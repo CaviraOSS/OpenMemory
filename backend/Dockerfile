@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++
 
 # Copy package files
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
@@ -16,6 +16,9 @@ COPY tsconfig.json ./
 
 # Build TypeScript
 RUN npm run build
+
+# Remove dev dependencies for slimmer runtime image
+RUN npm prune --omit=dev
 
 # Create data directory
 RUN mkdir -p /data && chown -R node:node /data
