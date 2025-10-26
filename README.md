@@ -314,6 +314,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/muhammad-fiaz">
+                    <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
+                    <br />
+                    <sub><b>Muhammad Fiaz</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/pc-quiknode">
                     <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
                     <br />
