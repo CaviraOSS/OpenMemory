@@ -327,6 +327,7 @@ export async function pruneWeakWaypoints(): Promise<number> {
 }
 import { embedForSector, embedMultiSector, cosineSimilarity, bufferToVector, vectorToBuffer, EmbeddingResult } from '../embedding'
 import { chunkText } from '../utils/chunking'
+import { j } from '../utils'
 export async function hsgQuery(
     queryText: string,
     k: number = 10,
@@ -509,10 +510,10 @@ export async function updateMemory(
     const memory = await q.get_mem.get(id)
     if (!memory) throw new Error(`Memory ${id} not found`)
 
-    // Use existing values if not provided
-    const newContent = content || memory.content
-    const newTags = tags || memory.tags
-    const newMetadata = JSON.stringify(metadata || memory.meta) 
+    // Use existing values if not provided, and ensure consistent JSON stringification
+    const newContent = content !== undefined ? content : memory.content
+    const newTags = tags !== undefined ? j(tags) : (memory.tags || '[]')
+    const newMetadata = metadata !== undefined ? j(metadata) : (memory.meta || '{}') 
 
     await transaction.begin()
 
