@@ -1,17 +1,36 @@
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { PieChart, Pie, BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Cell,
+} from "recharts";
 
 interface ChartData {
-  [key: string]: string | number
+  [key: string]: string | number;
 }
 
 interface SectorDistributionChartProps {
-  data: ChartData[]
-  colors: string[]
-  chartConfig: Record<string, { label: string; color: string }>
+  data: ChartData[];
+  colors: string[];
+  chartConfig: Record<string, { label: string; color: string }>;
 }
 
-export function SectorDistributionChart({ data, colors, chartConfig }: SectorDistributionChartProps) {
+export function SectorDistributionChart({
+  data,
+  colors,
+  chartConfig,
+}: SectorDistributionChartProps) {
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <PieChart>
@@ -32,15 +51,18 @@ export function SectorDistributionChart({ data, colors, chartConfig }: SectorDis
         </Pie>
       </PieChart>
     </ChartContainer>
-  )
+  );
 }
 
 interface SalienceDistributionChartProps {
-  data: ChartData[]
-  chartConfig: Record<string, { label: string; color: string }>
+  data: ChartData[];
+  chartConfig: Record<string, { label: string; color: string }>;
 }
 
-export function SalienceDistributionChart({ data, chartConfig }: SalienceDistributionChartProps) {
+export function SalienceDistributionChart({
+  data,
+  chartConfig,
+}: SalienceDistributionChartProps) {
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <BarChart data={data}>
@@ -51,12 +73,12 @@ export function SalienceDistributionChart({ data, chartConfig }: SalienceDistrib
         <Bar dataKey="count" fill="hsl(var(--chart-1))" />
       </BarChart>
     </ChartContainer>
-  )
+  );
 }
 
 interface MemoryTrendChartProps {
-  data: ChartData[]
-  chartConfig: Record<string, { label: string; color: string }>
+  data: ChartData[];
+  chartConfig: Record<string, { label: string; color: string }>;
 }
 
 export function MemoryTrendChart({ data, chartConfig }: MemoryTrendChartProps) {
@@ -76,15 +98,18 @@ export function MemoryTrendChart({ data, chartConfig }: MemoryTrendChartProps) {
         />
       </AreaChart>
     </ChartContainer>
-  )
+  );
 }
 
 interface SectorSalienceChartProps {
-  data: ChartData[]
-  chartConfig: Record<string, { label: string; color: string }>
+  data: ChartData[];
+  chartConfig: Record<string, { label: string; color: string }>;
 }
 
-export function SectorSalienceChart({ data, chartConfig }: SectorSalienceChartProps) {
+export function SectorSalienceChart({
+  data,
+  chartConfig,
+}: SectorSalienceChartProps) {
   return (
     <ChartContainer config={chartConfig} className="h-[300px] w-full">
       <BarChart data={data}>
@@ -95,5 +120,5 @@ export function SectorSalienceChart({ data, chartConfig }: SectorSalienceChartPr
         <Bar dataKey="avgSalience" fill="hsl(var(--chart-2))" />
       </BarChart>
     </ChartContainer>
-  )
+  );
 }

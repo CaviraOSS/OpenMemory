@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Upload, FileText } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Upload, FileText } from "lucide-react";
 
 export function IngestPageSkeleton() {
   return (
@@ -54,7 +54,10 @@ export function IngestPageSkeleton() {
         <CardContent>
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 border rounded-lg"
+              >
                 <div className="flex items-center gap-3">
                   <FileText className="h-8 w-8 text-muted-foreground" />
                   <div>
@@ -74,5 +77,5 @@ export function IngestPageSkeleton() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

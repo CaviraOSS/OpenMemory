@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { RefreshCw, Network } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { RefreshCw, Network } from "lucide-react";
 
 export function GraphPageSkeleton() {
   return (
@@ -69,5 +69,5 @@ export function GraphPageSkeleton() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

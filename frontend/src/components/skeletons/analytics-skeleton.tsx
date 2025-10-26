@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export function AnalyticsPageSkeleton() {
   return (
@@ -64,5 +64,5 @@ export function AnalyticsPageSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

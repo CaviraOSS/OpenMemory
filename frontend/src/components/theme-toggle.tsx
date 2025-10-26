@@ -1,29 +1,31 @@
-import { Moon, Sun } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useSettingsStore } from '@/stores/settings-store'
-import { useEffect } from 'react'
+import { Moon, Sun } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useSettingsStore } from "@/stores/settings-store";
+import { useEffect } from "react";
 
 export function ThemeToggle() {
-  const { theme, updateSettings } = useSettingsStore()
+  const { theme, updateSettings } = useSettingsStore();
 
   useEffect(() => {
-    const root = window.document.documentElement
-    root.classList.remove('light', 'dark')
+    const root = window.document.documentElement;
+    root.classList.remove("light", "dark");
 
-    if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-      root.classList.add(systemTheme)
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
+        ? "dark"
+        : "light";
+      root.classList.add(systemTheme);
     } else {
-      root.classList.add(theme)
+      root.classList.add(theme);
     }
-  }, [theme])
+  }, [theme]);
 
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'
-    updateSettings({ theme: newTheme })
-  }
+    const newTheme =
+      theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+    updateSettings({ theme: newTheme });
+  };
 
   return (
     <Button
@@ -33,9 +35,9 @@ export function ThemeToggle() {
       className="h-9 w-9"
       title={`Current theme: ${theme}`}
     >
-      {theme === 'dark' ? (
+      {theme === "dark" ? (
         <Moon className="h-4 w-4" />
-      ) : theme === 'light' ? (
+      ) : theme === "light" ? (
         <Sun className="h-4 w-4" />
       ) : (
         <div className="relative h-4 w-4">
@@ -45,5 +47,5 @@ export function ThemeToggle() {
       )}
       <span className="sr-only">Toggle theme</span>
     </Button>
-  )
+  );
 }

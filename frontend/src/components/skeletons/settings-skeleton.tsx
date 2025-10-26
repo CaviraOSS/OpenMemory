@@ -1,10 +1,10 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
-import { Save } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Save } from "lucide-react";
 
 export function SettingsPageSkeleton() {
   return (
@@ -99,5 +99,5 @@ export function SettingsPageSkeleton() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

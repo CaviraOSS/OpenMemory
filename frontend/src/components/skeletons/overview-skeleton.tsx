@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Clock, RefreshCw, Activity } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Clock, RefreshCw, Activity } from "lucide-react";
 
 export function OverviewPageSkeleton() {
   return (
@@ -63,5 +63,5 @@ export function OverviewPageSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

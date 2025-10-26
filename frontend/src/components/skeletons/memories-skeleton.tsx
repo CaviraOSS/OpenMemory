@@ -1,11 +1,18 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Search, Plus, Download, Upload, ArrowUpDown } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Search, Plus, Download, Upload, ArrowUpDown } from "lucide-react";
 
 export function MemoriesPageSkeleton() {
   return (
@@ -42,7 +49,11 @@ export function MemoriesPageSkeleton() {
           <div className="flex gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search memories..." disabled className="pl-9" />
+              <Input
+                placeholder="Search memories..."
+                disabled
+                className="pl-9"
+              />
             </div>
             <Skeleton className="h-10 w-[200px]" />
             <Skeleton className="h-10 w-[150px]" />
@@ -117,5 +128,5 @@ export function MemoriesPageSkeleton() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

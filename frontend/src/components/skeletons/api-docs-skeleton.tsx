@@ -1,8 +1,8 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
-import { Copy } from 'lucide-react'
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Copy } from "lucide-react";
 
 export function ApiDocsPageSkeleton() {
   return (
@@ -66,5 +66,5 @@ export function ApiDocsPageSkeleton() {
         ))}
       </div>
     </div>
-  )
+  );
 }

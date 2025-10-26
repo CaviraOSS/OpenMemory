@@ -1,78 +1,102 @@
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area, XAxis, YAxis, CartesianGrid, Cell } from 'recharts'
-import { Button } from '@/components/ui/button'
-import { dashboardDB } from '@/lib/dashboard-db'
-import type { RequestLog, ActivityLog } from '@/lib/dashboard-db'
-import { useAuth } from '@/hooks/useAuth'
-import { useNavigate } from 'react-router-dom'
-import { useMemoryStore } from '@/stores/memory-store'
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Cell,
+} from "recharts";
+import { Button } from "@/components/ui/button";
+import { dashboardDB } from "@/lib/dashboard-db";
+import type { RequestLog, ActivityLog } from "@/lib/dashboard-db";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useMemoryStore } from "@/stores/memory-store";
 
 interface RequestStats {
-  totalRequests: number
-  successfulRequests: number
-  failedRequests: number
-  successRate: number
-  averageDuration: number
-  methodBreakdown: Record<string, number>
-  statusBreakdown: Record<string, number>
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  successRate: number;
+  averageDuration: number;
+  methodBreakdown: Record<string, number>;
+  statusBreakdown: Record<string, number>;
 }
 
 interface RequestByDay {
-  date: string
-  count: number
-  successful: number
-  failed: number
-  averageDuration: number
+  date: string;
+  count: number;
+  successful: number;
+  failed: number;
+  averageDuration: number;
 }
 
 export function DashboardPage() {
-  const [stats, setStats] = useState<RequestStats | null>(null)
-  const [requestsByDay, setRequestsByDay] = useState<RequestByDay[]>([])
-  const [recentRequests, setRecentRequests] = useState<RequestLog[]>([])
-  const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([])
-  const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<RequestStats | null>(null);
+  const [requestsByDay, setRequestsByDay] = useState<RequestByDay[]>([]);
+  const [recentRequests, setRecentRequests] = useState<RequestLog[]>([]);
+  const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const { user, isAuthenticated, isAuthEnabled, signOut } = useAuth()
-  const navigate = useNavigate()
-  const { memories, fetchMemories } = useMemoryStore()
+  const { user, isAuthenticated, isAuthEnabled, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { memories, fetchMemories } = useMemoryStore();
 
   useEffect(() => {
-    loadDashboardData()
-    fetchMemories()
+    loadDashboardData();
+    fetchMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
 
   const loadDashboardData = async () => {
     try {
-      setLoading(true)
+      setLoading(true);
 
       // Load all dashboard data in parallel
-      const [statsData, requestsByDayData, requestsData, activitiesData] = await Promise.all([
-        dashboardDB.getRequestStats(7),
-        dashboardDB.getRequestsByDay(30),
-        dashboardDB.getRequestLogs(7),
-        dashboardDB.getActivityLogs(7)
-      ])
+      const [statsData, requestsByDayData, requestsData, activitiesData] =
+        await Promise.all([
+          dashboardDB.getRequestStats(7),
+          dashboardDB.getRequestsByDay(30),
+          dashboardDB.getRequestLogs(7),
+          dashboardDB.getActivityLogs(7),
+        ]);
 
-      setStats(statsData)
-      setRequestsByDay(requestsByDayData)
-      setRecentRequests(requestsData.slice(0, 10))
-      setRecentActivities(activitiesData.slice(0, 10))
+      setStats(statsData);
+      setRequestsByDay(requestsByDayData);
+      setRecentRequests(requestsData.slice(0, 10));
+      setRecentActivities(activitiesData.slice(0, 10));
     } catch (error) {
-      console.error('Failed to load dashboard data:', error)
+      console.error("Failed to load dashboard data:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Loading dashboard...</div>
       </div>
-    )
+    );
   }
 
   const chartConfig = {
@@ -111,68 +135,94 @@ export function DashboardPage() {
     reflective: {
       label: "Reflective",
       color: "hsl(var(--chart-5))",
-    }
-  }
+    },
+  };
 
   // Memory sector distribution
-  const memorySectorData = memories.reduce((acc, memory) => {
-    const sector = memory.primary_sector || 'unknown'
-    acc[sector] = (acc[sector] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const memorySectorData = memories.reduce(
+    (acc, memory) => {
+      const sector = memory.primary_sector || "unknown";
+      acc[sector] = (acc[sector] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-  const sectorChartData = Object.entries(memorySectorData).map(([sector, count]) => ({
-    sector,
-    count,
-    fill: `var(--color-${sector})`
-  }))
+  const sectorChartData = Object.entries(memorySectorData).map(
+    ([sector, count]) => ({
+      sector,
+      count,
+      fill: `var(--color-${sector})`,
+    }),
+  );
 
   // Salience distribution
   const salienceRanges = [
-    { range: '0.0-0.2', min: 0, max: 0.2, count: 0 },
-    { range: '0.2-0.4', min: 0.2, max: 0.4, count: 0 },
-    { range: '0.4-0.6', min: 0.4, max: 0.6, count: 0 },
-    { range: '0.6-0.8', min: 0.6, max: 0.8, count: 0 },
-    { range: '0.8-1.0', min: 0.8, max: 1.0, count: 0 }
-  ]
+    { range: "0.0-0.2", min: 0, max: 0.2, count: 0 },
+    { range: "0.2-0.4", min: 0.2, max: 0.4, count: 0 },
+    { range: "0.4-0.6", min: 0.4, max: 0.6, count: 0 },
+    { range: "0.6-0.8", min: 0.6, max: 0.8, count: 0 },
+    { range: "0.8-1.0", min: 0.8, max: 1.0, count: 0 },
+  ];
 
   memories.forEach((memory) => {
-    const salience = memory.salience || 0
-    const range = salienceRanges.find((r) => salience >= r.min && salience < r.max) || salienceRanges[salienceRanges.length - 1]
-    if (range) range.count++
-  })
+    const salience = memory.salience || 0;
+    const range =
+      salienceRanges.find((r) => salience >= r.min && salience < r.max) ||
+      salienceRanges[salienceRanges.length - 1];
+    if (range) range.count++;
+  });
 
   // Status code breakdown
-  const statusCodeData = Object.entries(stats?.statusBreakdown || {}).map(([code, count]) => ({
-    code,
-    count,
-    fill: code.startsWith('2') ? 'hsl(var(--chart-2))' :
-          code.startsWith('4') ? 'hsl(var(--chart-3))' :
-          code.startsWith('5') ? 'hsl(var(--chart-1))' : 'hsl(var(--chart-4))'
-  }))
+  const statusCodeData = Object.entries(stats?.statusBreakdown || {}).map(
+    ([code, count]) => ({
+      code,
+      count,
+      fill: code.startsWith("2")
+        ? "hsl(var(--chart-2))"
+        : code.startsWith("4")
+          ? "hsl(var(--chart-3))"
+          : code.startsWith("5")
+            ? "hsl(var(--chart-1))"
+            : "hsl(var(--chart-4))",
+    }),
+  );
 
   // Top endpoints by request count
-  const endpointCounts = recentRequests.reduce((acc, req) => {
-    acc[req.endpoint] = (acc[req.endpoint] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const endpointCounts = recentRequests.reduce(
+    (acc, req) => {
+      acc[req.endpoint] = (acc[req.endpoint] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   const topEndpointsData = Object.entries(endpointCounts)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 10)
     .map(([endpoint, count]) => ({
-      endpoint: endpoint.length > 30 ? endpoint.substring(0, 27) + '...' : endpoint,
-      count
-    }))
+      endpoint:
+        endpoint.length > 30 ? endpoint.substring(0, 27) + "..." : endpoint,
+      count,
+    }));
 
   // Hourly activity pattern
-  const hourlyActivity = Array.from({ length: 24 }, (_, i) => ({ hour: i, count: 0 }))
+  const hourlyActivity = Array.from({ length: 24 }, (_, i) => ({
+    hour: i,
+    count: 0,
+  }));
   recentRequests.forEach((req) => {
-    const hour = new Date(req.timestamp).getHours()
-    hourlyActivity[hour].count++
-  })
+    const hour = new Date(req.timestamp).getHours();
+    hourlyActivity[hour].count++;
+  });
 
-  const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))']
+  const COLORS = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--chart-5))",
+  ];
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -190,7 +240,7 @@ export function DashboardPage() {
                 </Button>
               </>
             ) : (
-              <Button variant="outline" onClick={() => navigate('/auth')}>
+              <Button variant="outline" onClick={() => navigate("/auth")}>
                 Sign In
               </Button>
             )}
@@ -206,7 +256,9 @@ export function DashboardPage() {
             <CardDescription>Last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalRequests || 0}</div>
+            <div className="text-3xl font-bold">
+              {stats?.totalRequests || 0}
+            </div>
           </CardContent>
         </Card>
 
@@ -216,7 +268,9 @@ export function DashboardPage() {
             <CardDescription>Last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.successRate?.toFixed(1) || 0}%</div>
+            <div className="text-3xl font-bold">
+              {stats?.successRate?.toFixed(1) || 0}%
+            </div>
           </CardContent>
         </Card>
 
@@ -226,7 +280,9 @@ export function DashboardPage() {
             <CardDescription>Last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.averageDuration?.toFixed(0) || 0}ms</div>
+            <div className="text-3xl font-bold">
+              {stats?.averageDuration?.toFixed(0) || 0}ms
+            </div>
           </CardContent>
         </Card>
 
@@ -236,7 +292,9 @@ export function DashboardPage() {
             <CardDescription>Last 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600">{stats?.failedRequests || 0}</div>
+            <div className="text-3xl font-bold text-red-600">
+              {stats?.failedRequests || 0}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -247,7 +305,9 @@ export function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Requests Over Time</CardTitle>
-            <CardDescription>Daily request count (last 30 days)</CardDescription>
+            <CardDescription>
+              Daily request count (last 30 days)
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
@@ -286,7 +346,10 @@ export function DashboardPage() {
                   label={(entry) => `${entry.sector}: ${entry.count}`}
                 >
                   {sectorChartData.map((_entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <ChartTooltip content={<ChartTooltipContent />} />
@@ -397,7 +460,10 @@ export function DashboardPage() {
             <ChartContainer config={chartConfig} className="h-[300px]">
               <AreaChart data={hourlyActivity}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="hour" tickFormatter={(value) => `${value}:00`} />
+                <XAxis
+                  dataKey="hour"
+                  tickFormatter={(value) => `${value}:00`}
+                />
                 <YAxis />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Area
@@ -420,10 +486,14 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px]">
-              <BarChart data={Object.entries(stats?.methodBreakdown || {}).map(([method, count]) => ({
-                method,
-                count
-              }))}>
+              <BarChart
+                data={Object.entries(stats?.methodBreakdown || {}).map(
+                  ([method, count]) => ({
+                    method,
+                    count,
+                  }),
+                )}
+              >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="method" />
                 <YAxis />
@@ -475,25 +545,37 @@ export function DashboardPage() {
               <tbody>
                 {recentRequests.map((req) => (
                   <tr key={req.id} className="border-b hover:bg-muted/50">
-                    <td className="p-2">{new Date(req.timestamp).toLocaleString()}</td>
                     <td className="p-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        req.method === 'GET' ? 'bg-blue-100 text-blue-800' :
-                        req.method === 'POST' ? 'bg-green-100 text-green-800' :
-                        req.method === 'PUT' ? 'bg-yellow-100 text-yellow-800' :
-                        req.method === 'DELETE' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      {new Date(req.timestamp).toLocaleString()}
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          req.method === "GET"
+                            ? "bg-blue-100 text-blue-800"
+                            : req.method === "POST"
+                              ? "bg-green-100 text-green-800"
+                              : req.method === "PUT"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : req.method === "DELETE"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
                         {req.method}
                       </span>
                     </td>
                     <td className="p-2 font-mono text-xs">{req.endpoint}</td>
                     <td className="p-2">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        req.status >= 200 && req.status < 300 ? 'bg-green-100 text-green-800' :
-                        req.status >= 400 ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          req.status >= 200 && req.status < 300
+                            ? "bg-green-100 text-green-800"
+                            : req.status >= 400
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
                         {req.status}
                       </span>
                     </td>
@@ -515,11 +597,16 @@ export function DashboardPage() {
         <CardContent>
           <div className="space-y-2">
             {recentActivities.map((activity) => (
-              <div key={activity.id} className="flex items-center justify-between p-3 rounded-lg border">
+              <div
+                key={activity.id}
+                className="flex items-center justify-between p-3 rounded-lg border"
+              >
                 <div>
                   <div className="font-medium">{activity.action}</div>
                   {activity.userId && (
-                    <div className="text-sm text-muted-foreground">User: {activity.userId}</div>
+                    <div className="text-sm text-muted-foreground">
+                      User: {activity.userId}
+                    </div>
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground">
@@ -531,5 +618,5 @@ export function DashboardPage() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { SidebarProvider } from '@/components/ui/sidebar'
-import { Toaster } from '@/components/ui/sonner'
-import { Dashboard } from '@/components/dashboard'
-import { DashboardPage } from '@/pages/DashboardPage'
-import { AuthPage } from '@/pages/AuthPage'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import { Toaster } from "@/components/ui/sonner";
+import { Dashboard } from "@/components/dashboard";
+import { DashboardPage } from "@/pages/DashboardPage";
+import { AuthPage } from "@/pages/AuthPage";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export function Router() {
   return (
@@ -28,5 +28,5 @@ export function Router() {
         </SidebarProvider>
       </AuthProvider>
     </BrowserRouter>
-  )
+  );
 }
