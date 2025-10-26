@@ -66,6 +66,10 @@ try {
       };
     }
     
+    async update(id, options) {
+      return { id, updated: true };
+    }
+    
     async deleteMemory(id) {
       return { success: true };
     }
@@ -197,6 +201,22 @@ async function testMemoryOperations() {
       assertProperty(memory, 'content', 'Retrieved memory should have content');
     } catch (error) {
       assert(false, `Get memory failed: ${error.message}`);
+    }
+
+    // Test memory update
+    try {
+      console.log('   Testing memory update...');
+      const updatedMemory = await client.update(testMemoryId, {
+        content: 'This is an UPDATED test memory from JavaScript SDK',
+        tags: ['test', 'updated', 'js-sdk'],
+        metadata: { updated: true, source: 'js-sdk-test' }
+      });
+      
+      assertProperty(updatedMemory, 'id', 'Updated memory should have ID');
+      assertProperty(updatedMemory, 'updated', 'Updated memory should have updated flag');
+      assertTrue(updatedMemory.updated, 'Updated flag should be true');
+    } catch (error) {
+      assert(false, `Update memory failed: ${error.message}`);
     }
   }
 

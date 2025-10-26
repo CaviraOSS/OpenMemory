@@ -189,6 +189,13 @@ export class OpenMemory {
     async delete(id: string): Promise<{ ok: boolean }> {
         return this.request('DELETE', `/memory/${id}`)
     }
+    async update(id: string, options: {
+        content?: string
+        tags?: string[]
+        metadata?: Record<string, unknown>
+    }): Promise<{ id: string, updated: boolean }> {
+        return this.request('PATCH', `/memory/${id}`, options)
+    }
     async getStats(): Promise<SectorsResponse> {
         return this.getSectors()
     }

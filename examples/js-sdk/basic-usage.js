@@ -1,4 +1,4 @@
-const { OpenMemory, SECTORS } = require('@openmemory/sdk-js')
+const { OpenMemory, SECTORS } = require('../../sdk-js/src/index.ts')
 
 const client = new OpenMemory({
     baseUrl: 'http://localhost:8080',
@@ -36,15 +36,31 @@ async function basicExample() {
             console.log(`      Score: ${match.score.toFixed(3)}, Salience: ${match.salience.toFixed(3)}`)
         })
         
+        // Update a memory
+        if (results.matches.length > 0) {
+            console.log('\n4. Updating best match...')
+            const memoryId = results.matches[0].id
+            const originalContent = results.matches[0].content
+            console.log(`   Original: ${originalContent.substring(0, 50)}...`)
+            
+            // Update the memory with new content and tags
+            const updatedMemory = await client.update(memoryId, {
+                content: "I went to Paris yesterday and absolutely loved the Eiffel Tower - it was even more beautiful than I imagined!",
+                tags: ["travel", "paris", "eiffel-tower", "updated"],
+                metadata: { updated: true, original_length: originalContent.length }
+            })
+            console.log(`✅ Memory updated:`, updatedMemory)
+        }
+        
         // Reinforce a memory
         if (results.matches.length > 0) {
-            console.log('\n4. Reinforcing best match...')
+            console.log('\n5. Reinforcing best match...')
             await client.reinforce(results.matches[0].id, 0.2)
             console.log('✅ Memory reinforced')
         }
         
         // Get all memories
-        console.log('\n5. Listing all memories...')
+        console.log('\n6. Listing all memories...')
         const allMemories = await client.getAll({ limit: 10 })
         console.log(`✅ Total memories: ${allMemories.items.length}`)
         

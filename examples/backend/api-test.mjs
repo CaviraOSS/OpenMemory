@@ -1,4 +1,4 @@
-import fetch from 'node-fetch'
+// Using built-in fetch (Node.js 18+)
 
 async function testBackendAPI() {
     const baseUrl = 'http://localhost:8080'
@@ -43,7 +43,28 @@ async function testBackendAPI() {
         console.log('✅ Query results:', results.matches.length, 'matches')
         
         if (results.matches.length > 0) {
-            console.log('\n5. Reinforce Memory...')
+            console.log('\n5. Update Memory (content only)...')
+            const updateResponse = await fetch(`${baseUrl}/memory/${results.matches[0].id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: 'I went to Paris yesterday and absolutely loved the Eiffel Tower - it was even more beautiful than I imagined!'
+                })
+            })
+            const updateResult = await updateResponse.json()
+            console.log('✅ Updated:', updateResult)
+            
+            console.log('\n6. Verify Update...')
+            const getResponse = await fetch(`${baseUrl}/memory/${results.matches[0].id}`)
+            const updatedMemory = await getResponse.json()
+            console.log('✅ Updated memory content:', updatedMemory.content.substring(0, 50) + '...')
+            console.log('✅ Updated tags:', updatedMemory.tags)
+            console.log('✅ Updated metadata:', updatedMemory.metadata)
+            console.log('✅ Version:', updatedMemory.version)
+        }
+        
+        if (results.matches.length > 0) {
+            console.log('\n7. Reinforce Memory...')
             const reinforceResponse = await fetch(`${baseUrl}/memory/reinforce`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -56,7 +77,7 @@ async function testBackendAPI() {
             console.log('✅ Reinforced:', reinforceResult)
         }
         
-        console.log('\n6. List All Memories...')
+        console.log('\n8. List All Memories...')
         const allResponse = await fetch(`${baseUrl}/memory/all?l=10`)
         const allMemories = await allResponse.json()
         console.log('✅ Total memories:', allMemories.items.length)

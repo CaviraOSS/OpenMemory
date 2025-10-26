@@ -30,6 +30,8 @@ type QueryInterface = {
     ins_mem: { run: (...params: any[]) => Promise<void> }
     upd_mean_vec: { run: (...params: any[]) => Promise<void> }
     upd_seen: { run: (...params: any[]) => Promise<void> }
+    upd_mem: { run: (...params: any[]) => Promise<void> }
+    upd_mem_with_sector: { run: (...params: any[]) => Promise<void> }
     del_mem: { run: (...params: any[]) => Promise<void> }
     get_mem: { get: (id: string) => Promise<any> }
     all_mem: { all: (limit: number, offset: number) => Promise<any[]> }
@@ -212,6 +214,14 @@ if (metadataBackend === 'postgres') {
             run: (...params: any[]) =>
                 runAsync(`update ${memoriesTable} set last_seen_at=$2, salience=$3, updated_at=$4 where id=$1`, params)
         },
+        upd_mem: {
+            run: (...params: any[]) =>
+                runAsync(`update ${memoriesTable} set content=$1, tags=$2, meta=$3, updated_at=$4, version=version+1 where id=$5`, params)
+        },
+        upd_mem_with_sector: {
+            run: (...params: any[]) =>
+                runAsync(`update ${memoriesTable} set content=$1, primary_sector=$2, tags=$3, meta=$4, updated_at=$5, version=version+1 where id=$6`, params)
+        },
         del_mem: {
             run: (...params: any[]) => runAsync(`delete from ${memoriesTable} where id=$1`, params)
         },
@@ -323,73 +333,73 @@ if (metadataBackend === 'postgres') {
 } else {
     const dbPath = env.db_path || './data/openmemory.sqlite'
     const dir = path.dirname(dbPath)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
     const db = new sqlite3.Database(dbPath)
-    db.serialize(() => {
-        db.run(`
-            create table if not exists memories(
-                id text primary key,
-                content text not null,
-                primary_sector text not null,
-                tags text,
-                meta text,
-                created_at integer,
-                updated_at integer,
-                last_seen_at integer,
-                salience real,
-                decay_lambda real,
-                version integer default 1,
-                mean_dim integer,
-                mean_vec blob
-            )
-        `)
-        db.run(`
-            create table if not exists vectors(
-                id text not null,
-                sector text not null,
-                v blob not null,
-                dim integer not null,
-                primary key(id, sector)
-            )
-        `)
+db.serialize(() => {
+    db.run(`
+        create table if not exists memories(
+        id text primary key,
+        content text not null,
+        primary_sector text not null,
+        tags text,
+        meta text,
+        created_at integer,
+        updated_at integer,
+        last_seen_at integer,
+        salience real,
+        decay_lambda real,
+        version integer default 1,
+        mean_dim integer,
+        mean_vec blob
+        )
+    `)
+    db.run(`
+        create table if not exists vectors(
+        id text not null,
+        sector text not null,
+        v blob not null,
+        dim integer not null,
+        primary key(id, sector)
+        )
+    `)
         db.run(`
             create virtual table if not exists memories_fts using fts5(
                 id UNINDEXED,
                 content,
                 tokenize = 'porter'
-            )
-        `)
-        db.run(`
-            create table if not exists waypoints(
-                src_id text primary key,
-                dst_id text not null,
-                weight real not null,
-                created_at integer,
-                updated_at integer
-            )
-        `)
-        db.run(`
-            create table if not exists embed_logs(
-                id text primary key,
-                model text,
-                status text,
-                ts integer,
-                err text
-            )
-        `)
-        db.run('create index if not exists idx_memories_sector on memories(primary_sector)')
-        db.run('create index if not exists idx_waypoints_src on waypoints(src_id)')
-        db.run('create index if not exists idx_waypoints_dst on waypoints(dst_id)')
-    })
+        )
+    `)
+    db.run(`
+        create table if not exists waypoints(
+        src_id text primary key,
+        dst_id text not null,
+        weight real not null,
+        created_at integer,
+        updated_at integer
+        )
+    `)
+    db.run(`
+        create table if not exists embed_logs(
+        id text primary key,
+        model text,
+        status text,
+        ts integer,
+        err text
+        )
+    `)
+    db.run('create index if not exists idx_memories_sector on memories(primary_sector)')
+    db.run('create index if not exists idx_waypoints_src on waypoints(src_id)')
+    db.run('create index if not exists idx_waypoints_dst on waypoints(dst_id)')
+})
 
     const run = (sql: string, params: any[] = []) =>
         new Promise<void>((resolve, reject) => {
-            db.run(sql, params, function (err) {
-                if (err) {
-                    console.error('[DB ERROR]', err.message)
-                    console.error('[DB SQL]', sql)
-                    console.error('[DB PARAMS]', params.length, 'params:', params.slice(0, 3))
-                    reject(err)
+        db.run(sql, params, function (err) {
+            if (err) {
+                console.error('[DB ERROR]', err.message)
+                console.error('[DB SQL]', sql)
+                console.error('[DB PARAMS]', params.length, 'params:', params.slice(0, 3))
+                reject(err)
                 } else {
                     resolve()
                 }
@@ -397,18 +407,18 @@ if (metadataBackend === 'postgres') {
         })
     const get = (sql: string, params: any[] = []) =>
         new Promise<any>((resolve, reject) => {
-            db.get(sql, params, (err, row) => {
-                if (err) reject(err)
-                else resolve(row)
-            })
+        db.get(sql, params, (err, row) => {
+            if (err) reject(err)
+            else resolve(row)
         })
+    })
     const all = (sql: string, params: any[] = []) =>
         new Promise<any[]>((resolve, reject) => {
-            db.all(sql, params, (err, rows) => {
-                if (err) reject(err)
-                else resolve(rows)
-            })
+        db.all(sql, params, (err, rows) => {
+            if (err) reject(err)
+            else resolve(rows)
         })
+    })
 
     runAsync = run
     getAsync = get
@@ -442,6 +452,14 @@ if (metadataBackend === 'postgres') {
         upd_seen: {
             run: (...params: any[]) =>
                 runAsync('update memories set last_seen_at=?, salience=?, updated_at=? where id=?', params)
+        },
+        upd_mem: {
+            run: (...params: any[]) =>
+                runAsync('update memories set content=?, tags=?, meta=?, updated_at=?, version=version+1 where id=?', params)
+        },
+        upd_mem_with_sector: {
+            run: (...params: any[]) =>
+                runAsync('update memories set content=?, primary_sector=?, tags=?, meta=?, updated_at=?, version=version+1 where id=?', params)
         },
         del_mem: {
             run: (...params: any[]) => runAsync('delete from memories where id=?', params)
@@ -500,7 +518,7 @@ if (metadataBackend === 'postgres') {
             run: (threshold: number) => runAsync('delete from waypoints where weight < ?', [threshold])
         },
         ins_log: {
-            run: (...params: any[]) => runAsync('insert into embed_logs(id,model,status,ts,err) values(?,?,?,?,?)', params)
+            run: (...params: any[]) => runAsync('insert or replace into embed_logs(id,model,status,ts,err) values(?,?,?,?,?)', params)
         },
         upd_log: {
             run: (...params: any[]) => runAsync('update embed_logs set status=?, err=? where id=?', params)
