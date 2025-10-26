@@ -33,6 +33,13 @@ db.serialize(() => {
         )
     `)
     db.run(`
+        create virtual table if not exists memories_fts using fts5(
+        id UNINDEXED,
+        content,
+        tokenize = 'porter'
+        )
+    `)
+    db.run(`
         create table if not exists waypoints(
         src_id text primary key,
         dst_id text not null,
@@ -144,6 +151,15 @@ export const q = {
     },
     del_waypoints: {
         run: (...params: any[]) => runAsync('delete from waypoints where src_id=? or dst_id=?', params)
+    },
+    ins_fts: {
+        run: (...params: any[]) => runAsync('insert into memories_fts(id, content) values(?, ?)', params)
+    },
+    del_fts: {
+        run: (...params: any[]) => runAsync('delete from memories_fts where id=?', params)
+    },
+    search_fts: {
+        all: (query: string, limit: number) => allAsync('select id, rank from memories_fts where memories_fts match ? order by rank limit ?', [query, limit])
     },
     prune_waypoints: {
         run: (threshold: number) => runAsync('delete from waypoints where weight < ?', [threshold])
