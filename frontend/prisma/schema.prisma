@@ -1,0 +1,77 @@
+// Prisma schema for dashboard analytics (SQLite)
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dashboard.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Request/Response Logs (30-day retention)
+model RequestLog {
+  id           Int      @id @default(autoincrement())
+  timestamp    DateTime
+  method       String
+  endpoint     String
+  status       Int
+  duration     Int      // milliseconds
+  requestBody  String?  @map("request_body")
+  responseBody String?  @map("response_body")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([timestamp])
+  @@map("request_logs")
+}
+
+// Activity Logs
+model ActivityLog {
+  id        Int      @id @default(autoincrement())
+  userId    String?  @map("user_id")
+  action    String
+  metadata  String?  // JSON string
+  timestamp DateTime @default(now())
+
+  @@index([timestamp])
+  @@index([userId])
+  @@map("activity_logs")
+}
+
+// Dashboard Metrics
+model DashboardMetric {
+  id         Int      @id @default(autoincrement())
+  metricName String   @map("metric_name")
+  value      Float
+  timestamp  DateTime @default(now())
+
+  @@index([metricName, timestamp])
+  @@map("dashboard_metrics")
+}
+
+// Users (for better-auth authentication)
+model User {
+  id        String    @id @default(cuid())
+  email     String    @unique
+  name      String?
+  password  String    // hashed with bcrypt
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  sessions  Session[]
+
+  @@map("users")
+}
+
+// Sessions (for better-auth)
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
