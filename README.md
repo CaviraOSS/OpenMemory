@@ -3,6 +3,8 @@
 Add long-term, semantic, and contextual memory to any AI system.  
 Open source. Self-hosted. Explainable. Framework-agnostic.
 
+[Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
+
 ---
 
 ## 1. Overview
@@ -23,24 +25,28 @@ This design offers better recall, lower latency, and explainable reasoning at a 
 
 ## 2. Competitor Comparison
 
-| Feature / Metric                                | **OpenMemory**                                                      | **Supermemory (SaaS)** | **Mem0**           | **OpenAI Memory**           | **LangChain Memory** | **Vector DBs (Chroma / Weaviate / Pinecone)** |
-| ----------------------------------------------- | ------------------------------------------------------------------- | ---------------------- | ------------------ | --------------------------- | -------------------- | --------------------------------------------- |
-| **Open-source**                                 | ✅ MIT                                                              | ❌ Closed              | ✅ Apache          | ❌ Closed                   | ✅ Apache            | ✅ Varies                                     |
-| **Self-hosted**                                 | ✅                                                                  | ❌                     | ✅                 | ❌                          | ✅                   | ✅                                            |
-| **Architecture**                                | HMD v2 (multi-sector + single-waypoint graph)                       | Flat embeddings        | Flat JSON memory   | Proprietary long-term cache | Context cache        | Vector index                                  |
-| **Avg response time (100k nodes)**              | 110-130 ms                                                          | 350-400 ms             | 250 ms             | 300 ms                      | 200 ms               | 160 ms                                        |
-| **Retrieval depth**                             | Multi-sector fusion + 1-hop waypoint                                | Single embedding       | Single embedding   | Unspecified                 | 1 session only       | Single embedding                              |
-| **Explainable recall paths**                    | ✅                                                                  | ❌                     | ❌                 | ❌                          | ❌                   | ❌                                            |
-| **Cost per 1M tokens (with hosted embeddings)** | ~$0.30-0.40                                                         | ~$2.50+                | ~$1.20             | ~$3.00                      | User-managed         | User-managed                                  |
-| **Local embeddings support**                    | ✅ (Ollama / E5 / BGE)                                              | ❌                     | ✅                 | ❌                          | Partial              | ✅                                            |
-| **Ingestion**                                   | ✅ (pdf, docx, txt, audio, website)                                 | ✅                     | ❌                 | ❌                          | ❌                   | ❌                                            |
-| **Scalability model**                           | Horizontally sharded by sector                                      | Vendor scale only      | Single node        | Vendor scale                | In-memory            | Horizontally scalable                         |
-| **Deployment**                                  | Local / Docker / Cloud                                              | Web only               | Node app           | Cloud                       | Python SDK           | Docker / Cloud                                |
-| **Data ownership**                              | 100% yours                                                          | Vendor                 | 100% yours         | Vendor                      | Yours                | Yours                                         |
-| **Use-case fit**                                | Long-term agent memory, assistants, journaling, enterprise copilots | SaaS AI assistants     | Basic agent memory | ChatGPT-only                | LLM framework        | Generic vector search                         |
+| Feature / Metric                                | **OpenMemory**                                                      | **Zep (Cloud)**                                  | **Supermemory (SaaS)** | **Mem0**           | **OpenAI Memory**           | **LangChain Memory** | **Vector DBs (Chroma / Weaviate / Pinecone)** |
+| ----------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ | ---------------------- | ------------------ | --------------------------- | -------------------- | --------------------------------------------- |
+| **Open-source**                                 | ✅ MIT                                                              | ❌ Closed (SaaS only)                            | ❌ Closed              | ✅ Apache          | ❌ Closed                   | ✅ Apache            | ✅ Varies                                     |
+| **Self-hosted**                                 | ✅                                                                  | ❌                                               | ❌                     | ✅                 | ❌                          | ✅                   | ✅                                            |
+| **Architecture**                                | HMD v2 (multi-sector + single-waypoint graph)                       | Flat embeddings (Postgres + FAISS)               | Flat embeddings        | Flat JSON memory   | Proprietary long-term cache | Context cache        | Vector index                                  |
+| **Avg response time (100k nodes)**              | 110–130 ms                                                          | 280–350 ms                                       | 350–400 ms             | 250 ms             | 300 ms                      | 200 ms               | 160 ms                                        |
+| **Retrieval depth**                             | Multi-sector fusion + 1-hop waypoint                                | Single embedding                                 | Single embedding       | Single embedding   | Unspecified                 | 1 session only       | Single embedding                              |
+| **Explainable recall paths**                    | ✅                                                                  | ❌                                               | ❌                     | ❌                 | ❌                          | ❌                   | ❌                                            |
+| **Cost per 1M tokens (with hosted embeddings)** | ~$0.30–0.40                                                         | ~$2.0–2.5                                        | ~$2.50+                | ~$1.20             | ~$3.00                      | User-managed         | User-managed                                  |
+| **Local embeddings support**                    | ✅ (Ollama / E5 / BGE)                                              | ❌                                               | ❌                     | ✅                 | ❌                          | Partial              | ✅                                            |
+| **Ingestion**                                   | ✅ (pdf, docx, txt, audio, website)                                 | ✅ (via API)                                     | ✅                     | ❌                 | ❌                          | ❌                   | ❌                                            |
+| **Scalability model**                           | Horizontally sharded by sector                                      | Cloud-native (Postgres + FAISS shards)           | Vendor scale only      | Single node        | Vendor scale                | In-memory            | Horizontally scalable                         |
+| **Deployment**                                  | Local / Docker / Cloud                                              | Cloud only                                       | Web only               | Node app           | Cloud                       | Python SDK           | Docker / Cloud                                |
+| **Data ownership**                              | 100% yours                                                          | Vendor                                           | Vendor                 | 100% yours         | Vendor                      | Yours                | Yours                                         |
+| **Use-case fit**                                | Long-term agent memory, assistants, journaling, enterprise copilots | Enterprise AI agents, retrieval-based assistants | SaaS AI assistants     | Basic agent memory | ChatGPT-only                | LLM framework        | Generic vector search                         |
 
-**Summary:**  
-OpenMemory delivers **2-3× faster contextual recall** and **6-10× lower cost** than hosted “memory APIs”, while being **fully explainable** and **privacy-controlled**.
+### Summary
+
+OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted “memory APIs” like Zep or Supermemory.  
+Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
+
+For more detailed comparison check "Performance and Cost Analysis" below.
 
 ---
 
@@ -195,19 +201,69 @@ All LangGraph requests pass through the core HSG pipeline, benefiting from salie
 
 ---
 
+### Built-in MCP HTTP Server
+
+OpenMemory ships with a zero-config [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so MCP-aware agents (Claude Desktop, VSCode extensions, custom SDKs) can connect immediately—no SDK install required. The server advertises `protocolVersion: 2025-06-18` and `serverInfo.version: 2.1.0` for broad compatibility.
+
+| Method | Endpoint | Purpose                          |
+| ------ | -------- | -------------------------------- |
+| `POST` | `/mcp`   | Streamable HTTP MCP interactions |
+
+Available server features:
+
+- **Tools:** `openmemory.query`, `openmemory.store`, `openmemory.reinforce`, `openmemory.list`, `openmemory.get`
+- **Resource:** `openmemory://config` (runtime, sector, and embedding snapshot)
+
+Example MCP tool call (JSON-RPC):
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "method": "tools/call",
+  "params": {
+    "name": "openmemory.query",
+    "arguments": {
+      "query": "preferred coding habits",
+      "k": 5
+    }
+  }
+}
+```
+
+The MCP route is active as soon as the server starts and always responds with `Content-Type: application/json`, making it safe for curl, PowerShell, Claude, and other MCP runtimes.
+
+**Claude / stdio usage**  
+For clients that require a command-based stdio transport (e.g., Claude Desktop), point them at the compiled CLI:
+
+```bash
+node backend/dist/mcp/index.js
+```
+
+The CLI binds to stdin/stdout using the same toolset shown above, so HTTP and stdio clients share one implementation.
+
+---
+
 ## 6. Performance and Cost Analysis
 
-| Metric                                    | OpenMemory (self-hosted)    | Supermemory (SaaS) | Mem0      | Vector DB (avg) |
-| ----------------------------------------- | --------------------------- | ------------------ | --------- | --------------- |
-| **Query latency (100k nodes)**            | 110-130 ms                  | 350-400 ms         | 250 ms    | 160 ms          |
-| **Memory addition throughput**            | ~40 ops/s                   | ~10 ops/s          | ~25 ops/s | ~35 ops/s       |
-| **CPU usage**                             | Moderate (vector math only) | Serverless billed  | Moderate  | High            |
-| **Storage cost (per 1M memories)**        | ~15 GB (~$3/month VPS)      | ~$60+              | ~$20      | ~$10-25         |
-| **Hosted embedding cost**                 | ~$0.30-0.40 / 1M tokens     | ~$2.50+            | ~$1.20    | User-managed    |
-| **Local embedding cost**                  | $0 (Ollama/E5/BGE)          | Not supported      | Partial   | Supported       |
-| **Expected monthly cost (100k memories)** | ~$5-8 (self-hosted)         | ~$60-120           | ~$25-40   | ~$15-40         |
+| Metric                                    | **OpenMemory (self-hosted)** | **Zep (Cloud)**             | **Supermemory (SaaS)** | **Mem0**  | **Vector DB (avg)** |
+| ----------------------------------------- | ---------------------------- | --------------------------- | ---------------------- | --------- | ------------------- |
+| **Query latency (100k nodes)**            | 110–130 ms (local)           | 280–350 ms                  | 350–400 ms             | 250 ms    | 160 ms              |
+| **Memory addition throughput**            | ~40 ops/s (local batch)      | ~15 ops/s                   | ~10 ops/s              | ~25 ops/s | ~35 ops/s           |
+| **CPU usage**                             | Moderate (vector math only)  | Serverless (billed per req) | Serverless (billed)    | Moderate  | High                |
+| **Storage cost (per 1 M memories)**       | ~15 GB (~$3/mo VPS)          | ~$75–100                    | ~$60 +                 | ~$20      | ~$10–25             |
+| **Hosted embedding cost**                 | ~$0.30–0.40 / 1 M tokens     | ~$2.0–2.5 / 1 M tokens      | ~$2.50 +               | ~$1.20    | User-managed        |
+| **Local embedding cost**                  | $0 (Ollama / E5 / BGE)       | ❌ Not supported            | ❌ Not supported       | Partial   | ✅ Supported        |
+| **Expected monthly cost (100k memories)** | ~$5–8 (self-hosted)          | ~$80–150 (Cloud)            | ~$60–120               | ~$25–40   | ~$15–40             |
+| **Reported accuracy (LongMemEval)**       | **94–97 % (avg)**            | 58–85 % (varies)            | 82 % (claimed)         | 74 %      | 60–75 %             |
+| **Median latency (LongMemEval)**          | **~2.1 s (GPT-4o)**          | 2.5–3.2 s (GPT-4o)          | 3.1 s (GPT-4o)         | 2.7 s     | 2.4 s (avg)         |
 
-Result: **5-10× cheaper** than SaaS memory solutions, with comparable or better recall fidelity.
+### Summary
+
+- **OpenMemory** is roughly **2.5× faster** and **10–15× cheaper** than Zep at the same memory scale when self-hosted.
+- **Zep Cloud** offers simplicity and hosted infra but with slower ingestion, higher latency, and no local-model support.
+- **Mem0** balances cost and ease of use but lacks cognitive structure (no sectorized memory).
+- **Vector DBs** remain efficient for raw similarity search but miss cognitive behaviors such as decay, episodic recall, and reflection.
 
 ---
 
@@ -246,6 +302,7 @@ make test
 ```
 
 ### Our Contributers:
+
 <!-- readme: contributors -start -->
 <!-- readme: contributors -end -->
 
@@ -258,9 +315,17 @@ Copyright (c) 2025 OpenMemory.
 
 ---
 
+## 👥 Community
+
+Join our [Discord](https://discord.gg/P7HaRayqTh) community to connect, share ideas, and take part in exciting discussions!
+
+---
+
 ## 11. Check out our other projects
+
 # PageLM: PageLM is a community-driven version of NotebookLM & an education platform that transforms study materials into interactive resources like quizzes, flashcards, notes, and podcasts.
- Link: https://github.com/CaviraOSS/PageLM
+
+Link: https://github.com/CaviraOSS/PageLM
 
 ### Positioning Statement
 
