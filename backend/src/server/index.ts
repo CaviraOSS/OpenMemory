@@ -6,6 +6,7 @@ import {
     addHSGMemory,
     hsgQuery,
     reinforceMemory,
+    updateMemory,
     runDecayProcess,
     pruneWeakWaypoints,
     SECTORS,
@@ -150,6 +151,22 @@ app.post('/memory/reinforce', async (req: any, res: any) => {
         res.json({ ok: true })
     } catch (error) {
         res.status(404).json({ err: 'nf' })
+    }
+})
+app.patch('/memory/:id', async (req: any, res: any) => {
+    const id = (req.params as any).id
+    const b = req.body as { content?: string, tags?: string[], metadata?: any }
+    if (!id) return res.status(400).json({ err: 'id' })
+    try {
+        const result = await updateMemory(id, b.content, b.tags, b.metadata)
+        res.json(result)
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('not found')) {
+            res.status(404).json({ err: 'nf' })
+        } else {
+            console.error('Error updating memory:', error)
+            res.status(500).json({ err: 'internal' })
+        }
     }
 })
 app.get('/memory/all', async (req: any, res: any) => {

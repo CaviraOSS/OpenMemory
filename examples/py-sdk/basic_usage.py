@@ -43,14 +43,30 @@ def basic_example():
             print(f"   {i+1}. [{match['primary_sector']}] {content_preview}")
             print(f"      Score: {match['score']:.3f}, Salience: {match['salience']:.3f}")
         
+        # Update a memory
+        if results['matches']:
+            print('\n4. Updating best match...')
+            memory_id = results['matches'][0]['id']
+            original_content = results['matches'][0]['content']
+            print(f"   Original: {original_content[:50]}...")
+            
+            # Update the memory with new content and tags
+            updated_memory = client.update(
+                memory_id, 
+                content="I went to Paris yesterday and absolutely loved the Eiffel Tower - it was even more beautiful than I imagined!",
+                tags=["travel", "paris", "eiffel-tower", "updated"],
+                metadata={"updated": True, "original_length": len(original_content)}
+            )
+            print(f"✅ Memory updated: {updated_memory}")
+        
         # Reinforce a memory
         if results['matches']:
-            print('\n4. Reinforcing best match...')
+            print('\n5. Reinforcing best match...')
             client.reinforce(results['matches'][0]['id'], 0.2)
             print('✅ Memory reinforced')
         
         # Get all memories
-        print('\n5. Listing all memories...')
+        print('\n6. Listing all memories...')
         all_memories = client.all(limit=10)
         print(f"✅ Total memories: {len(all_memories['items'])}")
         

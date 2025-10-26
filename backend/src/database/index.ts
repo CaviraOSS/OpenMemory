@@ -100,6 +100,12 @@ export const q = {
     upd_seen: {
         run: (...params: any[]) => runAsync('update memories set last_seen_at=?, salience=?, updated_at=? where id=?', params)
     },
+    upd_mem: {
+        run: (...params: any[]) => runAsync('update memories set content=?, tags=?, meta=?, updated_at=?, version=version+1 where id=?', params)
+    },
+    upd_mem_with_sector: {
+        run: (...params: any[]) => runAsync('update memories set content=?, primary_sector=?, tags=?, meta=?, updated_at=?, version=version+1 where id=?', params)
+    },
     del_mem: {
         run: (...params: any[]) => runAsync('delete from memories where id=?', params)
     },
@@ -149,7 +155,7 @@ export const q = {
         run: (threshold: number) => runAsync('delete from waypoints where weight < ?', [threshold])
     },
     ins_log: {
-        run: (...params: any[]) => runAsync('insert into embed_logs(id,model,status,ts,err) values(?,?,?,?,?)', params)
+        run: (...params: any[]) => runAsync('insert or replace into embed_logs(id,model,status,ts,err) values(?,?,?,?,?)', params)
     },
     upd_log: {
         run: (...params: any[]) => runAsync('update embed_logs set status=?, err=? where id=?', params)

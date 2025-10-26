@@ -72,6 +72,9 @@ except ImportError:
                 'total': 2
             }
         
+        def update(self, memory_id, content=None, tags=None, metadata=None):
+            return {'id': memory_id, 'updated': True}
+        
         def delete_memory(self, memory_id):
             return {'success': True}
         
@@ -219,6 +222,28 @@ def test_get_memory(memory_id):
     except Exception as e:
         assert_test(False, f'Get memory failed: {e}')
 
+def test_update_memory(memory_id):
+    """Test updating a memory"""
+    print('\n✏️ Testing Update Memory...')
+    
+    if not memory_id:
+        print('   Skipping update memory test - no memory ID available')
+        return
+    
+    try:
+        updated_memory = client.update(
+            memory_id,
+            content='This is an UPDATED test memory from Python SDK',
+            tags=['test', 'updated', 'py-sdk'],
+            metadata={'updated': True, 'source': 'py-sdk-test'}
+        )
+        
+        assert_property(updated_memory, 'id', 'Updated memory should have ID')
+        assert_property(updated_memory, 'updated', 'Updated memory should have updated flag')
+        assert_true(updated_memory['updated'], 'Updated flag should be True')
+    except Exception as e:
+        assert_test(False, f'Update memory failed: {e}')
+
 def test_query_memories():
     """Test querying memories"""
     print('\n🔎 Testing Query Memories...')
@@ -355,6 +380,7 @@ def run_python_tests():
         memory_id = test_add_memory()
         test_add_memory_with_metadata()
         test_get_memory(memory_id)
+        test_update_memory(memory_id)
         test_query_memories()
         test_query_with_graph()
         test_list_memories()

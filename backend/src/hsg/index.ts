@@ -499,3 +499,57 @@ export async function reinforceMemory(id: string, boost: number = 0.1): Promise<
     const newSalience = Math.min(REINFORCEMENT.max_salience, memory.salience + boost)
     await q.upd_seen.run(Date.now(), newSalience, Date.now(), id)
 }
+
+export async function updateMemory(
+    id: string,
+    content?: string,
+    tags?: string[],
+    metadata?: any
+): Promise<{ id: string, updated: boolean }> {
+    const memory = await q.get_mem.get(id)
+    if (!memory) throw new Error(`Memory ${id} not found`)
+
+    // Use existing values if not provided
+    const newContent = content || memory.content
+    const newTags = tags || memory.tags
+    const newMetadata = JSON.stringify(metadata || memory.meta) 
+
+    await transaction.begin()
+
+    try {
+        // If content changed, we need to update embeddings and potentially the primary sector
+        if (content !== undefined && content !== memory.content) {
+            const chunks = chunkText(newContent)
+            const useChunking = chunks.length > 1
+            const classification = classifyContent(newContent, metadata)
+            const allSectors = [classification.primary, ...classification.additional]
+
+            // Delete old vectors
+            await q.del_vec.run(id)
+
+            // Create new embeddings
+            const embeddingResults = await embedMultiSector(id, newContent, allSectors, useChunking ? chunks : undefined)
+            for (const result of embeddingResults) {
+                const vectorBuffer = vectorToBuffer(result.vector)
+                await q.ins_vec.run(id, result.sector, vectorBuffer, result.dim)
+            }
+
+            // Update mean vector
+            const meanVector = calculateMeanVector(embeddingResults, allSectors)
+            const meanVectorBuffer = vectorToBuffer(meanVector)
+            await q.upd_mean_vec.run(meanVector.length, meanVectorBuffer, id)
+
+            // Update memory record with new primary sector
+            await q.upd_mem_with_sector.run(newContent, classification.primary, newTags, newMetadata, Date.now(), id)
+        } else {
+            // Just update the memory record without changing embeddings
+            await q.upd_mem.run(newContent, newTags, newMetadata, Date.now(), id)
+        }
+
+        await transaction.commit()
+        return { id, updated: true }
+    } catch (error) {
+        await transaction.rollback()
+        throw error
+    }
+}

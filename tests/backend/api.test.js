@@ -134,6 +134,29 @@ async function testMemoryOperations() {
     assert(false, `Query memories failed: ${error.message}`);
   }
 
+  // Test memory update before deleting
+  if (testMemoryId) {
+    try {
+      console.log('   Testing memory update...');
+      const updateResponse = await makeRequest(`${BASE_URL}/memory/${testMemoryId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          content: 'This is an UPDATED test memory for backend API testing',
+          tags: ['test', 'updated'],
+          metadata: { updated: true }
+        })
+      });
+      
+      assertEqual(updateResponse.status, 200, 'Update memory should return 200 status');
+      assertProperty(updateResponse.data, 'id', 'Updated memory should have ID');
+      assertProperty(updateResponse.data, 'updated', 'Updated memory should have updated flag');
+      assertTrue(updateResponse.data.updated, 'Updated flag should be true');
+    } catch (error) {
+      assert(false, `Update memory failed: ${error.message}`);
+    }
+  }
+
   if (testMemoryId) {
     try {
       const response = await makeRequest(`${BASE_URL}/memory/${testMemoryId}`, {

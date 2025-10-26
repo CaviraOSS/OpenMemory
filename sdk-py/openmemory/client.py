@@ -126,6 +126,28 @@ class OpenMemory:
         """
         return self._r('POST', '/memory/reinforce', {'id': memory_id, 'boost': boost})
     
+    def update(self, memory_id: str, content: Optional[str] = None, 
+               tags: Optional[List[str]] = None, 
+               metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Update an existing memory.
+        
+        Args:
+            memory_id: Memory ID to update
+            content: New content (optional)
+            tags: New tags (optional)
+            metadata: New metadata (optional)
+        """
+        payload = {}
+        if content is not None:
+            payload['content'] = content
+        if tags is not None:
+            payload['tags'] = tags
+        if metadata is not None:
+            payload['metadata'] = metadata
+            
+        return self._r('PATCH', f'/memory/{memory_id}', payload)
+    
     def all(self, limit: int = 100, offset: int = 0, sector: Optional[str] = None) -> Dict[str, List]:
         """
         Get all memories with pagination.
