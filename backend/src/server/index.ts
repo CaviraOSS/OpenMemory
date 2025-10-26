@@ -1,6 +1,6 @@
 const server = require('./server.js')
 import { env } from '../config'
-import { db, q } from '../database'
+import { q } from '../database'
 import { now, rid, j, p } from '../utils'
 import {
     addHSGMemory,

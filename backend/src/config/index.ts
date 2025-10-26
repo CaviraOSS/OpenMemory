@@ -21,5 +21,7 @@ export const env = {
     mode: (process.env.OM_MODE || 'standard').toLowerCase(),
     lg_namespace: process.env.OM_LG_NAMESPACE || 'default',
     lg_max_context: Number(process.env.OM_LG_MAX_CONTEXT) || 50,
-    lg_reflective: (process.env.OM_LG_REFLECTIVE ?? 'true').toLowerCase() !== 'false'
+    lg_reflective: (process.env.OM_LG_REFLECTIVE ?? 'true').toLowerCase() !== 'false',
+    metadata_backend: (process.env.OM_METADATA_BACKEND || 'sqlite').toLowerCase(),
+    vector_backend: (process.env.OM_VECTOR_BACKEND || 'sqlite').toLowerCase()
 }

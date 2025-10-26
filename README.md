@@ -283,11 +283,10 @@ The CLI binds to stdin/stdout using the same toolset shown above, so HTTP and st
 | Phase | Focus                                          | Status         |
 | ----- | ---------------------------------------------- | -------------- |
 | v1.0  | Core HMD backend (multi-sector memory)         | ✅ Complete    |
-| v1.1  | Python SDK + Node SDK                          | ✅ Complete    |
+| v1.1  | Pluggable vector backends (pgvector, Weaviate) | ✅ Complete    |
 | v1.2  | Dashboard (React) + metrics                    | ⏳ In progress |
 | v1.3  | Learned sector classifier (Tiny Transformer)   | 🔜 Planned     |
 | v1.4  | Federated multi-node mode                      | 🔜 Planned     |
-| v1.5  | Pluggable vector backends (pgvector, Weaviate) | 🔜 Planned     |
 
 ---
 
