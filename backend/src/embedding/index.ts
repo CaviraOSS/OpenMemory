@@ -1,6 +1,10 @@
 import { env } from '../config'
 import { SECTOR_CONFIGS } from '../hsg'
 import { q } from '../database'
+import {
+    canonicalTokensFromText,
+    addSynonymTokens
+} from '../utils/text'
 
 // Global embedding queue for rate limiting
 let geminiQueue: Promise<any> = Promise.resolve()
@@ -228,23 +232,75 @@ async function embedWithLocal(text: string, sector: string): Promise<number[]> {
     }
 }
 
+function hashString(value: string): number {
+    let hash = 0x811c9dc5
+    for (let i = 0; i < value.length; i++) {
+        hash ^= value.charCodeAt(i)
+        hash = Math.imul(hash, 16777619)
+    }
+    return hash >>> 0
+}
+
+function addFeature(vector: Float32Array, dimension: number, key: string, weight: number) {
+    const hash = hashString(key)
+    const index = hash % dimension
+    const sign = (hash & 1) === 0 ? 1 : -1
+    vector[index] += weight * sign
+}
+
+function normalizeVector(vector: Float32Array) {
+    let norm = 0
+    for (let i = 0; i < vector.length; i++) {
+        norm += vector[i] * vector[i]
+    }
+    norm = Math.sqrt(norm)
+    if (!norm) return
+    for (let i = 0; i < vector.length; i++) {
+        vector[i] /= norm
+    }
+}
+
 function generateSyntheticEmbedding(text: string, sector: string): number[] {
-    const d = env.vec_dim
-    const v = new Array(d)
-
-    const sectorSeed = {
-        episodic: 0.13,
-        semantic: 0.17,
-        procedural: 0.19,
-        emotional: 0.23,
-        reflective: 0.29
-    }[sector] || 0.17
-
-    for (let i = 0; i < d; i++) {
-        v[i] = Math.sin(i * 0.7 + text.length * sectorSeed + sector.length * 0.11) % 1
+    const dimension = env.vec_dim || 768
+    const vector = new Float32Array(dimension).fill(0)
+    const canonicalTokens = canonicalTokensFromText(text)
+    if (canonicalTokens.length === 0) {
+        for (let i = 0; i < dimension; i++) {
+            vector[i] = 1 / Math.sqrt(dimension)
+        }
+        return Array.from(vector)
     }
 
-    return v as number[]
+    const enrichedTokens = Array.from(addSynonymTokens(canonicalTokens))
+    const tokenCounts = new Map<string, number>()
+    for (const token of enrichedTokens) {
+        if (!token) continue
+        const count = tokenCounts.get(token) ?? 0
+        tokenCounts.set(token, count + 1)
+    }
+
+    for (const [token, count] of tokenCounts.entries()) {
+        const weight = Math.log(1 + count) + 1
+        addFeature(vector, dimension, `${sector}|tok|${token}`, weight)
+
+        if (token.length >= 3) {
+            for (let i = 0; i < token.length - 2; i++) {
+                const trigram = token.slice(i, i + 3)
+                addFeature(vector, dimension, `${sector}|tri|${trigram}`, weight * 0.6)
+            }
+        }
+    }
+
+    for (let i = 0; i < canonicalTokens.length - 1; i++) {
+        const a = canonicalTokens[i]
+        const b = canonicalTokens[i + 1]
+        if (!a || !b) continue
+        const key = `${sector}|bi|${a}_${b}`
+        addFeature(vector, dimension, key, 1.2)
+    }
+
+    normalizeVector(vector)
+    return Array.from(vector)
 }
 
 function getSectorTaskType(sector: string): string {

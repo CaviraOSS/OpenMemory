@@ -15,23 +15,23 @@ Our goal is to ensure transparency, trust, and long-term sustainability for all 
 
 ## 2. Guiding Principles
 
-1. **Openness** — All major discussions, decisions, and changes happen publicly.  
-2. **Meritocracy** — Influence is earned through consistent, meaningful contributions.  
-3. **Accountability** — Maintainers act in the project’s best interest, not personal gain.  
-4. **Empowerment** — Contributors are encouraged to take initiative and propose improvements.  
+1. **Openness** — All major discussions, decisions, and changes happen publicly.
+2. **Meritocracy** — Influence is earned through consistent, meaningful contributions.
+3. **Accountability** — Maintainers act in the project’s best interest, not personal gain.
+4. **Empowerment** — Contributors are encouraged to take initiative and propose improvements.
 5. **Neutrality** — OpenMemory remains vendor-neutral and framework-agnostic.
 
 ---
 
 ## 3. Roles and Responsibilities
 
-| Role | Description |
-|------|--------------|
-| **Contributor** | Anyone who submits code, documentation, or feedback through issues or pull requests. |
-| **Reviewer** | Contributors with a proven track record who review pull requests for correctness, clarity, and quality. |
-| **Maintainer** | Trusted developers with merge rights and responsibility for a major subsystem (e.g., backend, JS SDK, or embeddings). |
-| **Lead Maintainer / Core Team** | Oversees project vision, approves roadmap changes, and manages releases. |
-| **Advisor (optional)** | Experienced external contributors providing technical or strategic input. |
+| Role                            | Description                                                                                                           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Contributor**                 | Anyone who submits code, documentation, or feedback through issues or pull requests.                                  |
+| **Reviewer**                    | Contributors with a proven track record who review pull requests for correctness, clarity, and quality.               |
+| **Maintainer**                  | Trusted developers with merge rights and responsibility for a major subsystem (e.g., backend, JS SDK, or embeddings). |
+| **Lead Maintainer / Core Team** | Oversees project vision, approves roadmap changes, and manages releases.                                              |
+| **Advisor (optional)**          | Experienced external contributors providing technical or strategic input.                                             |
 
 ---
 
@@ -50,13 +50,13 @@ A proposal passes with **majority approval (≥60%)**.
 
 OpenMemory is divided into modular components:
 
-| Module | Lead | Description |
-|---------|------|-------------|
-| `backend/` | Core Team | memory engine |
-| `sdk-js/` | JS Maintainer | JavaScript SDK for web and Node |
-| `sdk-py/` | Python Maintainer | Python SDK for researchers and AI devs |
-| `docs/` | Documentation Lead | Guides, diagrams, and developer docs |
-| `examples/` | Community | Reference implementations and agent demos |
+| Module      | Lead               | Description                               |
+| ----------- | ------------------ | ----------------------------------------- |
+| `backend/`  | Core Team          | memory engine                             |
+| `sdk-js/`   | JS Maintainer      | JavaScript SDK for web and Node           |
+| `sdk-py/`   | Python Maintainer  | Python SDK for researchers and AI devs    |
+| `docs/`     | Documentation Lead | Guides, diagrams, and developer docs      |
+| `examples/` | Community          | Reference implementations and agent demos |
 
 Each module may evolve independently as long as compatibility with the API contracts is maintained.
 
@@ -64,9 +64,9 @@ Each module may evolve independently as long as compatibility with the API contr
 
 ## 6. Roadmap and Releases
 
-- The roadmap is maintained publicly in `/docs/roadmap.md`.  
-- Minor releases every **3–4 weeks**.  
-- Major releases every **3–6 months**.  
+- The roadmap is maintained publicly in `/docs/roadmap.md`.
+- Minor releases every **3–4 weeks**.
+- Major releases every **3–6 months**.
 - Every release must:
   - Update `CHANGELOG.md`
   - Pass automated CI/CD checks
@@ -77,9 +77,10 @@ Each module may evolve independently as long as compatibility with the API contr
 ## 7. Conflict Resolution
 
 If disagreements arise:
-1. Seek consensus via respectful discussion.  
-2. If unresolved, escalate to core maintainers for mediation.  
-3. Persistent issues may be put to a formal vote by the core team.  
+
+1. Seek consensus via respectful discussion.
+2. If unresolved, escalate to core maintainers for mediation.
+3. Persistent issues may be put to a formal vote by the core team.
 
 Maintainers must act in good faith and prioritize project health.
 
@@ -88,9 +89,10 @@ Maintainers must act in good faith and prioritize project health.
 ## 8. Adding New Maintainers
 
 To become a maintainer:
-1. Be an active contributor for at least **3 months**.  
-2. Have at least **3+ approved PRs** merged.  
-3. Be nominated by an existing maintainer.  
+
+1. Be an active contributor for at least **3 months**.
+2. Have at least **3+ approved PRs** merged.
+3. Be nominated by an existing maintainer.
 4. Be confirmed by majority vote.
 
 Inactive maintainers (>90 days no activity) may be transitioned to **emeritus status**.
@@ -104,14 +106,15 @@ This governance document may be amended through a pull request approved by **two
 ---
 
 ### Current Core Team (2025)
-| Name | Role | Area |
-|------|------|------|
-| **nullure** | Lead Maintainer | Architecture & Vision |
-| **CaviraOss** | Organization | Infrastructure & Governance |
-| _(vacant)_ | Python Maintainer | SDK & API Sync |
-| _(vacant)_ | JS Maintainer | JS SDK, npm releases |
-| _(vacant)_ | Docs Maintainer | Docs & Community |
+
+| Name          | Role              | Area                        |
+| ------------- | ----------------- | --------------------------- |
+| **nullure**   | Lead Maintainer   | Architecture & Vision       |
+| **CaviraOss** | Organization      | Infrastructure & Governance |
+| _(vacant)_    | Python Maintainer | SDK & API Sync              |
+| _(vacant)_    | JS Maintainer     | JS SDK, npm releases        |
+| _(vacant)_    | Docs Maintainer   | Docs & Community            |
 
 ---
 
-*This document ensures OpenMemory remains a transparent, open, and long-lived project — open to contributors worldwide.*
+_This document ensures OpenMemory remains a transparent, open, and long-lived project — open to contributors worldwide. Document cannot be edited without nullure's approval and nullure owns all rights to the project OpenMemory_

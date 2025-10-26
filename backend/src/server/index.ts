@@ -1,6 +1,6 @@
 const server = require('./server.js')
 import { env } from '../config'
-import { db, q } from '../database'
+import { q } from '../database'
 import { now, rid, j, p } from '../utils'
 import {
     addHSGMemory,
@@ -15,6 +15,7 @@ import {
 import { getEmbeddingInfo } from '../embedding'
 import { ingestDocument, ingestURL } from '../ingestion'
 import { registerLangGraphEndpoints } from '../langgraph'
+import { registerMcpEndpoints } from '../mcp'
 import type {
     add_req,
     q_req,
@@ -229,12 +230,14 @@ app.delete('/memory/:id', async (req: any, res: any) => {
         if (!r) return res.status(404).json({ err: 'nf' })
         await q.del_mem.run(id)
         await q.del_vec.run(id)
+        await q.del_fts.run(id)
         await q.del_waypoints.run(id, id)
         res.json({ ok: true })
     } catch (error) {
         res.status(500).json({ err: 'internal' })
     }
 })
+registerMcpEndpoints(app)
 if (env.mode === 'langgraph') {
     console.log('[LGM] LangGraph integration mode enabled')
     registerLangGraphEndpoints(app)

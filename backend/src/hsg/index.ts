@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { buildSearchDocument, buildFtsQuery, canonicalTokenSet } from '../utils/text'
 export interface SectorConfig {
     model: string
     decay_lambda: number
@@ -335,6 +336,8 @@ export async function hsgQuery(
 ): Promise<HSGQueryResult[]> {
     const queryClassification = classifyContent(queryText)
     const candidateSectors = [queryClassification.primary, ...queryClassification.additional]
+    const queryTokens = canonicalTokenSet(queryText)
+    const lexicalScores = new Map<string, number>()
     const searchSectors = filters?.sectors?.length ?
         candidateSectors.filter(s => filters.sectors!.includes(s)) :
         candidateSectors
@@ -364,6 +367,21 @@ export async function hsgQuery(
             allMemoryIds.add(result.id)
         }
     }
+    const lexicalQuery = buildFtsQuery(queryText)
+    if (lexicalQuery) {
+        try {
+            const lexicalRows = await q.search_fts.all(lexicalQuery, Math.max(k * 4, 20))
+            lexicalRows.forEach((row: any, index: number) => {
+                const bm25Score = typeof row.score === 'number' ? row.score : index + 1
+                const score = 5 + 1 / (1 + bm25Score)
+                const previous = lexicalScores.get(row.id) ?? 0
+                if (score > previous) lexicalScores.set(row.id, score)
+                allMemoryIds.add(row.id)
+            })
+        } catch (error) {
+            console.warn('[HSG] FTS search failed, continuing with embedding results:', error)
+        }
+    }
     const expandedResults = await expandViaWaypoints(Array.from(allMemoryIds), k * 2)
     for (const expanded of expandedResults) {
         allMemoryIds.add(expanded.id)
@@ -386,12 +404,29 @@ export async function hsgQuery(
         const waypointWeight = expandedMatch?.weight || 0
         const daysSinceLastSeen = (Date.now() - memory.last_seen_at) / (1000 * 60 * 60 * 24)
         const currentSalience = calculateDecay(memory.primary_sector, memory.salience, daysSinceLastSeen)
-        const finalScore = computeRetrievalScore(
+        const memoryTokenSet = canonicalTokenSet(memory.content)
+        let overlap = 0
+        if (queryTokens.size) {
+            for (const token of queryTokens) {
+                if (memoryTokenSet.has(token)) overlap++
+            }
+        }
+        const overlapRatio = queryTokens.size ? overlap / queryTokens.size : 0
+        const lexicalBoost = Math.max(
+            lexicalScores.get(memoryId) ?? 0,
+            overlapRatio > 0 ? 4 + overlapRatio * 6 : 0
+        )
+        let finalScore = computeRetrievalScore(
             bestSimilarity,
             currentSalience,
             memory.last_seen_at,
             waypointWeight
         )
+        if (lexicalBoost > finalScore) {
+            finalScore = lexicalBoost
+        } else if (lexicalBoost > 0) {
+            finalScore += lexicalBoost * 0.2
+        }
         const memorySectors = await q.get_vecs_by_id.all(memoryId)
         const sectorList = memorySectors.map(v => v.sector)
         finalResults.push({
@@ -467,6 +502,8 @@ export async function addHSGMemory(
             null,
             null
         )
+        await q.del_fts.run(id)
+        await q.ins_fts.run(id, buildSearchDocument(content))
 
         const embeddingResults = await embedMultiSector(id, content, allSectors, useChunking ? chunks : undefined)
         for (const result of embeddingResults) {

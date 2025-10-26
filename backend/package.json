@@ -1,6 +1,6 @@
 {
     "name": "openmemory-backend",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "author": "nullure",
     "scripts": {
         "dev": "tsx src/server/index.ts",
@@ -8,15 +8,19 @@
         "start": "node dist/server/index.js"
     },
     "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.20.2",
         "dotenv": "^16.4.5",
         "mammoth": "^1.11.0",
         "pdf-parse": "^2.4.3",
+        "pg": "^8.16.3",
         "sqlite3": "^5.1.6",
         "turndown": "^7.2.1",
-        "ws": "^8.18.3"
+        "ws": "^8.18.3",
+        "zod": "^3.23.8"
     },
     "devDependencies": {
         "@types/node": "^20.10.5",
+        "@types/pg": "^8.15.5",
         "tsx": "^4.19.2",
         "typescript": "^5.6.3"
     }
