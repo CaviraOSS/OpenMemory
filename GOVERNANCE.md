@@ -6,7 +6,7 @@ _Last updated: 2025-10-18_
 
 ## 1. Overview
 
-**OpenMemory** is an open-source, community-driven project under the umbrella of **Spectrum Labs**.  
+**OpenMemory** is an open-source, community-driven project under the umbrella of **Spectrum Labs**.
 This document defines how decisions are made, who has authority within the project, and how contributors can grow into maintainers.
 
 Our goal is to ensure transparency, trust, and long-term sustainability for all contributors and users.
@@ -41,7 +41,7 @@ Our goal is to ensure transparency, trust, and long-term sustainability for all 
 - **Moderate changes** (new APIs, refactors): require two maintainers’ approval.
 - **Major proposals** (architecture redesign, deprecation, rebrand): discussed via a **Request for Comment (RFC)** issue and voted on by the core team.
 
-Each maintainer has one vote.  
+Each maintainer has one vote.
 A proposal passes with **majority approval (≥60%)**.
 
 ---

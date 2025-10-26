@@ -365,3 +365,10 @@ vite.config.ts.timestamp-*
 .vite/
 
 .idea
+
+# AI Agents files
+AGENTS.md
+CLAUDE.md
+
+# https://taskwing.app
+.taskwing
