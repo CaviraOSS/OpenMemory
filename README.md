@@ -150,6 +150,18 @@ Default ports:
 
 ## 5. API Overview
 
+### OpenAPI Documentation
+
+Full API documentation is available in OpenAPI 3.0 format: [`openapi.yaml`](./openapi.yaml)
+
+**View the documentation:**
+
+- **Online**: Upload `openapi.yaml` to [Swagger Editor](https://editor.swagger.io/)
+- **Local**: Use [Swagger UI](https://github.com/swagger-api/swagger-ui) or [Redoc](https://github.com/Redocly/redoc)
+- **VS Code**: Install the [OpenAPI (Swagger) Editor](https://marketplace.visualstudio.com/items?itemName=42Crunch.vscode-openapi) extension
+
+### Quick Reference
+
 | Method   | Endpoint        | Description               |
 | -------- | --------------- | ------------------------- |
 | `POST`   | `/memory/add`   | Add a memory item         |
