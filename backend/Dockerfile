@@ -1,4 +1,3 @@
-# 🧠 OpenMemory Backend - Brain-Inspired Memory System
 FROM node:20-alpine
 
 WORKDIR /app
