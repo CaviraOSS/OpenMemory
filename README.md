@@ -361,6 +361,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/jasonkneen">
+                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
+                    <br />
+                    <sub><b>Jason Kneen</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/muhammad-fiaz">
                     <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
                     <br />
@@ -381,6 +388,8 @@ make test
                     <sub><b>Brett Ammeson</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/Dhravya">
                     <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
@@ -388,8 +397,6 @@ make test
                     <sub><b>Dhravya Shah</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/josephgoksu">
                     <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
