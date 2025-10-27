@@ -9,7 +9,7 @@ import { registerLangGraphEndpoints } from '../langgraph';
 import { registerMcpEndpoints } from '../mcp';
 import type { add_req, q_req, ingest_req, ingest_url_req } from '../types';
 
-const app = server();
+const app = server({ max_payload_size: env.max_payload_size });
 
 app.use((req: any, res: any, next: any) => {
   res.setHeader('Access-Control-Allow-Origin', '*');

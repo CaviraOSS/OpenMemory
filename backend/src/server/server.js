@@ -26,7 +26,10 @@ const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
 const { parse } = require('url');
-function server() {
+function server(options = {}) {
+    const payloadLimit = Number.isFinite(options.max_payload_size) && options.max_payload_size > 0
+        ? options.max_payload_size
+        : 1e6;
     const ROUTES = [];
     const WARES = [];
     const WS_ROUTES = [];
@@ -159,7 +162,7 @@ function server() {
     use((req, res, next) => {
         if (req.headers['content-type']?.includes('application/json')) {
             let d = '';
-            let max = 1e6;
+            const max = payloadLimit;
             req.on('data', e => {
                 d += e;
                 if (d.length > max) {

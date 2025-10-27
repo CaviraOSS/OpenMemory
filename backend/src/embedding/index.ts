@@ -12,6 +12,14 @@ const OPENAI_MODEL_DIMENSIONS: Record<string, { min: number; max: number }> = {
   'text-embedding-3-large': { min: 1024, max: 3072 },
 };
 
+const DEFAULT_OPENAI_MODEL_MAP: Record<string, string> = {
+  episodic: 'text-embedding-3-small',
+  semantic: 'text-embedding-3-small',
+  procedural: 'text-embedding-3-small',
+  emotional: 'text-embedding-3-small',
+  reflective: 'text-embedding-3-large',
+};
+
 function resolveTargetDimension(model: string): number | undefined {
   const constraints = OPENAI_MODEL_DIMENSIONS[model];
   const targetDim = env.vec_dim;
@@ -30,6 +38,15 @@ function resolveTargetDimension(model: string): number | undefined {
 function coerceEmbeddingDimension(vector: number[]): number[] {
   const targetDim = Number.isFinite(env.vec_dim) && env.vec_dim > 0 ? env.vec_dim : vector.length;
   return resizeVector(vector, targetDim);
+}
+
+function resolveOpenAIModel(sector: string): string {
+  return env.openai_model || DEFAULT_OPENAI_MODEL_MAP[sector] || 'text-embedding-3-small';
+}
+
+function getOpenAIBaseUrl(): string {
+  const raw = (env.openai_base_url || 'https://api.openai.com/v1').trim();
+  return raw.replace(/\/$/, '');
 }
 
 export const emb_dim = () => env.vec_dim;
@@ -61,15 +78,7 @@ export async function embedForSector(text: string, sector: string): Promise<numb
 async function embedWithOpenAI(text: string, sector: string): Promise<number[]> {
   if (!env.openai_key) throw new Error('OpenAI API key not configured');
 
-  const modelMap: Record<string, string> = {
-    episodic: 'text-embedding-3-small',
-    semantic: 'text-embedding-3-small',
-    procedural: 'text-embedding-3-small',
-    emotional: 'text-embedding-3-small',
-    reflective: 'text-embedding-3-large',
-  };
-
-  const model = modelMap[sector] || 'text-embedding-3-small';
+  const model = resolveOpenAIModel(sector);
 
   const body: Record<string, unknown> = {
     input: text,
@@ -81,7 +90,8 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
     body.dimensions = targetDim;
   }
 
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
+  const baseUrl = getOpenAIBaseUrl();
+  const response = await fetch(`${baseUrl}/embeddings`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -109,7 +119,7 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
 async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<string, number[]>> {
   if (!env.openai_key) throw new Error('OpenAI API key not configured');
 
-  const model = 'text-embedding-3-small';
+  const model = env.openai_model || 'text-embedding-3-small';
   const inputTexts = Object.values(texts);
   const sectors = Object.keys(texts);
 
@@ -123,7 +133,8 @@ async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<s
     body.dimensions = targetDim;
   }
 
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
+  const baseUrl = getOpenAIBaseUrl();
+  const response = await fetch(`${baseUrl}/embeddings`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
@@ -542,13 +553,15 @@ export function getEmbeddingInfo(): Record<string, any> {
   switch (env.emb_kind) {
     case 'openai':
       info.configured = !!env.openai_key;
+      info.base_url = getOpenAIBaseUrl();
+      info.model_override = env.openai_model || null;
       info.batch_api = env.embed_mode === 'simple';
       info.models = {
-        episodic: 'text-embedding-3-small',
-        semantic: 'text-embedding-3-small',
-        procedural: 'text-embedding-3-small',
-        emotional: 'text-embedding-3-small',
-        reflective: 'text-embedding-3-large',
+        episodic: resolveOpenAIModel('episodic'),
+        semantic: resolveOpenAIModel('semantic'),
+        procedural: resolveOpenAIModel('procedural'),
+        emotional: resolveOpenAIModel('emotional'),
+        reflective: resolveOpenAIModel('reflective'),
       };
       break;
     case 'gemini':
