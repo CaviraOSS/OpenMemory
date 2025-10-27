@@ -26,7 +26,7 @@ const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
 const { parse } = require('url');
-function server() {
+function server(config = {}) {
     const ROUTES = [];
     const WARES = [];
     const WS_ROUTES = [];
@@ -159,7 +159,7 @@ function server() {
     use((req, res, next) => {
         if (req.headers['content-type']?.includes('application/json')) {
             let d = '';
-            let max = 1e6;
+            let max = config.max_payload_size || 1_000_000;
             req.on('data', e => {
                 d += e;
                 if (d.length > max) {
