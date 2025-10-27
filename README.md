@@ -25,21 +25,21 @@ This design offers better recall, lower latency, and explainable reasoning at a 
 
 ## 2. Competitor Comparison
 
-| Feature / Metric                                | **OpenMemory**                                                      | **Zep (Cloud)**                                  | **Supermemory (SaaS)** | **Mem0**           | **OpenAI Memory**           | **LangChain Memory** | **Vector DBs (Chroma / Weaviate / Pinecone)** |
-| ----------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ | ---------------------- | ------------------ | --------------------------- | -------------------- | --------------------------------------------- |
-| **Open-source**                                 | ✅ MIT                                                              | ❌ Closed (SaaS only)                            | ❌ Closed              | ✅ Apache          | ❌ Closed                   | ✅ Apache            | ✅ Varies                                     |
-| **Self-hosted**                                 | ✅                                                                  | ❌                                               | ❌                     | ✅                 | ❌                          | ✅                   | ✅                                            |
-| **Architecture**                                | HMD v2 (multi-sector + single-waypoint graph)                       | Flat embeddings (Postgres + FAISS)               | Flat embeddings        | Flat JSON memory   | Proprietary long-term cache | Context cache        | Vector index                                  |
-| **Avg response time (100k nodes)**              | 110–130 ms                                                          | 280–350 ms                                       | 350–400 ms             | 250 ms             | 300 ms                      | 200 ms               | 160 ms                                        |
-| **Retrieval depth**                             | Multi-sector fusion + 1-hop waypoint                                | Single embedding                                 | Single embedding       | Single embedding   | Unspecified                 | 1 session only       | Single embedding                              |
-| **Explainable recall paths**                    | ✅                                                                  | ❌                                               | ❌                     | ❌                 | ❌                          | ❌                   | ❌                                            |
-| **Cost per 1M tokens (with hosted embeddings)** | ~$0.30–0.40                                                         | ~$2.0–2.5                                        | ~$2.50+                | ~$1.20             | ~$3.00                      | User-managed         | User-managed                                  |
-| **Local embeddings support**                    | ✅ (Ollama / E5 / BGE)                                              | ❌                                               | ❌                     | ✅                 | ❌                          | Partial              | ✅                                            |
-| **Ingestion**                                   | ✅ (pdf, docx, txt, audio, website)                                 | ✅ (via API)                                     | ✅                     | ❌                 | ❌                          | ❌                   | ❌                                            |
-| **Scalability model**                           | Horizontally sharded by sector                                      | Cloud-native (Postgres + FAISS shards)           | Vendor scale only      | Single node        | Vendor scale                | In-memory            | Horizontally scalable                         |
-| **Deployment**                                  | Local / Docker / Cloud                                              | Cloud only                                       | Web only               | Node app           | Cloud                       | Python SDK           | Docker / Cloud                                |
-| **Data ownership**                              | 100% yours                                                          | Vendor                                           | Vendor                 | 100% yours         | Vendor                      | Yours                | Yours                                         |
-| **Use-case fit**                                | Long-term agent memory, assistants, journaling, enterprise copilots | Enterprise AI agents, retrieval-based assistants | SaaS AI assistants     | Basic agent memory | ChatGPT-only                | LLM framework        | Generic vector search                         |
+| Feature / Metric                                | **OpenMemory**                                                      | **Zep (Cloud)**                                  | **Supermemory (SaaS)**                                              | **Mem0**           | **OpenAI Memory**           | **LangChain Memory** | **Vector DBs (Chroma / Weaviate / Pinecone)** |
+| ----------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------- | ------------------ | --------------------------- | -------------------- | --------------------------------------------- |
+| **Open-source**                                 | ✅ MIT                                                              | ❌ Closed (SaaS only)                            | ❌ Closed (Source available)                                        | ✅ Apache          | ❌ Closed                   | ✅ Apache            | ✅ Varies                                     |
+| **Self-hosted**                                 | ✅                                                                  | ❌                                               | ✅ With managed cloud                                               | ✅                 | ❌                          | ✅                   | ✅                                            |
+| **Architecture**                                | HMD v2 (multi-sector + single-waypoint graph)                       | Flat embeddings (Postgres + FAISS)               | Graph + Embeddings                                                  | Flat JSON memory   | Proprietary long-term cache | Context cache        | Vector index                                  |
+| **Avg response time (100k nodes)**              | 110–130 ms                                                          | 280–350 ms                                       | 50–150 ms on-prem, 250–400 ms cloud                                 | 250 ms             | 300 ms                      | 200 ms               | 160 ms                                        |
+| **Retrieval depth**                             | Multi-sector fusion + 1-hop waypoint                                | Single embedding                                 | Single embedding with graph relations                               | Single embedding   | Unspecified                 | 1 session only       | Single embedding                              |
+| **Explainable recall paths**                    | ✅                                                                  | ❌                                               | ✅                                                                  | ❌                 | ❌                          | ❌                   | ❌                                            |
+| **Cost per 1M tokens (with hosted embeddings)** | ~$0.30–0.40                                                         | ~$2.0–2.5                                        | ~$2.50+                                                             | ~$1.20             | ~$3.00                      | User-managed         | User-managed                                  |
+| **Local embeddings support**                    | ✅ (Ollama / E5 / BGE)                                              | ❌                                               | ✅ (Self-hosted tier)                                               | ✅                 | ❌                          | Partial              | ✅                                            |
+| **Ingestion**                                   | ✅ (pdf, docx, txt, audio, website)                                 | ✅ (via API)                                     | ✅                                                                  | ❌                 | ❌                          | ❌                   | ❌                                            |
+| **Scalability model**                           | Horizontally sharded by sector                                      | Cloud-native (Postgres + FAISS shards)           | Cloud-native (Postgres)                                             | Single node        | Vendor scale                | In-memory            | Horizontally scalable                         |
+| **Deployment**                                  | Local / Docker / Cloud                                              | Cloud only                                       | Docker/Cloud                                                        | Node app           | Cloud                       | Python SDK           | Docker / Cloud                                |
+| **Data ownership**                              | 100% yours                                                          | Vendor                                           | Self-hosting available                                              | 100% yours         | Vendor                      | Yours                | Yours                                         |
+| **Use-case fit**                                | Long-term agent memory, assistants, journaling, enterprise copilots | Enterprise AI agents, retrieval-based assistants | Long-term agent memory, assistants, journaling, enterprise copilots | Basic agent memory | ChatGPT-only                | LLM framework        | Generic vector search                         |
 
 ### Summary
 
@@ -71,15 +71,43 @@ npm run dev
 Example `.env` configuration:
 
 ```ini
+# Core server
 OM_PORT=8080
-OM_DB_PATH=./data/openmemory.sqlite
+OM_MODE=standard
+OM_API_KEY=
+
+# Metadata store
+OM_METADATA_BACKEND=sqlite          # sqlite | postgres
+OM_DB_PATH=./data/openmemory.sqlite # used when sqlite
+
+# PostgreSQL (only when OM_METADATA_BACKEND=postgres or OM_VECTOR_BACKEND=pgvector)
+OM_PG_HOST=localhost
+OM_PG_PORT=5432
+OM_PG_DB=openmemory
+OM_PG_USER=postgres
+OM_PG_PASSWORD=postgres
+OM_PG_SCHEMA=public
+OM_PG_TABLE=openmemory_memories
+OM_PG_SSL=disable                   # disable | require
+
+# Vector store
+OM_VECTOR_BACKEND=sqlite            # sqlite | pgvector | weaviate
+OM_VECTOR_TABLE=openmemory_vectors
+OM_WEAVIATE_URL=
+OM_WEAVIATE_API_KEY=
+OM_WEAVIATE_CLASS=OpenMemory
+
+# Embeddings
 OM_EMBEDDINGS=openai
+OM_VEC_DIM=768
 OPENAI_API_KEY=
 GEMINI_API_KEY=
 OLLAMA_URL=http://localhost:11434
-OM_VEC_DIM=768
+LOCAL_MODEL_PATH=
 OM_MIN_SCORE=0.3
 OM_DECAY_LAMBDA=0.02
+
+# LangGraph integration (optional)
 OM_LG_NAMESPACE=default
 OM_LG_MAX_CONTEXT=50
 OM_LG_REFLECTIVE=true
@@ -115,7 +143,7 @@ Default ports:
 | Layer           | Technology                          | Description                         |
 | --------------- | ----------------------------------- | ----------------------------------- |
 | **Backend**     | Typescript                          | REST API and orchestration          |
-| **Storage**     | SQLite (WAL)                        | Memory metadata, vectors, waypoints |
+| **Storage**     | SQLite (default) / PostgreSQL       | Memory metadata, vectors, waypoints |
 | **Embeddings**  | E5 / BGE / OpenAI / Gemini / Ollama | Sector-specific embeddings          |
 | **Graph Logic** | In-process                          | Single-waypoint associative graph   |
 | **Scheduler**   | node-cron                           | Decay, pruning, log repair          |
@@ -149,6 +177,18 @@ Default ports:
 ---
 
 ## 5. API Overview
+
+### OpenAPI Documentation
+
+Full API documentation is available in OpenAPI 3.0 format: [`openapi.yaml`](./openapi.yaml)
+
+**View the documentation:**
+
+- **Online**: Upload `openapi.yaml` to [Swagger Editor](https://editor.swagger.io/)
+- **Local**: Use [Swagger UI](https://github.com/swagger-api/swagger-ui) or [Redoc](https://github.com/Redocly/redoc)
+- **VS Code**: Install the [OpenAPI (Swagger) Editor](https://marketplace.visualstudio.com/items?itemName=42Crunch.vscode-openapi) extension
+
+### Quick Reference
 
 | Method   | Endpoint        | Description               |
 | -------- | --------------- | ------------------------- |
@@ -314,6 +354,20 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/msris108">
+                    <img src="https://avatars.githubusercontent.com/u/43115330?v=4" width="100;" alt="msris108"/>
+                    <br />
+                    <sub><b>Sriram M</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/jasonkneen">
+                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
+                    <br />
+                    <sub><b>Jason Kneen</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/muhammad-fiaz">
                     <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
                     <br />
@@ -332,6 +386,15 @@ make test
                     <img src="https://avatars.githubusercontent.com/u/2522710?v=4" width="100;" alt="ammesonb"/>
                     <br />
                     <sub><b>Brett Ammeson</b></sub>
+                </a>
+            </td>
+		</tr>
+		<tr>
+            <td align="center">
+                <a href="https://github.com/Dhravya">
+                    <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
+                    <br />
+                    <sub><b>Dhravya Shah</b></sub>
                 </a>
             </td>
             <td align="center">

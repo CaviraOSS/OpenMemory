@@ -8,8 +8,23 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - OM_PORT=8080
-      - OM_DB_PATH=/data/openmemory.sqlite
+      - OM_PORT=${OM_PORT:-8080}
+      - OM_MODE=${OM_MODE:-standard}
+      - OM_METADATA_BACKEND=${OM_METADATA_BACKEND:-sqlite}
+      - OM_DB_PATH=${OM_DB_PATH:-/data/openmemory.sqlite}
+      - OM_PG_HOST=${OM_PG_HOST:-}
+      - OM_PG_PORT=${OM_PG_PORT:-5432}
+      - OM_PG_DB=${OM_PG_DB:-}
+      - OM_PG_USER=${OM_PG_USER:-}
+      - OM_PG_PASSWORD=${OM_PG_PASSWORD:-}
+      - OM_PG_SCHEMA=${OM_PG_SCHEMA:-public}
+      - OM_PG_TABLE=${OM_PG_TABLE:-openmemory_memories}
+      - OM_PG_SSL=${OM_PG_SSL:-disable}
+      - OM_VECTOR_BACKEND=${OM_VECTOR_BACKEND:-sqlite}
+      - OM_VECTOR_TABLE=${OM_VECTOR_TABLE:-openmemory_vectors}
+      - OM_WEAVIATE_URL=${OM_WEAVIATE_URL:-}
+      - OM_WEAVIATE_API_KEY=${OM_WEAVIATE_API_KEY:-}
+      - OM_WEAVIATE_CLASS=${OM_WEAVIATE_CLASS:-OpenMemory}
       - OM_API_KEY=${OM_API_KEY:-}
       - OM_EMBEDDINGS=${OM_EMBEDDINGS:-openai}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}

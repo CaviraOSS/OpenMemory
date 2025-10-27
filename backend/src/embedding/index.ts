@@ -76,36 +76,34 @@ export async function embedForSector(text: string, sector: string): Promise<numb
 }
 
 async function embedWithOpenAI(text: string, sector: string): Promise<number[]> {
-  if (!env.openai_key) throw new Error('OpenAI API key not configured');
+    if (!env.openai_key) throw new Error('OpenAI API key not configured')
 
-  const model = resolveOpenAIModel(sector);
+    const defaultModelMap: Record<string, string> = {
+        episodic: 'text-embedding-3-small',
+        semantic: 'text-embedding-3-small',
+        procedural: 'text-embedding-3-small',
+        emotional: 'text-embedding-3-small',
+        reflective: 'text-embedding-3-large'
+    }
 
-  const body: Record<string, unknown> = {
-    input: text,
-    model,
-  };
+    const model = env.openai_model || defaultModelMap[sector] || 'text-embedding-3-small'
 
-  const targetDim = resolveTargetDimension(model);
-  if (targetDim) {
-    body.dimensions = targetDim;
-  }
+    const baseUrl = env.openai_base_url.replace(/\/$/, '')
+    const response = await fetch(`${baseUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'authorization': `Bearer ${env.openai_key}`
+        },
+        body: JSON.stringify({
+            input: text,
+            model,
+            dimensions: env.vec_dim
+        })
+    })
 
-  const baseUrl = getOpenAIBaseUrl();
-  const response = await fetch(`${baseUrl}/embeddings`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${env.openai_key}`,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    let detail = '';
-    try {
-      detail = await response.text();
-    } catch {
-      // ignore body parsing failure
+    if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`)
     }
     const suffix = detail ? ` - ${detail}` : '';
     throw new Error(`OpenAI API error: ${response.status} ${response.statusText}${suffix}`);
@@ -117,38 +115,28 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
 }
 
 async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<string, number[]>> {
-  if (!env.openai_key) throw new Error('OpenAI API key not configured');
+    if (!env.openai_key) throw new Error('OpenAI API key not configured')
 
-  const model = env.openai_model || 'text-embedding-3-small';
-  const inputTexts = Object.values(texts);
-  const sectors = Object.keys(texts);
+    const model = env.openai_model || 'text-embedding-3-small'
+    const inputTexts = Object.values(texts)
+    const sectors = Object.keys(texts)
 
-  const body: Record<string, unknown> = {
-    input: inputTexts,
-    model,
-  };
+    const baseUrl = env.openai_base_url.replace(/\/$/, '')
+    const response = await fetch(`${baseUrl}/embeddings`, {
+        method: 'POST',
+        headers: {
+            'content-type': 'application/json',
+            'authorization': `Bearer ${env.openai_key}`
+        },
+        body: JSON.stringify({
+            input: inputTexts,
+            model,
+            dimensions: env.vec_dim
+        })
+    })
 
-  const targetDim = resolveTargetDimension(model);
-  if (targetDim) {
-    body.dimensions = targetDim;
-  }
-
-  const baseUrl = getOpenAIBaseUrl();
-  const response = await fetch(`${baseUrl}/embeddings`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${env.openai_key}`,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    let detail = '';
-    try {
-      detail = await response.text();
-    } catch {
-      // ignore body parsing failure
+    if (!response.ok) {
+        throw new Error(`OpenAI batch API error: ${response.status} ${response.statusText}`)
     }
     const suffix = detail ? ` - ${detail}` : '';
     throw new Error(`OpenAI batch API error: ${response.status} ${response.statusText}${suffix}`);
@@ -541,53 +529,53 @@ export function getEmbeddingProvider(): string {
 }
 
 export function getEmbeddingInfo(): Record<string, any> {
-  const info: Record<string, any> = {
-    provider: env.emb_kind,
-    dimensions: env.vec_dim,
-    mode: env.embed_mode,
-    batch_support: env.embed_mode === 'simple' && (env.emb_kind === 'gemini' || env.emb_kind === 'openai'),
-    advanced_parallel: env.adv_embed_parallel,
-    embed_delay_ms: env.embed_delay_ms,
-  };
+    const info: Record<string, any> = {
+        provider: env.emb_kind,
+        dimensions: env.vec_dim,
+        mode: env.embed_mode,
+        batch_support: env.embed_mode === 'simple' && (env.emb_kind === 'gemini' || env.emb_kind === 'openai'),
+        advanced_parallel: env.adv_embed_parallel,
+        embed_delay_ms: env.embed_delay_ms
+    }
 
-  switch (env.emb_kind) {
-    case 'openai':
-      info.configured = !!env.openai_key;
-      info.base_url = getOpenAIBaseUrl();
-      info.model_override = env.openai_model || null;
-      info.batch_api = env.embed_mode === 'simple';
-      info.models = {
-        episodic: resolveOpenAIModel('episodic'),
-        semantic: resolveOpenAIModel('semantic'),
-        procedural: resolveOpenAIModel('procedural'),
-        emotional: resolveOpenAIModel('emotional'),
-        reflective: resolveOpenAIModel('reflective'),
-      };
-      break;
-    case 'gemini':
-      info.configured = !!env.gemini_key;
-      info.batch_api = env.embed_mode === 'simple';
-      info.model = 'embedding-001';
-      break;
-    case 'ollama':
-      info.configured = true;
-      info.url = env.ollama_url;
-      info.models = {
-        episodic: 'nomic-embed-text',
-        semantic: 'nomic-embed-text',
-        procedural: 'bge-small',
-        emotional: 'nomic-embed-text',
-        reflective: 'bge-large',
-      };
-      break;
-    case 'local':
-      info.configured = !!env.local_model_path;
-      info.path = env.local_model_path;
-      break;
-    default:
-      info.configured = true;
-      info.type = 'synthetic';
-  }
+    switch (env.emb_kind) {
+        case 'openai':
+            info.configured = !!env.openai_key
+            info.base_url = env.openai_base_url
+            info.model_override = env.openai_model || null
+            info.batch_api = env.embed_mode === 'simple'
+            info.models = {
+                episodic: env.openai_model || 'text-embedding-3-small',
+                semantic: env.openai_model || 'text-embedding-3-small',
+                procedural: env.openai_model || 'text-embedding-3-small',
+                emotional: env.openai_model || 'text-embedding-3-small',
+                reflective: env.openai_model || 'text-embedding-3-large'
+            }
+            break
+        case 'gemini':
+            info.configured = !!env.gemini_key
+            info.batch_api = env.embed_mode === 'simple'
+            info.model = 'embedding-001'
+            break
+        case 'ollama':
+            info.configured = true
+            info.url = env.ollama_url
+            info.models = {
+                episodic: 'nomic-embed-text',
+                semantic: 'nomic-embed-text',
+                procedural: 'bge-small',
+                emotional: 'nomic-embed-text',
+                reflective: 'bge-large'
+            }
+            break
+        case 'local':
+            info.configured = !!env.local_model_path
+            info.path = env.local_model_path
+            break
+        default:
+            info.configured = true
+            info.type = 'synthetic'
+    }
 
-  return info;
+    return info
 }
