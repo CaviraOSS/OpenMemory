@@ -39,7 +39,7 @@ export async function embedForSector(text: string, sector: string): Promise<numb
 async function embedWithOpenAI(text: string, sector: string): Promise<number[]> {
     if (!env.openai_key) throw new Error('OpenAI API key not configured')
 
-    const modelMap: Record<string, string> = {
+    const defaultModelMap: Record<string, string> = {
         episodic: 'text-embedding-3-small',
         semantic: 'text-embedding-3-small',
         procedural: 'text-embedding-3-small',
@@ -47,9 +47,10 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
         reflective: 'text-embedding-3-large'
     }
 
-    const model = modelMap[sector] || 'text-embedding-3-small'
+    const model = env.openai_model || defaultModelMap[sector] || 'text-embedding-3-small'
 
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
+    const baseUrl = env.openai_base_url.replace(/\/$/, '')
+    const response = await fetch(`${baseUrl}/embeddings`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json',
@@ -58,7 +59,7 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
         body: JSON.stringify({
             input: text,
             model,
-            dimensions: env.vec_dim <= 1536 ? env.vec_dim : undefined
+            dimensions: env.vec_dim
         })
     })
 
@@ -73,11 +74,12 @@ async function embedWithOpenAI(text: string, sector: string): Promise<number[]> 
 async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<string, number[]>> {
     if (!env.openai_key) throw new Error('OpenAI API key not configured')
 
-    const model = 'text-embedding-3-small'
+    const model = env.openai_model || 'text-embedding-3-small'
     const inputTexts = Object.values(texts)
     const sectors = Object.keys(texts)
 
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
+    const baseUrl = env.openai_base_url.replace(/\/$/, '')
+    const response = await fetch(`${baseUrl}/embeddings`, {
         method: 'POST',
         headers: {
             'content-type': 'application/json',
@@ -86,7 +88,7 @@ async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<s
         body: JSON.stringify({
             input: inputTexts,
             model,
-            dimensions: env.vec_dim <= 1536 ? env.vec_dim : undefined
+            dimensions: env.vec_dim
         })
     })
 
@@ -492,13 +494,15 @@ export function getEmbeddingInfo(): Record<string, any> {
     switch (env.emb_kind) {
         case 'openai':
             info.configured = !!env.openai_key
+            info.base_url = env.openai_base_url
+            info.model_override = env.openai_model || null
             info.batch_api = env.embed_mode === 'simple'
             info.models = {
-                episodic: 'text-embedding-3-small',
-                semantic: 'text-embedding-3-small',
-                procedural: 'text-embedding-3-small',
-                emotional: 'text-embedding-3-small',
-                reflective: 'text-embedding-3-large'
+                episodic: env.openai_model || 'text-embedding-3-small',
+                semantic: env.openai_model || 'text-embedding-3-small',
+                procedural: env.openai_model || 'text-embedding-3-small',
+                emotional: env.openai_model || 'text-embedding-3-small',
+                reflective: env.openai_model || 'text-embedding-3-large'
             }
             break
         case 'gemini':
