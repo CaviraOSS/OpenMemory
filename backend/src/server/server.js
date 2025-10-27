@@ -26,10 +26,10 @@ const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
 const { parse } = require('url');
-function server(options = {}) {
-    const payloadLimit = Number.isFinite(options.max_payload_size) && options.max_payload_size > 0
-        ? options.max_payload_size
-        : 1e6;
+function server(config = {}) {
+    const payloadLimit = Number.isFinite(config.max_payload_size) && config.max_payload_size > 0
+        ? config.max_payload_size
+        : 1_000_000;
     const ROUTES = [];
     const WARES = [];
     const WS_ROUTES = [];
