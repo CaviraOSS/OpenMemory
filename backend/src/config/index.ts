@@ -21,7 +21,6 @@ export const env = {
     max_payload_size: Number(process.env.OM_MAX_PAYLOAD_SIZE) || 1_000_000,
     min_score: Number(process.env.OM_MIN_SCORE) || 0.3,
     decay_lambda: Number(process.env.OM_DECAY_LAMBDA) || 0.02,
-    max_payload_size: Number(process.env.OM_MAX_PAYLOAD_SIZE) || 1_000_000,
     mode: (process.env.OM_MODE || 'standard').toLowerCase(),
     lg_namespace: process.env.OM_LG_NAMESPACE || 'default',
     lg_max_context: Number(process.env.OM_LG_MAX_CONTEXT) || 50,
