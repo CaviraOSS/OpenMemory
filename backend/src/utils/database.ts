@@ -1,6 +1,6 @@
 import sqlite3 from 'sqlite3'
 import { Pool, PoolClient } from 'pg'
-import { env } from '../config'
+import { env } from './config'
 import fs from 'node:fs'
 import path from 'node:path'
 

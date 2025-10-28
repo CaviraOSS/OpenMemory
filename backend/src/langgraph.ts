@@ -1,14 +1,14 @@
-import { env } from '../config'
-import { addHSGMemory, hsgQuery } from '../hsg'
-import { q } from '../database'
-import { now, j } from '../utils'
+import { env } from './utils/config'
+import { addHSGMemory, hsgQuery } from './hsg'
+import { q } from './utils/database'
+import { now, j } from './utils'
 import type {
     lgm_store_req,
     lgm_retrieve_req,
     lgm_context_req,
     lgm_reflection_req,
     SectorType
-} from '../types'
+} from './types'
 
 type MemoryRow = {
     id: string

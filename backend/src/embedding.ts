@@ -1,10 +1,10 @@
-import { env } from '../config'
-import { SECTOR_CONFIGS } from '../hsg'
-import { q } from '../database'
+import { env } from './utils/config'
+import { SECTOR_CONFIGS } from './hsg'
+import { q } from './utils/database'
 import {
     canonicalTokensFromText,
     addSynonymTokens
-} from '../utils/text'
+} from './utils/text'
 
 // Global embedding queue for rate limiting
 let geminiQueue: Promise<any> = Promise.resolve()
