@@ -1,4 +1,4 @@
-const { OpenMemory, SECTORS } = require('@openmemory/sdk-js')
+const { OpenMemory, SECTORS } = require('@openmemory/SDK/javascript')
 
 const client = new OpenMemory({
     baseUrl: 'http://localhost:8080'

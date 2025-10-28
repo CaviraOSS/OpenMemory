@@ -5,7 +5,7 @@ import os
 import asyncio
 import aiohttp
 import time
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'SDK/python'))
 
 from openmemory import OpenMemory
 

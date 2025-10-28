@@ -79,7 +79,7 @@ npm run build
 
 ```bash
 # Navigate to JS SDK
-cd sdk-js
+cd SDK/javascript
 
 # Install dependencies
 npm install
@@ -99,7 +99,7 @@ node basic-usage.js
 
 ```bash
 # Navigate to Python SDK
-cd sdk-py
+cd SDK/python
 
 # Install development dependencies (optional)
 pip install -e .[dev]
@@ -180,14 +180,14 @@ npm run test:coverage   # Run tests with coverage
 
 #### JavaScript SDK Tests
 ```bash
-cd sdk-js
+cd SDK/javascript
 npm test                # Run Jest tests
 npm run test:e2e       # Run end-to-end tests
 ```
 
 #### Python SDK Tests
 ```bash
-cd sdk-py
+cd SDK/python
 python -m pytest tests/              # Run all tests
 python -m pytest tests/ -v          # Verbose output
 python -m pytest tests/ --cov       # With coverage

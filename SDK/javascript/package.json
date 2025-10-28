@@ -35,6 +35,6 @@
     "repository": {
         "type": "git",
         "url": "https://github.com/caviraoss/openmemory.git",
-        "directory": "sdk-js"
+        "directory": "SDK/javascript"
     }
 }

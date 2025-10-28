@@ -8,7 +8,7 @@ let testResults = { passed: 0, failed: 0, total: 0, failures: [] };
 
 let OpenMemory;
 try {
-  OpenMemory = require('../../sdk-js/dist/index.js');
+  OpenMemory = require('../../SDK/javascript/dist/index.js');
 } catch (error) {
   console.log('Warning: SDK not found, using mock implementation for basic testing');
 

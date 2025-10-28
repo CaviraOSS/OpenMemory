@@ -1,4 +1,4 @@
-const { OpenMemory, SECTORS } = require('../../sdk-js/src/index.ts')
+const { OpenMemory, SECTORS } = require('../../SDK/javascript/src/index.ts')
 
 const client = new OpenMemory({
     baseUrl: 'http://localhost:8080',

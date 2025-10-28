@@ -11,7 +11,7 @@ import urllib.error
 from typing import Optional, Dict, Any
 
 # Add the SDK to the path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'SDK/python'))
 
 # Try to import the SDK, fallback to mock if not available
 try:

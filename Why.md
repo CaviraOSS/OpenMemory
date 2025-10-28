@@ -30,7 +30,7 @@ Vector databases like **Chroma**, **Weaviate**, or **Pinecone** are excellent fo
 
 | Factor | Supermemory (SaaS) | OpenAI Memory | OpenMemory |
 |---------|--------------------|---------------|-------------|
-| **Ownership** | Closed SaaS | Closed SaaS | Open-source MIT |
+| **Ownership** | Significantly closed | Closed SaaS | Open-source MIT |
 | **Hosting** | Cloud only | Cloud only | Self-hosted or cloud |
 | **Explainability** | Black-box | Black-box | Transparent |
 | **Architecture** | Flat embeddings | Proprietary | HMD v2 (multi-sector + single-waypoint graph) |
@@ -148,3 +148,9 @@ This turns static storage into **a cognitive substrate for AI**.
 
 > **OpenMemory = Cognitive storage for AI agents.**
 > Not just another vector DB — it’s the *brain behind your AI*.
+
+---
+
+## 9. Caveats & Accuracy
+
+Note: the figures and comparisons above are approximate and may not be accurate for every environment or over time.
