@@ -12,12 +12,12 @@ function makeRequest(method, path, body = null) {
       port: 8080,
       path,
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : {}
+      headers: body ? { 'Content-Type': 'application/json' } : {},
     };
 
     const req = http.request(options, (res) => {
       let data = '';
-      res.on('data', chunk => data += chunk);
+      res.on('data', (chunk) => (data += chunk));
       res.on('end', () => {
         try {
           resolve({ status: res.statusCode, data: JSON.parse(data) });
@@ -102,13 +102,17 @@ Hierarchical memory decomposition represents a promising approach to building mo
 The future of AI memory systems lies in sophisticated integration of these layers, enabling machines to not just store information, but to understand context, learn from experience, and adapt to user needs in increasingly natural ways.
 `.trim();
 
-  console.log(`📝 Document length: ${largeDocument.length} characters (~${Math.ceil(largeDocument.length / 4)} tokens)\n`);
+  console.log(
+    `📝 Document length: ${largeDocument.length} characters (~${Math.ceil(
+      largeDocument.length / 4,
+    )} tokens)\n`,
+  );
 
   console.log('📤 Sending large document to /memory/add...');
   const start = Date.now();
   const response = await makeRequest('POST', '/memory/add', {
     content: largeDocument,
-    tags: ['ai', 'memory-systems', 'architecture']
+    tags: ['ai', 'memory-systems', 'architecture'],
   });
   const duration = Date.now() - start;
 
@@ -118,17 +122,22 @@ The future of AI memory systems lies in sophisticated integration of these layer
   console.log(`   All sectors: ${response.data.sectors.join(', ')}`);
   console.log(`   Chunks processed: ${response.data.chunks || 1}`);
 
-  console.log('\n🔍 Testing retrieval with query...');
+  const memoryId = response.data.id;
+
+  console.log('\n🔍 Testing retrieval with specific query...');
   const queryStart = Date.now();
   const queryResponse = await makeRequest('POST', '/memory/query', {
     query: 'How do episodic and semantic memory differ in AI systems?',
-    k: 3
+    k: 5,
   });
   const queryDuration = Date.now() - queryStart;
 
   console.log(`\n✅ Query completed in ${queryDuration}ms`);
   console.log(`   Found ${queryResponse.data.matches.length} matches`);
-  
+
+  let retrievedOurMemory = false;
+  let ourMemoryScore = 0;
+
   if (queryResponse.data.matches.length > 0) {
     const topMatch = queryResponse.data.matches[0];
     console.log(`\n📊 Top match:`);
@@ -137,12 +146,67 @@ The future of AI memory systems lies in sophisticated integration of these layer
     console.log(`   Sectors: ${topMatch.sectors.join(', ')}`);
     console.log(`   Content preview: ${topMatch.content.substring(0, 100)}...`);
     console.log(`   Path: ${topMatch.path.join(' → ')}`);
+
+    const match = queryResponse.data.matches.find((m) => m.id === memoryId);
+    if (match) {
+      retrievedOurMemory = true;
+      ourMemoryScore = match.score;
+      const position = queryResponse.data.matches.indexOf(match) + 1;
+      console.log(
+        `\n✅ Retrieved our memory at position ${position} with score ${ourMemoryScore.toFixed(
+          4,
+        )}`,
+      );
+    } else {
+      console.log(
+        `\n⚠️  Our memory not in top ${queryResponse.data.matches.length} results`,
+      );
+    }
   }
+
+  console.log('\n🔍 Testing multiple queries for accuracy...');
+  const testQueries = [
+    {
+      q: 'What are the characteristics of episodic memory?',
+      expect: 'episodic',
+    },
+    {
+      q: 'Explain semantic memory and knowledge representation',
+      expect: 'semantic',
+    },
+    { q: 'How does procedural memory work in AI?', expect: 'procedural' },
+    {
+      q: 'What is reflective memory and meta-cognition?',
+      expect: 'reflective',
+    },
+  ];
+
+  let accuracyCount = 0;
+  for (const test of testQueries) {
+    const qr = await makeRequest('POST', '/memory/query', {
+      query: test.q,
+      k: 3,
+    });
+    const hasOurMemory = qr.data.matches.some((m) => m.id === memoryId);
+    const topContent = qr.data.matches[0]?.content.toLowerCase() || '';
+    const relevant = hasOurMemory && topContent.includes(test.expect);
+
+    if (relevant) accuracyCount++;
+    console.log(
+      `   ${relevant ? '✅' : '❌'} "${test.q.substring(0, 50)}..." - ${
+        hasOurMemory ? 'found' : 'missing'
+      }`,
+    );
+  }
+
+  const accuracy = ((accuracyCount / testQueries.length) * 100).toFixed(1);
+  console.log(
+    `\n📊 Retrieval accuracy: ${accuracy}% (${accuracyCount}/${testQueries.length} queries returned relevant results)`,
+  );
 
   console.log('\n🔗 Verifying single waypoint rule maintained...');
   const allMem = await makeRequest('GET', '/memory/all?l=100');
   const totalMemories = allMem.data.items.length;
-
 
   console.log(`   Total memories: ${totalMemories}`);
   console.log(`   Single memory stored despite large size: ✅`);
@@ -150,16 +214,30 @@ The future of AI memory systems lies in sophisticated integration of these layer
 
   console.log('\n🎉 Large context test complete!');
   console.log('\n📝 Summary:');
-  console.log(`   ✅ Large document (~${Math.ceil(largeDocument.length / 4)} tokens) successfully stored as single memory`);
-  console.log(`   ✅ Chunking automatically applied (${response.data.chunks || 1} chunks)`);
+  console.log(
+    `   ✅ Large document (~${Math.ceil(
+      largeDocument.length / 4,
+    )} tokens) stored as single memory`,
+  );
+  console.log(
+    `   ✅ Chunking automatically applied (${
+      response.data.chunks || 1
+    } chunks)`,
+  );
   console.log(`   ✅ Multi-sector embeddings created per sector`);
   console.log(`   ✅ Single waypoint rule maintained (O(n) graph structure)`);
-  console.log(`   ✅ Query retrieval working (${queryDuration}ms)`);
-  
+  console.log(`   ✅ Initial query retrieval: ${queryDuration}ms`);
+  console.log(`   ✅ Retrieval accuracy: ${accuracy}%`);
+  console.log(
+    `   ${retrievedOurMemory ? '✅' : '⚠️'}  Memory retrievable: ${
+      retrievedOurMemory ? 'YES' : 'NO'
+    } ${retrievedOurMemory ? `(score: ${ourMemoryScore.toFixed(4)})` : ''}`,
+  );
+
   process.exit(0);
 }
 
-testLargeContext().catch(err => {
+testLargeContext().catch((err) => {
   console.error('❌ Test failed:', err);
   process.exit(1);
 });
