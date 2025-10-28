@@ -1,8 +1,7 @@
 import { addHSGMemory } from '../hsg'
-import { q, transaction } from '../database'
+import { q, transaction } from '../utils/database'
 import { rid, now, j } from '../utils'
 import { extractText, ExtractionResult } from './extractors'
-import type { SectorType } from '../types'
 
 const LARGE_DOC_THRESHOLD = 8000
 const SECTION_SIZE = 3000

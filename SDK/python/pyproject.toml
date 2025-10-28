@@ -50,7 +50,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/caviraoss/openmemory"
-Documentation = "https://github.com/caviraoss/openmemory/tree/main/sdk-py"
+Documentation = "https://github.com/caviraoss/openmemory/tree/main/SDK/python"
 Repository = "https://github.com/caviraoss/openmemory.git"
 "Bug Reports" = "https://github.com/caviraoss/openmemory/issues"
 

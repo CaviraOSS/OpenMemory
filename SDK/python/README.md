@@ -210,4 +210,4 @@ MIT
 
 - **Docs:** https://openmemory.cavira.app
 - **GitHub:** https://github.com/caviraoss/openmemory
-- **SDK (JS):** https://github.com/caviraoss/openmemory-sdk-js
+- **SDK (JS):** https://github.com/caviraoss/openmemory-SDK/javascript

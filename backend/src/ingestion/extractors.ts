@@ -1,9 +1,5 @@
-import { exec } from 'child_process'
-import { promisify } from 'util'
 import mammoth from 'mammoth'
 const TurndownService = require('turndown')
-
-const execAsync = promisify(exec)
 
 export interface ExtractionResult {
     text: string

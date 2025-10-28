@@ -4,7 +4,7 @@ import sys
 import os
 import json
 import time
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'SDK/python'))
 
 from openmemory import OpenMemory
 

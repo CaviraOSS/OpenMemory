@@ -1,6 +1,6 @@
-import { allAsync, runAsync } from '../database'
-import { now } from '../utils'
-import { env } from '../config'
+import { allAsync, runAsync } from './utils/database'
+import { now } from './utils'
+import { env } from './utils/config'
 export const apply_decay = async () => {
     const memories = await allAsync('select id,salience,decay_lambda,last_seen_at,updated_at from memories')
     const n = now()

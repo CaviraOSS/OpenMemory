@@ -14,16 +14,16 @@ install: ## Install all dependencies
 	@echo "📦 Installing backend dependencies..."
 	cd backend && npm install
 	@echo "📦 Installing JavaScript SDK dependencies..."
-	cd sdk-js && npm install
+	cd SDK/javascript && npm install
 	@echo "📦 Installing Python SDK dependencies..."
-	cd sdk-py && pip install -e .
+	cd SDK/python && pip install -e .
 	@echo "✅ All dependencies installed!"
 
 install-dev: ## Install development dependencies
 	@echo "🛠️ Installing development dependencies..."
 	cd backend && npm install
-	cd sdk-js && npm install
-	cd sdk-py && pip install -e .[dev]
+	cd SDK/javascript && npm install
+	cd SDK/python && pip install -e .[dev]
 	@echo "✅ Development dependencies installed!"
 
 # Build
@@ -31,14 +31,14 @@ build: ## Build all components
 	@echo "🏗️ Building backend..."
 	cd backend && npm run build
 	@echo "🏗️ Building JavaScript SDK..."
-	cd sdk-js && npm run build
+	cd SDK/javascript && npm run build
 	@echo "✅ All components built!"
 
 build-backend: ## Build backend only
 	cd backend && npm run build
 
 build-js-sdk: ## Build JavaScript SDK only
-	cd sdk-js && npm run build
+	cd SDK/javascript && npm run build
 
 # Development
 dev: ## Start development server
@@ -88,19 +88,19 @@ test-integration: ## Run integration tests
 lint: ## Run linters
 	@echo "🔍 Running linters..."
 	cd backend && npm run lint || echo "Backend linting completed"
-	cd sdk-js && npm run lint || echo "JS SDK linting completed"
-	cd sdk-py && python -m flake8 . || echo "Python linting completed"
+	cd SDK/javascript && npm run lint || echo "JS SDK linting completed"
+	cd SDK/python && python -m flake8 . || echo "Python linting completed"
 
 format: ## Format code
 	@echo "🎨 Formatting code..."
 	cd backend && npm run format || echo "Backend formatting completed"
-	cd sdk-js && npm run format || echo "JS SDK formatting completed"
-	cd sdk-py && python -m black . || echo "Python formatting completed"
+	cd SDK/javascript && npm run format || echo "JS SDK formatting completed"
+	cd SDK/python && python -m black . || echo "Python formatting completed"
 
 type-check: ## Run type checking
 	@echo "🏷️ Running type checks..."
 	cd backend && npx tsc --noEmit
-	cd sdk-js && npx tsc --noEmit
+	cd SDK/javascript && npx tsc --noEmit
 
 # Database
 db-reset: ## Reset database
@@ -137,8 +137,8 @@ run: docker-dev ## Alias for docker-dev
 clean: ## Clean build artifacts
 	@echo "🧹 Cleaning build artifacts..."
 	rm -rf backend/dist/
-	rm -rf sdk-js/dist/
-	rm -rf sdk-js/node_modules/.cache/
+	rm -rf SDK/javascript/dist/
+	rm -rf SDK/javascript/node_modules/.cache/
 	rm -rf backend/node_modules/.cache/
 	find . -name "*.pyc" -delete
 	find . -name "__pycache__" -type d -exec rm -rf {} + || true
@@ -147,10 +147,10 @@ clean: ## Clean build artifacts
 clean-all: clean ## Clean everything including node_modules
 	@echo "🧹 Deep cleaning..."
 	rm -rf backend/node_modules/
-	rm -rf sdk-js/node_modules/
-	rm -rf sdk-py/build/
-	rm -rf sdk-py/dist/
-	rm -rf sdk-py/*.egg-info/
+	rm -rf SDK/javascript/node_modules/
+	rm -rf SDK/python/build/
+	rm -rf SDK/python/dist/
+	rm -rf SDK/python/*.egg-info/
 	@echo "✅ Deep cleanup complete!"
 
 # Examples

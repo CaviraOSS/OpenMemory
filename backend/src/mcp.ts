@@ -3,17 +3,17 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { env } from '../config'
+import { env } from './utils/config'
 import {
     addHSGMemory,
     hsgQuery,
     reinforceMemory,
     SECTOR_CONFIGS
-} from '../hsg'
-import { q, allAsync } from '../database'
-import { getEmbeddingInfo } from '../embedding'
-import { j, p } from '../utils'
-import type { SectorType } from '../types'
+} from './hsg'
+import { q, allAsync } from './utils/database'
+import { getEmbeddingInfo } from './embedding'
+import { j, p } from './utils'
+import type { SectorType } from './types'
 
 type MemoryRow = {
     id: string

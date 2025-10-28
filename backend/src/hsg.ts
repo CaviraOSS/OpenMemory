@@ -1,5 +1,10 @@
 import crypto from 'node:crypto'
-import { buildSearchDocument, buildFtsQuery, canonicalTokenSet } from '../utils/text'
+import { buildSearchDocument, buildFtsQuery, canonicalTokenSet } from './utils/text'
+import { embedForSector, embedMultiSector, cosineSimilarity, bufferToVector, vectorToBuffer, EmbeddingResult } from './embedding'
+import { chunkText } from './utils/chunking'
+import { j } from './utils'
+import { q, transaction } from './utils/database'
+
 export interface SectorConfig {
     model: string
     decay_lambda: number
@@ -177,7 +182,6 @@ export function computeRetrievalScore(
         SCORING_WEIGHTS.waypoint * waypointWeight
     )
 }
-import { q, transaction } from '../database'
 export async function createCrossSectorWaypoints(
     primaryId: string,
     primarySector: string,
@@ -326,9 +330,7 @@ export async function pruneWeakWaypoints(): Promise<number> {
     await q.prune_waypoints.run(REINFORCEMENT.prune_threshold)
     return 0
 }
-import { embedForSector, embedMultiSector, cosineSimilarity, bufferToVector, vectorToBuffer, EmbeddingResult } from '../embedding'
-import { chunkText } from '../utils/chunking'
-import { j } from '../utils'
+
 export async function hsgQuery(
     queryText: string,
     k: number = 10,

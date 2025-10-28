@@ -2,7 +2,7 @@
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'SDK/python'))
 
 from openmemory import OpenMemory, SECTORS
 
