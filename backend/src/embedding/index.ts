@@ -45,7 +45,8 @@ function resolveOpenAIModel(sector: string): string {
 }
 
 function getOpenAIBaseUrl(): string {
-  const raw = (env.openai_base_url || 'https://api.openai.com/v1').trim();
+  const baseUrl = typeof env.openai_base_url === 'string' ? env.openai_base_url.trim() : '';
+  const raw = baseUrl !== '' ? baseUrl : 'https://api.openai.com/v1';
   return raw.replace(/\/$/, '');
 }
 
