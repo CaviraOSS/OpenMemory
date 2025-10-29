@@ -28,7 +28,8 @@ COPY src/ ./src/
 COPY tsconfig.json ./
 RUN bun run build
 
-# Remove devDependencies to reduce image size (optional, since we'll use a fresh stage next)
+# Remove devDependencies to reduce image size 
+# (Removing all the devDependencies that we dont need in the final build)
 RUN npm prune --omit=dev
 
 
@@ -38,7 +39,6 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 # Create a dedicated non-root user for security
-# (Alpine's node image does not include a generic 'node' user by default)
 RUN addgroup -g 1001 -S appgroup \
  && adduser -u 1001 -S appuser -G appgroup
 
@@ -60,7 +60,7 @@ EXPOSE 8080
 
 # Define a lightweight health check that verifies the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD bun -e "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
-# Start the application using npm (assumes "start" script uses Bun or is compatible)
+# Start the application using npm
 ENTRYPOINT ["npm", "start"]
