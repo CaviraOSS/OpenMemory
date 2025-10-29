@@ -1,137 +1,100 @@
-const SYNONYM_GROUPS: string[][] = [
-    ['prefer', 'prefer', 'like', 'love', 'enjoy', 'favor', 'favour', 'preference'],
-    ['theme', 'theme', 'mode', 'style', 'layout', 'appearance', 'skin', 'palette'],
-    ['meeting', 'meeting', 'meet', 'session', 'call', 'sync', 'standup', 'conference', 'appointment', 'gathering'],
-    ['dark', 'dark', 'night', 'nighttime', 'black'],
-    ['light', 'light', 'bright', 'day', 'daytime'],
-    ['user', 'user', 'person', 'people', 'customer', 'client', 'participant', 'individual'],
-    ['task', 'task', 'todo', 'job', 'assignment', 'item'],
-    ['note', 'note', 'memo', 'reminder', 'record'],
-    ['time', 'time', 'schedule', 'when', 'date'],
-    ['project', 'project', 'initiative', 'plan'],
-    ['issue', 'issue', 'problem', 'bug', 'error'],
-    ['document', 'document', 'doc', 'file', 'record'],
-    ['question', 'question', 'query', 'ask', 'request']
+const SYN = [
+    ['prefer', 'like', 'love', 'enjoy', 'favor'],
+    ['theme', 'mode', 'style', 'layout'],
+    ['meeting', 'meet', 'session', 'call', 'sync'],
+    ['dark', 'night', 'black'],
+    ['light', 'bright', 'day'],
+    ['user', 'person', 'people', 'customer'],
+    ['task', 'todo', 'job'],
+    ['note', 'memo', 'reminder'],
+    ['time', 'schedule', 'when', 'date'],
+    ['project', 'initiative', 'plan'],
+    ['issue', 'problem', 'bug'],
+    ['document', 'doc', 'file'],
+    ['question', 'query', 'ask']
 ]
 
-const CANONICAL_MAP = new Map<string, string>()
-const SYNONYM_LOOKUP = new Map<string, Set<string>>()
+const CAN = new Map<string, string>()
+const LOOK = new Map<string, Set<string>>()
 
-for (const group of SYNONYM_GROUPS) {
-    const canonical = group[0]
-    const normalizedCanonical = canonical.toLowerCase()
-    for (const word of group) {
-        const normalized = word.toLowerCase()
-        CANONICAL_MAP.set(normalized, normalizedCanonical)
-        const set = SYNONYM_LOOKUP.get(normalizedCanonical) ?? new Set<string>()
-        for (const synonym of group) {
-            set.add(synonym.toLowerCase())
-        }
-        SYNONYM_LOOKUP.set(normalizedCanonical, set)
+for (const g of SYN) {
+    const c = g[0]
+    for (const w of g) {
+        CAN.set(w, c)
+        const s = LOOK.get(c) ?? new Set<string>()
+        g.forEach(x => s.add(x))
+        LOOK.set(c, s)
     }
 }
 
-const STEM_RULES: Array<[RegExp, string]> = [
-    [/ies$/, 'y'],
-    [/ing$/, ''],
-    [/ers?$/, 'er'],
-    [/ed$/, ''],
-    [/s$/, '']
-]
+const STEM: Array<[RegExp, string]> = [[/ies$/, 'y'], [/ing$/, ''], [/ers?$/, 'er'], [/ed$/, ''], [/s$/, '']]
+const TOK = /[a-z0-9]+/gi
 
-const TOKEN_RE = /[a-z0-9]+/gi
-
-export function tokenize(text: string): string[] {
-    const tokens: string[] = []
-    let match: RegExpExecArray | null
-    while ((match = TOKEN_RE.exec(text)) !== null) {
-        tokens.push(match[0].toLowerCase())
-    }
-    return tokens
+export const tokenize = (t: string) => {
+    const r: string[] = []
+    let m: RegExpExecArray | null
+    while ((m = TOK.exec(t))) r.push(m[0].toLowerCase())
+    return r
 }
 
-function applyStemming(token: string): string {
-    if (token.length <= 3) return token
-    for (const [pattern, replacement] of STEM_RULES) {
-        if (pattern.test(token)) {
-            const stemmed = token.replace(pattern, replacement)
-            if (stemmed.length >= 3) return stemmed
+const stem = (t: string) => {
+    if (t.length <= 3) return t
+    for (const [p, r] of STEM) {
+        if (p.test(t)) {
+            const s = t.replace(p, r)
+            if (s.length >= 3) return s
         }
     }
-    return token
+    return t
 }
 
-export function canonicalizeToken(rawToken: string): string {
-    if (!rawToken) return ''
-    const lowered = rawToken.toLowerCase()
-    if (CANONICAL_MAP.has(lowered)) {
-        return CANONICAL_MAP.get(lowered)!
+export const canonicalizeToken = (t: string) => {
+    if (!t) return ''
+    const l = t.toLowerCase()
+    if (CAN.has(l)) return CAN.get(l)!
+    const s = stem(l)
+    return CAN.get(s) || s
+}
+
+export const canonicalTokensFromText = (t: string) => {
+    const r: string[] = []
+    for (const tok of tokenize(t)) {
+        const c = canonicalizeToken(tok)
+        if (c && c.length > 1) r.push(c)
     }
-    const stemmed = applyStemming(lowered)
-    if (CANONICAL_MAP.has(stemmed)) {
-        return CANONICAL_MAP.get(stemmed)!
+    return r
+}
+
+export const synonymsFor = (t: string) => {
+    const c = canonicalizeToken(t)
+    return LOOK.get(c) || new Set([c])
+}
+
+export const buildSearchDocument = (t: string) => {
+    const c = canonicalTokensFromText(t)
+    const e = new Set<string>()
+    for (const tok of c) {
+        const s = LOOK.get(tok)
+        if (s) s.forEach(x => e.add(x))
     }
-    return stemmed
+    return [t, c.join(' '), Array.from(e).join(' ')].filter(Boolean).join(' ')
 }
 
-export function canonicalTokensFromText(text: string): string[] {
-    const tokens = tokenize(text)
-    const canonical: string[] = []
-    for (const token of tokens) {
-        const c = canonicalizeToken(token)
-        if (c && c.length > 1) {
-            canonical.push(c)
-        }
+export const buildFtsQuery = (t: string) => {
+    const c = canonicalTokensFromText(t)
+    if (!c.length) return ''
+    const u = Array.from(new Set(c.filter(x => x.length > 1)))
+    return u.map(x => `"${x}"`).join(' OR ')
+}
+
+export const canonicalTokenSet = (t: string) => new Set(canonicalTokensFromText(t))
+
+export const addSynonymTokens = (toks: Iterable<string>) => {
+    const r = new Set<string>()
+    for (const t of toks) {
+        r.add(t)
+        const s = LOOK.get(t)
+        if (s) s.forEach(x => r.add(canonicalizeToken(x)))
     }
-    return canonical
-}
-
-export function synonymsFor(token: string): Set<string> {
-    const canonical = canonicalizeToken(token)
-    const synonyms = SYNONYM_LOOKUP.get(canonical)
-    if (!synonyms) {
-        return new Set([canonical])
-    }
-    return new Set(Array.from(synonyms).map(s => canonicalizeToken(s)))
-}
-
-export function buildSearchDocument(text: string): string {
-    const canonicalTokens = canonicalTokensFromText(text)
-    const expansion = new Set<string>()
-    for (const token of canonicalTokens) {
-        const syns = SYNONYM_LOOKUP.get(token)
-        if (syns) {
-            for (const s of syns) {
-                expansion.add(s)
-            }
-        }
-    }
-    const canonicalSection = canonicalTokens.join(' ')
-    const expansionSection = Array.from(expansion).join(' ')
-    return [text, canonicalSection, expansionSection].filter(Boolean).join(' ')
-}
-
-export function buildFtsQuery(text: string): string {
-    const canonicalTokens = canonicalTokensFromText(text)
-    if (!canonicalTokens.length) return ''
-    const unique = Array.from(new Set(canonicalTokens.filter(t => t.length > 1)))
-    return unique.map(token => `"${token}"`).join(' OR ')
-}
-
-export function canonicalTokenSet(text: string): Set<string> {
-    return new Set(canonicalTokensFromText(text))
-}
-
-export function addSynonymTokens(tokens: Iterable<string>): Set<string> {
-    const result = new Set<string>()
-    for (const token of tokens) {
-        result.add(token)
-        const syns = SYNONYM_LOOKUP.get(token)
-        if (syns) {
-            for (const s of syns) {
-                result.add(canonicalizeToken(s))
-            }
-        }
-    }
-    return result
+    return r
 }

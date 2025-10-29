@@ -382,7 +382,7 @@ export const getLangGraphConfig = () => ({
     node_sector_map: NODE_SECTOR_MAP
 })
 
-export const registerLangGraphEndpoints = (app: any) => {
+export const lang = (app: any) => {
     app.get('/lgm/config', (_req: any, res: any) => {
         res.json(getLangGraphConfig())
     })

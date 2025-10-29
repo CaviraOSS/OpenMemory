@@ -3,15 +3,9 @@ import { q, transaction } from '../utils/database'
 import { rid, now, j } from '../utils'
 import { extractText, ExtractionResult } from './extractors'
 
-const LARGE_DOC_THRESHOLD = 8000
-const SECTION_SIZE = 3000
+const LG = 8000, SEC = 3000
 
-export interface IngestionConfig {
-    forceRootChild?: boolean
-    sectionSize?: number
-    largeDocThreshold?: number
-}
-
+export interface IngestionConfig { forceRootChild?: boolean; sectionSize?: number; largeDocThreshold?: number }
 export interface IngestionResult {
     root_memory_id: string
     child_count: number
@@ -20,273 +14,130 @@ export interface IngestionResult {
     extraction: ExtractionResult['metadata']
 }
 
-function splitIntoSections(text: string, sectionSize: number): string[] {
-    if (text.length <= sectionSize) {
-        return [text]
+const split = (t: string, sz: number): string[] => {
+    if (t.length <= sz) return [t]
+    const secs: string[] = []
+    const paras = t.split(/\n\n+/)
+    let cur = ''
+    for (const p of paras) {
+        if (cur.length + p.length > sz && cur.length > 0) { secs.push(cur.trim()); cur = p }
+        else cur += (cur ? '\n\n' : '') + p
     }
-
-    const sections: string[] = []
-    const paragraphs = text.split(/\n\n+/)
-
-    let currentSection = ''
-
-    for (const para of paragraphs) {
-        if (currentSection.length + para.length > sectionSize && currentSection.length > 0) {
-            sections.push(currentSection.trim())
-            currentSection = para
-        } else {
-            currentSection += (currentSection ? '\n\n' : '') + para
-        }
-    }
-
-    if (currentSection.trim()) {
-        sections.push(currentSection.trim())
-    }
-
-    return sections
+    if (cur.trim()) secs.push(cur.trim())
+    return secs
 }
 
-async function createRootMemory(
-    originalText: string,
-    extraction: ExtractionResult,
-    metadata?: Record<string, unknown>
-): Promise<string> {
-    const summary = originalText.length > 500
-        ? originalText.slice(0, 500) + '...'
-        : originalText
-
-    const rootContent = `[Document: ${extraction.metadata.content_type.toUpperCase()}]\n\n${summary}\n\n[Full content split across ${Math.ceil(originalText.length / SECTION_SIZE)} sections]`
-
-    const rootId = rid()
-    const created = now()
-
+const mkRoot = async (txt: string, ex: ExtractionResult, meta?: Record<string, unknown>) => {
+    const sum = txt.length > 500 ? txt.slice(0, 500) + '...' : txt
+    const cnt = `[Document: ${ex.metadata.content_type.toUpperCase()}]\n\n${sum}\n\n[Full content split across ${Math.ceil(txt.length / SEC)} sections]`
+    const id = rid(), ts = now()
     await transaction.begin()
     try {
-        await q.ins_mem.run(
-            rootId,
-            rootContent,
-            'reflective',
-            j([]),
-            j({
-                ...metadata,
-                ...extraction.metadata,
-                is_root: true,
-                ingestion_strategy: 'root-child',
-                ingested_at: created
-            }),
-            created,
-            created,
-            created,
-            1.0,
-            0.1,
-            1,
-            null,
-            null
-        )
-
+        await q.ins_mem.run(id, cnt, 'reflective', j([]), j({ ...meta, ...ex.metadata, is_root: true, ingestion_strategy: 'root-child', ingested_at: ts }), ts, ts, ts, 1.0, 0.1, 1, null, null)
         await transaction.commit()
-        return rootId
-    } catch (error) {
-        console.error('[ERROR] Failed to create root memory:', error)
+        return id
+    } catch (e) {
+        console.error('[ERROR] Root failed:', e)
         await transaction.rollback()
-        throw error
+        throw e
     }
 }
 
-async function createChildMemory(
-    sectionText: string,
-    sectionIndex: number,
-    totalSections: number,
-    rootId: string,
-    metadata?: Record<string, unknown>
-): Promise<string> {
-    const childMetadata = {
-        ...metadata,
-        is_child: true,
-        section_index: sectionIndex,
-        total_sections: totalSections,
-        parent_id: rootId
-    }
-
-    const result = await addHSGMemory(sectionText, j([]), childMetadata)
-    return result.id
+const mkChild = async (txt: string, idx: number, tot: number, rid: string, meta?: Record<string, unknown>) => {
+    const r = await addHSGMemory(txt, j([]), { ...meta, is_child: true, section_index: idx, total_sections: tot, parent_id: rid })
+    return r.id
 }
 
-async function linkRootToChild(rootId: string, childId: string, sectionIndex: number): Promise<void> {
-    const created = now()
-
+const link = async (rid: string, cid: string, idx: number) => {
+    const ts = now()
     await transaction.begin()
     try {
-        await q.ins_waypoint.run(
-            rootId,
-            childId,
-            1.0,
-            created,
-            created
-        )
+        await q.ins_waypoint.run(rid, cid, 1.0, ts, ts)
         await transaction.commit()
-        console.log(`🔗 Waypoint created: ${rootId.slice(0, 8)} → ${childId.slice(0, 8)} (section ${sectionIndex})`)
-    } catch (error) {
+        console.log(`🔗 Link: ${rid.slice(0, 8)} → ${cid.slice(0, 8)} (${idx})`)
+    } catch (e) {
         await transaction.rollback()
-        console.error(`❌ Failed to create waypoint for section ${sectionIndex}:`, error)
-        throw error
+        console.error(`❌ Link failed for ${idx}:`, e)
+        throw e
     }
 }
 
-export async function ingestDocument(
-    contentType: string,
-    data: string | Buffer,
-    metadata?: Record<string, unknown>,
-    config?: IngestionConfig
-): Promise<IngestionResult> {
-    const threshold = config?.largeDocThreshold || LARGE_DOC_THRESHOLD
-    const sectionSize = config?.sectionSize || SECTION_SIZE
+export async function ingestDocument(t: string, data: string | Buffer, meta?: Record<string, unknown>, cfg?: IngestionConfig): Promise<IngestionResult> {
+    const th = cfg?.largeDocThreshold || LG, sz = cfg?.sectionSize || SEC
+    const ex = await extractText(t, data)
+    const { text, metadata: exMeta } = ex
+    const useRC = cfg?.forceRootChild || exMeta.estimated_tokens > th
 
-    const extraction = await extractText(contentType, data)
-    const { text, metadata: extractionMeta } = extraction
-
-    const shouldUseRootChild = config?.forceRootChild || extractionMeta.estimated_tokens > threshold
-
-    if (!shouldUseRootChild) {
-        const result = await addHSGMemory(text, j([]), {
-            ...metadata,
-            ...extractionMeta,
-            ingestion_strategy: 'single',
-            ingested_at: now()
-        })
-
-        return {
-            root_memory_id: result.id,
-            child_count: 0,
-            total_tokens: extractionMeta.estimated_tokens,
-            strategy: 'single',
-            extraction: extractionMeta
-        }
+    if (!useRC) {
+        const r = await addHSGMemory(text, j([]), { ...meta, ...exMeta, ingestion_strategy: 'single', ingested_at: now() })
+        return { root_memory_id: r.id, child_count: 0, total_tokens: exMeta.estimated_tokens, strategy: 'single', extraction: exMeta }
     }
 
-    const sections = splitIntoSections(text, sectionSize)
+    const secs = split(text, sz)
+    console.log(`📄 Large doc: ${exMeta.estimated_tokens} tokens`)
+    console.log(`📑 Split into ${secs.length} sections`)
 
-    console.log(`📄 Large document detected: ${extractionMeta.estimated_tokens} tokens`)
-    console.log(`📑 Splitting into ${sections.length} sections (root+child strategy)`)
-
-    let rootId: string
-    const childIds: string[] = []
+    let rid: string
+    const cids: string[] = []
 
     try {
-        rootId = await createRootMemory(text, extraction, metadata)
-        console.log(`📝 Root memory created: ${rootId}`)
-
-        for (let i = 0; i < sections.length; i++) {
+        rid = await mkRoot(text, ex, meta)
+        console.log(`📝 Root: ${rid}`)
+        for (let i = 0; i < secs.length; i++) {
             try {
-                const childId = await createChildMemory(
-                    sections[i],
-                    i,
-                    sections.length,
-                    rootId,
-                    metadata
-                )
-                childIds.push(childId)
-
-                await linkRootToChild(rootId, childId, i)
-
-                console.log(`✅ Section ${i + 1}/${sections.length} created: ${childId}`)
-            } catch (error) {
-                console.error(`❌ Failed to process section ${i + 1}/${sections.length}:`, error)
-                throw error
+                const cid = await mkChild(secs[i], i, secs.length, rid, meta)
+                cids.push(cid)
+                await link(rid, cid, i)
+                console.log(`✅ Section ${i + 1}/${secs.length}: ${cid}`)
+            } catch (e) {
+                console.error(`❌ Section ${i + 1}/${secs.length} failed:`, e)
+                throw e
             }
         }
-
-        console.log(`🎉 Document ingestion complete: ${childIds.length} sections linked to root ${rootId}`)
-
-        return {
-            root_memory_id: rootId,
-            child_count: sections.length,
-            total_tokens: extractionMeta.estimated_tokens,
-            strategy: 'root-child',
-            extraction: extractionMeta
-        }
-    } catch (error) {
-        console.error('❌ Document ingestion failed:', error)
-        throw error
+        console.log(`🎉 Done: ${cids.length} sections → ${rid}`)
+        return { root_memory_id: rid, child_count: secs.length, total_tokens: exMeta.estimated_tokens, strategy: 'root-child', extraction: exMeta }
+    } catch (e) {
+        console.error('❌ Ingestion failed:', e)
+        throw e
     }
 }
 
-export async function ingestURL(
-    url: string,
-    metadata?: Record<string, unknown>,
-    config?: IngestionConfig
-): Promise<IngestionResult> {
+export async function ingestURL(url: string, meta?: Record<string, unknown>, cfg?: IngestionConfig): Promise<IngestionResult> {
     const { extractURL } = await import('./extractors')
-    const extraction = await extractURL(url)
+    const ex = await extractURL(url)
+    const th = cfg?.largeDocThreshold || LG, sz = cfg?.sectionSize || SEC
+    const useRC = cfg?.forceRootChild || ex.metadata.estimated_tokens > th
 
-    const threshold = config?.largeDocThreshold || LARGE_DOC_THRESHOLD
-    const sectionSize = config?.sectionSize || SECTION_SIZE
-
-    const shouldUseRootChild = config?.forceRootChild || extraction.metadata.estimated_tokens > threshold
-
-    if (!shouldUseRootChild) {
-        const result = await addHSGMemory(extraction.text, j([]), {
-            ...metadata,
-            ...extraction.metadata,
-            ingestion_strategy: 'single',
-            ingested_at: now()
-        })
-
-        return {
-            root_memory_id: result.id,
-            child_count: 0,
-            total_tokens: extraction.metadata.estimated_tokens,
-            strategy: 'single',
-            extraction: extraction.metadata
-        }
+    if (!useRC) {
+        const r = await addHSGMemory(ex.text, j([]), { ...meta, ...ex.metadata, ingestion_strategy: 'single', ingested_at: now() })
+        return { root_memory_id: r.id, child_count: 0, total_tokens: ex.metadata.estimated_tokens, strategy: 'single', extraction: ex.metadata }
     }
 
-    const sections = splitIntoSections(extraction.text, sectionSize)
+    const secs = split(ex.text, sz)
+    console.log(`🌐 Large URL: ${ex.metadata.estimated_tokens} tokens`)
+    console.log(`📑 Split into ${secs.length} sections`)
 
-    console.log(`🌐 Large URL content detected: ${extraction.metadata.estimated_tokens} tokens`)
-    console.log(`📑 Splitting into ${sections.length} sections (root+child strategy)`)
-
-    let rootId: string
-    const childIds: string[] = []
+    let rid: string
+    const cids: string[] = []
 
     try {
-        rootId = await createRootMemory(extraction.text, extraction, {
-            ...metadata,
-            source_url: url
-        })
-        console.log(`📝 Root memory created for URL: ${rootId}`)
-
-        for (let i = 0; i < sections.length; i++) {
+        rid = await mkRoot(ex.text, ex, { ...meta, source_url: url })
+        console.log(`📝 Root for URL: ${rid}`)
+        for (let i = 0; i < secs.length; i++) {
             try {
-                const childId = await createChildMemory(
-                    sections[i],
-                    i,
-                    sections.length,
-                    rootId,
-                    { ...metadata, source_url: url }
-                )
-                childIds.push(childId)
-
-                await linkRootToChild(rootId, childId, i)
-
-                console.log(`✅ URL section ${i + 1}/${sections.length} created: ${childId}`)
-            } catch (error) {
-                console.error(`❌ Failed to process URL section ${i + 1}/${sections.length}:`, error)
-                throw error
+                const cid = await mkChild(secs[i], i, secs.length, rid, { ...meta, source_url: url })
+                cids.push(cid)
+                await link(rid, cid, i)
+                console.log(`✅ URL section ${i + 1}/${secs.length}: ${cid}`)
+            } catch (e) {
+                console.error(`❌ URL section ${i + 1}/${secs.length} failed:`, e)
+                throw e
             }
         }
-
-        console.log(`🎉 URL ingestion complete: ${childIds.length} sections linked to root ${rootId}`)
-
-        return {
-            root_memory_id: rootId,
-            child_count: sections.length,
-            total_tokens: extraction.metadata.estimated_tokens,
-            strategy: 'root-child',
-            extraction: extraction.metadata
-        }
-    } catch (error) {
-        console.error('❌ URL ingestion failed:', error)
-        throw error
+        console.log(`🎉 URL done: ${cids.length} sections → ${rid}`)
+        return { root_memory_id: rid, child_count: secs.length, total_tokens: ex.metadata.estimated_tokens, strategy: 'root-child', extraction: ex.metadata }
+    } catch (e) {
+        console.error('❌ URL ingestion failed:', e)
+        throw e
     }
 }
