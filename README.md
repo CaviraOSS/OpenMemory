@@ -361,6 +361,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/DoKoB0512">
+                    <img src="https://avatars.githubusercontent.com/u/123281216?v=4" width="100;" alt="DoKoB0512"/>
+                    <br />
+                    <sub><b>DoKoB0512</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
@@ -381,6 +388,8 @@ make test
                     <sub><b>Peter Chung</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/ammesonb">
                     <img src="https://avatars.githubusercontent.com/u/2522710?v=4" width="100;" alt="ammesonb"/>
@@ -388,8 +397,6 @@ make test
                     <sub><b>Brett Ammeson</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/Dhravya">
                     <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
