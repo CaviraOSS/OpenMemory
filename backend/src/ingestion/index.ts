@@ -56,7 +56,6 @@ export interface IngestionConfig {
   sectionSize?: number;
   largeDocThreshold?: number;
 }
-
 export interface IngestionResult {
   root_memory_id: string;
   child_count: number;

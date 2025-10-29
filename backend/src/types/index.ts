@@ -2,6 +2,22 @@ export type add_req = { content: string, tags?: string[], metadata?: Record<stri
 export type q_req = { query: string, k?: number, filters?: { tags?: string[], min_score?: number, sector?: string } }
 export type SectorType = 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'
 
+export type MemoryRow = {
+    id: string
+    content: string
+    primary_sector: string
+    tags: string | null
+    meta: string | null
+    created_at: number
+    updated_at: number
+    last_seen_at: number
+    salience: number
+    decay_lambda: number
+    version: number
+}
+
+export type JsonRpcErrorCode = -32600 | -32603
+
 export type ingest_req = {
     source: 'file' | 'link' | 'connector'
     content_type: 'pdf' | 'docx' | 'html' | 'md' | 'txt' | 'audio'

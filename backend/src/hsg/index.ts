@@ -329,6 +329,62 @@ export async function pruneWeakWaypoints(): Promise<number> {
 import { embedForSector, embedMultiSector, cosineSimilarity, bufferToVector, vectorToBuffer, EmbeddingResult } from '../embedding'
 import { chunkText } from '../utils/chunking'
 import { j } from '../utils'
+import {
+    calculateCrossSectorResonanceScore,
+    applyRetrievalTraceReinforcementToMemory,
+    propagateAssociativeReinforcementToLinkedNodes,
+    ALPHA_LEARNING_RATE_FOR_RECALL_REINFORCEMENT,
+    BETA_LEARNING_RATE_FOR_EMOTIONAL_FREQUENCY
+} from '../memory-dynamics'
+
+export interface MultiVectorEmbeddingFusionWeights {
+    semantic_dimension_weight: number
+    emotional_dimension_weight: number
+    procedural_dimension_weight: number
+    temporal_dimension_weight: number
+    reflective_dimension_weight: number
+}
+
+export async function calculateMultiVectorFusionScore(
+    memory_id_for_scoring: string,
+    query_embeddings_by_sector: Record<string, number[]>,
+    context_adaptive_weights: MultiVectorEmbeddingFusionWeights
+): Promise<number> {
+    const all_vector_embeddings_for_memory = await q.get_vecs_by_id.all(memory_id_for_scoring)
+
+    let accumulated_weighted_similarity_score = 0
+    let total_weight_normalization_factor = 0
+
+    const sector_to_weight_mapping: Record<string, number> = {
+        'semantic': context_adaptive_weights.semantic_dimension_weight,
+        'emotional': context_adaptive_weights.emotional_dimension_weight,
+        'procedural': context_adaptive_weights.procedural_dimension_weight,
+        'episodic': context_adaptive_weights.temporal_dimension_weight,
+        'reflective': context_adaptive_weights.reflective_dimension_weight
+    }
+
+    for (const vector_embedding_record of all_vector_embeddings_for_memory) {
+        const sector_type_of_embedding = vector_embedding_record.sector
+        const query_embedding_for_sector = query_embeddings_by_sector[sector_type_of_embedding]
+
+        if (!query_embedding_for_sector) continue
+
+        const memory_vector_buffer = bufferToVector(vector_embedding_record.v)
+        const cosine_similarity_for_this_sector = cosineSimilarity(query_embedding_for_sector, memory_vector_buffer)
+
+        const weight_for_this_cognitive_dimension = sector_to_weight_mapping[sector_type_of_embedding] || 0.5
+
+        accumulated_weighted_similarity_score += cosine_similarity_for_this_sector * weight_for_this_cognitive_dimension
+        total_weight_normalization_factor += weight_for_this_cognitive_dimension
+    }
+
+    const normalized_multi_vector_fusion_score = total_weight_normalization_factor > 0
+        ? accumulated_weighted_similarity_score / total_weight_normalization_factor
+        : 0
+
+    return normalized_multi_vector_fusion_score
+}
+
 export async function hsgQuery(
     queryText: string,
     k: number = 10,
@@ -342,11 +398,19 @@ export async function hsgQuery(
         candidateSectors.filter(s => filters.sectors!.includes(s)) :
         candidateSectors
     if (searchSectors.length === 0) {
-        searchSectors.push('semantic') // Fallback
+        searchSectors.push('semantic')
     }
     const queryEmbeddings: Record<string, number[]> = {}
     for (const sector of searchSectors) {
         queryEmbeddings[sector] = await embedForSector(queryText, sector)
+    }
+
+    const context_based_fusion_weights: MultiVectorEmbeddingFusionWeights = {
+        semantic_dimension_weight: queryClassification.primary === 'semantic' ? 1.2 : 0.8,
+        emotional_dimension_weight: queryClassification.primary === 'emotional' ? 1.5 : 0.6,
+        procedural_dimension_weight: queryClassification.primary === 'procedural' ? 1.3 : 0.7,
+        temporal_dimension_weight: queryClassification.primary === 'episodic' ? 1.4 : 0.7,
+        reflective_dimension_weight: queryClassification.primary === 'reflective' ? 1.1 : 0.5
     }
     const sectorResults: Record<string, Array<{ id: string, similarity: number }>> = {}
     for (const sector of searchSectors) {
@@ -391,7 +455,20 @@ export async function hsgQuery(
         const memory = await q.get_mem.get(memoryId)
         if (!memory) continue
         if (filters?.minSalience && memory.salience < filters.minSalience) continue
-        let bestSimilarity = 0
+
+        const multi_vector_fusion_similarity_score = await calculateMultiVectorFusionScore(
+            memoryId,
+            queryEmbeddings,
+            context_based_fusion_weights
+        )
+
+        const cross_sector_resonance_modulated_score = await calculateCrossSectorResonanceScore(
+            memory.primary_sector,
+            queryClassification.primary,
+            multi_vector_fusion_similarity_score
+        )
+
+        let bestSimilarity = cross_sector_resonance_modulated_score
         let bestSector = memory.primary_sector
         for (const [sector, results] of Object.entries(sectorResults)) {
             const match = results.find(r => r.id === memoryId)
@@ -443,11 +520,36 @@ export async function hsgQuery(
     finalResults.sort((a, b) => b.score - a.score)
     const topResults = finalResults.slice(0, k)
     for (const result of topResults) {
-        const newSalience = Math.min(REINFORCEMENT.max_salience,
-            result.salience + REINFORCEMENT.salience_boost)
-        await q.upd_seen.run(Date.now(), newSalience, Date.now(), result.id)
+        const reinforced_salience_after_retrieval = await applyRetrievalTraceReinforcementToMemory(
+            result.id,
+            result.salience
+        )
+
+        await q.upd_seen.run(result.id, Date.now(), reinforced_salience_after_retrieval, Date.now())
+
         if (result.path.length > 1) {
             await reinforceWaypoints(result.path)
+
+            const waypoints_for_propagation = await q.get_waypoints_by_src.all(result.id)
+            const linked_nodes_with_weights = waypoints_for_propagation.map((wp: any) => ({
+                target_id: wp.dst_id,
+                weight: wp.weight
+            }))
+
+            const propagated_reinforcement_updates = await propagateAssociativeReinforcementToLinkedNodes(
+                result.id,
+                reinforced_salience_after_retrieval,
+                linked_nodes_with_weights
+            )
+
+            for (const reinforcement_update of propagated_reinforcement_updates) {
+                await q.upd_seen.run(
+                    reinforcement_update.node_id,
+                    Date.now(),
+                    reinforcement_update.new_salience,
+                    Date.now()
+                )
+            }
         }
     }
     return topResults
@@ -460,7 +562,7 @@ export async function runDecayProcess(): Promise<{ processed: number, decayed: n
         const daysSinceLastSeen = (Date.now() - memory.last_seen_at) / (1000 * 60 * 60 * 24)
         const newSalience = calculateDecay(memory.primary_sector, memory.salience, daysSinceLastSeen)
         if (newSalience !== memory.salience) {
-            await q.upd_seen.run(memory.last_seen_at, newSalience, Date.now(), memory.id)
+            await q.upd_seen.run(memory.id, memory.last_seen_at, newSalience, Date.now())
             decayed++
         }
         processed++
@@ -513,7 +615,7 @@ export async function addHSGMemory(
 
         const meanVector = calculateMeanVector(embeddingResults, allSectors)
         const meanVectorBuffer = vectorToBuffer(meanVector)
-        await q.upd_mean_vec.run(meanVector.length, meanVectorBuffer, id)
+        await q.upd_mean_vec.run(id, meanVector.length, meanVectorBuffer)
 
         await createSingleWaypoint(id, meanVector, now)
 
@@ -550,7 +652,7 @@ export async function updateMemory(
     // Use existing values if not provided, and ensure consistent JSON stringification
     const newContent = content !== undefined ? content : memory.content
     const newTags = tags !== undefined ? j(tags) : (memory.tags || '[]')
-    const newMetadata = metadata !== undefined ? j(metadata) : (memory.meta || '{}') 
+    const newMetadata = metadata !== undefined ? j(metadata) : (memory.meta || '{}')
 
     await transaction.begin()
 
@@ -575,9 +677,8 @@ export async function updateMemory(
             // Update mean vector
             const meanVector = calculateMeanVector(embeddingResults, allSectors)
             const meanVectorBuffer = vectorToBuffer(meanVector)
-            await q.upd_mean_vec.run(meanVector.length, meanVectorBuffer, id)
+            await q.upd_mean_vec.run(id, meanVector.length, meanVectorBuffer)
 
-            // Update memory record with new primary sector
             await q.upd_mem_with_sector.run(newContent, classification.primary, newTags, newMetadata, Date.now(), id)
         } else {
             // Just update the memory record without changing embeddings

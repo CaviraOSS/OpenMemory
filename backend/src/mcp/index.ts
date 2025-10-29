@@ -13,32 +13,11 @@ import {
 import { q, allAsync } from '../database'
 import { getEmbeddingInfo } from '../embedding'
 import { j, p } from '../utils'
-import type { SectorType } from '../types'
-
-type MemoryRow = {
-    id: string
-    content: string
-    primary_sector: string
-    tags: string | null
-    meta: string | null
-    created_at: number
-    updated_at: number
-    last_seen_at: number
-    salience: number
-    decay_lambda: number
-    version: number
-}
-
-type JsonRpcErrorCode = -32600 | -32603
-
-const MCP_ROUTE = '/mcp'
-const SUMMARY_LIMIT = 200
-const SERVER_VERSION = '2.1.0'
-const PROTOCOL_VERSION = '2025-06-18'
+import type { SectorType, MemoryRow, JsonRpcErrorCode } from '../types'
 
 const SECTOR_ENUM = z.enum(['episodic', 'semantic', 'procedural', 'emotional', 'reflective'] as const)
 
-const truncate = (value: string, max = SUMMARY_LIMIT) =>
+const truncate = (value: string, max = 200) =>
     value.length <= max ? value : `${value.slice(0, max).trimEnd()}...`
 
 const buildMemorySnapshot = (row: MemoryRow) => ({
@@ -78,8 +57,8 @@ export const createMcpServer = () => {
     const server = new McpServer(
         {
             name: 'openmemory-mcp',
-            version: SERVER_VERSION,
-            protocolVersion: PROTOCOL_VERSION
+            version: '2.1.0',
+            protocolVersion: '2025-06-18'
         },
         {
             capabilities: {
@@ -286,8 +265,8 @@ export const createMcpServer = () => {
                 stats,
                 embeddings: getEmbeddingInfo(),
                 server: {
-                    version: SERVER_VERSION,
-                    protocol: PROTOCOL_VERSION
+                    version: '2.1.0',
+                    protocol: '2025-06-18'
                 },
                 available_tools: ['openmemory.query', 'openmemory.store', 'openmemory.reinforce', 'openmemory.list', 'openmemory.get']
             }
@@ -332,7 +311,7 @@ const extractPayload = async (req: IncomingMessage & { body?: any }) => {
     return JSON.parse(raw)
 }
 
-export const registerMcpEndpoints = (app: any) => {
+export const mcp = (app: any) => {
     const server = createMcpServer()
     const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
@@ -370,23 +349,23 @@ export const registerMcpEndpoints = (app: any) => {
         }
     }
 
-    app.post(MCP_ROUTE, (req: any, res: any) => {
+    app.post('/mcp', (req: any, res: any) => {
         void handleRequest(req, res)
     })
 
-    app.options(MCP_ROUTE, (_req: any, res: any) => {
+    app.options('/mcp', (_req: any, res: any) => {
         res.statusCode = 204
         setCommonHeaders(res)
         res.end()
     })
 
     const methodNotAllowed = (_req: IncomingMessage, res: ServerResponse) => {
-        sendJsonError(res, -32600, 'Method not supported. Use POST /mcp with JSON payload.', null, 405)
+        sendJsonError(res, -32600, 'Method not supported. Use POST  /mcp with JSON payload.', null, 405)
     }
 
-    app.get(MCP_ROUTE, methodNotAllowed)
-    app.delete(MCP_ROUTE, methodNotAllowed)
-    app.put(MCP_ROUTE, methodNotAllowed)
+    app.get('/mcp', methodNotAllowed)
+    app.delete('/mcp', methodNotAllowed)
+    app.put('/mcp', methodNotAllowed)
 }
 
 export const startMcpStdioServer = async () => {

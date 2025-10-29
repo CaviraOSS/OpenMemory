@@ -166,6 +166,14 @@ async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<s
   return out;
 }
 
+const TASK: Record<string, string> = {
+  episodic: 'RETRIEVAL_DOCUMENT',
+  semantic: 'SEMANTIC_SIMILARITY',
+  procedural: 'RETRIEVAL_DOCUMENT',
+  emotional: 'CLASSIFICATION',
+  reflective: 'SEMANTIC_SIMILARITY',
+};
+
 async function embedWithGemini(texts: Record<string, string>): Promise<Record<string, number[]>> {
   if (!env.gemini_key) throw new Error('Gemini API key not configured');
 
