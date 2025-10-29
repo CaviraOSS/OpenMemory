@@ -4,13 +4,14 @@ import { runDecayProcess, pruneWeakWaypoints } from '../hsg'
 import { lang } from '../langgraph'
 import { mcp } from '../mcp'
 import { routes } from './routes'
+import { authenticate_api_request, log_authenticated_request } from './middleware/auth'
 
 const app = server({ max_payload_size: env.max_payload_size })
 
 app.use((req: any, res: any, next: any) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,x-api-key')
     if (req.method === 'OPTIONS') {
         res.status(200).end()
         return
@@ -18,14 +19,13 @@ app.use((req: any, res: any, next: any) => {
     next()
 })
 
-app.use((req: any, res: any, next: any) => {
-    if (!env.api_key) return next()
-    const h = req.headers['authorization'] || ''
-    if (!h.startsWith('Bearer ') || h.slice(7) !== env.api_key) {
-        return res.status(401).json({ err: 'auth' })
-    }
-    next()
-})
+// Apply authentication middleware
+app.use(authenticate_api_request)
+
+// Optional: Log authenticated requests (comment out in production)
+if (process.env.OM_LOG_AUTH === 'true') {
+    app.use(log_authenticated_request)
+}
 
 routes(app)
 

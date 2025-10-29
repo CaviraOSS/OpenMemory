@@ -10,7 +10,10 @@ const bool = (v: string | undefined) => v === 'true'
 export const env = {
     port: num(process.env.OM_PORT, 8080),
     db_path: str(process.env.OM_DB_PATH, './data/openmemory.sqlite'),
-    api_key: '',
+    api_key: process.env.OM_API_KEY || '',
+    rate_limit_enabled: bool(process.env.OM_RATE_LIMIT_ENABLED),
+    rate_limit_window_ms: num(process.env.OM_RATE_LIMIT_WINDOW_MS, 60000),
+    rate_limit_max_requests: num(process.env.OM_RATE_LIMIT_MAX_REQUESTS, 100),
     emb_kind: str(process.env.OM_EMBEDDINGS, 'synthetic'),
     embed_mode: str(process.env.OM_EMBED_MODE, 'simple'),
     adv_embed_parallel: bool(process.env.OM_ADV_EMBED_PARALLEL),
@@ -30,6 +33,8 @@ export const env = {
     lg_max_context: num(process.env.OM_LG_MAX_CONTEXT, 50),
     lg_reflective: (process.env.OM_LG_REFLECTIVE ?? 'true') !== 'false',
     metadata_backend: str(process.env.OM_METADATA_BACKEND, 'sqlite').toLowerCase(),
-    vector_backend: str(process.env.OM_VECTOR_BACKEND, 'sqlite').toLowerCase()
+    vector_backend: str(process.env.OM_VECTOR_BACKEND, 'sqlite').toLowerCase(),
+    ide_mode: bool(process.env.OM_IDE_MODE),
+    ide_allowed_origins: str(process.env.OM_IDE_ALLOWED_ORIGINS, 'http://localhost:5173,http://localhost:3000').split(',')
 }
 

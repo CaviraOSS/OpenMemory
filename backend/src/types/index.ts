@@ -72,3 +72,33 @@ export type lgm_reflection_req = {
     content?: string
     context_ids?: string[]
 }
+
+export type ide_event_req = {
+    event: 'edit' | 'open' | 'close' | 'save' | 'refactor' | 'comment' | 'pattern_detected' | 'api_call' | 'definition' | 'reflection'
+    file?: string
+    snippet?: string
+    comment?: string
+    metadata: {
+        project?: string
+        lang?: string
+        user?: string
+        timestamp?: number
+        [key: string]: unknown
+    }
+    session_id?: string
+}
+
+export type ide_context_query_req = {
+    query: string
+    k?: number
+    session_id?: string
+    file_filter?: string
+    include_patterns?: boolean
+    include_knowledge?: boolean
+}
+
+export type ide_session_req = {
+    user?: string
+    project?: string
+    ide?: string
+}

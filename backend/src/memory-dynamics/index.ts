@@ -1,6 +1,5 @@
 import { allAsync, runAsync, getAsync, q } from '../database'
 import { now } from '../utils'
-import { env } from '../config'
 import { cosineSimilarity } from '../embedding'
 
 export const ALPHA_LEARNING_RATE_FOR_RECALL_REINFORCEMENT = 0.15

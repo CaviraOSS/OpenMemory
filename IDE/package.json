@@ -1,0 +1,51 @@
+{
+    "name": "openmemory-vscode",
+    "displayName": "OpenMemory for VS Code",
+    "description": "Cognitive memory system that remembers your coding context across sessions",
+    "version": "2.0.0",
+    "publisher": "cavira",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Machine Learning",
+        "Other"
+    ],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "openmemory.queryContext",
+                "title": "OpenMemory: Query Context"
+            }
+        ],
+        "configuration": {
+            "title": "OpenMemory",
+            "properties": {
+                "openmemory.backendUrl": {
+                    "type": "string",
+                    "default": "http://localhost:3000",
+                    "description": "URL of the OpenMemory backend server"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile",
+        "lint": "eslint src --ext ts"
+    },
+    "devDependencies": {
+        "@types/node": "^18.x",
+        "@types/vscode": "^1.85.0",
+        "typescript": "^5.3.0",
+        "eslint": "^8.56.0",
+        "@typescript-eslint/eslint-plugin": "^6.15.0",
+        "@typescript-eslint/parser": "^6.15.0"
+    }
+}
