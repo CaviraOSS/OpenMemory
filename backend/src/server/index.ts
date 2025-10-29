@@ -19,9 +19,9 @@ app.use((req: any, res: any, next: any) => {
 })
 
 app.use((req: any, res: any, next: any) => {
-    if (!env.OM_API_KEY) return next()
+    if (!env.api_key) return next()
     const h = req.headers['authorization'] || ''
-    if (!h.startsWith('Bearer ') || h.slice(7) !== env.OM_API_KEY) {
+    if (!h.startsWith('Bearer ') || h.slice(7) !== env.api_key) {
         return res.status(401).json({ err: 'auth' })
     }
     next()

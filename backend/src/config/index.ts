@@ -10,7 +10,7 @@ const bool = (v: string | undefined) => v === 'true'
 export const env = {
     port: num(process.env.OM_PORT, 8080),
     db_path: str(process.env.OM_DB_PATH, './data/openmemory.sqlite'),
-    api_key: '',
+    api_key: process.env.OM_API_KEY
     emb_kind: str(process.env.OM_EMBEDDINGS, 'synthetic'),
     embed_mode: str(process.env.OM_EMBED_MODE, 'simple'),
     adv_embed_parallel: bool(process.env.OM_ADV_EMBED_PARALLEL),
