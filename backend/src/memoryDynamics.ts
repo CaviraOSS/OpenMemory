@@ -1,7 +1,6 @@
-import { allAsync, runAsync, getAsync, q } from '../database'
-import { now } from '../utils'
-import { env } from '../config'
-import { cosineSimilarity } from '../embedding'
+import { allAsync, runAsync, getAsync, q } from './utils/database'
+import { now } from './utils'
+import { cosineSimilarity } from './embedding'
 
 export const ALPHA_LEARNING_RATE_FOR_RECALL_REINFORCEMENT = 0.15
 export const BETA_LEARNING_RATE_FOR_EMOTIONAL_FREQUENCY = 0.20
