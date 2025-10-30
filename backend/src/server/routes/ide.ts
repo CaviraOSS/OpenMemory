@@ -1,7 +1,7 @@
 import { q } from '../../database'
 import { addHSGMemory, hsgQuery } from '../../hsg'
 import { j, p } from '../../utils'
-
+import * as crypto from 'crypto';
 export function ide(app: any) {
     app.post('/api/ide/events', async (req: any, res: any) => {
         try {
@@ -101,7 +101,7 @@ export function ide(app: any) {
             const project_name = req.body.project_name || 'unknown'
             const ide_name = req.body.ide_name || 'unknown'
 
-            const session_id = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`
+            const session_id = `session_${Date.now()}_${crypto.randomBytes(7).toString('hex')}`
             const now_ts = Date.now()
 
             const content = `Session started: ${user_id} in ${project_name} using ${ide_name}`
