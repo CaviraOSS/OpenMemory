@@ -282,6 +282,8 @@ node backend/dist/mcp/index.js
 
 The CLI binds to stdin/stdout using the same toolset shown above, so HTTP and stdio clients share one implementation.
 
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
+
 ---
 
 ## 6. Performance and Cost Analysis
