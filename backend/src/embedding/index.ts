@@ -158,14 +158,9 @@ const hash = (v: string) => {
 const addFeat = (vec: Float32Array, dim: number, key: string, w: number) => {
     const h = hash(key);
     const value = w * (1 - ((h & 1) << 1));
-
-    // The core optimization: Check if dim is a power of two.
-    // This check is extremely fast and allows V8's JIT to optimize heavily.
     if ((dim > 0) && (dim & (dim - 1)) === 0) {
-        // FAST PATH: dim is a power of two. Use bitwise AND.
         vec[h & (dim - 1)] += value;
     } else {
-        // SLOW PATH: Use modulo.
         vec[h % dim] += value;
     }
 }
