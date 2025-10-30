@@ -113,5 +113,11 @@ export function aggregateVectors(vectors: number[][]): number[] {
  * Combines chunks back into full text (for display/context)
  */
 export function combineChunks(chunks: Chunk[]): string {
-    return chunks.map(c => c.text).join(' ')
+    const len = chunks.length;
+    if (len === 0) return '';
+    let str = chunks[0].text;
+    for (let i = 1; i < len; ++i) {
+        str += ' ' + chunks[i].text;
+    }
+    return str;
 }
