@@ -27,9 +27,9 @@ Pull requests are the best way to propose changes to the codebase. We actively w
 
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using Github's [issues](https://github.com/nullure/openmemory/issues)
+## Report bugs using Github's [issues](https://github.com/CaviraOSS/OpenMemory/issues)
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/nullure/openmemory/issues/new).
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/CaviraOSS/OpenMemory/issues/new).
 
 ## Write bug reports with detail, background, and sample code
 
@@ -43,13 +43,13 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 - What actually happens
 - Notes (possibly including why you think this might be happening, or stuff you tried that didn't work)
 
-People *love* thorough bug reports. I'm not even kidding.
+People _love_ thorough bug reports. I'm not even kidding.
 
 ## Development Setup
 
 ### Prerequisites
 
-- Node.js 18+ and npm
+- Node.js 21+ and npm
 - Python 3.8+ (for Python SDK development)
 - Git
 - Docker (optional, for containerized development)
@@ -58,7 +58,7 @@ People *love* thorough bug reports. I'm not even kidding.
 
 ```bash
 # Clone the repository
-git clone https://github.com/nullure/openmemory.git
+git clone https://github.com/CaviraOSS/OpenMemory.git
 cd openmemory
 
 # Install backend dependencies
@@ -79,7 +79,7 @@ npm run build
 
 ```bash
 # Navigate to JS SDK
-cd sdk-js
+cd SDK/javascript
 
 # Install dependencies
 npm install
@@ -99,7 +99,7 @@ node basic-usage.js
 
 ```bash
 # Navigate to Python SDK
-cd sdk-py
+cd SDK/python
 
 # Install development dependencies (optional)
 pip install -e .[dev]
@@ -127,6 +127,7 @@ docker-compose -f docker-compose.dev.yml up
 ### Code Style
 
 #### TypeScript/JavaScript
+
 - Use TypeScript for all new code
 - Follow ESLint configuration
 - Use Prettier for formatting
@@ -134,6 +135,7 @@ docker-compose -f docker-compose.dev.yml up
 - Semicolons required
 
 #### Python
+
 - Follow PEP 8 style guide
 - Use black for formatting
 - 4-space indentation
@@ -153,6 +155,7 @@ type(scope): description
 ```
 
 Types:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -162,6 +165,7 @@ Types:
 - `chore`: Maintenance tasks
 
 Examples:
+
 ```
 feat(embedding): add Google Gemini embedding provider
 fix(database): resolve memory leak in connection pooling
@@ -171,6 +175,7 @@ docs(api): update HSG endpoint documentation
 ### Testing
 
 #### Backend Tests
+
 ```bash
 cd backend
 npm test                 # Run all tests
@@ -179,15 +184,17 @@ npm run test:coverage   # Run tests with coverage
 ```
 
 #### JavaScript SDK Tests
+
 ```bash
-cd sdk-js
+cd SDK/javascript
 npm test                # Run Jest tests
 npm run test:e2e       # Run end-to-end tests
 ```
 
 #### Python SDK Tests
+
 ```bash
-cd sdk-py
+cd SDK/python
 python -m pytest tests/              # Run all tests
 python -m pytest tests/ -v          # Verbose output
 python -m pytest tests/ --cov       # With coverage
@@ -221,24 +228,28 @@ When working on HSG features:
 ## Feature Development Process
 
 ### 1. Design Phase
+
 - Create GitHub issue with detailed proposal
 - Discuss architecture implications
 - Consider HSG impact and sector routing
 - Plan testing strategy
 
 ### 2. Implementation Phase
+
 - Create feature branch from `main`
 - Implement core functionality
 - Add comprehensive tests
 - Update documentation
 
 ### 3. Review Phase
+
 - Submit pull request
 - Address code review feedback
 - Ensure all tests pass
 - Update changelog
 
 ### 4. Integration Phase
+
 - Merge to main branch
 - Deploy to staging environment
 - Verify functionality
@@ -256,6 +267,7 @@ When adding new embedding providers:
 6. **Examples**: Add examples demonstrating the new provider
 
 Example provider structure:
+
 ```typescript
 interface EmbeddingProvider {
   name: string;
@@ -268,18 +280,21 @@ interface EmbeddingProvider {
 ## Documentation
 
 ### API Documentation
+
 - Update OpenAPI specs for new endpoints
 - Include request/response examples
 - Document error conditions
 - Update SDK documentation
 
 ### Code Documentation
+
 - Use TSDoc for TypeScript code
 - Use docstrings for Python code
 - Include usage examples
 - Document complex algorithms
 
 ### User Documentation
+
 - Update README files
 - Create tutorial content
 - Update example code
@@ -288,12 +303,14 @@ interface EmbeddingProvider {
 ## Performance Considerations
 
 ### Backend Performance
+
 - Profile database queries
 - Monitor memory usage
 - Test with large datasets
 - Consider async operations
 
 ### SDK Performance
+
 - Minimize bundle size
 - Optimize API calls
 - Consider caching strategies
@@ -302,12 +319,14 @@ interface EmbeddingProvider {
 ## Security Guidelines
 
 ### Input Validation
+
 - Sanitize all user inputs
 - Validate API parameters
 - Check authentication tokens
 - Rate limit requests
 
 ### Data Protection
+
 - Encrypt sensitive data
 - Secure API endpoints
 - Validate file uploads
@@ -316,12 +335,15 @@ interface EmbeddingProvider {
 ## Release Process
 
 ### Version Numbering
+
 We follow [Semantic Versioning](https://semver.org/):
+
 - **MAJOR**: Breaking changes
 - **MINOR**: New features (backwards compatible)
 - **PATCH**: Bug fixes (backwards compatible)
 
 ### Release Checklist
+
 1. Update version numbers
 2. Update CHANGELOG.md
 3. Run full test suite
@@ -333,17 +355,20 @@ We follow [Semantic Versioning](https://semver.org/):
 ## Community
 
 ### Getting Help
+
 - GitHub Discussions for questions
 - GitHub Issues for bug reports
 - Discord server for real-time chat
 - Stack Overflow with `openmemory` tag
 
 ### Code of Conduct
+
 Please note that this project is released with a [Contributor Code of Conduct](CODE_OF_CONDUCT.md). By participating in this project you agree to abide by its terms.
 
 ## Recognition
 
 Contributors will be recognized in:
+
 - CONTRIBUTORS.md file
 - GitHub contributors page
 - Release notes

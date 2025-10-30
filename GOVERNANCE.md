@@ -6,7 +6,7 @@ _Last updated: 2025-10-18_
 
 ## 1. Overview
 
-**OpenMemory** is an open-source, community-driven project under the umbrella of **Spectrum Labs**.  
+**OpenMemory** is an open-source, community-driven project under the umbrella of **CaviraOSS**.  
 This document defines how decisions are made, who has authority within the project, and how contributors can grow into maintainers.
 
 Our goal is to ensure transparency, trust, and long-term sustainability for all contributors and users.
@@ -50,13 +50,12 @@ A proposal passes with **majority approval (≥60%)**.
 
 OpenMemory is divided into modular components:
 
-| Module      | Lead               | Description                               |
-| ----------- | ------------------ | ----------------------------------------- |
-| `backend/`  | Core Team          | memory engine                             |
-| `sdk-js/`   | JS Maintainer      | JavaScript SDK for web and Node           |
-| `sdk-py/`   | Python Maintainer  | Python SDK for researchers and AI devs    |
-| `docs/`     | Documentation Lead | Guides, diagrams, and developer docs      |
-| `examples/` | Community          | Reference implementations and agent demos |
+| Module      | Lead              | Description                               |
+| ----------- | ----------------- | ----------------------------------------- |
+| `backend/`  | Core Team         | memory engine                             |
+| `sdk-js/`   | JS Maintainer     | JavaScript SDK for web and Node           |
+| `sdk-py/`   | Python Maintainer | Python SDK for researchers and AI devs    |
+| `examples/` | Community         | Reference implementations and agent demos |
 
 Each module may evolve independently as long as compatibility with the API contracts is maintained.
 
@@ -64,9 +63,8 @@ Each module may evolve independently as long as compatibility with the API contr
 
 ## 6. Roadmap and Releases
 
-- The roadmap is maintained publicly in `/docs/roadmap.md`.
-- Minor releases every **3–4 weeks**.
-- Major releases every **3–6 months**.
+- Minor releases every **3–4 day**.
+- Major releases every **3–6 weeks**.
 - Every release must:
   - Update `CHANGELOG.md`
   - Pass automated CI/CD checks
@@ -113,7 +111,6 @@ This governance document may be amended through a pull request approved by **two
 | **CaviraOss** | Organization      | Infrastructure & Governance |
 | _(vacant)_    | Python Maintainer | SDK & API Sync              |
 | _(vacant)_    | JS Maintainer     | JS SDK, npm releases        |
-| _(vacant)_    | Docs Maintainer   | Docs & Community            |
 
 ---
 

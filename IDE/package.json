@@ -2,10 +2,11 @@
     "name": "openmemory-vscode",
     "displayName": "OpenMemory for VS Code",
     "description": "Cognitive memory system that remembers your coding context across sessions",
-    "version": "2.0.0",
-    "publisher": "cavira",
+    "version": "1.0.1",
+    "publisher": "Nullure",
+    "icon": "icon.png",
     "engines": {
-        "vscode": "^1.85.0"
+        "vscode": "^1.105.0"
     },
     "categories": [
         "Machine Learning",
@@ -14,6 +15,10 @@
     "activationEvents": [
         "onStartupFinished"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/caviraoss/openmemory"
+    },
     "main": "./out/extension.js",
     "contributes": {
         "commands": [

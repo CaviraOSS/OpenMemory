@@ -3,7 +3,7 @@
 Add long-term, semantic, and contextual memory to any AI system.  
 Open source. Self-hosted. Explainable. Framework-agnostic.
 
-[Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
+[VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
 
 ---
 
@@ -12,7 +12,26 @@ Open source. Self-hosted. Explainable. Framework-agnostic.
 OpenMemory is a self-hosted, modular **AI memory engine** designed to provide persistent, structured, and semantic memory for large language model (LLM) applications.  
 It enables AI agents, assistants, and copilots to remember user data, preferences, and prior interactions — securely and efficiently.
 
-Unlike traditional vector databases or SaaS “memory layers”, OpenMemory implements a **Hierarchical Memory Decomposition (HMD)** architecture:
+### VS Code Extension
+
+Install the OpenMemory VS Code extension to give your AI assistants persistent memory across coding sessions:
+
+**[Get it on VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)**
+
+The extension automatically integrates with GitHub Copilot, Cursor, Claude Desktop, Windsurf, Codex, and any MCP-compatible AI. Features include:
+
+- Zero-config AI integration with auto-configuration on first run
+- Tracks every file edit, save, and open automatically
+- Smart compression reduces token usage by 30-70%
+- Query responses under 80ms with intelligent caching
+- Real-time token savings and compression metrics
+- Supports both Direct HTTP and MCP protocol modes
+
+Install the extension, start the OpenMemory backend, and your AI tools instantly access your entire coding memory.
+
+### Core Architecture
+
+Unlike traditional vector databases or SaaS "memory layers", OpenMemory implements a **Hierarchical Memory Decomposition (HMD)** architecture:
 
 - **One canonical node per memory** (no data duplication)
 - **Multi-sector embeddings** (episodic, semantic, procedural, emotional, reflective)
