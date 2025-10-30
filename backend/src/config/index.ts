@@ -10,7 +10,7 @@ const bool = (v: string | undefined) => v === 'true'
 export const env = {
     port: num(process.env.OM_PORT, 8080),
     db_path: str(process.env.OM_DB_PATH, './data/openmemory.sqlite'),
-    api_key: process.env.OM_API_KEY || '',
+    api_key: process.env.OM_API_KEY,
     rate_limit_enabled: bool(process.env.OM_RATE_LIMIT_ENABLED),
     rate_limit_window_ms: num(process.env.OM_RATE_LIMIT_WINDOW_MS, 60000),
     rate_limit_max_requests: num(process.env.OM_RATE_LIMIT_MAX_REQUESTS, 100),

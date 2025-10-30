@@ -19,10 +19,8 @@ app.use((req: any, res: any, next: any) => {
     next()
 })
 
-// Apply authentication middleware
 app.use(authenticate_api_request)
 
-// Optional: Log authenticated requests (comment out in production)
 if (process.env.OM_LOG_AUTH === 'true') {
     app.use(log_authenticated_request)
 }
