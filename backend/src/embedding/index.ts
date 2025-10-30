@@ -147,21 +147,41 @@ async function embedWithLocal(t: string, s: string): Promise<number[]> {
 }
 
 const hash = (v: string) => {
-    let h = 0x811c9dc5
-    for (let i = 0; i < v.length; i++) h = Math.imul(h ^ v.charCodeAt(i), 16777619)
-    return h >>> 0
+    let h = 0x811c9dc5 | 0;
+    const len = v.length | 0;
+    for (let i = 0; i < len; i++) {
+        h = Math.imul(h ^ v.charCodeAt(i), 16777619);
+    }
+    return h >>> 0;
 }
 
 const addFeat = (vec: Float32Array, dim: number, key: string, w: number) => {
-    const h = hash(key)
-    vec[h % dim] += w * ((h & 1) ? -1 : 1)
+    const h = hash(key);
+    const value = w * (1 - ((h & 1) << 1));
+
+    // The core optimization: Check if dim is a power of two.
+    // This check is extremely fast and allows V8's JIT to optimize heavily.
+    if ((dim > 0) && (dim & (dim - 1)) === 0) {
+        // FAST PATH: dim is a power of two. Use bitwise AND.
+        vec[h & (dim - 1)] += value;
+    } else {
+        // SLOW PATH: Use modulo.
+        vec[h % dim] += value;
+    }
 }
 
 const norm = (vec: Float32Array) => {
-    let n = 0
-    for (let i = 0; i < vec.length; i++) n += vec[i] * vec[i]
-    n = Math.sqrt(n)
-    if (n) for (let i = 0; i < vec.length; i++) vec[i] /= n
+    let n = 0;
+    const len = vec.length;
+    for (let i = 0; i < len; i++) {
+        const v = vec[i];
+        n += v * v;
+    }
+    if (n === 0) return;
+    const invSqrt = 1 / Math.sqrt(n);
+    for (let i = 0; i < len; i++) {
+        vec[i] *= invSqrt;
+    }
 }
 
 function generateSyntheticEmbedding(t: string, s: string): number[] {
@@ -174,7 +194,11 @@ function generateSyntheticEmbedding(t: string, s: string): number[] {
     }
     const et = Array.from(addSynonymTokens(ct))
     const tc = new Map<string, number>()
-    et.forEach(tok => tc.set(tok, (tc.get(tok) || 0) + 1))
+    const etLength: number = et.length;
+    for (let i = 0; i < etLength; i++) {
+        const tok = et[i];
+        tc.set(tok, (tc.get(tok) || 0) + 1)
+    }
 
     for (const [tok, c] of tc) {
         const w = Math.log(1 + c) + 1
@@ -196,6 +220,7 @@ const resizeVector = (v: number[], t: number) => {
     if (v.length > t) return v.slice(0, t)
     return [...v, ...Array(t - v.length).fill(0)]
 }
+
 export async function embedMultiSector(id: string, text: string, sectors: string[], chunks?: Array<{ text: string }>): Promise<EmbeddingResult[]> {
     const r: EmbeddingResult[] = []
     await q.ins_log.run(id, 'multi-sector', 'pending', Date.now(), null)
