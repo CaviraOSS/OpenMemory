@@ -1,0 +1,71 @@
+name: Docker Build Test
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-latest
+    name: Test Docker Build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          tags: openmemory-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker Compose Build
+        run: |
+          docker compose build
+          docker compose config
+
+      - name: Start Services
+        run: |
+          docker compose up -d
+          sleep 10
+
+      - name: Check Health Endpoint
+        run: |
+          max_attempts=30
+          attempt=0
+          until curl -f http://localhost:8080/health || [ $attempt -eq $max_attempts ]; do
+            echo "Waiting for service to be healthy... (attempt $((attempt+1))/$max_attempts)"
+            sleep 2
+            attempt=$((attempt+1))
+          done
+
+          if [ $attempt -eq $max_attempts ]; then
+            echo "Service failed to become healthy"
+            docker compose logs
+            exit 1
+          fi
+
+          echo "✅ Service is healthy!"
+          curl -v http://localhost:8080/health
+
+      - name: Show Container Logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v

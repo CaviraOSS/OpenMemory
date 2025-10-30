@@ -5,11 +5,19 @@ import * as crypto from 'crypto';
 export function ide(app: any) {
     app.post('/api/ide/events', async (req: any, res: any) => {
         try {
+            console.log('[IDE DEBUG] /api/ide/events - Request body:', JSON.stringify(req.body, null, 2))
+
             const event_type = req.body.event_type
             const file_path = req.body.file_path || 'unknown'
             const content = req.body.content || ''
             const session_id = req.body.session_id || 'default'
             const metadata = req.body.metadata || {}
+
+            console.log('[IDE DEBUG] Parsed values:')
+            console.log('  - event_type:', event_type, typeof event_type)
+            console.log('  - file_path:', file_path, typeof file_path)
+            console.log('  - session_id:', session_id, typeof session_id)
+            console.log('  - metadata:', JSON.stringify(metadata))
 
             if (!event_type) return res.status(400).json({ err: 'event_type_required' })
 
@@ -24,7 +32,13 @@ export function ide(app: any) {
                 ide_mode: true
             }
 
+            console.log('[IDE DEBUG] Calling addHSGMemory with:')
+            console.log('  - memory_content:', memory_content.substring(0, 100) + '...')
+            console.log('  - full_metadata:', JSON.stringify(full_metadata))
+
             const result = await addHSGMemory(memory_content, undefined, full_metadata)
+
+            console.log('[IDE DEBUG] addHSGMemory result:', JSON.stringify(result, null, 2))
 
             res.json({
                 success: true,
@@ -33,18 +47,26 @@ export function ide(app: any) {
                 sectors: result.sectors
             })
         } catch (err) {
-            console.error('Error storing IDE event:', err)
+            console.error('[IDE DEBUG] Error storing IDE event:', err)
+            console.error('[IDE DEBUG] Error stack:', err instanceof Error ? err.stack : 'No stack')
             res.status(500).json({ err: 'internal' })
         }
     })
 
-    // POST /api/ide/context - Query relevant context
     app.post('/api/ide/context', async (req: any, res: any) => {
         try {
+            console.log('[IDE DEBUG] /api/ide/context - Request body:', JSON.stringify(req.body, null, 2))
+
             const query = req.body.query
             const k = req.body.k || req.body.limit || 5
             const session_id = req.body.session_id
             const file_path = req.body.file_path
+
+            console.log('[IDE DEBUG] Query params:')
+            console.log('  - query:', query, typeof query)
+            console.log('  - k:', k, typeof k)
+            console.log('  - session_id:', session_id, typeof session_id)
+            console.log('  - file_path:', file_path, typeof file_path)
 
             if (!query) return res.status(400).json({ err: 'query_required' })
 
@@ -52,7 +74,6 @@ export function ide(app: any) {
 
             let filtered = results
 
-            // Filter by session if provided
             if (session_id) {
                 filtered = []
                 for (const r of results) {
@@ -66,7 +87,6 @@ export function ide(app: any) {
                 }
             }
 
-            // Filter by file path if provided
             if (file_path) {
                 filtered = filtered.filter((r: any) => r.content.includes(file_path))
             }
@@ -89,19 +109,27 @@ export function ide(app: any) {
                 query: query
             })
         } catch (err) {
-            console.error('Error retrieving IDE context:', err)
+            console.error('[IDE DEBUG] Error retrieving IDE context:', err)
+            console.error('[IDE DEBUG] Error stack:', err instanceof Error ? err.stack : 'No stack')
             res.status(500).json({ err: 'internal' })
         }
     })
 
-    // POST /api/ide/session/start - Start IDE session
     app.post('/api/ide/session/start', async (req: any, res: any) => {
         try {
+            console.log('[IDE DEBUG] /api/ide/session/start - Request body:', JSON.stringify(req.body, null, 2))
+
             const user_id = req.body.user_id || 'anonymous'
             const project_name = req.body.project_name || 'unknown'
             const ide_name = req.body.ide_name || 'unknown'
 
+            console.log('[IDE DEBUG] Session start params:')
+            console.log('  - user_id:', user_id, typeof user_id)
+            console.log('  - project_name:', project_name, typeof project_name)
+            console.log('  - ide_name:', ide_name, typeof ide_name)
+
             const session_id = `session_${Date.now()}_${crypto.randomBytes(7).toString('hex')}`
+            console.log('[IDE DEBUG] Generated session_id:', session_id)
             const now_ts = Date.now()
 
             const content = `Session started: ${user_id} in ${project_name} using ${ide_name}`
@@ -116,9 +144,15 @@ export function ide(app: any) {
                 ide_mode: true
             }
 
+            console.log('[IDE DEBUG] Calling addHSGMemory for session start with:')
+            console.log('  - content:', content)
+            console.log('  - metadata:', JSON.stringify(metadata))
+
             const result = await addHSGMemory(content, undefined, metadata)
 
-            res.json({
+            console.log('[IDE DEBUG] Session start result:', JSON.stringify(result, null, 2))
+
+            const response = {
                 success: true,
                 session_id: session_id,
                 memory_id: result.id,
@@ -126,23 +160,29 @@ export function ide(app: any) {
                 user_id: user_id,
                 project_name: project_name,
                 ide_name: ide_name
-            })
+            }
+
+            console.log('[IDE DEBUG] Sending response:', JSON.stringify(response, null, 2))
+
+            res.json(response)
         } catch (err) {
-            console.error('Error starting IDE session:', err)
+            console.error('[IDE DEBUG] Error starting IDE session:', err)
             res.status(500).json({ err: 'internal' })
         }
     })
 
-    // POST /api/ide/session/end - End IDE session
     app.post('/api/ide/session/end', async (req: any, res: any) => {
         try {
+            console.log('[IDE DEBUG] /api/ide/session/end - Request body:', JSON.stringify(req.body, null, 2))
+
             const session_id = req.body.session_id
+
+            console.log('[IDE DEBUG] Session end - session_id:', session_id, typeof session_id)
 
             if (!session_id) return res.status(400).json({ err: 'session_id_required' })
 
             const now_ts = Date.now()
 
-            // Get all memories from this session
             const all_memories = await q.all_mem.all(10000, 0)
             const session_memories = all_memories.filter((m: any) => {
                 try {
@@ -194,15 +234,19 @@ export function ide(app: any) {
                 }
             })
         } catch (err) {
-            console.error('Error ending IDE session:', err)
+            console.error('[IDE DEBUG] Error ending IDE session:', err)
+            console.error('[IDE DEBUG] Error stack:', err instanceof Error ? err.stack : 'No stack')
             res.status(500).json({ err: 'internal' })
         }
     })
 
-    // GET /api/ide/patterns/:session_id - Get coding patterns
     app.get('/api/ide/patterns/:session_id', async (req: any, res: any) => {
         try {
+            console.log('[IDE DEBUG] /api/ide/patterns/:session_id - Params:', req.params)
+
             const session_id = req.params.session_id
+
+            console.log('[IDE DEBUG] Pattern query - session_id:', session_id, typeof session_id)
 
             if (!session_id) return res.status(400).json({ err: 'session_id_required' })
 
@@ -233,7 +277,8 @@ export function ide(app: any) {
                 patterns: patterns
             })
         } catch (err) {
-            console.error('Error detecting patterns:', err)
+            console.error('[IDE DEBUG] Error detecting patterns:', err)
+            console.error('[IDE DEBUG] Error stack:', err instanceof Error ? err.stack : 'No stack')
             res.status(500).json({ err: 'internal' })
         }
     })

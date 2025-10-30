@@ -27,8 +27,23 @@
             "properties": {
                 "openmemory.backendUrl": {
                     "type": "string",
-                    "default": "http://localhost:3000",
+                    "default": "http://localhost:8080",
                     "description": "URL of the OpenMemory backend server"
+                },
+                "openmemory.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "API key for OpenMemory backend authentication (leave empty if no auth required)"
+                },
+                "openmemory.useMCP": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use MCP protocol for AI tool integration instead of direct HTTP"
+                },
+                "openmemory.mcpServerPath": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to MCP server executable (leave empty to use built-in backend MCP)"
                 }
             }
         }
@@ -38,14 +53,16 @@
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
-        "lint": "eslint src --ext ts"
+        "lint": "eslint src --ext ts",
+        "postinstall": "node postinstall.js"
     },
     "devDependencies": {
         "@types/node": "^18.x",
-        "@types/vscode": "^1.85.0",
-        "typescript": "^5.3.0",
-        "eslint": "^8.56.0",
+        "@types/vscode": "^1.105.0",
         "@typescript-eslint/eslint-plugin": "^6.15.0",
-        "@typescript-eslint/parser": "^6.15.0"
+        "@typescript-eslint/parser": "^6.15.0",
+        "eslint": "^8.56.0",
+        "typescript": "^5.3.0",
+        "vscode": "^1.1.37"
     }
 }

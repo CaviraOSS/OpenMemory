@@ -2,6 +2,31 @@
 
 > Transform your IDE into a cognitive memory system that remembers your coding context across sessions.
 
+## ✨ Zero-Config AI Integration
+
+**Install once. Use everywhere.**
+
+OpenMemory automatically links with:
+
+- 🚀 **GitHub Copilot** - Context provider auto-configured
+- 🎯 **Cursor** - Context provider auto-configured
+- 🤖 **Claude Code** - MCP integration enabled
+- 🌊 **Windsurf** - Context API connected
+- � **Codex** - Context provider enabled
+- 🧠 **Any MCP-compatible AI** - Universal memory access
+
+**No manual setup required!** Extension detects backend and auto-generates all config files.
+
+## Quick Start
+
+**3 Steps to Get Started:**
+
+1. **Start Backend**: `cd backend && npm start` (runs on port 8080)
+2. **Open IDE Folder**: Open `IDE/` folder in VS Code
+3. **Press F5**: Launches extension in development mode
+
+**That's it!** OpenMemory is now tracking your coding activity.
+
 ## Features
 
 - **Automatic Context Capture**: Tracks file opens, edits, and saves
@@ -12,33 +37,66 @@
 
 ## Installation
 
+### Method 1: Quick Install (For Users)
+
+1. **Start OpenMemory Backend** (if not running):
+
+   ```powershell
+   cd backend
+   npm install
+   npm start
+   ```
+
+   Backend runs on `http://localhost:8080` by default
+
+2. **Install the VS Code Extension**:
+
+   - Open VS Code
+   - Go to Extensions view (Ctrl+Shift+X)
+   - Click the `...` menu → "Install from VSIX..."
+   - Navigate to `IDE/` folder and select the `.vsix` file (if available)
+
+   **OR** for development:
+
+   - Open the `IDE/` folder in VS Code
+   - Press F5 to launch Extension Development Host
+   - A new VS Code window opens with OpenMemory active
+
+3. **Configure Backend URL** (if different from default):
+   - Open VS Code Settings (Ctrl+,)
+   - Search for "OpenMemory"
+   - Set `openmemory.backendUrl` to your backend URL (default: `http://localhost:8080`)
+
+### Method 2: Build from Source (For Developers)
+
+1. **Install Dependencies**:
+
+   ```powershell
+   cd IDE
+   npm install
+   ```
+
+2. **Compile the Extension**:
+
+   ```powershell
+   npm run compile
+   ```
+
+3. **Run in Development Mode**:
+   - Press F5 in VS Code to launch Extension Development Host
+   - Or package as VSIX: `npx vsce package`
+
 ### Prerequisites
 
-1. OpenMemory backend running (default: `http://localhost:3000`)
-2. VS Code 1.85.0 or higher
-
-### Setup
-
-1. Install dependencies:
-
-```bash
-cd IDE/vscode
-npm install
-```
-
-2. Compile the extension:
-
-```bash
-npm run compile
-```
-
-3. Press F5 in VS Code to launch Extension Development Host
+- ✅ VS Code 1.85.0 or higher
+- ✅ Node.js 18+ installed
+- ✅ OpenMemory backend running (port 8080 by default)
 
 ## Configuration
 
 Configure OpenMemory through VS Code settings:
 
-- **`openmemory.backendUrl`**: URL of your OpenMemory backend (default: `http://localhost:3000`)
+- **`openmemory.backendUrl`**: URL of your OpenMemory backend (default: `http://localhost:8080`)
 
 ## Usage
 
@@ -79,7 +137,7 @@ Results appear in the Output panel with salience scores.
 ┌────────▼────────┐
 │  OpenMemory     │
 │    Backend      │
-│  (port 3000)    │
+│  (port 8080)    │
 └─────────────────┘
 ```
 
@@ -175,8 +233,8 @@ npm run watch
 
 Check backend is running:
 
-```bash
-curl http://localhost:3000/api/system/health
+```powershell
+curl http://localhost:8080/api/system/health
 ```
 
 ### Events not appearing
@@ -189,10 +247,8 @@ curl http://localhost:3000/api/system/health
 
 Ensure backend `/api/ide/session/start` endpoint is available:
 
-```bash
-curl -X POST http://localhost:3000/api/ide/session/start \
-  -H "Content-Type: application/json" \
-  -d '{"user_identifier_for_session":"test","project_name_or_workspace":"test","ide_name_and_version":"test"}'
+```powershell
+curl -X POST http://localhost:8080/api/ide/session/start -H "Content-Type: application/json" -d '{\"user_identifier_for_session\":\"test\",\"project_name_or_workspace\":\"test\",\"ide_name_and_version\":\"test\"}'
 ```
 
 ## License
