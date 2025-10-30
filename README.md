@@ -370,6 +370,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/recabasic">
+                    <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
+                    <br />
+                    <sub><b>Elvoro</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
@@ -383,6 +390,8 @@ make test
                     <sub><b>Muhammad Fiaz</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/pc-quiknode">
                     <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
@@ -390,8 +399,6 @@ make test
                     <sub><b>Peter Chung</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/ammesonb">
                     <img src="https://avatars.githubusercontent.com/u/2522710?v=4" width="100;" alt="ammesonb"/>
@@ -407,17 +414,17 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/recabasic">
-                    <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
-                    <br />
-                    <sub><b>Elvoro</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/josephgoksu">
                     <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
                     <br />
                     <sub><b>Joseph Goksu</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/lwsinclair">
+                    <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
+                    <br />
+                    <sub><b>Lawrence Sinclair</b></sub>
                 </a>
             </td>
 		</tr>
