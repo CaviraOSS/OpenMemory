@@ -90,23 +90,27 @@ export function chunkText(
  * Per HMD v2 spec section 4.3: mean or attention-weighted pooling
  */
 export function aggregateVectors(vectors: number[][]): number[] {
-    if (vectors.length === 0) throw new Error('No vectors to aggregate')
-    if (vectors.length === 1) return vectors[0]
+    const n = vectors.length;
+    if (n === 0) throw new Error('No vectors to aggregate');
+    if (n === 1) return vectors[0].slice();
 
-    const dim = vectors[0].length
-    const result = new Array(dim).fill(0)
+    const dim = vectors[0].length;
+    const result = new Array(dim);
+    for (let i = 0; i < dim; ++i) result[i] = 0;
 
-    for (const vector of vectors) {
-        for (let i = 0; i < dim; i++) {
-            result[i] += vector[i]
+    for (let v = 0; v < n; ++v) {
+        const vec = vectors[v];
+        for (let i = 0; i < dim; ++i) {
+            result[i] += vec[i];
         }
     }
 
-    for (let i = 0; i < dim; i++) {
-        result[i] /= vectors.length
+    const reciprocal = 1 / n;
+    for (let i = 0; i < dim; ++i) {
+        result[i] *= reciprocal;
     }
 
-    return result
+    return result;
 }
 
 /**
