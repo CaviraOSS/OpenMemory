@@ -4,6 +4,7 @@
  */
 
 const http = require('http');
+const API_KEY = 'your';
 
 function makeRequest(method, path, body = null) {
   return new Promise((resolve, reject) => {
@@ -12,7 +13,12 @@ function makeRequest(method, path, body = null) {
       port: 8080,
       path,
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : {},
+      headers: body
+        ? {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${API_KEY}`,
+          }
+        : { Authorization: `Bearer ${API_KEY}` },
     };
 
     const req = http.request(options, (res) => {

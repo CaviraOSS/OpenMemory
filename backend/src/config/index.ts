@@ -38,6 +38,9 @@ export const env = {
     metadata_backend: str(process.env.OM_METADATA_BACKEND, 'sqlite').toLowerCase(),
     vector_backend: str(process.env.OM_VECTOR_BACKEND, 'sqlite').toLowerCase(),
     ide_mode: bool(process.env.OM_IDE_MODE),
-    ide_allowed_origins: str(process.env.OM_IDE_ALLOWED_ORIGINS, 'http://localhost:5173,http://localhost:3000').split(',')
+    ide_allowed_origins: str(process.env.OM_IDE_ALLOWED_ORIGINS, 'http://localhost:5173,http://localhost:3000').split(','),
+    auto_reflect: bool(process.env.OM_AUTO_REFLECT),
+    reflect_interval: num(process.env.OM_REFLECT_INTERVAL, 10),
+    reflect_min: num(process.env.OM_REFLECT_MIN_MEMORIES, 20)
 }
 

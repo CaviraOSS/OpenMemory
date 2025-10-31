@@ -74,10 +74,11 @@ export const buildSearchDocument = (t: string) => {
     const c = canonicalTokensFromText(t)
     const e = new Set<string>()
     for (const tok of c) {
+        e.add(tok)
         const s = LOOK.get(tok)
         if (s) s.forEach(x => e.add(x))
     }
-    return [t, c.join(' '), Array.from(e).join(' ')].filter(Boolean).join(' ')
+    return Array.from(e).join(' ')
 }
 
 export const buildFtsQuery = (t: string) => {

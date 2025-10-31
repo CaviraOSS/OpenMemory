@@ -1,8 +1,8 @@
-import { createHash } from 'crypto';
-import { env } from '../config';
-import { q } from '../database';
-import { SECTOR_CONFIGS } from '../hsg';
-import { addSynonymTokens, canonicalTokensFromText } from '../utils/text';
+import { env } from '../config'
+import { getModel } from '../config/models'
+import { SECTOR_CONFIGS } from '../hsg'
+import { q } from '../database'
+import { canonicalTokensFromText, addSynonymTokens } from '../utils/text'
 
 let geminiQueue: Promise<any> = Promise.resolve()
 
@@ -19,20 +19,13 @@ export async function embedForSector(t: string, s: string): Promise<number[]> {
     }
 }
 
-const MOD: Record<string, string> = {
-    episodic: 'text-embedding-3-small',
-    semantic: 'text-embedding-3-small',
-    procedural: 'text-embedding-3-small',
-    emotional: 'text-embedding-3-small',
-    reflective: 'text-embedding-3-large'
-}
-
 async function embedWithOpenAI(t: string, s: string): Promise<number[]> {
     if (!env.openai_key) throw new Error('OpenAI key missing')
+    const model = getModel(s, 'openai')
     const r = await fetch(`${env.openai_base_url.replace(/\/$/, '')}/embeddings`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${env.openai_key}` },
-        body: JSON.stringify({ input: t, model: env.openai_model || MOD[s] || MOD.semantic, dimensions: env.vec_dim })
+        body: JSON.stringify({ input: t, model: env.openai_model || model, dimensions: env.vec_dim })
     })
     if (!r.ok) throw new Error(`OpenAI: ${r.status}`)
     return ((await r.json()) as any).data[0].embedding
@@ -41,10 +34,11 @@ async function embedWithOpenAI(t: string, s: string): Promise<number[]> {
 async function embedBatchOpenAI(texts: Record<string, string>): Promise<Record<string, number[]>> {
     if (!env.openai_key) throw new Error('OpenAI key missing')
     const sectors = Object.keys(texts)
+    const model = getModel('semantic', 'openai')
     const r = await fetch(`${env.openai_base_url.replace(/\/$/, '')}/embeddings`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'authorization': `Bearer ${env.openai_key}` },
-        body: JSON.stringify({ input: Object.values(texts), model: env.openai_model || MOD.semantic, dimensions: env.vec_dim })
+        body: JSON.stringify({ input: Object.values(texts), model: env.openai_model || model, dimensions: env.vec_dim })
     })
     if (!r.ok) throw new Error(`OpenAI batch: ${r.status}`)
     const d = (await r.json()) as any
@@ -107,19 +101,12 @@ async function embedWithGemini(texts: Record<string, string>): Promise<Record<st
     return promise
 }
 
-const OMOD: Record<string, string> = {
-    episodic: 'nomic-embed-text',
-    semantic: 'nomic-embed-text',
-    procedural: 'bge-small',
-    emotional: 'nomic-embed-text',
-    reflective: 'bge-large'
-}
-
 async function embedWithOllama(t: string, s: string): Promise<number[]> {
+    const model = getModel(s, 'ollama')
     const r = await fetch(`${env.ollama_url}/api/embeddings`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ model: OMOD[s] || OMOD.semantic, prompt: t })
+        body: JSON.stringify({ model, prompt: t })
     })
     if (!r.ok) throw new Error(`Ollama: ${r.status}`)
     return resizeVector(((await r.json()) as any).embedding, env.vec_dim)
@@ -131,38 +118,21 @@ async function embedWithLocal(t: string, s: string): Promise<number[]> {
         return generateSyntheticEmbedding(t, s)
     }
     try {
-        const hash = createHash('sha256').update(t, 'utf8').update(s, 'utf8').digest();
-        const dim = env.vec_dim;
-        const e = new Array<number>(dim);
-        const HLEN = 32;
-
-        let i = 0;
-        for (let idx = 0; idx < dim; idx++) {
-        const b1 = hash[i];
-        i = (i + 1) % HLEN;
-        const b2 = hash[i];
-        e[idx] = (b1 * 256 + b2) / 65535 * 2 - 1;
+        const { createHash } = await import('crypto')
+        const h = createHash('sha256').update(t + s).digest()
+        const e: number[] = []
+        for (let i = 0; i < env.vec_dim; i++) {
+            const b1 = h[i % h.length]
+            const b2 = h[(i + 1) % h.length]
+            e.push((b1 * 256 + b2) / 65535 * 2 - 1)
         }
-
-        let sumSquares = 0;
-        for (let idx = 0; idx < dim; idx++) {
-        const v = e[idx];
-        sumSquares += v * v;
-        }
-        const norm = Math.sqrt(sumSquares);
-
-        for (let idx = 0; idx < dim; idx++) {
-        e[idx] /= norm;
-        }
-
-        return e;
+        const n = Math.sqrt(e.reduce((sum, v) => sum + v * v, 0))
+        return e.map(v => v / n)
     } catch {
         console.warn('Local embedding failed, using synthetic')
         return generateSyntheticEmbedding(t, s)
     }
-}
-
-const hash = (v: string) => {
+} const hash = (v: string) => {
     let h = 0x811c9dc5 | 0;
     const len = v.length | 0;
     for (let i = 0; i < len; i++) {
@@ -329,7 +299,7 @@ export const getEmbeddingInfo = () => {
         i.base_url = env.openai_base_url
         i.model_override = env.openai_model || null
         i.batch_api = env.embed_mode === 'simple'
-        i.models = MOD
+        i.models = { episodic: getModel('episodic', 'openai'), semantic: getModel('semantic', 'openai'), procedural: getModel('procedural', 'openai'), emotional: getModel('emotional', 'openai'), reflective: getModel('reflective', 'openai') }
     } else if (env.emb_kind === 'gemini') {
         i.configured = !!env.gemini_key
         i.batch_api = env.embed_mode === 'simple'
@@ -337,7 +307,7 @@ export const getEmbeddingInfo = () => {
     } else if (env.emb_kind === 'ollama') {
         i.configured = true
         i.url = env.ollama_url
-        i.models = OMOD
+        i.models = { episodic: getModel('episodic', 'ollama'), semantic: getModel('semantic', 'ollama'), procedural: getModel('procedural', 'ollama'), emotional: getModel('emotional', 'ollama'), reflective: getModel('reflective', 'ollama') }
     } else if (env.emb_kind === 'local') {
         i.configured = !!env.local_model_path
         i.path = env.local_model_path

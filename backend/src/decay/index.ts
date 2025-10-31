@@ -9,7 +9,10 @@ import {
 } from '../memory-dynamics'
 
 export const apply_decay = async () => {
+    console.log('[Decay] Starting decay job...')
     const all_memory_records_from_database = await allAsync('select id,salience,decay_lambda,last_seen_at,updated_at from memories')
+    console.log(`[Decay] Fetched ${all_memory_records_from_database.length} memories`)
+
     const current_timestamp_in_milliseconds = now()
     const individual_memory_salience_updates = all_memory_records_from_database.map(async (memory_database_row: any) => {
         const time_difference_since_last_seen = Math.max(0, (current_timestamp_in_milliseconds - (memory_database_row.last_seen_at || memory_database_row.updated_at)) / 86400000)
@@ -24,10 +27,15 @@ export const apply_decay = async () => {
         const blended_decay_value = (combined_dual_phase_retention * 0.7) + (original_sector_decay * 0.3)
 
         const final_updated_salience = Math.max(0, memory_database_row.salience * blended_decay_value)
-        return { id: memory_database_row.id, salience: final_updated_salience }
+        return { id: memory_database_row.id, salience: final_updated_salience, old: memory_database_row.salience }
     })
-    await Promise.all((await Promise.all(individual_memory_salience_updates)).map(update_operation =>
+
+    const updates = await Promise.all(individual_memory_salience_updates)
+    const changed = updates.filter(u => Math.abs(u.salience - u.old) > 0.001).length
+
+    await Promise.all(updates.map(update_operation =>
         runAsync('update memories set salience=?, updated_at=? where id=?', [update_operation.salience, current_timestamp_in_milliseconds, update_operation.id])
     ))
-    console.log(`Applied dual-phase decay to ${all_memory_records_from_database.length} memories`)
+
+    console.log(`[Decay] Applied dual-phase decay to ${all_memory_records_from_database.length} memories (${changed} changed)`)
 }

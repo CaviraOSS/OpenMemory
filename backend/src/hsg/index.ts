@@ -228,13 +228,15 @@ export async function createSingleWaypoint(
         const existingMean = bufferToVector(mem.mean_vec)
         const similarity = cosineSimilarity(newMeanVector, existingMean)
 
-        if (similarity >= threshold && (!bestMatch || similarity > bestMatch.similarity)) {
+        if (!bestMatch || similarity > bestMatch.similarity) {
             bestMatch = { id: mem.id, similarity }
         }
     }
 
     if (bestMatch) {
         await q.ins_waypoint.run(newId, bestMatch.id, bestMatch.similarity, timestamp, timestamp)
+    } else {
+        await q.ins_waypoint.run(newId, newId, 1.0, timestamp, timestamp)
     }
 }
 

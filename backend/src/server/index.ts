@@ -5,6 +5,7 @@ import { lang } from '../langgraph'
 import { mcp } from '../mcp'
 import { routes } from './routes'
 import { authenticate_api_request, log_authenticated_request } from './middleware/auth'
+import { startReflection } from '../reflection'
 
 const app = server({ max_payload_size: env.max_payload_size })
 
@@ -32,8 +33,6 @@ if (env.mode === 'langgraph') {
     console.log('[LGM] LangGraph integration mode enabled')
     lang(app)
 }
-const DECAY_INTERVAL = 24 * 60 * 60 * 1000
-const PRUNE_INTERVAL = 7 * 24 * 60 * 60 * 1000
 setInterval(async () => {
     console.log('🧠 Running HSG decay process...')
     try {
@@ -42,7 +41,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('❌ Decay process failed:', error)
     }
-}, DECAY_INTERVAL)
+}, 24 * 60 * 60 * 1000)
 setInterval(async () => {
     console.log('🔗 Pruning weak waypoints...')
     try {
@@ -51,10 +50,13 @@ setInterval(async () => {
     } catch (error) {
         console.error('❌ Waypoint pruning failed:', error)
     }
-}, PRUNE_INTERVAL)
+}, 7 * 24 * 60 * 60 * 1000)
 runDecayProcess().then(result => {
     console.log(`🚀 Initial decay: ${result.decayed}/${result.processed} memories updated`)
 }).catch(console.error)
+
+startReflection()
+
 console.log(`?? OpenMemory server starting on port ${env.port}`)
 app.listen(env.port, () => {
     console.log(`? Server running on http://localhost:${env.port}`)
