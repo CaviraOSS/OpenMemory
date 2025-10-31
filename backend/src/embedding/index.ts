@@ -1,7 +1,8 @@
-import { env } from '../config'
-import { SECTOR_CONFIGS } from '../hsg'
-import { q } from '../database'
-import { canonicalTokensFromText, addSynonymTokens } from '../utils/text'
+import { createHash } from 'crypto';
+import { env } from '../config';
+import { q } from '../database';
+import { SECTOR_CONFIGS } from '../hsg';
+import { addSynonymTokens, canonicalTokensFromText } from '../utils/text';
 
 let geminiQueue: Promise<any> = Promise.resolve()
 
@@ -130,16 +131,31 @@ async function embedWithLocal(t: string, s: string): Promise<number[]> {
         return generateSyntheticEmbedding(t, s)
     }
     try {
-        const { createHash } = await import('crypto')
-        const h = createHash('sha256').update(t + s).digest()
-        const e: number[] = []
-        for (let i = 0; i < env.vec_dim; i++) {
-            const b1 = h[i % h.length]
-            const b2 = h[(i + 1) % h.length]
-            e.push((b1 * 256 + b2) / 65535 * 2 - 1)
+        const hash = createHash('sha256').update(t, 'utf8').update(s, 'utf8').digest();
+        const dim = env.vec_dim;
+        const e = new Array<number>(dim);
+        const HLEN = 32;
+
+        let i = 0;
+        for (let idx = 0; idx < dim; idx++) {
+        const b1 = hash[i];
+        i = (i + 1) % HLEN;
+        const b2 = hash[i];
+        e[idx] = (b1 * 256 + b2) / 65535 * 2 - 1;
         }
-        const n = Math.sqrt(e.reduce((sum, v) => sum + v * v, 0))
-        return e.map(v => v / n)
+
+        let sumSquares = 0;
+        for (let idx = 0; idx < dim; idx++) {
+        const v = e[idx];
+        sumSquares += v * v;
+        }
+        const norm = Math.sqrt(sumSquares);
+
+        for (let idx = 0; idx < dim; idx++) {
+        e[idx] /= norm;
+        }
+
+        return e;
     } catch {
         console.warn('Local embedding failed, using synthetic')
         return generateSyntheticEmbedding(t, s)
