@@ -1,8 +1,8 @@
-import { env } from '../config'
-import { SECTOR_CONFIGS } from '../hsg'
-import { q } from '../database'
-import { canonicalTokensFromText, addSynonymTokens } from '../utils/text'
 import { createHash } from 'crypto';
+import { env } from '../config';
+import { q } from '../database';
+import { SECTOR_CONFIGS } from '../hsg';
+import { addSynonymTokens, canonicalTokensFromText } from '../utils/text';
 
 let geminiQueue: Promise<any> = Promise.resolve()
 
