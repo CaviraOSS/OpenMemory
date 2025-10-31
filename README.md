@@ -375,6 +375,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/DKB0512">
+                    <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
+                    <br />
+                    <sub><b>Devarsh (DKB) Bhatt</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/msris108">
                     <img src="https://avatars.githubusercontent.com/u/43115330?v=4" width="100;" alt="msris108"/>
                     <br />
@@ -402,6 +409,8 @@ make test
                     <sub><b>Jason Kneen</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/muhammad-fiaz">
                     <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
@@ -409,20 +418,11 @@ make test
                     <sub><b>Muhammad Fiaz</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/pc-quiknode">
                     <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
                     <br />
                     <sub><b>Peter Chung</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/DKB0512">
-                    <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
-                    <br />
-                    <sub><b>Devarsh (DKB) Bhatt</b></sub>
                 </a>
             </td>
             <td align="center">
