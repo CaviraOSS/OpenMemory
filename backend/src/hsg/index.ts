@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import { buildSearchDocument, buildFtsQuery, canonicalTokenSet } from '../utils/text'
+import { incQ, decQ } from '../decay'
 export interface SectorConfig {
     model: string
     decay_lambda: number
@@ -147,7 +148,7 @@ export function classifyContent(content: string, metadata?: any): SectorClassifi
         Math.min(1.0, primaryScore / (primaryScore + (sortedScores[1]?.[1] || 0) + 1)) :
         0.2
     return {
-        primary: primaryScore > 0 ? primary : 'semantic', // Default to semantic
+        primary: primaryScore > 0 ? primary : 'semantic',
         additional,
         confidence
     }
@@ -348,229 +349,187 @@ export interface MultiVectorEmbeddingFusionWeights {
 }
 
 export async function calculateMultiVectorFusionScore(
-    memory_id_for_scoring: string,
-    query_embeddings_by_sector: Record<string, number[]>,
-    context_adaptive_weights: MultiVectorEmbeddingFusionWeights
+    mid: string,
+    qe: Record<string, number[]>,
+    w: MultiVectorEmbeddingFusionWeights
 ): Promise<number> {
-    const all_vector_embeddings_for_memory = await q.get_vecs_by_id.all(memory_id_for_scoring)
-
-    let accumulated_weighted_similarity_score = 0
-    let total_weight_normalization_factor = 0
-
-    const sector_to_weight_mapping: Record<string, number> = {
-        'semantic': context_adaptive_weights.semantic_dimension_weight,
-        'emotional': context_adaptive_weights.emotional_dimension_weight,
-        'procedural': context_adaptive_weights.procedural_dimension_weight,
-        'episodic': context_adaptive_weights.temporal_dimension_weight,
-        'reflective': context_adaptive_weights.reflective_dimension_weight
+    const vecs = await q.get_vecs_by_id.all(mid)
+    let sum = 0, tot = 0
+    const wm: Record<string, number> = { semantic: w.semantic_dimension_weight, emotional: w.emotional_dimension_weight, procedural: w.procedural_dimension_weight, episodic: w.temporal_dimension_weight, reflective: w.reflective_dimension_weight }
+    for (const v of vecs) {
+        const qv = qe[v.sector]
+        if (!qv) continue
+        const mv = bufferToVector(v.v)
+        const sim = cosineSimilarity(qv, mv)
+        const wgt = wm[v.sector] || 0.5
+        sum += sim * wgt
+        tot += wgt
     }
-
-    for (const vector_embedding_record of all_vector_embeddings_for_memory) {
-        const sector_type_of_embedding = vector_embedding_record.sector
-        const query_embedding_for_sector = query_embeddings_by_sector[sector_type_of_embedding]
-
-        if (!query_embedding_for_sector) continue
-
-        const memory_vector_buffer = bufferToVector(vector_embedding_record.v)
-        const cosine_similarity_for_this_sector = cosineSimilarity(query_embedding_for_sector, memory_vector_buffer)
-
-        const weight_for_this_cognitive_dimension = sector_to_weight_mapping[sector_type_of_embedding] || 0.5
-
-        accumulated_weighted_similarity_score += cosine_similarity_for_this_sector * weight_for_this_cognitive_dimension
-        total_weight_normalization_factor += weight_for_this_cognitive_dimension
-    }
-
-    const normalized_multi_vector_fusion_score = total_weight_normalization_factor > 0
-        ? accumulated_weighted_similarity_score / total_weight_normalization_factor
-        : 0
-
-    return normalized_multi_vector_fusion_score
+    return tot > 0 ? sum / tot : 0
 }
 
-export async function hsgQuery(
-    queryText: string,
-    k: number = 10,
-    filters?: { sectors?: string[], minSalience?: number }
-): Promise<HSGQueryResult[]> {
-    const queryClassification = classifyContent(queryText)
-    const candidateSectors = [queryClassification.primary, ...queryClassification.additional]
-    const queryTokens = canonicalTokenSet(queryText)
-    const lexicalScores = new Map<string, number>()
-    const searchSectors = filters?.sectors?.length ?
-        candidateSectors.filter(s => filters.sectors!.includes(s)) :
-        candidateSectors
-    if (searchSectors.length === 0) {
-        searchSectors.push('semantic')
-    }
-    const queryEmbeddings: Record<string, number[]> = {}
-    for (const sector of searchSectors) {
-        queryEmbeddings[sector] = await embedForSector(queryText, sector)
-    }
+const cache = new Map<string, { r: HSGQueryResult[], t: number }>()
+const salCache = new Map<string, { s: number, t: number }>()
+const coactBuf: Array<[string, string]> = []
+const TTL = 60000
 
-    const context_based_fusion_weights: MultiVectorEmbeddingFusionWeights = {
-        semantic_dimension_weight: queryClassification.primary === 'semantic' ? 1.2 : 0.8,
-        emotional_dimension_weight: queryClassification.primary === 'emotional' ? 1.5 : 0.6,
-        procedural_dimension_weight: queryClassification.primary === 'procedural' ? 1.3 : 0.7,
-        temporal_dimension_weight: queryClassification.primary === 'episodic' ? 1.4 : 0.7,
-        reflective_dimension_weight: queryClassification.primary === 'reflective' ? 1.1 : 0.5
-    }
-    const sectorResults: Record<string, Array<{ id: string, similarity: number }>> = {}
-    for (const sector of searchSectors) {
-        const queryVec = queryEmbeddings[sector]
-        const vectors = await q.get_vecs_by_sector.all(sector)
-        const similarities: Array<{ id: string, similarity: number }> = []
-        for (const vecRow of vectors) {
-            const memoryVec = bufferToVector(vecRow.v)
-            const similarity = cosineSimilarity(queryVec, memoryVec)
-            similarities.push({ id: vecRow.id, similarity })
-        }
-        similarities.sort((a, b) => b.similarity - a.similarity)
-        sectorResults[sector] = similarities.slice(0, k)
-    }
-    const allMemoryIds = new Set<string>()
-    for (const results of Object.values(sectorResults)) {
-        for (const result of results) {
-            allMemoryIds.add(result.id)
-        }
-    }
-    const lexicalQuery = buildFtsQuery(queryText)
-    if (lexicalQuery) {
+setInterval(async () => {
+    if (!coactBuf.length) return
+    const pairs = coactBuf.splice(0, 50) // Limit batch size
+    const n = Date.now()
+    for (const [a, b] of pairs) {
         try {
-            const lexicalRows = await q.search_fts.all(lexicalQuery, Math.max(k * 4, 20))
-            lexicalRows.forEach((row: any, index: number) => {
-                const bm25Score = typeof row.score === 'number' ? row.score : index + 1
-                const score = 5 + 1 / (1 + bm25Score)
-                const previous = lexicalScores.get(row.id) ?? 0
-                if (score > previous) lexicalScores.set(row.id, score)
-                allMemoryIds.add(row.id)
-            })
-        } catch (error) {
-            console.warn('[HSG] FTS search failed, continuing with embedding results:', error)
+            const wp = await q.get_waypoint.get(a, b)
+            const w = wp ? Math.min(1, wp.weight + 0.05) : 0.05
+            await q.ins_waypoint.run(a, b, w, wp?.created_at || n, n)
+        } catch (e) {
         }
     }
-    const expandedResults = await expandViaWaypoints(Array.from(allMemoryIds), k * 2)
-    for (const expanded of expandedResults) {
-        allMemoryIds.add(expanded.id)
-    }
-    const finalResults: HSGQueryResult[] = []
-    for (const memoryId of Array.from(allMemoryIds)) {
-        const memory = await q.get_mem.get(memoryId)
-        if (!memory) continue
-        if (filters?.minSalience && memory.salience < filters.minSalience) continue
+}, 1000)
 
-        const multi_vector_fusion_similarity_score = await calculateMultiVectorFusionScore(
-            memoryId,
-            queryEmbeddings,
-            context_based_fusion_weights
-        )
-
-        const cross_sector_resonance_modulated_score = await calculateCrossSectorResonanceScore(
-            memory.primary_sector,
-            queryClassification.primary,
-            multi_vector_fusion_similarity_score
-        )
-
-        let bestSimilarity = cross_sector_resonance_modulated_score
-        let bestSector = memory.primary_sector
-        for (const [sector, results] of Object.entries(sectorResults)) {
-            const match = results.find(r => r.id === memoryId)
-            if (match && match.similarity > bestSimilarity) {
-                bestSimilarity = match.similarity
-                bestSector = sector
-            }
-        }
-        const expandedMatch = expandedResults.find(e => e.id === memoryId)
-        const waypointWeight = expandedMatch?.weight || 0
-        const daysSinceLastSeen = (Date.now() - memory.last_seen_at) / (1000 * 60 * 60 * 24)
-        const currentSalience = calculateDecay(memory.primary_sector, memory.salience, daysSinceLastSeen)
-        const memoryTokenSet = canonicalTokenSet(memory.content)
-        let overlap = 0
-        if (queryTokens.size) {
-            for (const token of queryTokens) {
-                if (memoryTokenSet.has(token)) overlap++
-            }
-        }
-        const overlapRatio = queryTokens.size ? overlap / queryTokens.size : 0
-        const lexicalBoost = Math.max(
-            lexicalScores.get(memoryId) ?? 0,
-            overlapRatio > 0 ? 4 + overlapRatio * 6 : 0
-        )
-        let finalScore = computeRetrievalScore(
-            bestSimilarity,
-            currentSalience,
-            memory.last_seen_at,
-            waypointWeight
-        )
-        if (lexicalBoost > finalScore) {
-            finalScore = lexicalBoost
-        } else if (lexicalBoost > 0) {
-            finalScore += lexicalBoost * 0.2
-        }
-        const memorySectors = await q.get_vecs_by_id.all(memoryId)
-        const sectorList = memorySectors.map(v => v.sector)
-        finalResults.push({
-            id: memoryId,
-            content: memory.content,
-            score: finalScore,
-            sectors: sectorList,
-            primary_sector: memory.primary_sector,
-            path: expandedMatch?.path || [memoryId],
-            salience: currentSalience,
-            last_seen_at: memory.last_seen_at
-        })
-    }
-    finalResults.sort((a, b) => b.score - a.score)
-    const topResults = finalResults.slice(0, k)
-    for (const result of topResults) {
-        const reinforced_salience_after_retrieval = await applyRetrievalTraceReinforcementToMemory(
-            result.id,
-            result.salience
-        )
-
-        await q.upd_seen.run(result.id, Date.now(), reinforced_salience_after_retrieval, Date.now())
-
-        if (result.path.length > 1) {
-            await reinforceWaypoints(result.path)
-
-            const waypoints_for_propagation = await q.get_waypoints_by_src.all(result.id)
-            const linked_nodes_with_weights = waypoints_for_propagation.map((wp: any) => ({
-                target_id: wp.dst_id,
-                weight: wp.weight
-            }))
-
-            const propagated_reinforcement_updates = await propagateAssociativeReinforcementToLinkedNodes(
-                result.id,
-                reinforced_salience_after_retrieval,
-                linked_nodes_with_weights
-            )
-
-            for (const reinforcement_update of propagated_reinforcement_updates) {
-                await q.upd_seen.run(
-                    reinforcement_update.node_id,
-                    Date.now(),
-                    reinforcement_update.new_salience,
-                    Date.now()
-                )
-            }
-        }
-    }
-    return topResults
+const getSal = async (id: string, defSal: number): Promise<number> => {
+    const c = salCache.get(id)
+    if (c && Date.now() - c.t < TTL) return c.s
+    const m = await q.get_mem.get(id)
+    const s = m?.salience ?? defSal
+    salCache.set(id, { s, t: Date.now() })
+    return s
 }
+
+export async function hsgQuery(qt: string, k = 10, f?: { sectors?: string[], minSalience?: number }): Promise<HSGQueryResult[]> {
+    incQ()
+    try {
+        const h = `${qt}:${k}:${JSON.stringify(f || {})}`
+        const cached = cache.get(h)
+        if (cached && Date.now() - cached.t < TTL) return cached.r
+
+        const qc = classifyContent(qt)
+        const cs = [qc.primary, ...qc.additional]
+        const qtk = canonicalTokenSet(qt)
+        const lex = new Map<string, number>()
+        const ss = f?.sectors?.length ? cs.filter(s => f.sectors!.includes(s)) : cs
+        if (!ss.length) ss.push('semantic')
+
+        const qe: Record<string, number[]> = {}
+        for (const s of ss) qe[s] = await embedForSector(qt, s)
+
+        const w: MultiVectorEmbeddingFusionWeights = {
+            semantic_dimension_weight: qc.primary === 'semantic' ? 1.2 : 0.8,
+            emotional_dimension_weight: qc.primary === 'emotional' ? 1.5 : 0.6,
+            procedural_dimension_weight: qc.primary === 'procedural' ? 1.3 : 0.7,
+            temporal_dimension_weight: qc.primary === 'episodic' ? 1.4 : 0.7,
+            reflective_dimension_weight: qc.primary === 'reflective' ? 1.1 : 0.5
+        }
+
+        const sr: Record<string, Array<{ id: string, similarity: number }>> = {}
+        for (const s of ss) {
+            const qv = qe[s]
+            const vecs = await q.get_vecs_by_sector.all(s)
+            const sims: Array<{ id: string, similarity: number }> = []
+            for (const vr of vecs) {
+                const mv = bufferToVector(vr.v)
+                const sim = cosineSimilarity(qv, mv)
+                sims.push({ id: vr.id, similarity: sim })
+            }
+            sims.sort((a, b) => b.similarity - a.similarity)
+            sr[s] = sims.slice(0, k)
+        }
+
+        const ids = new Set<string>()
+        for (const r of Object.values(sr)) for (const x of r) ids.add(x.id)
+
+        const lq = buildFtsQuery(qt)
+        if (lq) {
+            try {
+                const lr = await q.search_fts.all(lq, Math.max(k * 4, 20))
+                lr.forEach((row: any, i: number) => {
+                    const bm = typeof row.score === 'number' ? row.score : i + 1
+                    const sc = 5 + 1 / (1 + bm)
+                    const p = lex.get(row.id) ?? 0
+                    if (sc > p) lex.set(row.id, sc)
+                    ids.add(row.id)
+                })
+            } catch { }
+        }
+
+        const exp = await expandViaWaypoints(Array.from(ids), k * 2)
+        for (const e of exp) ids.add(e.id)
+
+        const res: HSGQueryResult[] = []
+        for (const mid of Array.from(ids)) {
+            const m = await q.get_mem.get(mid)
+            if (!m || (f?.minSalience && m.salience < f.minSalience)) continue
+
+            const mvf = await calculateMultiVectorFusionScore(mid, qe, w)
+            const csr = await calculateCrossSectorResonanceScore(m.primary_sector, qc.primary, mvf)
+
+            let bs = csr, bsec = m.primary_sector
+            for (const [sec, rr] of Object.entries(sr)) {
+                const mat = rr.find(r => r.id === mid)
+                if (mat && mat.similarity > bs) { bs = mat.similarity; bsec = sec }
+            }
+
+            const em = exp.find(e => e.id === mid)
+            const ww = em?.weight || 0
+            const ds = (Date.now() - m.last_seen_at) / 86400000
+            const sal = calculateDecay(m.primary_sector, m.salience, ds)
+            const mtk = canonicalTokenSet(m.content)
+            let ovlap = 0
+            if (qtk.size) for (const t of qtk) if (mtk.has(t)) ovlap++
+            const ovr = qtk.size ? ovlap / qtk.size : 0
+            const lb = Math.max(lex.get(mid) ?? 0, ovr > 0 ? 4 + ovr * 6 : 0)
+
+            let fs = computeRetrievalScore(bs, sal, m.last_seen_at, ww)
+            if (lb > fs) fs = lb
+            else if (lb > 0) fs += lb * 0.2
+
+            const msec = await q.get_vecs_by_id.all(mid)
+            const sl = msec.map(v => v.sector)
+            res.push({ id: mid, content: m.content, score: fs, sectors: sl, primary_sector: m.primary_sector, path: em?.path || [mid], salience: sal, last_seen_at: m.last_seen_at })
+        }
+
+        res.sort((a, b) => b.score - a.score)
+        const top = res.slice(0, k)
+
+        const tids = top.map(r => r.id)
+        for (let i = 0; i < tids.length; i++) {
+            for (let j = i + 1; j < tids.length; j++) {
+                const [a, b] = [tids[i], tids[j]].sort()
+                coactBuf.push([a, b])
+            }
+        }
+
+        for (const r of top) {
+            const rsal = await applyRetrievalTraceReinforcementToMemory(r.id, r.salience)
+            await q.upd_seen.run(r.id, Date.now(), rsal, Date.now())
+            if (r.path.length > 1) {
+                await reinforceWaypoints(r.path)
+                const wps = await q.get_waypoints_by_src.all(r.id)
+                const lns = wps.map((wp: any) => ({ target_id: wp.dst_id, weight: wp.weight }))
+                const pru = await propagateAssociativeReinforcementToLinkedNodes(r.id, rsal, lns)
+                for (const u of pru) await q.upd_seen.run(u.node_id, Date.now(), u.new_salience, Date.now())
+            }
+        }
+
+        cache.set(h, { r: top, t: Date.now() })
+        return top
+    } finally {
+        decQ()
+    }
+}
+
 export async function runDecayProcess(): Promise<{ processed: number, decayed: number }> {
-    const memories = await q.all_mem.all(10000, 0)
-    let processed = 0
-    let decayed = 0
-    for (const memory of memories) {
-        const daysSinceLastSeen = (Date.now() - memory.last_seen_at) / (1000 * 60 * 60 * 24)
-        const newSalience = calculateDecay(memory.primary_sector, memory.salience, daysSinceLastSeen)
-        if (newSalience !== memory.salience) {
-            await q.upd_seen.run(memory.id, memory.last_seen_at, newSalience, Date.now())
-            decayed++
-        }
-        processed++
+    const mems = await q.all_mem.all(10000, 0)
+    let p = 0, d = 0
+    for (const m of mems) {
+        const ds = (Date.now() - m.last_seen_at) / 86400000
+        const ns = calculateDecay(m.primary_sector, m.salience, ds)
+        if (ns !== m.salience) { await q.upd_seen.run(m.id, m.last_seen_at, ns, Date.now()); d++ }
+        p++
     }
-    return { processed, decayed }
+    return { processed: p, decayed: d }
 }
+
 export async function addHSGMemory(
     content: string,
     tags?: string,
@@ -651,7 +610,6 @@ export async function updateMemory(
     const memory = await q.get_mem.get(id)
     if (!memory) throw new Error(`Memory ${id} not found`)
 
-    // Use existing values if not provided, and ensure consistent JSON stringification
     const newContent = content !== undefined ? content : memory.content
     const newTags = tags !== undefined ? j(tags) : (memory.tags || '[]')
     const newMetadata = metadata !== undefined ? j(metadata) : (memory.meta || '{}')
@@ -659,31 +617,26 @@ export async function updateMemory(
     await transaction.begin()
 
     try {
-        // If content changed, we need to update embeddings and potentially the primary sector
         if (content !== undefined && content !== memory.content) {
             const chunks = chunkText(newContent)
             const useChunking = chunks.length > 1
             const classification = classifyContent(newContent, metadata)
             const allSectors = [classification.primary, ...classification.additional]
 
-            // Delete old vectors
             await q.del_vec.run(id)
 
-            // Create new embeddings
             const embeddingResults = await embedMultiSector(id, newContent, allSectors, useChunking ? chunks : undefined)
             for (const result of embeddingResults) {
                 const vectorBuffer = vectorToBuffer(result.vector)
                 await q.ins_vec.run(id, result.sector, vectorBuffer, result.dim)
             }
 
-            // Update mean vector
             const meanVector = calculateMeanVector(embeddingResults, allSectors)
             const meanVectorBuffer = vectorToBuffer(meanVector)
             await q.upd_mean_vec.run(id, meanVector.length, meanVectorBuffer)
 
             await q.upd_mem_with_sector.run(newContent, classification.primary, newTags, newMetadata, Date.now(), id)
         } else {
-            // Just update the memory record without changing embeddings
             await q.upd_mem.run(newContent, newTags, newMetadata, Date.now(), id)
         }
 

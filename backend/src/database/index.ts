@@ -121,6 +121,7 @@ if (isPg) {
         await pg.query(`create table if not exists ${w}(src_id text primary key,dst_id text not null,weight double precision not null,created_at bigint,updated_at bigint)`)
         await pg.query(`create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`)
         await pg.query(`create table if not exists ${f}(id uuid primary key,content tsvector)`)
+
         await pg.query(`create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`)
         await pg.query(`create index if not exists openmemory_memories_fts_idx on ${f} using gin(content)`)
         ready = true
@@ -180,12 +181,20 @@ if (isPg) {
 
     const db = new sqlite3.Database(dbPath)
     db.serialize(() => {
+        db.run('PRAGMA journal_mode=WAL')
+        db.run('PRAGMA synchronous=NORMAL')
+        db.run('PRAGMA temp_store=MEMORY')
+        db.run('PRAGMA cache_size=-8000')
+        db.run('PRAGMA mmap_size=134217728')
+        db.run('PRAGMA foreign_keys=OFF')
+
         db.run(`create table if not exists memories(id text primary key,content text not null,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob)`)
         db.run(`create table if not exists vectors(id text not null,sector text not null,v blob not null,dim integer not null,primary key(id,sector))`)
         db.run(`create virtual table if not exists memories_fts using fts5(id UNINDEXED,content,tokenize='porter')`)
         db.run(`create table if not exists waypoints(src_id text primary key,dst_id text not null,weight real not null,created_at integer,updated_at integer)`)
         db.run(`create table if not exists embed_logs(id text primary key,model text,status text,ts integer,err text)`)
         db.run('create index if not exists idx_memories_sector on memories(primary_sector)')
+        db.run('create index if not exists idx_memories_ts on memories(last_seen_at)')
         db.run('create index if not exists idx_waypoints_src on waypoints(src_id)')
         db.run('create index if not exists idx_waypoints_dst on waypoints(dst_id)')
     })

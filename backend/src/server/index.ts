@@ -33,6 +33,11 @@ if (env.mode === 'langgraph') {
     console.log('[LGM] LangGraph integration mode enabled')
     lang(app)
 }
+// Decay interval: Configurable via OM_DECAY_INTERVAL_MINUTES (default 24h = 1440 min)
+// Set OM_DECAY_INTERVAL_MINUTES=0.5 for testing (30 seconds)
+const decayIntervalMs = env.decay_interval_minutes * 60 * 1000
+console.log(`⏱️  Decay interval: ${env.decay_interval_minutes} minutes (${decayIntervalMs / 1000}s)`)
+
 setInterval(async () => {
     console.log('🧠 Running HSG decay process...')
     try {
@@ -41,7 +46,7 @@ setInterval(async () => {
     } catch (error) {
         console.error('❌ Decay process failed:', error)
     }
-}, 24 * 60 * 60 * 1000)
+}, decayIntervalMs)
 setInterval(async () => {
     console.log('🔗 Pruning weak waypoints...')
     try {
