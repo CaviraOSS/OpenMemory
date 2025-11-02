@@ -1,13 +1,14 @@
-export type add_req = { content: string, tags?: string[], metadata?: Record<string, unknown>, salience?: number, decay_lambda?: number }
-export type q_req = { query: string, k?: number, filters?: { tags?: string[], min_score?: number, sector?: string } }
-export type SectorType = 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'
+export type add_req = { content: string, tags?: string[], metadata?: Record<string, unknown>, salience?: number, decay_lambda?: number, user_id?: string }
+export type q_req = { query: string, k?: number, filters?: { tags?: string[], min_score?: number, sector?: string, user_id?: string } }
+export type sector_type = 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'
 
-export type MemoryRow = {
+export type mem_row = {
     id: string
     content: string
     primary_sector: string
     tags: string | null
     meta: string | null
+    user_id: string | null
     created_at: number
     updated_at: number
     last_seen_at: number
@@ -16,28 +17,20 @@ export type MemoryRow = {
     version: number
 }
 
-export type JsonRpcErrorCode = -32600 | -32603
+export type rpc_err_code = -32600 | -32603
 
 export type ingest_req = {
     source: 'file' | 'link' | 'connector'
     content_type: 'pdf' | 'docx' | 'html' | 'md' | 'txt' | 'audio'
     data: string
     metadata?: Record<string, unknown>
-    config?: {
-        forceRootChild?: boolean
-        sectionSize?: number
-        largeDocThreshold?: number
-    }
+    config?: { force_root?: boolean, sec_sz?: number, lg_thresh?: number }
 }
 
 export type ingest_url_req = {
     url: string
     metadata?: Record<string, unknown>
-    config?: {
-        forceRootChild?: boolean
-        sectionSize?: number
-        largeDocThreshold?: number
-    }
+    config?: { force_root?: boolean, sec_sz?: number, lg_thresh?: number }
 }
 
 export type lgm_store_req = {
@@ -59,11 +52,7 @@ export type lgm_retrieve_req = {
     include_metadata?: boolean
 }
 
-export type lgm_context_req = {
-    graph_id?: string
-    namespace?: string
-    limit?: number
-}
+export type lgm_context_req = { graph_id?: string, namespace?: string, limit?: number }
 
 export type lgm_reflection_req = {
     node?: string
@@ -78,13 +67,7 @@ export type ide_event_req = {
     file?: string
     snippet?: string
     comment?: string
-    metadata: {
-        project?: string
-        lang?: string
-        user?: string
-        timestamp?: number
-        [key: string]: unknown
-    }
+    metadata: { project?: string, lang?: string, user?: string, timestamp?: number, [key: string]: unknown }
     session_id?: string
 }
 
@@ -97,8 +80,4 @@ export type ide_context_query_req = {
     include_knowledge?: boolean
 }
 
-export type ide_session_req = {
-    user?: string
-    project?: string
-    ide?: string
-}
+export type ide_session_req = { user?: string, project?: string, ide?: string }

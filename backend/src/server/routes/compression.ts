@@ -1,4 +1,4 @@
-import { compressionEngine, CompressionMetrics } from '../../compression/index';
+import { compressionEngine, CompressionMetrics } from '../../ops/compress';
 
 export function compression(app: any) {
     app.post('/api/compression/compress', async (req: any, res: any) => {

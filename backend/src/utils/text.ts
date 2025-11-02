@@ -1,4 +1,4 @@
-const SYN = [
+const syn_grps = [
     ['prefer', 'like', 'love', 'enjoy', 'favor'],
     ['theme', 'mode', 'style', 'layout'],
     ['meeting', 'meet', 'session', 'call', 'sync'],
@@ -13,89 +13,103 @@ const SYN = [
     ['document', 'doc', 'file'],
     ['question', 'query', 'ask']
 ]
+const cmap = new Map<string, string>()
+const slook = new Map<string, Set<string>>()
 
-const CAN = new Map<string, string>()
-const LOOK = new Map<string, Set<string>>()
-
-for (const g of SYN) {
-    const c = g[0]
-    for (const w of g) {
-        CAN.set(w, c)
-        const s = LOOK.get(c) ?? new Set<string>()
-        g.forEach(x => s.add(x))
-        LOOK.set(c, s)
+for (const grp of syn_grps) {
+    const can = grp[0]
+    const sset = new Set(grp)
+    for (const w of grp) {
+        cmap.set(w, can)
+        slook.set(can, sset)
     }
 }
 
-const STEM: Array<[RegExp, string]> = [[/ies$/, 'y'], [/ing$/, ''], [/ers?$/, 'er'], [/ed$/, ''], [/s$/, '']]
-const TOK = /[a-z0-9]+/gi
+const stem_rules: Array<[RegExp, string]> = [
+    [/ies$/, 'y'],
+    [/ing$/, ''],
+    [/ers?$/, 'er'],
+    [/ed$/, ''],
+    [/s$/, '']
+]
+const tok_pat = /[a-z0-9]+/gi
 
-export const tokenize = (t: string) => {
-    const r: string[] = []
+export const tokenize = (text: string): string[] => {
+    const toks: string[] = []
     let m: RegExpExecArray | null
-    while ((m = TOK.exec(t))) r.push(m[0].toLowerCase())
-    return r
+    while ((m = tok_pat.exec(text))) {
+        toks.push(m[0].toLowerCase())
+    }
+    return toks
 }
 
-const stem = (t: string) => {
-    if (t.length <= 3) return t
-    for (const [p, r] of STEM) {
-        if (p.test(t)) {
-            const s = t.replace(p, r)
-            if (s.length >= 3) return s
+const stem = (tok: string): string => {
+    if (tok.length <= 3) return tok
+    for (const [pat, rep] of stem_rules) {
+        if (pat.test(tok)) {
+            const st = tok.replace(pat, rep)
+            if (st.length >= 3) return st
         }
     }
-    return t
+    return tok
 }
 
-export const canonicalizeToken = (t: string) => {
-    if (!t) return ''
-    const l = t.toLowerCase()
-    if (CAN.has(l)) return CAN.get(l)!
-    const s = stem(l)
-    return CAN.get(s) || s
+export const canonicalize_token = (tok: string): string => {
+    if (!tok) return ''
+    const low = tok.toLowerCase()
+    if (cmap.has(low)) return cmap.get(low)!
+    const st = stem(low)
+    return cmap.get(st) || st
 }
 
-export const canonicalTokensFromText = (t: string) => {
-    const r: string[] = []
-    for (const tok of tokenize(t)) {
-        const c = canonicalizeToken(tok)
-        if (c && c.length > 1) r.push(c)
+export const canonical_tokens_from_text = (text: string): string[] => {
+    const res: string[] = []
+    for (const tok of tokenize(text)) {
+        const can = canonicalize_token(tok)
+        if (can && can.length > 1) {
+            res.push(can)
+        }
     }
-    return r
+    return res
 }
 
-export const synonymsFor = (t: string) => {
-    const c = canonicalizeToken(t)
-    return LOOK.get(c) || new Set([c])
+export const synonyms_for = (tok: string): Set<string> => {
+    const can = canonicalize_token(tok)
+    return slook.get(can) || new Set([can])
 }
 
-export const buildSearchDocument = (t: string) => {
-    const c = canonicalTokensFromText(t)
-    const e = new Set<string>()
-    for (const tok of c) {
-        e.add(tok)
-        const s = LOOK.get(tok)
-        if (s) s.forEach(x => e.add(x))
+export const build_search_doc = (text: string): string => {
+    const can = canonical_tokens_from_text(text)
+    const exp = new Set<string>()
+    for (const tok of can) {
+        exp.add(tok)
+        const syns = slook.get(tok)
+        if (syns) {
+            syns.forEach(s => exp.add(s))
+        }
     }
-    return Array.from(e).join(' ')
+    return Array.from(exp).join(' ')
 }
 
-export const buildFtsQuery = (t: string) => {
-    const c = canonicalTokensFromText(t)
-    if (!c.length) return ''
-    const u = Array.from(new Set(c.filter(x => x.length > 1)))
-    return u.map(x => `"${x}"`).join(' OR ')
+export const build_fts_query = (text: string): string => {
+    const can = canonical_tokens_from_text(text)
+    if (!can.length) return ''
+    const uniq = Array.from(new Set(can.filter(t => t.length > 1)))
+    return uniq.map(t => `"${t}"`).join(' OR ')
 }
 
-export const canonicalTokenSet = (t: string) => new Set(canonicalTokensFromText(t))
+export const canonical_token_set = (text: string): Set<string> => {
+    return new Set(canonical_tokens_from_text(text))
+}
 
-export const addSynonymTokens = (toks: Iterable<string>) => {
-    const r = new Set<string>()
-    for (const t of toks) {
-        r.add(t)
-        const s = LOOK.get(t)
-        if (s) s.forEach(x => r.add(canonicalizeToken(x)))
+export const add_synonym_tokens = (toks: Iterable<string>): Set<string> => {
+    const res = new Set<string>()
+    for (const tok of toks) {
+        res.add(tok)
+        const syns = slook.get(tok)
+        if (syns) {
+            syns.forEach(s => res.add(canonicalize_token(s)))
+        }
     }
-    return r
+    return res
 }

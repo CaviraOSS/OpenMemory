@@ -1,4 +1,4 @@
-import { q } from '../../database'
+import { q } from '../../core/db'
 import {
     calculateDynamicSalienceWithTimeDecay,
     calculateCrossSectorResonanceScore,
@@ -17,7 +17,7 @@ import {
     LAMBDA_TWO_SLOW_DECAY_RATE,
     TAU_ENERGY_THRESHOLD_FOR_RETRIEVAL,
     SECTORAL_INTERDEPENDENCE_MATRIX_FOR_COGNITIVE_RESONANCE
-} from '../../memory-dynamics'
+} from '../../ops/dynamics'
 
 export function dynroutes(app: any) {
     app.get('/dynamics/constants', async (incoming_http_request: any, outgoing_http_response: any) => {
@@ -116,7 +116,7 @@ export function dynroutes(app: any) {
                 return outgoing_http_response.status(400).json({ err: 'query_required' })
             }
 
-            const { embedForSector } = await import('../../embedding')
+            const { embedForSector } = await import('../../memory/embed')
             const query_vector_embedding_array = await embedForSector(
                 query_text_content_from_request,
                 query_sector_type_from_request
@@ -318,7 +318,7 @@ export function dynroutes(app: any) {
                 return outgoing_http_response.status(400).json({ err: 'memories_missing_embeddings' })
             }
 
-            const { bufferToVector } = await import('../../embedding')
+            const { bufferToVector } = await import('../../memory/embed')
             const source_vector_array = bufferToVector(source_memory_mean_vector)
             const target_vector_array = bufferToVector(target_memory_mean_vector)
 

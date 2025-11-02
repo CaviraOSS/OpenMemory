@@ -1,6 +1,6 @@
-import { allAsync, runAsync, getAsync, q } from '../database'
+import { all_async, run_async, get_async, q } from '../core/db'
 import { now } from '../utils'
-import { cosineSimilarity } from '../embedding'
+import { cosineSimilarity } from '../memory/embed'
 
 export const ALPHA_LEARNING_RATE_FOR_RECALL_REINFORCEMENT = 0.15
 export const BETA_LEARNING_RATE_FOR_EMOTIONAL_FREQUENCY = 0.20
@@ -85,7 +85,7 @@ export async function propagateAssociativeReinforcementToLinkedNodes(
 ): Promise<Array<{ node_id: string, new_salience: number }>> {
     const ups: Array<{ node_id: string, new_salience: number }> = []
     for (const wp of wps) {
-        const ld = await getAsync('select salience from memories where id=?', [wp.target_id]) as any
+        const ld = await get_async('select salience from memories where id=?', [wp.target_id]) as any
         if (ld) {
             const pr = ETA_REINFORCEMENT_FACTOR_FOR_TRACE_LEARNING * wp.weight * ssal
             ups.push({ node_id: wp.target_id, new_salience: Math.min(1, ld.salience + pr) })
@@ -106,14 +106,14 @@ export async function determineEnergyBasedRetrievalThreshold(act: number, tau: n
 }
 
 export async function applyDualPhaseDecayToAllMemories(): Promise<void> {
-    const mems = await allAsync('select id,salience,decay_lambda,last_seen_at,updated_at,created_at from memories')
+    const mems = await all_async('select id,salience,decay_lambda,last_seen_at,updated_at,created_at from memories')
     const ts = now()
     const ops = mems.map(async (m: any) => {
         const tms = Math.max(0, ts - (m.last_seen_at || m.updated_at))
         const td = tms / 86400000
         const rt = await calculateDualPhaseDecayMemoryRetention(td)
         const nsal = m.salience * rt
-        await runAsync('update memories set salience=?,updated_at=? where id=?', [Math.max(0, nsal), ts, m.id])
+        await run_async('update memories set salience=?,updated_at=? where id=?', [Math.max(0, nsal), ts, m.id])
     })
     await Promise.all(ops)
     console.log(`Decay applied to ${mems.length} memories`)
@@ -121,7 +121,7 @@ export async function applyDualPhaseDecayToAllMemories(): Promise<void> {
 
 export async function buildAssociativeWaypointGraphFromMemories(): Promise<Map<string, AssociativeWaypointGraphNode>> {
     const gr = new Map<string, AssociativeWaypointGraphNode>()
-    const wps = await allAsync('select src_id,dst_id,weight,created_at from waypoints') as any[]
+    const wps = await all_async('select src_id,dst_id,weight,created_at from waypoints') as any[]
     const ids = new Set<string>()
     for (const wp of wps) { ids.add(wp.src_id); ids.add(wp.dst_id) }
     for (const id of ids) gr.set(id, { node_memory_id: id, activation_energy_level: 0, connected_waypoint_edges: [] })
@@ -163,7 +163,7 @@ export async function performSpreadingActivationRetrieval(
 export async function retrieveMemoriesWithEnergyThresholding(
     qv: number[], qs: string, me: number
 ): Promise<any[]> {
-    const mems = await allAsync('select id,content,primary_sector,salience,mean_vec from memories where salience>0.01') as any[]
+    const mems = await all_async('select id,content,primary_sector,salience,mean_vec from memories where salience>0.01') as any[]
     const sc = new Map<string, number>()
     for (const m of mems) {
         if (!m.mean_vec) continue

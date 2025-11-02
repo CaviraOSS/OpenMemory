@@ -1,6 +1,6 @@
 {
     "name": "openmemory-js",
-    "version": "0.1.1",
+    "version": "0.2.0",
     "description": "JavaScript SDK for OpenMemory - Long term AI memory system",
     "main": "dist/index.js",
     "module": "dist/index.esm.js",

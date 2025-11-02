@@ -1,17 +1,22 @@
-import { q } from '../../database';
+import { q } from '../../core/db';
 import { now, rid, j, p } from '../../utils';
-import { addHSGMemory, hsgQuery, reinforceMemory, updateMemory } from '../../hsg';
-import { ingestDocument, ingestURL } from '../../ingestion';
-import { env } from '../../config';
-import type { add_req, q_req, ingest_req, ingest_url_req } from '../../types';
+import { add_hsg_memory, hsg_query, reinforce_memory, update_memory } from '../../memory/hsg';
+import { ingestDocument, ingestURL } from '../../ops/ingest';
+import { env } from '../../core/cfg';
+import { update_user_summary } from '../../memory/user_summary';
+import type { add_req, q_req, ingest_req, ingest_url_req } from '../../core/types';
 
 export function mem(app: any) {
     app.post('/memory/add', async (req: any, res: any) => {
         const b = req.body as add_req;
         if (!b?.content) return res.status(400).json({ err: 'content' });
         try {
-            const m = await addHSGMemory(b.content, j(b.tags || []), b.metadata);
+            const m = await add_hsg_memory(b.content, j(b.tags || []), b.metadata, b.user_id);
             res.json(m);
+
+            if (b.user_id) {
+                update_user_summary(b.user_id).catch(e => console.error('[mem] user summary update failed:', e));
+            }
         } catch (e: any) {
             res.status(500).json({ err: e.message });
         }
@@ -45,12 +50,13 @@ export function mem(app: any) {
         try {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
-                minSalience: b.filters?.min_score
+                minSalience: b.filters?.min_score,
+                user_id: b.filters?.user_id
             };
-            const m = await hsgQuery(b.query, k, f);
+            const m = await hsg_query(b.query, k, f);
             res.json({
                 query: b.query,
-                matches: m.map(x => ({
+                matches: m.map((x: any) => ({
                     id: x.id,
                     content: x.content,
                     score: x.score,
@@ -70,7 +76,7 @@ export function mem(app: any) {
         const b = req.body as { id: string; boost?: number };
         if (!b?.id) return res.status(400).json({ err: 'id' });
         try {
-            await reinforceMemory(b.id, b.boost);
+            await reinforce_memory(b.id, b.boost);
             res.json({ ok: true });
         } catch (e: any) {
             res.status(404).json({ err: 'nf' });
@@ -82,7 +88,7 @@ export function mem(app: any) {
         const b = req.body as { content?: string; tags?: string[]; metadata?: any };
         if (!id) return res.status(400).json({ err: 'id' });
         try {
-            const r = await updateMemory(id, b.content, b.tags, b.metadata);
+            const r = await update_memory(id, b.content, b.tags, b.metadata);
             res.json(r);
         } catch (e: any) {
             if (e.message.includes('not found')) {

@@ -1,7 +1,7 @@
-import { allAsync } from '../../database'
-import { SECTOR_CONFIGS } from '../../hsg'
-import { getEmbeddingInfo } from '../../embedding'
-import { tier, env } from '../../config'
+import { all_async } from '../../core/db'
+import { sector_configs } from '../../memory/hsg'
+import { getEmbeddingInfo } from '../../memory/embed'
+import { tier, env } from '../../core/cfg'
 
 const TIER_BENEFITS = {
     fast: { recall: 70, qps: '700-850', ram: '0.6GB/10k', use: 'Local apps, extensions' },
@@ -24,14 +24,14 @@ export function sys(app: any) {
 
     app.get('/sectors', async (incoming_http_request: any, outgoing_http_response: any) => {
         try {
-            const database_sector_statistics_rows = await allAsync(`
+            const database_sector_statistics_rows = await all_async(`
                 select primary_sector as sector, count(*) as count, avg(salience) as avg_salience 
                 from memories 
                 group by primary_sector
             `)
             outgoing_http_response.json({
-                sectors: Object.keys(SECTOR_CONFIGS),
-                configs: SECTOR_CONFIGS,
+                sectors: Object.keys(sector_configs),
+                configs: sector_configs,
                 stats: database_sector_statistics_rows
             })
         } catch (unexpected_error_fetching_sectors) {

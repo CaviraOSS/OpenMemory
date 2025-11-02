@@ -4,7 +4,7 @@ contact_links:
   url: https://github.com/CaviraOSS/openmemory/discussions
     about: Ask questions and discuss ideas with the community
   - name: 📖 Documentation
-  url: https://github.com/openmemory/pagelm/wiki
+  url: https://github.com/openmemory/openmemory/wiki
     about: Check out the project documentation
   - name: 🔒 Security Issue
   url: https://github.com/CaviraOSS/openmemory/security/advisories/new

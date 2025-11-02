@@ -1,5 +1,5 @@
-import { q } from '../../database'
-import { addHSGMemory, hsgQuery } from '../../hsg'
+import { q } from '../../core/db'
+import { add_hsg_memory, hsg_query } from '../../memory/hsg'
 import { j, p } from '../../utils'
 import * as crypto from 'crypto';
 export function ide(app: any) {
@@ -32,13 +32,13 @@ export function ide(app: any) {
                 ide_mode: true
             }
 
-            console.log('[IDE DEBUG] Calling addHSGMemory with:')
+            console.log('[IDE DEBUG] Calling add_hsg_memory with:')
             console.log('  - memory_content:', memory_content.substring(0, 100) + '...')
             console.log('  - full_metadata:', JSON.stringify(full_metadata))
 
-            const result = await addHSGMemory(memory_content, undefined, full_metadata)
+            const result = await add_hsg_memory(memory_content, undefined, full_metadata)
 
-            console.log('[IDE DEBUG] addHSGMemory result:', JSON.stringify(result, null, 2))
+            console.log('[IDE DEBUG] add_hsg_memory result:', JSON.stringify(result, null, 2))
 
             res.json({
                 success: true,
@@ -70,7 +70,7 @@ export function ide(app: any) {
 
             if (!query) return res.status(400).json({ err: 'query_required' })
 
-            const results = await hsgQuery(query, k)
+            const results = await hsg_query(query, k)
 
             let filtered = results
 
@@ -144,11 +144,11 @@ export function ide(app: any) {
                 ide_mode: true
             }
 
-            console.log('[IDE DEBUG] Calling addHSGMemory for session start with:')
+            console.log('[IDE DEBUG] Calling add_hsg_memory for session start with:')
             console.log('  - content:', content)
             console.log('  - metadata:', JSON.stringify(metadata))
 
-            const result = await addHSGMemory(content, undefined, metadata)
+            const result = await add_hsg_memory(content, undefined, metadata)
 
             console.log('[IDE DEBUG] Session start result:', JSON.stringify(result, null, 2))
 
@@ -219,7 +219,7 @@ export function ide(app: any) {
                 ide_mode: true
             }
 
-            const result = await addHSGMemory(summary, undefined, metadata)
+            const result = await add_hsg_memory(summary, undefined, metadata)
 
             res.json({
                 success: true,

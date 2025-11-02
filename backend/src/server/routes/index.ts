@@ -3,6 +3,8 @@ import { mem } from './memory'
 import { dynroutes } from './dynamics'
 import { ide } from './ide'
 import { compression } from './compression'
+import { lg } from './langgraph'
+import { usr } from './users'
 
 export function routes(app: any) {
     sys(app)
@@ -10,4 +12,6 @@ export function routes(app: any) {
     dynroutes(app)
     ide(app)
     compression(app)
+    lg(app)
+    usr(app)
 }

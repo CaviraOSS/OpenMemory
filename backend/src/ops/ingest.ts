@@ -1,11 +1,11 @@
-import { addHSGMemory } from '../hsg'
-import { q, transaction } from '../database'
+import { add_hsg_memory } from '../memory/hsg'
+import { q, transaction } from '../core/db'
 import { rid, now, j } from '../utils'
-import { extractText, ExtractionResult } from './extractors'
+import { extractText, ExtractionResult } from './extract'
 
 const LG = 8000, SEC = 3000
 
-export interface IngestionConfig { forceRootChild?: boolean; sectionSize?: number; largeDocThreshold?: number }
+export interface ingestion_cfg { force_root?: boolean; sec_sz?: number; lg_thresh?: number }
 export interface IngestionResult {
     root_memory_id: string
     child_count: number
@@ -44,7 +44,7 @@ const mkRoot = async (txt: string, ex: ExtractionResult, meta?: Record<string, u
 }
 
 const mkChild = async (txt: string, idx: number, tot: number, rid: string, meta?: Record<string, unknown>) => {
-    const r = await addHSGMemory(txt, j([]), { ...meta, is_child: true, section_index: idx, total_sections: tot, parent_id: rid })
+    const r = await add_hsg_memory(txt, j([]), { ...meta, is_child: true, section_index: idx, total_sections: tot, parent_id: rid })
     return r.id
 }
 
@@ -62,14 +62,14 @@ const link = async (rid: string, cid: string, idx: number) => {
     }
 }
 
-export async function ingestDocument(t: string, data: string | Buffer, meta?: Record<string, unknown>, cfg?: IngestionConfig): Promise<IngestionResult> {
-    const th = cfg?.largeDocThreshold || LG, sz = cfg?.sectionSize || SEC
+export async function ingestDocument(t: string, data: string | Buffer, meta?: Record<string, unknown>, cfg?: ingestion_cfg): Promise<IngestionResult> {
+    const th = cfg?.lg_thresh || LG, sz = cfg?.sec_sz || SEC
     const ex = await extractText(t, data)
     const { text, metadata: exMeta } = ex
-    const useRC = cfg?.forceRootChild || exMeta.estimated_tokens > th
+    const useRC = cfg?.force_root || exMeta.estimated_tokens > th
 
     if (!useRC) {
-        const r = await addHSGMemory(text, j([]), { ...meta, ...exMeta, ingestion_strategy: 'single', ingested_at: now() })
+        const r = await add_hsg_memory(text, j([]), { ...meta, ...exMeta, ingestion_strategy: 'single', ingested_at: now() })
         return { root_memory_id: r.id, child_count: 0, total_tokens: exMeta.estimated_tokens, strategy: 'single', extraction: exMeta }
     }
 
@@ -102,14 +102,14 @@ export async function ingestDocument(t: string, data: string | Buffer, meta?: Re
     }
 }
 
-export async function ingestURL(url: string, meta?: Record<string, unknown>, cfg?: IngestionConfig): Promise<IngestionResult> {
-    const { extractURL } = await import('./extractors')
+export async function ingestURL(url: string, meta?: Record<string, unknown>, cfg?: ingestion_cfg): Promise<IngestionResult> {
+    const { extractURL } = await import('./extract')
     const ex = await extractURL(url)
-    const th = cfg?.largeDocThreshold || LG, sz = cfg?.sectionSize || SEC
-    const useRC = cfg?.forceRootChild || ex.metadata.estimated_tokens > th
+    const th = cfg?.lg_thresh || LG, sz = cfg?.sec_sz || SEC
+    const useRC = cfg?.force_root || ex.metadata.estimated_tokens > th
 
     if (!useRC) {
-        const r = await addHSGMemory(ex.text, j([]), { ...meta, ...ex.metadata, ingestion_strategy: 'single', ingested_at: now() })
+        const r = await add_hsg_memory(ex.text, j([]), { ...meta, ...ex.metadata, ingestion_strategy: 'single', ingested_at: now() })
         return { root_memory_id: r.id, child_count: 0, total_tokens: ex.metadata.estimated_tokens, strategy: 'single', extraction: ex.metadata }
     }
 

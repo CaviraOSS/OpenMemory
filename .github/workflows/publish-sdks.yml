@@ -1,0 +1,96 @@
+name: publish sdks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'sdk-js/**'
+      - 'sdk-py/**'
+  workflow_dispatch:
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      js_changed: ${{ steps.filter.outputs.js }}
+      py_changed: ${{ steps.filter.outputs.py }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'sdk-js/**'
+            py:
+              - 'sdk-py/**'
+
+  publish-js:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.js_changed == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: get version
+        id: version
+        run: |
+          cd sdk-js
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing @openmemory/sdk@$VERSION"
+
+      - name: install deps
+        run: cd sdk-js && npm ci
+
+      - name: build
+        run: cd sdk-js && npm run build
+
+      - name: publish
+        run: cd sdk-js && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: notify
+        run: |
+          echo "✅ Published @openmemory/sdk@${{ steps.version.outputs.version }}"
+
+  publish-py:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.py_changed == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: get version
+        id: version
+        run: |
+          cd sdk-py
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Publishing openmemory-py@$VERSION"
+
+      - name: install build tools
+        run: pip install build twine
+
+      - name: build
+        run: cd sdk-py && python -m build
+
+      - name: publish
+        run: cd sdk-py && python -m twine upload dist/* --skip-existing
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+      - name: notify
+        run: |
+          echo "✅ Published openmemory-py@${{ steps.version.outputs.version }}"

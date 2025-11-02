@@ -1,4 +1,4 @@
-import { env } from '../../config'
+import { env } from '../../core/cfg'
 import crypto from 'crypto'
 
 const rate_limit_store = new Map<string, { count: number; reset_time: number }>()
