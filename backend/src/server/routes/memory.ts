@@ -2,7 +2,6 @@ import { q } from '../../database';
 import { now, rid, j, p } from '../../utils';
 import { addHSGMemory, hsgQuery, reinforceMemory, updateMemory } from '../../hsg';
 import { ingestDocument, ingestURL } from '../../ingestion';
-import { compressionEngine } from '../../compression/index';
 import { env } from '../../config';
 import type { add_req, q_req, ingest_req, ingest_url_req } from '../../types';
 
@@ -11,30 +10,8 @@ export function mem(app: any) {
         const b = req.body as add_req;
         if (!b?.content) return res.status(400).json({ err: 'content' });
         try {
-            let c = b.content;
-            let cm = null;
-            if (env.compression_enabled && c.length >= env.compression_min_length) {
-                const r = env.compression_algorithm === 'auto'
-                    ? compressionEngine.auto(c)
-                    : compressionEngine.compress(c, env.compression_algorithm);
-                c = r.comp;
-                cm = r.metrics;
-            }
-            const m = await addHSGMemory(c, j(b.tags || []), b.metadata);
-            if (cm) {
-                res.json({
-                    ...m,
-                    comp: {
-                        on: true,
-                        saved: cm.saved,
-                        pct: cm.pct.toFixed(2) + '%',
-                        lat: cm.latency.toFixed(2) + 'ms',
-                        algo: cm.algo
-                    }
-                });
-            } else {
-                res.json(m);
-            }
+            const m = await addHSGMemory(b.content, j(b.tags || []), b.metadata);
+            res.json(m);
         } catch (e: any) {
             res.status(500).json({ err: e.message });
         }
@@ -176,7 +153,6 @@ export function mem(app: any) {
             if (!m) return res.status(404).json({ err: 'nf' });
             await q.del_mem.run(id);
             await q.del_vec.run(id);
-            await q.del_fts.run(id);
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
         } catch (e: any) {

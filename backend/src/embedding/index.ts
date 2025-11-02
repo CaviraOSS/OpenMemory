@@ -1,4 +1,4 @@
-import { env } from '../config'
+import { env, tier } from '../config'
 import { getModel } from '../config/models'
 import { SECTOR_CONFIGS } from '../hsg'
 import { q } from '../database'
@@ -8,8 +8,58 @@ let geminiQueue: Promise<any> = Promise.resolve()
 
 export const emb_dim = () => env.vec_dim
 export interface EmbeddingResult { sector: string; vector: number[]; dim: number }
+
+// Compress high-dim vector to lower dims (for smart tier)
+function compressVector(vec: number[], targetDim: number): number[] {
+    if (vec.length <= targetDim) return vec
+    const compressed = new Float32Array(targetDim)
+    const bucketSize = vec.length / targetDim
+    for (let i = 0; i < targetDim; i++) {
+        const start = Math.floor(i * bucketSize)
+        const end = Math.floor((i + 1) * bucketSize)
+        let sum = 0, count = 0
+        for (let j = start; j < end && j < vec.length; j++) {
+            sum += vec[j]; count++
+        }
+        compressed[i] = count > 0 ? sum / count : 0
+    }
+    // Normalize
+    let norm = 0
+    for (let i = 0; i < targetDim; i++) norm += compressed[i] * compressed[i]
+    norm = Math.sqrt(norm)
+    if (norm > 0) for (let i = 0; i < targetDim; i++) compressed[i] /= norm
+    return Array.from(compressed)
+}
+
+// Fuse synthetic + compressed semantic for smart tier
+function fuseVectors(synthetic: number[], semantic: number[]): number[] {
+    const fused = [...synthetic.map(v => v * 0.6), ...semantic.map(v => v * 0.4)]
+    let norm = 0
+    for (let i = 0; i < fused.length; i++) norm += fused[i] * fused[i]
+    norm = Math.sqrt(norm)
+    if (norm > 0) for (let i = 0; i < fused.length; i++) fused[i] /= norm
+    return fused
+}
+
 export async function embedForSector(t: string, s: string): Promise<number[]> {
     if (!SECTOR_CONFIGS[s]) throw new Error(`Unknown sector: ${s}`)
+
+    // Smart tier: hybrid embedding (synthetic + compressed semantic)
+    if (tier === 'smart' && env.emb_kind !== 'synthetic') {
+        const synthetic = generateSyntheticEmbedding(t, s)
+        const semantic = await getSemanticEmbedding(t, s)
+        const compressed = compressVector(semantic, 128)
+        return fuseVectors(synthetic, compressed)
+    }
+
+    // Fast tier: pure synthetic
+    if (tier === 'fast') return generateSyntheticEmbedding(t, s)
+
+    // Deep tier: full AI embedding
+    return await getSemanticEmbedding(t, s)
+}
+
+async function getSemanticEmbedding(t: string, s: string): Promise<number[]> {
     switch (env.emb_kind) {
         case 'openai': return await embedWithOpenAI(t, s)
         case 'gemini': return (await embedWithGemini({ [s]: t }))[s]
@@ -141,14 +191,47 @@ async function embedWithLocal(t: string, s: string): Promise<number[]> {
     return h >>> 0;
 }
 
+// Secondary hash for better distribution
+const hash2 = (v: string, seed: number) => {
+    let h = seed | 0;
+    for (let i = 0; i < v.length; i++) {
+        h = Math.imul(h ^ v.charCodeAt(i), 0x5bd1e995);
+        h = (h >>> 13) ^ h;
+    }
+    return h >>> 0;
+}
+
 const addFeat = (vec: Float32Array, dim: number, key: string, w: number) => {
     const h = hash(key);
+    const h2 = hash2(key, 0xdeadbeef);
     const value = w * (1 - ((h & 1) << 1));
+
+    // Primary feature
     if ((dim > 0) && (dim & (dim - 1)) === 0) {
         vec[h & (dim - 1)] += value;
+        // Add secondary feature for better distribution
+        vec[h2 & (dim - 1)] += value * 0.5;
     } else {
         vec[h % dim] += value;
+        vec[h2 % dim] += value * 0.5;
     }
+}
+
+// Positional encoding (sin/cos) for word order
+const addPositionalFeat = (vec: Float32Array, dim: number, pos: number, w: number) => {
+    const idx = pos % dim;
+    const angle = pos / Math.pow(10000, (2 * idx) / dim);
+    vec[idx] += w * Math.sin(angle);
+    vec[(idx + 1) % dim] += w * Math.cos(angle);
+}
+
+// Sector-specific weights for domain adaptation
+const SECTOR_WEIGHTS: Record<string, number> = {
+    episodic: 1.3,    // Boost temporal/narrative features
+    semantic: 1.0,     // Baseline
+    procedural: 1.2,   // Boost sequential patterns
+    emotional: 1.4,    // Boost sentiment features
+    reflective: 0.9    // Lower weight for abstract concepts
 }
 
 const norm = (vec: Float32Array) => {
@@ -165,32 +248,91 @@ const norm = (vec: Float32Array) => {
     }
 }
 
-function generateSyntheticEmbedding(t: string, s: string): number[] {
+export function generateSyntheticEmbedding(t: string, s: string): number[] {
     const d = env.vec_dim || 768
     const v = new Float32Array(d).fill(0)
     const ct = canonicalTokensFromText(t)
+
     if (!ct.length) {
         const x = 1 / Math.sqrt(d)
         return Array.from({ length: d }, () => x)
     }
+
     const et = Array.from(addSynonymTokens(ct))
     const tc = new Map<string, number>()
     const etLength: number = et.length;
+
+    // Token frequency counting
     for (let i = 0; i < etLength; i++) {
         const tok = et[i];
         tc.set(tok, (tc.get(tok) || 0) + 1)
     }
 
+    // Sector-specific weight
+    const sectorWeight = SECTOR_WEIGHTS[s] || 1.0
+
+    // Document length for TF-IDF-like normalization
+    const docLen = Math.log(1 + etLength)
+
+    // === 1. UNIGRAM FEATURES (TF-IDF weighted) ===
     for (const [tok, c] of tc) {
-        const w = Math.log(1 + c) + 1
+        const tf = c / etLength  // Term frequency
+        const idf = Math.log(1 + etLength / c)  // Inverse document frequency approximation
+        const w = (tf * idf + 1) * sectorWeight
         addFeat(v, d, `${s}|tok|${tok}`, w)
-        if (tok.length >= 3) for (let i = 0; i < tok.length - 2; i++) addFeat(v, d, `${s}|tri|${tok.slice(i, i + 3)}`, w * 0.6)
+
+        // Character n-grams for robustness (3-5 chars)
+        if (tok.length >= 3) {
+            for (let i = 0; i < tok.length - 2; i++) {
+                addFeat(v, d, `${s}|c3|${tok.slice(i, i + 3)}`, w * 0.4)
+            }
+        }
+        if (tok.length >= 4) {
+            for (let i = 0; i < tok.length - 3; i++) {
+                addFeat(v, d, `${s}|c4|${tok.slice(i, i + 4)}`, w * 0.3)
+            }
+        }
     }
 
+    // === 2. BIGRAM FEATURES (sequential patterns) ===
     for (let i = 0; i < ct.length - 1; i++) {
         const a = ct[i], b = ct[i + 1]
-        if (a && b) addFeat(v, d, `${s}|bi|${a}_${b}`, 1.2)
+        if (a && b) {
+            // Position-weighted bigrams (early words matter more)
+            const posWeight = 1.0 / (1.0 + i * 0.1)
+            addFeat(v, d, `${s}|bi|${a}_${b}`, 1.4 * sectorWeight * posWeight)
+        }
     }
+
+    // === 3. TRIGRAM FEATURES (phrase patterns) ===
+    for (let i = 0; i < ct.length - 2; i++) {
+        const a = ct[i], b = ct[i + 1], c = ct[i + 2]
+        if (a && b && c) {
+            addFeat(v, d, `${s}|tri|${a}_${b}_${c}`, 1.0 * sectorWeight)
+        }
+    }
+
+    // === 4. SKIP-GRAM FEATURES (long-range dependencies) ===
+    for (let i = 0; i < Math.min(ct.length - 2, 20); i++) {
+        const a = ct[i], c = ct[i + 2]
+        if (a && c) {
+            addFeat(v, d, `${s}|skip|${a}_${c}`, 0.7 * sectorWeight)
+        }
+    }
+
+    // === 5. POSITIONAL ENCODING (word order) ===
+    for (let i = 0; i < Math.min(ct.length, 50); i++) {
+        addPositionalFeat(v, d, i, 0.5 * sectorWeight / docLen)
+    }
+
+    // === 6. DOCUMENT LENGTH SIGNAL ===
+    const lenBucket = Math.min(Math.floor(Math.log2(etLength + 1)), 10)
+    addFeat(v, d, `${s}|len|${lenBucket}`, 0.6 * sectorWeight)
+
+    // === 7. SEMANTIC DENSITY (unique words / total words) ===
+    const density = tc.size / etLength
+    const densityBucket = Math.floor(density * 10)
+    addFeat(v, d, `${s}|dens|${densityBucket}`, 0.5 * sectorWeight)
 
     norm(v)
     return Array.from(v)

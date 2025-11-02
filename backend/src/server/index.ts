@@ -1,5 +1,5 @@
 const server = require('./server.js')
-import { env } from '../config'
+import { env, tier } from '../config'
 import { runDecayProcess, pruneWeakWaypoints } from '../hsg'
 import { lang } from '../langgraph'
 import { mcp } from '../mcp'
@@ -8,6 +8,8 @@ import { authenticate_api_request, log_authenticated_request } from './middlewar
 import { startReflection } from '../reflection'
 
 const app = server({ max_payload_size: env.max_payload_size })
+
+console.log(`[OpenMemory] Dim: ${env.vec_dim} | Cache: ${env.cache_segments} segments | Max Active: ${env.max_active}`)
 
 app.use((req: any, res: any, next: any) => {
     res.setHeader('Access-Control-Allow-Origin', '*')

@@ -87,51 +87,6 @@ npm install
 npm run dev
 ```
 
-Example `.env` configuration:
-
-```ini
-# Core server
-OM_PORT=8080
-OM_MODE=standard
-OM_API_KEY=
-
-# Metadata store
-OM_METADATA_BACKEND=sqlite          # sqlite | postgres
-OM_DB_PATH=./data/openmemory.sqlite # used when sqlite
-
-# PostgreSQL (only when OM_METADATA_BACKEND=postgres or OM_VECTOR_BACKEND=pgvector)
-OM_PG_HOST=localhost
-OM_PG_PORT=5432
-OM_PG_DB=openmemory
-OM_PG_USER=postgres
-OM_PG_PASSWORD=postgres
-OM_PG_SCHEMA=public
-OM_PG_TABLE=openmemory_memories
-OM_PG_SSL=disable                   # disable | require
-
-# Vector store
-OM_VECTOR_BACKEND=sqlite            # sqlite | pgvector | weaviate
-OM_VECTOR_TABLE=openmemory_vectors
-OM_WEAVIATE_URL=
-OM_WEAVIATE_API_KEY=
-OM_WEAVIATE_CLASS=OpenMemory
-
-# Embeddings
-OM_EMBEDDINGS=openai
-OM_VEC_DIM=768
-OPENAI_API_KEY=
-GEMINI_API_KEY=
-OLLAMA_URL=http://localhost:11434
-LOCAL_MODEL_PATH=
-OM_MIN_SCORE=0.3
-OM_DECAY_LAMBDA=0.02
-
-# LangGraph integration (optional)
-OM_LG_NAMESPACE=default
-OM_LG_MAX_CONTEXT=50
-OM_LG_REFLECTIVE=true
-```
-
 Start server:
 
 ```bash
