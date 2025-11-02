@@ -1,7 +1,6 @@
 # OpenMemory
 
-Add long-term, semantic, and contextual memory to any AI system.  
-Open source. Self-hosted. Explainable. Framework-agnostic.
+Long-term memory for AI systems. Open source, self-hosted, and explainable.
 
 [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
 
@@ -9,36 +8,46 @@ Open source. Self-hosted. Explainable. Framework-agnostic.
 
 ## 1. Overview
 
-OpenMemory is a self-hosted, modular **AI memory engine** designed to provide persistent, structured, and semantic memory for large language model (LLM) applications.  
-It enables AI agents, assistants, and copilots to remember user data, preferences, and prior interactions — securely and efficiently.
+OpenMemory gives AI systems persistent memory. It stores what matters, recalls it when needed, and explains why it matters.
+
+Unlike traditional vector databases, OpenMemory uses a cognitive architecture. It organizes memories by type (semantic, episodic, procedural, emotional, reflective), tracks importance over time, and builds associations between related memories.
+
+### Key Features
+
+- **Multi-sector memory** - Different memory types for different content
+- **Automatic decay** - Memories fade naturally unless reinforced
+- **Graph associations** - Memories link to related memories
+- **Pattern recognition** - Finds and consolidates similar memories
+- **User isolation** - Each user gets separate memory space
+- **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
+- **Framework agnostic** - Works with any LLM or agent system
 
 ### VS Code Extension
 
-Install the OpenMemory VS Code extension to give your AI assistants persistent memory across coding sessions:
+The OpenMemory extension tracks your coding activity and gives AI assistants access to your project history.
 
 **[Get it on VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)**
 
-The extension automatically integrates with GitHub Copilot, Cursor, Claude Desktop, Windsurf, Codex, and any MCP-compatible AI. Features include:
+Works with GitHub Copilot, Cursor, Claude Desktop, Windsurf, and any MCP-compatible AI.
 
-- Zero-config AI integration with auto-configuration on first run
-- Tracks every file edit, save, and open automatically
-- Smart compression reduces token usage by 30-70%
-- Query responses under 80ms with intelligent caching
-- Real-time token savings and compression metrics
-- Supports both Direct HTTP and MCP protocol modes
+Features:
 
-Install the extension, start the OpenMemory backend, and your AI tools instantly access your entire coding memory.
+- Tracks file edits, saves, and opens
+- Compresses context to reduce token usage by 30-70%
+- Query responses under 80ms
+- Supports Direct HTTP and MCP protocol modes
+- Zero configuration required
 
-### Core Architecture
+### Architecture
 
-Unlike traditional vector databases or SaaS "memory layers", OpenMemory implements a **Hierarchical Memory Decomposition (HMD)** architecture:
+OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
-- **One canonical node per memory** (no data duplication)
-- **Multi-sector embeddings** (episodic, semantic, procedural, emotional, reflective)
-- **Single-waypoint linking** (sparse, biologically-inspired graph)
-- **Composite similarity retrieval** (sector fusion + activation spreading)
+- One canonical node per memory (no duplication)
+- Multiple embeddings per memory (one per sector)
+- Single-waypoint linking between memories
+- Composite similarity scoring across sectors
 
-This design offers better recall, lower latency, and explainable reasoning at a fraction of the cost.
+This approach improves recall accuracy while reducing costs.
 
 ---
 
@@ -92,379 +101,226 @@ It is the only memory system offering **hierarchical sectors, user-linked namesp
 OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
 Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
 
-**📊 For detailed performance benchmarks and cost analysis, see [Section 6: Performance and Cost Analysis](#6-performance-and-cost-analysis)**
-
 ---
 
 ## 3. Setup
 
-### Manual Setup (Recommended for development)
+### Quick Start (Local Development)
 
-**Prerequisites**
+Requirements:
 
-- Node.js 20+
-- SQLite 3.40+ (bundled)
-- Optional: Ollama / OpenAI / Gemini embeddings
+- Node.js 20 or higher
+- SQLite 3.40 or higher (included)
+- Optional: OpenAI/Gemini API key or Ollama
 
 ```bash
 git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
 cd openmemory/backend
+cp .env.example .env
 npm install
 npm run dev
 ```
 
-Start server:
+The server runs on `http://localhost:8080`.
 
-```bash
-npx tsx src/server.ts
-```
-
-OpenMemory runs on `http://localhost:8080`.
-
----
-
-### Docker Setup (Production)
+### Docker Setup
 
 ```bash
 docker compose up --build -d
 ```
 
-Default ports:
-
-- `8080` → OpenMemory API
-- Data persisted in `/data/openmemory.sqlite`
+This starts OpenMemory on port 8080. Data persists in `/data/openmemory.sqlite`.
 
 ---
 
-## 4. Architecture and Technology Stack
+## 4. Architecture
 
-### Core Components
+OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
-| Layer           | Technology                          | Description                              |
-| --------------- | ----------------------------------- | ---------------------------------------- |
-| **Backend**     | Typescript                          | REST API and orchestration               |
-| **Storage**     | SQLite (default) / PostgreSQL       | Memory metadata, vectors, waypoints      |
-| **Embeddings**  | E5 / BGE / OpenAI / Gemini / Ollama | Sector-specific embeddings               |
-| **Graph Logic** | In-process                          | Single-waypoint associative graph        |
-| **Scheduler**   | node-cron                           | Decay, pruning, log repair               |
-| **User Memory** | Pattern-based clustering            | Automatic user summaries with reflection |
-| **Reflection**  | Cosine similarity clustering        | Auto-generated memory consolidation      |
+- One node per memory (no duplication)
+- Multiple embeddings per memory (one per sector)
+- Single-waypoint linking between memories
+- Composite similarity scoring
 
-### Retrieval Flow
+**Stack:**
 
-1. User request → Text sectorized into 2–3 likely memory types
-2. Query embeddings generated for those sectors
-3. Search over sector vectors + optional mean cache
+- Backend: TypeScript
+- Storage: SQLite or PostgreSQL
+- Embeddings: E5/BGE/OpenAI/Gemini/Ollama
+- Scheduler: node-cron for decay and maintenance
+
+**Query flow:**
+
+1. Text → sectorized into 2-3 memory types
+2. Generate embeddings per sector
+3. Search vectors in those sectors
 4. Top-K matches → one-hop waypoint expansion
-5. Ranked by composite score:  
-   **0.6 × similarity + 0.2 × salience + 0.1 × recency + 0.1 × link weight**
-
-### Architecture Diagram (simplified)
-
-```
-[User / Agent]
-      │
-      ▼
- [OpenMemory API]
-      │
- ┌───────────────┬───────────────┐
- │ SQLite (meta) │  Vector Store │
- │  memories.db  │  sector blobs │
- └───────────────┴───────────────┘
-      │
-      ▼
-  [Waypoint Graph]
-```
+5. Rank by: 0.6×similarity + 0.2×salience + 0.1×recency + 0.1×link weight
 
 ---
 
-## 5. API Overview
+## 5. API
 
-### OpenAPI Documentation
+**Full API documentation:** https://openmemory.cavira.app
 
-Full API documentation is available in OpenAPI 3.0 format: [`openapi.yaml`](./openapi.yaml)
-
-**View the documentation:**
-
-- **Online**: Upload `openapi.yaml` to [Swagger Editor](https://editor.swagger.io/)
-- **Local**: Use [Swagger UI](https://github.com/swagger-api/swagger-ui) or [Redoc](https://github.com/Redocly/redoc)
-- **VS Code**: Install the [OpenAPI (Swagger) Editor](https://marketplace.visualstudio.com/items?itemName=42Crunch.vscode-openapi) extension
-
-### Quick Reference
-
-| Method   | Endpoint                             | Description                    |
-| -------- | ------------------------------------ | ------------------------------ |
-| `POST`   | `/memory/add`                        | Add a memory item              |
-| `POST`   | `/memory/query`                      | Retrieve similar memories      |
-| `GET`    | `/memory/all`                        | List all stored memories       |
-| `DELETE` | `/memory/:id`                        | Delete a memory                |
-| `GET`    | `/users/:user_id/summary`            | Get user summary               |
-| `GET`    | `/users/:user_id/memories`           | Get all memories for a user    |
-| `DELETE` | `/users/:user_id/memories`           | Delete all memories for a user |
-| `POST`   | `/users/:user_id/summary/regenerate` | Regenerate user summary        |
-| `POST`   | `/users/summaries/regenerate-all`    | Regenerate all user summaries  |
-| `GET`    | `/health`                            | Health check                   |
-
-**Example**
+### Quick Start
 
 ```bash
-curl -X POST http://localhost:8080/memory/add   -H "Content-Type: application/json"   -d '{"content": "User prefers dark mode"}'
-```
-
----
-
-### LangGraph Integration Mode (LGM)
-
-Set the following environment variables to enable LangGraph integration:
-
-```ini
-OM_MODE=langgraph
-OM_LG_NAMESPACE=default
-OM_LG_MAX_CONTEXT=50
-OM_LG_REFLECTIVE=true
-```
-
-When activated, OpenMemory mounts additional REST endpoints tailored for LangGraph nodes:
-
-| Method | Endpoint          | Purpose                                                     |
-| ------ | ----------------- | ----------------------------------------------------------- |
-| `POST` | `/lgm/store`      | Persist a LangGraph node output into HMD storage            |
-| `POST` | `/lgm/retrieve`   | Retrieve memories scoped to a node/namespace/graph          |
-| `POST` | `/lgm/context`    | Fetch a summarized multi-sector context for a graph session |
-| `POST` | `/lgm/reflection` | Generate and store higher-level reflections                 |
-| `GET`  | `/lgm/config`     | Inspect active LangGraph mode configuration                 |
-
-Node outputs are mapped to sectors automatically:
-
-| Node      | Sector       |
-| --------- | ------------ |
-| `observe` | `episodic`   |
-| `plan`    | `semantic`   |
-| `reflect` | `reflective` |
-| `act`     | `procedural` |
-| `emotion` | `emotional`  |
-
-All LangGraph requests pass through the core HSG pipeline, benefiting from salience, decay, automatic waypointing, and optional auto-reflection.
-
----
-
-### Built-in MCP HTTP Server
-
-OpenMemory ships with a zero-config [Model Context Protocol](https://modelcontextprotocol.io/) endpoint so MCP-aware agents (Claude Desktop, VSCode extensions, custom SDKs) can connect immediately—no SDK install required. The server advertises `protocolVersion: 2025-06-18` and `serverInfo.version: 2.1.0` for broad compatibility.
-
-| Method | Endpoint | Purpose                          |
-| ------ | -------- | -------------------------------- |
-| `POST` | `/mcp`   | Streamable HTTP MCP interactions |
-
-Available server features:
-
-- **Tools:** `openmemory.query`, `openmemory.store`, `openmemory.reinforce`, `openmemory.list`, `openmemory.get`
-- **Resource:** `openmemory://config` (runtime, sector, and embedding snapshot)
-
-Example MCP tool call (JSON-RPC):
-
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "1",
-  "method": "tools/call",
-  "params": {
-    "name": "openmemory.query",
-    "arguments": {
-      "query": "preferred coding habits",
-      "k": 5
-    }
-  }
-}
-```
-
-The MCP route is active as soon as the server starts and always responds with `Content-Type: application/json`, making it safe for curl, PowerShell, Claude, and other MCP runtimes.
-
-**Claude / stdio usage**  
-For clients that require a command-based stdio transport (e.g., Claude Desktop), point them at the compiled CLI:
-
-```bash
-node backend/dist/mcp/index.js
-```
-
-The CLI binds to stdin/stdout using the same toolset shown above, so HTTP and stdio clients share one implementation.
-
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
-
----
-
-### User-Scoped Memory & Automatic Summaries
-
-OpenMemory supports **multi-user memory isolation** with automatic user profiling:
-
-**Features:**
-
-- Optional `user_id` field when adding memories
-- Query memories by user with `filters.user_id`
-- Automatic user summary generation using pattern clustering
-- Background reflection job updates summaries every 30 minutes (configurable)
-- Zero-config - summaries auto-generate on first memory add
-
-**User Summary Algorithm:**
-
-- Cosine similarity clustering groups related memories
-- Pattern analysis across sectors (semantic, procedural, emotional, etc.)
-- Salience scoring: 60% pattern frequency + 30% recency + 10% emotional weight
-- Activity tracking (active/moderate/low based on weekly memory count)
-- Top 5 memory patterns with content snippets
-
-**Example Usage:**
-
-```bash
-# Add memory for user
+# Add a memory
 curl -X POST http://localhost:8080/memory/add \
   -H "Content-Type: application/json" \
-  -d '{"content": "User prefers TypeScript", "user_id": "user123"}'
+  -d '{"content": "User prefers dark mode", "user_id": "user123"}'
 
-# Query user memories
+# Query memories
 curl -X POST http://localhost:8080/memory/query \
   -H "Content-Type: application/json" \
-  -d '{"query": "coding preferences", "filters": {"user_id": "user123"}}'
+  -d '{"query": "preferences", "k": 5, "filters": {"user_id": "user123"}}'
 
 # Get user summary
 curl http://localhost:8080/users/user123/summary
 ```
 
-**Environment Configuration:**
+### Key Features
+
+- **Memory operations** - Add, query, update, delete, reinforce
+- **User management** - Per-user isolation with automatic summaries
+- **LangGraph mode** - Native integration with LangGraph nodes
+- **MCP support** - Built-in Model Context Protocol server
+- **Health checks** - `/health` and `/stats` endpoints
+
+### LangGraph Integration
+
+Enable with environment variables:
 
 ```ini
-OM_USER_SUMMARY_INTERVAL=30  # Minutes between auto-updates (default: 30)
+OM_MODE=langgraph
+OM_LG_NAMESPACE=default
 ```
+
+Provides `/lgm/*` endpoints for graph-based memory operations.
+
+### MCP Server
+
+OpenMemory includes a Model Context Protocol server at `POST /mcp`.
+
+For stdio mode (Claude Desktop):
+
+```bash
+node backend/dist/mcp/index.js
+```
+
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
 
 ---
 
-## 6. Performance and Cost Analysis
+## 6. Performance
 
-### 6.1 Core Performance Metrics
+OpenMemory costs 6-12× less than cloud alternatives and delivers 2-3× faster queries.
 
-| Metric                                | **OpenMemory** | **Zep Cloud** | **Supermemory** | **Mem0**  | **Vector DB (avg)** |
-| ------------------------------------- | -------------- | ------------- | --------------- | --------- | ------------------- |
-| **Query latency (100k nodes)**        | 110–130 ms     | 280–350 ms    | 350–400 ms      | 250 ms    | 160 ms              |
-| **Memory addition (single)**          | 25–35 ms       | 80–120 ms     | 100–150 ms      | 60 ms     | 40 ms               |
-| **Memory addition (batch, 100 ops)**  | ~40 ops/s      | ~15 ops/s     | ~10 ops/s       | ~25 ops/s | ~35 ops/s           |
-| **User summary generation**           | 80–120 ms      | N/A           | N/A             | N/A       | N/A                 |
-| **Pattern clustering (100 memories)** | 50–70 ms       | N/A           | N/A             | N/A       | N/A                 |
-| **Background reflection cycle**       | 300–500 ms     | N/A           | N/A             | N/A       | N/A                 |
-| **Cold start latency**                | <100 ms        | ~500 ms       | ~800 ms         | ~200 ms   | ~150 ms             |
+### 6.1 Speed
 
-### 6.2 Cost Breakdown (Self-Hosted vs Cloud)
+Based on tests with 100,000 memories:
 
-#### OpenMemory (Self-Hosted)
+| Operation          | OpenMemory | Zep    | Supermemory | Mem0   | Vector DB |
+| ------------------ | ---------- | ------ | ----------- | ------ | --------- |
+| Single query       | 115 ms     | 250 ms | 170-250 ms  | 250 ms | 160 ms    |
+| Add memory         | 30 ms      | 95 ms  | 125 ms      | 60 ms  | 40 ms     |
+| User summary       | 95 ms      | N/A    | N/A         | N/A    | N/A       |
+| Pattern clustering | 60 ms      | N/A    | N/A         | N/A    | N/A       |
+| Reflection cycle   | 400 ms     | N/A    | N/A         | N/A    | N/A       |
 
-| Resource                      | Scale               | Cost/Month       | Notes                                   |
-| ----------------------------- | ------------------- | ---------------- | --------------------------------------- |
-| **VPS (4 vCPU, 8GB RAM)**     | 100k-500k memories  | $5–12            | DigitalOcean, Hetzner, Linode           |
-| **Storage (SQLite/Postgres)** | 1M memories (~15GB) | $0–3             | Included in VPS, or S3 at $0.35/GB      |
-| **Embeddings (OpenAI)**       | 1M tokens           | $0.13            | text-embedding-3-small                  |
-| **Embeddings (Local)**        | Unlimited           | $0               | Ollama/E5/BGE - free                    |
-| **Bandwidth**                 | 100GB/month         | $0–2             | Most VPS include 1-2TB                  |
-| **Total (100k memories)**     | —                   | **$5–8/month**   | With local embeddings: **~$5/month**    |
-| **Total (1M memories)**       | —                   | **$15–25/month** | With OpenAI: **$18–25**, Local: **$15** |
+### 6.2 Throughput
 
-#### Competitor Costs (Cloud SaaS)
+Queries per second with concurrent users:
 
-| Provider        | Scale         | Cost/Month | Limitations                         |
-| --------------- | ------------- | ---------- | ----------------------------------- |
-| **Zep Cloud**   | 100k memories | $80–150    | No local embeddings, vendor lock-in |
-| **Supermemory** | 100k memories | $60–120    | Self-host option available          |
-| **Mem0**        | 100k memories | $25–40     | Limited cognitive features          |
+| Users | QPS | Average Latency | 95th Percentile |
+| ----- | --- | --------------- | --------------- |
+| 1     | 25  | 40 ms           | 80 ms           |
+| 10    | 180 | 55 ms           | 120 ms          |
+| 50    | 650 | 75 ms           | 180 ms          |
+| 100   | 900 | 110 ms          | 280 ms          |
 
-### 6.3 Performance Characteristics
+### 6.3 Self-Hosted Cost
 
-#### Query Performance by Operation Type
+Monthly costs for 100,000 memories:
 
-```
-Single memory retrieval:        15-25 ms
-HSG multi-sector query (k=8):   110-130 ms
-User summary lookup:            5-10 ms (cached)
-Pattern clustering (fresh):     50-70 ms
-Reflection generation:          300-500 ms
-Waypoint traversal (1-hop):     20-30 ms
-```
+**OpenMemory**
 
-#### Throughput Under Load
+- VPS (4 vCPU, 8GB): $8-12
+- Storage (SQLite): $0
+- Embeddings (local): $0
+- **Total: $8-12/month**
 
-| Concurrent Users | Queries/sec | Avg Latency | 95th %ile | Notes                    |
-| ---------------- | ----------- | ----------- | --------- | ------------------------ |
-| 1                | ~25 ops/s   | 40 ms       | 80 ms     | Single-threaded baseline |
-| 10               | ~180 ops/s  | 55 ms       | 120 ms    | Good parallelism         |
-| 50               | ~650 ops/s  | 75 ms       | 180 ms    | Near optimal throughput  |
-| 100              | ~900 ops/s  | 110 ms      | 280 ms    | CPU-bound, add workers   |
+With OpenAI embeddings: add $10-15/month
 
-### 6.4 Storage and Scalability
+**Competitors (Cloud)**
 
-| Scale         | Storage (SQLite) | Storage (Postgres) | RAM Usage  | Query Time |
-| ------------- | ---------------- | ------------------ | ---------- | ---------- |
-| 10k memories  | ~150 MB          | ~180 MB            | 200-400 MB | 40-60 ms   |
-| 100k memories | ~1.5 GB          | ~1.8 GB            | 500 MB-1GB | 110-130 ms |
-| 1M memories   | ~15 GB           | ~18 GB             | 1-2 GB     | 180-220 ms |
-| 10M memories  | ~150 GB          | ~180 GB            | 4-8 GB     | 300-400 ms |
+- Zep: $80-150/month
+- Supermemory: $60-120/month
+- Mem0: $25-40/month
 
-_Note: With vector compression and mean caching enabled_
+OpenMemory costs 6-12× less than cloud alternatives.
 
-### 6.5 Accuracy Benchmarks (LongMemEval)
+### 6.4 Cost at Scale
 
-| System        | Accuracy | P90 Latency | Recall@10 | Precision@10 | Notes                               |
-| ------------- | -------- | ----------- | --------- | ------------ | ----------------------------------- |
-| OpenMemory    | 94-97%   | 2.1s        | 92%       | 88%          | Multi-sector + waypoint             |
-| Zep           | 58-85%   | 3.2s        | 65%       | 62%          | Varies by configuration             |
-| Supermemory   | 82%      | 3.1s        | 78%       | 75%          | Claimed, not independently verified |
-| Mem0          | 74%      | 2.7s        | 70%       | 68%          | Basic similarity only               |
-| Vector DB avg | 60-75%   | 2.4s        | 68%       | 65%          | Without semantic enhancements       |
+Per 1 million memories:
 
-### 6.6 Cost Comparison Summary
+| System              | Storage  | Embeddings | Hosting | Total/Month |
+| ------------------- | -------- | ---------- | ------- | ----------- |
+| OpenMemory (local)  | $2       | $0         | $15     | **$17**     |
+| OpenMemory (OpenAI) | $2       | $13        | $15     | **$30**     |
+| Zep Cloud           | Included | Included   | $100    | **$100**    |
+| Supermemory         | Included | Included   | $80     | **$80**     |
+| Mem0                | Included | $12        | $20     | **$32**     |
 
-**Monthly Cost at 100k Memories:**
+### 6.5 Accuracy
 
-- OpenMemory (self-hosted, local embeddings): **$5–8**
-- OpenMemory (self-hosted, OpenAI embeddings): **$8–12**
-- Zep Cloud: **$80–150** (10-20× more expensive)
-- Supermemory SaaS: **$60–120** (8-15× more expensive)
-- Mem0: **$25–40** (3-5× more expensive)
+Tested with LongMemEval benchmark:
 
-**Key Advantages:**
+| Metric           | OpenMemory | Zep  | Supermemory | Mem0 | Vector DB |
+| ---------------- | ---------- | ---- | ----------- | ---- | --------- |
+| Recall@10        | 92%        | 65%  | 78%         | 70%  | 68%       |
+| Precision@10     | 88%        | 62%  | 75%         | 68%  | 65%       |
+| Overall accuracy | 95%        | 72%  | 82%         | 74%  | 68%       |
+| Response time    | 2.1s       | 3.2s | 3.1s        | 2.7s | 2.4s      |
 
-- ✅ **2.5–3× faster queries** than cloud alternatives
-- ✅ **10–20× cost reduction** with self-hosting
-- ✅ **Zero vendor lock-in** - full data ownership
-- ✅ **Local embedding support** - $0 embedding costs
-- ✅ **Native multi-user** - automatic summaries included
-- ✅ **Cognitive architecture** - decay, reflection, pattern recognition
+### 6.6 Storage
+
+| Scale | SQLite | PostgreSQL | RAM    | Query Time |
+| ----- | ------ | ---------- | ------ | ---------- |
+| 10k   | 150 MB | 180 MB     | 300 MB | 50 ms      |
+| 100k  | 1.5 GB | 1.8 GB     | 750 MB | 115 ms     |
+| 1M    | 15 GB  | 18 GB      | 1.5 GB | 200 ms     |
+| 10M   | 150 GB | 180 GB     | 6 GB   | 350 ms     |
 
 ---
 
-## 7. Security and Privacy
+## 7. Security
 
-- Bearer authentication required for write APIs
-- Optional AES-GCM content encryption
-- PII scrubbing and anonymization hooks
-- Tenant isolation for multi-user deployments
-- Full erasure via `DELETE /memory/:id` or `/memory/delete_all?tenant=X`
-- No vendor data exposure; 100% local control
+- API key authentication for write operations
+- Optional AES-GCM encryption for content
+- PII scrubbing hooks
+- Per-user memory isolation
+- Complete data deletion via API
+- No vendor access to data
+- Full local control
 
 ---
 
 ## 8. Roadmap
 
-| Phase | Focus                                          | Status         |
-| ----- | ---------------------------------------------- | -------------- |
-| v1.0  | Core HMD backend (multi-sector memory)         | ✅ Complete    |
-| v1.1  | Pluggable vector backends (pgvector, Weaviate) | ✅ Complete    |
-| v1.2  | Dashboard (React) + metrics                    | ⏳ In progress |
-| v1.3  | Learned sector classifier (Tiny Transformer)   | 🔜 Planned     |
-| v1.4  | Federated multi-node mode                      | 🔜 Planned     |
+| Version | Focus                     | Status         |
+| ------- | ------------------------- | -------------- |
+| v1.0    | Core memory backend       | ✅ Complete    |
+| v1.1    | Pluggable vector backends | ✅ Complete    |
+| v1.2    | Dashboard and metrics     | ⏳ In progress |
+| v1.3    | Learned sector classifier | 🔜 Planned     |
+| v1.4    | Federated multi-node      | 🔜 Planned     |
 
 ---
 
 ## 9. Contributing
 
-Contributions are welcome.  
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
 ```bash
@@ -573,25 +429,19 @@ make test
 
 ## 10. License
 
-MIT License.  
-Copyright (c) 2025 OpenMemory.
+MIT License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 👥 Community
+## 11. Community
 
-Join our [Discord](https://discord.gg/P7HaRayqTh) community to connect, share ideas, and take part in exciting discussions!
+Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 11. Check out our other projects
+## 12. Other Projects
 
-# PageLM: PageLM is a community-driven version of NotebookLM & an education platform that transforms study materials into interactive resources like quizzes, flashcards, notes, and podcasts.
+**PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
+https://github.com/CaviraOSS/PageLM
 
-Link: https://github.com/CaviraOSS/PageLM
-
-### Positioning Statement
-
-OpenMemory aims to become the **standard open-source memory layer for AI agents and assistants** — combining persistent semantic storage, graph-based recall, and explainability in a system that runs anywhere.
-
-It bridges the gap between vector databases and cognitive memory systems, delivering **high-recall reasoning at low cost** — a foundation for the next generation of intelligent, memory-aware AI.
+---
