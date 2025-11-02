@@ -1,4 +1,6 @@
 name: publish sdks
+permissions:
+  contents: read
 
 on:
   push:
