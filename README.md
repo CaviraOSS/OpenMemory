@@ -1,3 +1,5 @@
+<img width="1577" height="781" alt="image" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
+
 # OpenMemory
 
 Long-term memory for AI systems. Open source, self-hosted, and explainable.
@@ -342,17 +344,17 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/DKB0512">
-                    <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
-                    <br />
-                    <sub><b>Devarsh (DKB) Bhatt</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/recabasic">
                     <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
                     <br />
                     <sub><b>Elvoro</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/DKB0512">
+                    <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
+                    <br />
+                    <sub><b>Devarsh (DKB) Bhatt</b></sub>
                 </a>
             </td>
             <td align="center">
