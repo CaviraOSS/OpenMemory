@@ -349,17 +349,17 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/msris108">
-                    <img src="https://avatars.githubusercontent.com/u/43115330?v=4" width="100;" alt="msris108"/>
-                    <br />
-                    <sub><b>Sriram M</b></sub>
-                </a>
-            </td>
-            <td align="center">
                 <a href="https://github.com/recabasic">
                     <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
                     <br />
                     <sub><b>Elvoro</b></sub>
+                </a>
+            </td>
+            <td align="center">
+                <a href="https://github.com/msris108">
+                    <img src="https://avatars.githubusercontent.com/u/43115330?v=4" width="100;" alt="msris108"/>
+                    <br />
+                    <sub><b>Sriram M</b></sub>
                 </a>
             </td>
             <td align="center">
