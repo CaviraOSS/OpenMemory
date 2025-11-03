@@ -9,12 +9,13 @@ import { q, all_async } from '../core/db'
 import { getEmbeddingInfo } from '../memory/embed'
 import { j, p } from '../utils'
 import type { sector_type, mem_row, rpc_err_code } from '../core/types'
+import { update_user_summary } from '../memory/user_summary'
 
 const sec_enum = z.enum(['episodic', 'semantic', 'procedural', 'emotional', 'reflective'] as const)
 
 const trunc = (val: string, max = 200) => val.length <= max ? val : `${val.slice(0, max).trimEnd()}...`
 
-const build_mem_snap = (row: mem_row) => ({ id: row.id, primary_sector: row.primary_sector, salience: Number(row.salience.toFixed(3)), last_seen_at: row.last_seen_at, content_preview: trunc(row.content, 240) })
+const build_mem_snap = (row: mem_row) => ({ id: row.id, primary_sector: row.primary_sector, salience: Number(row.salience.toFixed(3)), last_seen_at: row.last_seen_at, user_id: row.user_id, content_preview: trunc(row.content, 240) })
 
 const fmt_matches = (matches: Awaited<ReturnType<typeof hsg_query>>) => matches.map((m: any, idx: any) => {
     const prev = trunc(m.content.replace(/\s+/g, ' ').trim(), 200)
@@ -36,6 +37,8 @@ const send_err = (res: ServerResponse, code: rpc_err_code, msg: string, id: numb
     }
 }
 
+const uid = (val?: string | null) => val?.trim() ? val.trim() : undefined
+
 export const create_mcp_srv = () => {
     const srv = new McpServer({ name: 'openmemory-mcp', version: '2.1.0', protocolVersion: '2025-06-18' }, { capabilities: { tools: {}, resources: {}, logging: {} } })
 
@@ -43,9 +46,15 @@ export const create_mcp_srv = () => {
         query: z.string().min(1, 'query text is required').describe('Free-form search text'),
         k: z.number().int().min(1).max(32).default(8).describe('Maximum results to return'),
         sector: sec_enum.optional().describe('Restrict search to a specific sector'),
-        min_salience: z.number().min(0).max(1).optional().describe('Minimum salience threshold')
-    }, async ({ query, k, sector, min_salience }) => {
-        const flt = { sectors: sector ? [sector as sector_type] : undefined, minSalience: min_salience }
+        min_salience: z.number().min(0).max(1).optional().describe('Minimum salience threshold'),
+        user_id: z.string().trim().min(1).optional().describe('Isolate results to a specific user identifier')
+    }, async ({ query, k, sector, min_salience, user_id }) => {
+        const u = uid(user_id)
+        const flt = sector || min_salience !== undefined || u ? {
+            ...(sector ? { sectors: [sector as sector_type] } : {}),
+            ...(min_salience !== undefined ? { minSalience: min_salience } : {}),
+            ...(u ? { user_id: u } : {})
+        } : undefined
         const matches = await hsg_query(query, k ?? 8, flt)
         const summ = matches.length ? fmt_matches(matches) : 'No memories matched the supplied query.'
         const pay = matches.map((m: any) => ({ id: m.id, score: Number(m.score.toFixed(4)), primary_sector: m.primary_sector, sectors: m.sectors, salience: Number(m.salience.toFixed(4)), last_seen_at: m.last_seen_at, path: m.path, content: m.content }))
@@ -55,11 +64,15 @@ export const create_mcp_srv = () => {
     srv.tool('openmemory.store', 'Persist new content into OpenMemory', {
         content: z.string().min(1).describe('Raw memory text to store'),
         tags: z.array(z.string()).optional().describe('Optional tag list'),
-        metadata: z.record(z.any()).optional().describe('Arbitrary metadata blob')
-    }, async ({ content, tags, metadata }) => {
-        const res = await add_hsg_memory(content, j(tags || []), metadata)
-        const txt = `Stored memory ${res.id} (primary=${res.primary_sector}) across sectors: ${res.sectors.join(', ')}`
-        return { content: [{ type: 'text', text: txt }, { type: 'text', text: JSON.stringify({ id: res.id, primary_sector: res.primary_sector, sectors: res.sectors }, null, 2) }] }
+        metadata: z.record(z.any()).optional().describe('Arbitrary metadata blob'),
+        user_id: z.string().trim().min(1).optional().describe('Associate the memory with a specific user identifier')
+    }, async ({ content, tags, metadata, user_id }) => {
+        const u = uid(user_id)
+        const res = await add_hsg_memory(content, j(tags || []), metadata, u)
+        if (u) update_user_summary(u).catch(err => console.error('[MCP] user summary update failed:', err))
+        const txt = `Stored memory ${res.id} (primary=${res.primary_sector}) across sectors: ${res.sectors.join(', ')}${u ? ` [user=${u}]` : ''}`
+        const payload = { id: res.id, primary_sector: res.primary_sector, sectors: res.sectors, user_id: u ?? null }
+        return { content: [{ type: 'text', text: txt }, { type: 'text', text: JSON.stringify(payload, null, 2) }] }
     })
 
     srv.tool('openmemory.reinforce', 'Boost salience for an existing memory', {
@@ -72,25 +85,46 @@ export const create_mcp_srv = () => {
 
     srv.tool('openmemory.list', 'List recent memories for quick inspection', {
         limit: z.number().int().min(1).max(50).default(10).describe('Number of memories to return'),
-        sector: sec_enum.optional().describe('Optionally limit to a sector')
-    }, async ({ limit, sector }) => {
-        const rows: mem_row[] = sector ? await q.all_mem_by_sector.all(sector, limit ?? 10, 0) : await q.all_mem.all(limit ?? 10, 0)
+        sector: sec_enum.optional().describe('Optionally limit to a sector'),
+        user_id: z.string().trim().min(1).optional().describe('Restrict results to a specific user identifier')
+    }, async ({ limit, sector, user_id }) => {
+        const u = uid(user_id)
+        let rows: mem_row[]
+        if (u) {
+            const all = await q.all_mem_by_user.all(u, limit ?? 10, 0)
+            rows = sector ? all.filter(row => row.primary_sector === sector) : all
+        } else {
+            rows = sector ? await q.all_mem_by_sector.all(sector, limit ?? 10, 0) : await q.all_mem.all(limit ?? 10, 0)
+        }
         const items = rows.map(row => ({ ...build_mem_snap(row), tags: p(row.tags || '[]') as string[], metadata: p(row.meta || '{}') as Record<string, unknown> }))
-        const lns = items.map((item, idx) => {
-            const tag_str = item.tags.length ? ` tags=${item.tags.join(', ')}` : ''
-            return `${idx + 1}. [${item.primary_sector}] salience=${item.salience} id=${item.id}${tag_str}\n${item.content_preview}`
-        })
+        const lns = items.map((item, idx) => `${idx + 1}. [${item.primary_sector}] salience=${item.salience} id=${item.id}${item.tags.length ? ` tags=${item.tags.join(', ')}` : ''}${item.user_id ? ` user=${item.user_id}` : ''}\n${item.content_preview}`)
         return { content: [{ type: 'text', text: lns.join('\n\n') || 'No memories stored yet.' }, { type: 'text', text: JSON.stringify({ items }, null, 2) }] }
     })
 
     srv.tool('openmemory.get', 'Fetch a single memory by identifier', {
         id: z.string().min(1).describe('Memory identifier to load'),
-        include_vectors: z.boolean().default(false).describe('Include sector vector metadata')
-    }, async ({ id, include_vectors }) => {
+        include_vectors: z.boolean().default(false).describe('Include sector vector metadata'),
+        user_id: z.string().trim().min(1).optional().describe('Validate ownership against a specific user identifier')
+    }, async ({ id, include_vectors, user_id }) => {
+        const u = uid(user_id)
         const mem = await q.get_mem.get(id)
         if (!mem) return { content: [{ type: 'text', text: `Memory ${id} not found.` }] }
+        if (u && mem.user_id !== u) return { content: [{ type: 'text', text: `Memory ${id} not found for user ${u}.` }] }
         const vecs = include_vectors ? await q.get_vecs_by_id.all(id) : []
-        const pay = { id: mem.id, content: mem.content, primary_sector: mem.primary_sector, salience: mem.salience, decay_lambda: mem.decay_lambda, created_at: mem.created_at, updated_at: mem.updated_at, last_seen_at: mem.last_seen_at, tags: p(mem.tags || '[]'), metadata: p(mem.meta || '{}'), sectors: include_vectors ? vecs.map(v => v.sector) : undefined }
+        const pay = {
+            id: mem.id,
+            content: mem.content,
+            primary_sector: mem.primary_sector,
+            salience: mem.salience,
+            decay_lambda: mem.decay_lambda,
+            created_at: mem.created_at,
+            updated_at: mem.updated_at,
+            last_seen_at: mem.last_seen_at,
+            user_id: mem.user_id,
+            tags: p(mem.tags || '[]'),
+            metadata: p(mem.meta || '{}'),
+            sectors: include_vectors ? vecs.map(v => v.sector) : undefined
+        }
         return { content: [{ type: 'text', text: JSON.stringify(pay, null, 2) }] }
     })
 
