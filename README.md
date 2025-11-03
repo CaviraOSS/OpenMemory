@@ -1,3 +1,5 @@
+<img width="1577" height="781" alt="image" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
+
 # OpenMemory
 
 Long-term memory for AI systems. Open source, self-hosted, and explainable.
