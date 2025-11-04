@@ -67,6 +67,9 @@ export const create_mcp_srv = () => {
         metadata: z.record(z.any()).optional().describe('Arbitrary metadata blob'),
         user_id: z.string().trim().min(1).optional().describe('Associate the memory with a specific user identifier')
     }, async ({ content, tags, metadata, user_id }) => {
+        // Note: add_hsg_memory internally queues writes to handle concurrent parallel calls
+        // This prevents SQLite "transaction within transaction" errors when clients like
+        // Gemini CLI make multiple simultaneous store requests
         const u = uid(user_id)
         const res = await add_hsg_memory(content, j(tags || []), metadata, u)
         if (u) update_user_summary(u).catch(err => console.error('[MCP] user summary update failed:', err))

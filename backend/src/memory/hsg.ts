@@ -3,6 +3,7 @@ import { canonical_token_set } from '../utils/text'
 import { inc_q, dec_q } from './decay'
 import { env, tier } from '../core/cfg'
 import { cos_sim, buf_to_vec, vec_to_buf } from '../utils/index'
+import { dbq } from '../core/queue'
 export interface sector_cfg {
     model: string
     decay_lambda: number
@@ -672,86 +673,88 @@ export async function add_hsg_memory(
     metadata?: any,
     user_id?: string
 ): Promise<{ id: string, primary_sector: string, sectors: string[], chunks?: number, deduplicated?: boolean }> {
-    const simhash = compute_simhash(content)
-    const existing = await q.get_mem_by_simhash.get(simhash)
-    if (existing && hamming_dist(simhash, existing.simhash) <= 3) {
+    return dbq.exec(async () => {
+        const simhash = compute_simhash(content)
+        const existing = await q.get_mem_by_simhash.get(simhash)
+        if (existing && hamming_dist(simhash, existing.simhash) <= 3) {
+            const now = Date.now()
+            const boosted_sal = Math.min(1, existing.salience + 0.15)
+            await q.upd_seen.run(existing.id, now, boosted_sal, now)
+            return {
+                id: existing.id,
+                primary_sector: existing.primary_sector,
+                sectors: [existing.primary_sector],
+                deduplicated: true
+            }
+        }
+        const id = crypto.randomUUID()
         const now = Date.now()
-        const boosted_sal = Math.min(1, existing.salience + 0.15)
-        await q.upd_seen.run(existing.id, now, boosted_sal, now)
-        return {
-            id: existing.id,
-            primary_sector: existing.primary_sector,
-            sectors: [existing.primary_sector],
-            deduplicated: true
-        }
-    }
-    const id = crypto.randomUUID()
-    const now = Date.now()
-    const chunks = chunk_text(content)
-    const use_chunking = chunks.length > 1
-    const classification = classify_content(content, metadata)
-    const all_sectors = [classification.primary, ...classification.additional]
-    await transaction.begin()
-    try {
-        const max_seg_res = await q.get_max_segment.get()
-        let cur_seg = max_seg_res?.max_seg ?? 0
-        const seg_cnt_res = await q.get_segment_count.get(cur_seg)
-        const seg_cnt = seg_cnt_res?.c ?? 0
-        if (seg_cnt >= env.seg_size) {
-            cur_seg++
-            console.log(`[HSG] Rotated to segment ${cur_seg} (previous segment full: ${seg_cnt} memories)`)
-        }
-        const stored_content = extract_essence(content, classification.primary, env.summary_max_length)
-        const sec_cfg = sector_configs[classification.primary]
-        const init_sal = Math.max(0, Math.min(1, 0.4 + 0.1 * classification.additional.length))
-        await q.ins_mem.run(
-            id,
-            user_id || null,
-            cur_seg,
-            stored_content,
-            simhash,
-            classification.primary,
-            tags || null,
-            JSON.stringify(metadata || {}),
-            now,
-            now,
-            now,
-            init_sal,
-            sec_cfg.decay_lambda,
-            1,
-            null,
-            null,
-            null,  // compressed_vec
-            0      // feedback_score
-        )
-        const emb_res = await embedMultiSector(id, content, all_sectors, use_chunking ? chunks : undefined)
-        for (const result of emb_res) {
-            const vec_buf = vectorToBuffer(result.vector)
-            await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
-        }
-        const mean_vec = calc_mean_vec(emb_res, all_sectors)
-        const mean_vec_buf = vectorToBuffer(mean_vec)
-        await q.upd_mean_vec.run(id, mean_vec.length, mean_vec_buf)
+        const chunks = chunk_text(content)
+        const use_chunking = chunks.length > 1
+        const classification = classify_content(content, metadata)
+        const all_sectors = [classification.primary, ...classification.additional]
+        await transaction.begin()
+        try {
+            const max_seg_res = await q.get_max_segment.get()
+            let cur_seg = max_seg_res?.max_seg ?? 0
+            const seg_cnt_res = await q.get_segment_count.get(cur_seg)
+            const seg_cnt = seg_cnt_res?.c ?? 0
+            if (seg_cnt >= env.seg_size) {
+                cur_seg++
+                console.log(`[HSG] Rotated to segment ${cur_seg} (previous segment full: ${seg_cnt} memories)`)
+            }
+            const stored_content = extract_essence(content, classification.primary, env.summary_max_length)
+            const sec_cfg = sector_configs[classification.primary]
+            const init_sal = Math.max(0, Math.min(1, 0.4 + 0.1 * classification.additional.length))
+            await q.ins_mem.run(
+                id,
+                user_id || null,
+                cur_seg,
+                stored_content,
+                simhash,
+                classification.primary,
+                tags || null,
+                JSON.stringify(metadata || {}),
+                now,
+                now,
+                now,
+                init_sal,
+                sec_cfg.decay_lambda,
+                1,
+                null,
+                null,
+                null,  // compressed_vec
+                0      // feedback_score
+            )
+            const emb_res = await embedMultiSector(id, content, all_sectors, use_chunking ? chunks : undefined)
+            for (const result of emb_res) {
+                const vec_buf = vectorToBuffer(result.vector)
+                await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
+            }
+            const mean_vec = calc_mean_vec(emb_res, all_sectors)
+            const mean_vec_buf = vectorToBuffer(mean_vec)
+            await q.upd_mean_vec.run(id, mean_vec.length, mean_vec_buf)
 
-        // Store compressed vector for smart tier (for future query optimization)
-        if (tier === 'smart' && mean_vec.length > 128) {
-            const comp = compress_vec_for_storage(mean_vec, 128)
-            const comp_buf = vectorToBuffer(comp)
-            await q.upd_compressed_vec.run(comp_buf, id)
-        }
+            // Store compressed vector for smart tier (for future query optimization)
+            if (tier === 'smart' && mean_vec.length > 128) {
+                const comp = compress_vec_for_storage(mean_vec, 128)
+                const comp_buf = vectorToBuffer(comp)
+                await q.upd_compressed_vec.run(comp_buf, id)
+            }
 
-        await create_single_waypoint(id, mean_vec, now)
-        await transaction.commit()
-        return {
-            id,
-            primary_sector: classification.primary,
-            sectors: all_sectors,
-            chunks: chunks.length
+            await create_single_waypoint(id, mean_vec, now)
+            await transaction.commit()
+            return {
+                id,
+                primary_sector: classification.primary,
+                sectors: all_sectors,
+                chunks: chunks.length
+            }
+        } catch (error) {
+            await transaction.rollback()
+            throw error
         }
-    } catch (error) {
-        await transaction.rollback()
-        throw error
-    }
+    })
 }
 export async function reinforce_memory(id: string, boost: number = 0.1): Promise<void> {
     const mem = await q.get_mem.get(id)
@@ -765,35 +768,37 @@ export async function update_memory(
     tags?: string[],
     metadata?: any
 ): Promise<{ id: string, updated: boolean }> {
-    const mem = await q.get_mem.get(id)
-    if (!mem) throw new Error(`Memory ${id} not found`)
-    const new_content = content !== undefined ? content : mem.content
-    const new_tags = tags !== undefined ? j(tags) : (mem.tags || '[]')
-    const new_meta = metadata !== undefined ? j(metadata) : (mem.meta || '{}')
-    await transaction.begin()
-    try {
-        if (content !== undefined && content !== mem.content) {
-            const chunks = chunk_text(new_content)
-            const use_chunking = chunks.length > 1
-            const classification = classify_content(new_content, metadata)
-            const all_sectors = [classification.primary, ...classification.additional]
-            await q.del_vec.run(id)
-            const emb_res = await embedMultiSector(id, new_content, all_sectors, use_chunking ? chunks : undefined)
-            for (const result of emb_res) {
-                const vec_buf = vectorToBuffer(result.vector)
-                await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
+    return dbq.exec(async () => {
+        const mem = await q.get_mem.get(id)
+        if (!mem) throw new Error(`Memory ${id} not found`)
+        const new_content = content !== undefined ? content : mem.content
+        const new_tags = tags !== undefined ? j(tags) : (mem.tags || '[]')
+        const new_meta = metadata !== undefined ? j(metadata) : (mem.meta || '{}')
+        await transaction.begin()
+        try {
+            if (content !== undefined && content !== mem.content) {
+                const chunks = chunk_text(new_content)
+                const use_chunking = chunks.length > 1
+                const classification = classify_content(new_content, metadata)
+                const all_sectors = [classification.primary, ...classification.additional]
+                await q.del_vec.run(id)
+                const emb_res = await embedMultiSector(id, new_content, all_sectors, use_chunking ? chunks : undefined)
+                for (const result of emb_res) {
+                    const vec_buf = vectorToBuffer(result.vector)
+                    await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
+                }
+                const mean_vec = calc_mean_vec(emb_res, all_sectors)
+                const mean_vec_buf = vectorToBuffer(mean_vec)
+                await q.upd_mean_vec.run(id, mean_vec.length, mean_vec_buf)
+                await q.upd_mem_with_sector.run(new_content, classification.primary, new_tags, new_meta, Date.now(), id)
+            } else {
+                await q.upd_mem.run(new_content, new_tags, new_meta, Date.now(), id)
             }
-            const mean_vec = calc_mean_vec(emb_res, all_sectors)
-            const mean_vec_buf = vectorToBuffer(mean_vec)
-            await q.upd_mean_vec.run(id, mean_vec.length, mean_vec_buf)
-            await q.upd_mem_with_sector.run(new_content, classification.primary, new_tags, new_meta, Date.now(), id)
-        } else {
-            await q.upd_mem.run(new_content, new_tags, new_meta, Date.now(), id)
+            await transaction.commit()
+            return { id, updated: true }
+        } catch (error) {
+            await transaction.rollback()
+            throw error
         }
-        await transaction.commit()
-        return { id, updated: true }
-    } catch (error) {
-        await transaction.rollback()
-        throw error
-    }
+    })
 }

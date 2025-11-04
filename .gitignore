@@ -360,3 +360,5 @@ dist
 !.yarn/versions
 
 benchmark
+temp
+dashboard
