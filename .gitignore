@@ -3,6 +3,7 @@ node_modules
 dist
 data
 .vscode
+.ignore
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
