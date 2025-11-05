@@ -1,0 +1,265 @@
+{
+  "_instructions": "Define AI agent types, their capabilities, and coordination. Customize the agents and specializations to match your project structure.",
+  "_required_customization": [
+    "Update service names in specializations to match your architecture",
+    "Add or remove agent types based on your project needs",
+    "Update agent capabilities to reflect your tech stack"
+  ],
+  
+  "agent_roles": {
+    "architect": {
+      "role": "AI Architect",
+      "primary_responsibility": "System design, architecture decisions, and high-level planning",
+      "capabilities": [
+        "Read and analyze project documentation",
+        "Make architectural decisions",
+        "Plan component implementations",
+        "Design database schemas",
+        "Define API contracts",
+        "Coordinate work between specialist agents"
+      ],
+      "command_access": [
+        "Read",
+        "Plan",
+        "Assign",
+        "Review",
+        "Deploy"
+      ],
+      "context_required": [
+        "README.md",
+        ".ai-agents/project-state.json",
+        ".ai-agents/workflow-tracker.json"
+      ]
+    },
+    
+    "TEMPLATE_DEVELOPER_ROLE": {
+      "_comment": "Rename this role and customize for your project. Examples: service_developer, frontend_developer, mobile_developer, etc.",
+      "role": "Developer Role Name",
+      "primary_responsibility": "What this developer type is responsible for",
+      "capabilities": [
+        "Implement components/services",
+        "Create data models",
+        "Build API endpoints or UI components",
+        "Implement business logic",
+        "Write component-specific tests",
+        "Integrate with other components"
+      ],
+      "specializations": {
+        "TEMPLATE_SPECIALIST_1": {
+          "_comment": "Define specialized areas within this developer role",
+          "services": ["component1", "component2", "component3"],
+          "focus": "Description of what this specialist handles"
+        },
+        "TEMPLATE_SPECIALIST_2": {
+          "services": ["component4", "component5", "component6"],
+          "focus": "Description of what this specialist handles"
+        }
+      },
+      "command_access": [
+        "Implement",
+        "Test",
+        "Debug"
+      ],
+      "context_required": [
+        "README.md",
+        "Component specification document",
+        "API contracts",
+        "Database schema"
+      ]
+    },
+    
+    "infrastructure_developer": {
+      "_comment": "Keep if your project has infrastructure needs (Docker, cloud deployment, etc.). Remove if not needed.",
+      "role": "Infrastructure Developer",
+      "primary_responsibility": "Build infrastructure services and deployment systems",
+      "capabilities": [
+        "Implement service registry (if microservices)",
+        "Build event bus or message queue",
+        "Create cache service",
+        "Build storage abstraction",
+        "Create configuration management",
+        "Implement monitoring and logging",
+        "Write Docker configurations",
+        "Create IaC scripts (Terraform, CloudFormation, etc.)"
+      ],
+      "services": [
+        "TEMPLATE: List your infrastructure components here",
+        "Examples: service_registry, event_bus, cache_service, storage_service, config_service"
+      ],
+      "command_access": [
+        "Implement",
+        "Test",
+        "Deploy"
+      ],
+      "context_required": [
+        "README.md",
+        "Infrastructure requirements",
+        "Deployment strategy"
+      ]
+    },
+    
+    "integration_engineer": {
+      "_comment": "Keep if you need to integrate multiple services/components. Remove for simple monolithic apps.",
+      "role": "Integration Engineer",
+      "primary_responsibility": "Connect components and ensure proper communication",
+      "capabilities": [
+        "Implement service discovery",
+        "Create event handlers",
+        "Build message queue consumers",
+        "Implement workflow orchestration",
+        "Implement circuit breakers",
+        "Add retry logic"
+      ],
+      "command_access": [
+        "Integrate",
+        "Test",
+        "Debug"
+      ],
+      "context_required": [
+        "README.md",
+        "Component communication patterns",
+        "Event types",
+        "Workflow definitions"
+      ]
+    },
+    
+    "database_engineer": {
+      "_comment": "Keep if you have complex database needs. Remove if using simple data storage.",
+      "role": "Database Engineer",
+      "primary_responsibility": "Design and implement database layer",
+      "capabilities": [
+        "Design database schemas",
+        "Create ORM models (SQLAlchemy, Mongoose, etc.)",
+        "Implement database adapters",
+        "Build migration scripts",
+        "Optimize queries",
+        "Design indexes"
+      ],
+      "command_access": [
+        "Design",
+        "Implement",
+        "Migrate",
+        "Optimize"
+      ],
+      "context_required": [
+        "README.md",
+        "Database architecture",
+        "Component data requirements"
+      ]
+    },
+    
+    "devops_engineer": {
+      "_comment": "Keep if you need deployment, CI/CD, or operational tools.",
+      "role": "DevOps Engineer",
+      "primary_responsibility": "Deployment, CI/CD, and operational tools",
+      "capabilities": [
+        "Create Docker Compose configurations",
+        "Build infrastructure as code (Terraform, etc.)",
+        "Implement CI/CD pipelines",
+        "Create deployment scripts",
+        "Build monitoring dashboards",
+        "Implement alerting",
+        "Create troubleshooting tools"
+      ],
+      "command_access": [
+        "Deploy",
+        "Monitor",
+        "Rollback"
+      ],
+      "context_required": [
+        "README.md",
+        "Deployment strategies",
+        "Infrastructure requirements"
+      ]
+    },
+    
+    "qa_engineer": {
+      "_comment": "Highly recommended to keep for any project.",
+      "role": "QA Engineer",
+      "primary_responsibility": "Testing and quality assurance",
+      "capabilities": [
+        "Write unit tests",
+        "Create integration tests",
+        "Build end-to-end tests",
+        "Implement test fixtures",
+        "Create mock services/components",
+        "Build test harnesses",
+        "Perform load testing (if applicable)",
+        "Write security tests"
+      ],
+      "command_access": [
+        "Test",
+        "Report",
+        "Verify"
+      ],
+      "context_required": [
+        "README.md",
+        "Component specifications",
+        "Test coverage requirements"
+      ]
+    },
+    
+    "technical_writer": {
+      "_comment": "Optional. Keep if documentation is important for your project.",
+      "role": "Technical Writer",
+      "primary_responsibility": "Documentation and API specifications",
+      "capabilities": [
+        "Write API documentation",
+        "Create component guides",
+        "Document workflows",
+        "Write troubleshooting guides",
+        "Create architecture diagrams",
+        "Document deployment procedures",
+        "Write contribution guidelines"
+      ],
+      "command_access": [
+        "Document",
+        "Review",
+        "Publish"
+      ],
+      "context_required": [
+        "README.md",
+        "Component implementations",
+        "API endpoints"
+      ]
+    },
+    
+    "security_engineer": {
+      "_comment": "Optional. Keep if security is a major concern for your project.",
+      "role": "Security Engineer",
+      "primary_responsibility": "Security implementation and auditing",
+      "capabilities": [
+        "Implement authentication",
+        "Build authorization systems",
+        "Add encryption",
+        "Implement rate limiting",
+        "Create security middleware",
+        "Perform security audits",
+        "Implement secrets management"
+      ],
+      "command_access": [
+        "Audit",
+        "Implement",
+        "Test"
+      ],
+      "context_required": [
+        "README.md",
+        "Security model",
+        "Threat analysis"
+      ]
+    }
+  },
+  
+  "agent_coordination": {
+    "workflow": "Sequential with parallel tasks where possible",
+    "handoff_protocol": "Each agent updates project-state.json and workflow-tracker.json upon completion",
+    "communication": "Through project-state.json and context-manager.json files",
+    "conflict_resolution": "Architect agent has final decision authority"
+  },
+  
+  "_customization_guide": {
+    "minimal": "Just update service names in specializations and remove unused agent types",
+    "recommended": "Customize capabilities and context_required to match your tech stack",
+    "advanced": "Add custom agent types specific to your domain"
+  }
+}

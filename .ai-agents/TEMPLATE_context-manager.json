@@ -1,0 +1,319 @@
+{
+  "_instructions": "This file defines how AI agents understand your project structure and automatically load context. Customize file_context_mapping to match your project structure.",
+  "_required_customization": [
+    "Update file_context_mapping with your actual file patterns",
+    "Define next_steps_when_reading for each file type",
+    "Specify agent_actions for each file type",
+    "Update automatic_context_loading rules"
+  ],
+  
+  "AUTONOMOUS_MODE": {
+    "CRITICAL": "AI agents MUST work completely autonomously - NEVER ask for user input",
+    "FORBIDDEN": [
+      "NEVER ask 'Would you like me to...?'",
+      "NEVER ask 'Should I proceed with...?'",
+      "NEVER provide options A/B/C and wait for choice",
+      "NEVER ask for confirmation or permission"
+    ],
+    "REQUIRED": [
+      "ALWAYS execute next_recommended_tasks immediately",
+      "ALWAYS report what you DID (past tense)",
+      "ALWAYS update state after completing tasks",
+      "ALWAYS move to next task automatically"
+    ],
+    "REFERENCE": ".ai-agents/AUTONOMOUS_MODE.md"
+  },
+  
+  "bootstrap_protocol": {
+    "description": "First thing to execute when any AI agent starts work",
+    "trigger": "ANY file read command, especially 'Read README.md'",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Check if .ai-agents/project-state.json exists",
+        "purpose": "Determine if this is initialization or resume"
+      },
+      {
+        "step": 2,
+        "condition": "If project-state.json EXISTS",
+        "action": "RESUME MODE - Read .ai-agents/project-state.json immediately",
+        "then": "Use intelligent_resume_protocol to continue work"
+      },
+      {
+        "step": 3,
+        "condition": "If project-state.json DOES NOT EXIST",
+        "action": "INITIALIZE MODE - Read README.md bootstrap section",
+        "then": "Begin Phase 1: Foundation"
+      }
+    ],
+    "detection_script": ".ai-agents/detect-state.py",
+    "always_check_first": "This check happens BEFORE any other action"
+  },
+  
+  "file_resolution_rules": {
+    "description": "How to resolve ambiguous file references",
+    "README.md": {
+      "without_path": "README.md",
+      "resolution_order": [
+        "1. Check bootstrap_protocol first",
+        "2. If project-state.json exists, assume root README.md for architecture",
+        "3. If project-state.json doesn't exist, use root README.md for initialization",
+        "4. For AI system docs, explicitly use .ai-agents/README.md"
+      ],
+      "explicit_paths": {
+        "root_readme": "README.md or ./README.md",
+        "ai_system_readme": ".ai-agents/README.md"
+      }
+    }
+  },
+  
+  "file_context_mapping": {
+    "_comment": "CUSTOMIZE THIS SECTION to match your project structure. Add entries for each important file pattern.",
+    
+    "README.md": {
+      "purpose": "Project architecture and documentation",
+      "required_for": ["All agents"],
+      "provides_context_for": ["System architecture", "Component catalog", "Technology stack", "Workflows"],
+      "bootstrap_check": "FIRST: Check if .ai-agents/project-state.json exists to determine mode (initialize vs resume)",
+      "next_steps_when_reading": [
+        "CRITICAL: Execute bootstrap_protocol FIRST - check if .ai-agents/project-state.json exists",
+        "IF project-state.json EXISTS: Read it immediately to resume work",
+        "IF project-state.json DOES NOT EXIST: Begin fresh initialization",
+        "Review architecture",
+        "Identify which components need to be implemented",
+        "Review workflow-tracker.json for active workflows"
+      ],
+      "agent_actions": {
+        "architect": "Plan component implementation order based on dependencies",
+        "TEMPLATE_developer": "Understand component responsibilities and APIs"
+      }
+    },
+    
+    "TEMPLATE_COMPONENT_PATTERN": {
+      "_comment": "REPLACE THIS with your actual component/service pattern. Examples: 'services/{service_name}/main.py', 'src/components/{component}.tsx', 'lib/{module}.py', etc.",
+      "_example_patterns": [
+        "services/{service_name}/main.py - for microservices",
+        "src/components/{component_name}/index.tsx - for React",
+        "src/pages/{page_name}.vue - for Vue",
+        "app/models/{model_name}.py - for models",
+        "lib/{module_name}.rb - for Ruby modules"
+      ],
+      "purpose": "Component/service implementation",
+      "required_for": ["TEMPLATE_developer_type"],
+      "provides_context_for": ["Component functionality", "Business logic", "Dependencies"],
+      "next_steps_when_reading": [
+        "Check if component is complete or needs work",
+        "Review implementation vs requirements",
+        "Verify data models are created",
+        "Check integration with other components",
+        "Verify registration (if applicable)",
+        "Review project-state.json to update completion status"
+      ],
+      "agent_actions": {
+        "TEMPLATE_developer": "Implement missing features, add tests, update project-state.json",
+        "qa_engineer": "Write tests for implemented functionality",
+        "technical_writer": "Document API/component interface"
+      }
+    },
+    
+    "TEMPLATE_SHARED_LIBRARIES_PATTERN": {
+      "_comment": "If you have shared libraries/utilities. Examples: 'libs/{library}/*.py', 'src/utils/{util}.ts', 'common/{module}.js'",
+      "purpose": "Shared library implementation",
+      "required_for": ["TEMPLATE_developer_type", "infrastructure_developer"],
+      "provides_context_for": ["Shared utilities", "Common patterns"],
+      "next_steps_when_reading": [
+        "Check if library is complete",
+        "Review usage patterns",
+        "Verify it meets all component needs",
+        "Update project-state.json shared_libraries section"
+      ],
+      "agent_actions": {
+        "TEMPLATE_developer": "Use library in components, report issues",
+        "infrastructure_developer": "Implement or enhance library functionality"
+      }
+    },
+    
+    "TEMPLATE_CONFIG_PATTERN": {
+      "_comment": "Configuration files. Examples: 'docker-compose.yml', 'package.json', 'requirements.txt', '.env.example'",
+      "purpose": "Configuration management",
+      "required_for": ["devops_engineer", "infrastructure_developer"],
+      "provides_context_for": ["Deployment configuration", "Dependencies", "Environment"],
+      "next_steps_when_reading": [
+        "Check which components are configured",
+        "Verify environment variables",
+        "Review dependencies",
+        "Update project-state.json deployment section"
+      ],
+      "agent_actions": {
+        "devops_engineer": "Add new components, update configurations",
+        "TEMPLATE_developer": "Verify component configuration is correct"
+      }
+    },
+    
+    "TEMPLATE_TEST_PATTERN": {
+      "_comment": "Test files. Examples: 'tests/{test_type}/test_{component}.py', 'src/__tests__/{component}.test.ts'",
+      "purpose": "Component tests",
+      "required_for": ["qa_engineer"],
+      "provides_context_for": ["Test coverage", "Component behavior"],
+      "next_steps_when_reading": [
+        "Check test coverage",
+        "Review test cases",
+        "Identify missing tests",
+        "Update project-state.json testing section"
+      ],
+      "agent_actions": {
+        "qa_engineer": "Write missing tests, improve coverage",
+        "TEMPLATE_developer": "Fix failing tests"
+      }
+    },
+    
+    ".ai-agents/project-state.json": {
+      "purpose": "Current development state and progress",
+      "required_for": ["All agents"],
+      "provides_context_for": ["What's implemented", "What's in progress", "What's next"],
+      "next_steps_when_reading": [
+        "Check current_phase to understand development stage",
+        "Review next_recommended_tasks for immediate actions",
+        "Check component status to see what dependencies are ready",
+        "Identify blocking tasks that need completion"
+      ],
+      "agent_actions": {
+        "architect": "Assign tasks to appropriate agents, update next_recommended_tasks",
+        "any_agent": "Update status upon task completion, mark files created"
+      }
+    },
+    
+    ".ai-agents/workflow-tracker.json": {
+      "purpose": "Track workflow implementation progress",
+      "required_for": ["architect", "integration_engineer", "TEMPLATE_developer"],
+      "provides_context_for": ["Workflow status", "Implementation progress", "Event handling"],
+      "next_steps_when_reading": [
+        "Check which workflows are implemented",
+        "Review event handlers status (if applicable)",
+        "Identify missing workflow steps",
+        "Verify component integration points"
+      ],
+      "agent_actions": {
+        "architect": "Plan workflow implementation order",
+        "integration_engineer": "Implement missing event handlers and integration patterns",
+        "TEMPLATE_developer": "Implement component-specific workflow steps"
+      }
+    }
+  },
+  
+  "automatic_context_loading": {
+    "description": "When AI Architect reads any file, automatically load these related files",
+    "rules": [
+      {
+        "trigger": "Any file read",
+        "always_load": [
+          ".ai-agents/project-state.json",
+          "README.md"
+        ]
+      },
+      {
+        "_comment": "CUSTOMIZE: Update these triggers to match your project structure",
+        "trigger": "TEMPLATE: Component file read pattern",
+        "load": [
+          ".ai-agents/workflow-tracker.json",
+          "Component dependencies from project-state.json"
+        ]
+      },
+      {
+        "trigger": "Infrastructure/config file read",
+        "load": [
+          ".ai-agents/project-state.json deployment section",
+          "All component configurations"
+        ]
+      },
+      {
+        "trigger": "Test file read",
+        "load": [
+          "Corresponding component implementation",
+          ".ai-agents/project-state.json testing section"
+        ]
+      }
+    ]
+  },
+  
+  "intelligent_resume_protocol": {
+    "description": "How the system determines what to do next from any point",
+    "steps": [
+      {
+        "step": 1,
+        "action": "Load project-state.json to determine current phase and status"
+      },
+      {
+        "step": 2,
+        "action": "Check active_agent to see if work was in progress"
+      },
+      {
+        "step": 3,
+        "action": "Review next_recommended_tasks for immediate priorities"
+      },
+      {
+        "step": 4,
+        "action": "Check component dependencies - only work on components whose dependencies are complete"
+      },
+      {
+        "step": 5,
+        "action": "If file was being worked on, load that file plus its context from context-manager.json"
+      },
+      {
+        "step": 6,
+        "action": "Execute next_steps_when_reading from context manager"
+      },
+      {
+        "step": 7,
+        "action": "Perform agent_actions specified for current agent role"
+      },
+      {
+        "step": 8,
+        "action": "Update project-state.json with progress and new next_recommended_tasks"
+      }
+    ]
+  },
+  
+  "architect_command_interpreter": {
+    "Read": {
+      "description": "AI Architect command to resume work",
+      "syntax": "Read {filename}",
+      "execution_flow": [
+        "Load the specified file",
+        "Load automatic context files (project-state.json, README.md)",
+        "Execute intelligent_resume_protocol",
+        "Determine appropriate next steps based on file_context_mapping",
+        "Execute agent_actions for current context",
+        "Report status and next recommended action to user"
+      ],
+      "examples": [
+        {
+          "command": "Read README.md",
+          "result": "Loads project overview, checks project-state.json, determines next phase to implement, assigns tasks to agents"
+        },
+        {
+          "command": "Read TEMPLATE_component_path",
+          "result": "Loads component code, checks dependencies completion, determines what needs implementation, assigns appropriate developer agent"
+        },
+        {
+          "command": "Read project-state.json",
+          "result": "Shows current status, lists next recommended tasks, identifies blocking issues"
+        }
+      ]
+    }
+  },
+  
+  "_customization_checklist": {
+    "essential": [
+      "Replace TEMPLATE_COMPONENT_PATTERN with your actual file patterns",
+      "Update agent_actions to use your agent types",
+      "Add all important file patterns from your project",
+      "Define next_steps_when_reading for each pattern"
+    ],
+    "recommended": [
+      "Customize automatic_context_loading rules",
+      "Add project-specific file resolution rules",
+      "Define custom triggers based on your architecture"
+    ]
+  }
+}

@@ -1,0 +1,304 @@
+{
+  "_instructions": "This file tracks the current state of your project. It will be automatically created and updated by the AI system. You can create an initial version or let the AI create it on first run.",
+  "_note": "If you don't create this file, the AI will detect it's missing and create it automatically when you run 'Read README.md'",
+  "_required_if_manual_creation": [
+    "Update project_name and version",
+    "Define all your components/services in the services section",
+    "List shared libraries if applicable",
+    "Define initial next_recommended_tasks"
+  ],
+  
+  "project_metadata": {
+    "project_name": "TEMPLATE_Your_Project_Name",
+    "version": "0.1.0",
+    "current_phase": "initialization",
+    "_comment_current_phase": "Phases: initialization, foundation, core_development, integration, deployment, finalization",
+    "progress_percentage": 0,
+    "last_updated": "YYYY-MM-DDTHH:MM:SSZ",
+    "active_agent": "architect",
+    "_comment_active_agent": "Which agent is currently working (or last worked)",
+    "start_date": "YYYY-MM-DDTHH:MM:SSZ",
+    "estimated_completion": null
+  },
+  
+  "services": {
+    "_comment": "Organize your components/services by category. Use categories that make sense for your project.",
+    "_example_categories": [
+      "For microservices: infrastructure_services, core_business_services, data_services, ui_services",
+      "For web app: frontend_components, backend_api, database, infrastructure",
+      "For mobile app: screens, api_client, local_storage, utilities",
+      "For library: core_modules, utilities, integrations, examples"
+    ],
+    
+    "TEMPLATE_CATEGORY_1": {
+      "_comment": "Replace with your category name. Examples: infrastructure_services, frontend_components, api_endpoints, core_modules",
+      
+      "TEMPLATE_component_name_1": {
+        "_comment": "Replace with your actual component/service name",
+        "status": "not_started",
+        "_comment_status": "Values: not_started, in_progress, completed",
+        "completion_percentage": 0,
+        "files": [],
+        "_comment_files": "List of files created for this component",
+        "dependencies": [],
+        "_comment_dependencies": "List other components this depends on",
+        "blocking": [],
+        "_comment_blocking": "List components that are blocked by this one",
+        "last_updated": "",
+        "assigned_agent": null,
+        "_comment_assigned_agent": "Which agent is working on this",
+        "priority": "medium",
+        "_comment_priority": "Values: critical, high, medium, low",
+        "notes": ""
+      },
+      
+      "TEMPLATE_component_name_2": {
+        "status": "not_started",
+        "completion_percentage": 0,
+        "files": [],
+        "dependencies": ["TEMPLATE_component_name_1"],
+        "blocking": [],
+        "last_updated": "",
+        "assigned_agent": null,
+        "priority": "medium",
+        "notes": ""
+      }
+    },
+    
+    "TEMPLATE_CATEGORY_2": {
+      "TEMPLATE_component_name_3": {
+        "status": "not_started",
+        "completion_percentage": 0,
+        "files": [],
+        "dependencies": [],
+        "blocking": [],
+        "last_updated": "",
+        "assigned_agent": null,
+        "priority": "high",
+        "notes": ""
+      }
+    }
+  },
+  
+  "shared_libraries": {
+    "_comment": "If your project has shared libraries/utilities. Remove this section if not applicable.",
+    "TEMPLATE_library_name": {
+      "status": "not_started",
+      "completion_percentage": 0,
+      "files": [],
+      "used_by": ["component1", "component2"],
+      "_comment_used_by": "Which components use this library",
+      "last_updated": ""
+    }
+  },
+  
+  "testing": {
+    "unit_tests": {
+      "coverage_percentage": 0,
+      "total_tests": 0,
+      "passing_tests": 0,
+      "failing_tests": 0,
+      "files": []
+    },
+    "integration_tests": {
+      "coverage_percentage": 0,
+      "total_tests": 0,
+      "passing_tests": 0,
+      "failing_tests": 0,
+      "files": []
+    },
+    "e2e_tests": {
+      "_comment": "Remove if not applicable for your project",
+      "coverage_percentage": 0,
+      "total_tests": 0,
+      "passing_tests": 0,
+      "failing_tests": 0,
+      "files": []
+    }
+  },
+  
+  "deployment": {
+    "local": {
+      "status": "not_started",
+      "last_deployed": null,
+      "configuration_files": [],
+      "_comment_configuration_files": "e.g., docker-compose.yml, .env.local",
+      "notes": ""
+    },
+    "staging": {
+      "_comment": "Remove if you don't have staging environment",
+      "status": "not_started",
+      "last_deployed": null,
+      "configuration_files": [],
+      "url": null,
+      "notes": ""
+    },
+    "production": {
+      "_comment": "Remove if you don't have production deployment yet",
+      "status": "not_started",
+      "last_deployed": null,
+      "configuration_files": [],
+      "url": null,
+      "notes": ""
+    }
+  },
+  
+  "phases": {
+    "_comment": "Define your development phases. These are templates - customize to match your project needs.",
+    "phase_1_foundation": {
+      "name": "Phase 1: Foundation & Setup",
+      "progress_percentage": 0,
+      "status": "not_started",
+      "tasks": [
+        "Create project directory structure",
+        "Set up development environment",
+        "Implement shared libraries/utilities",
+        "Set up testing framework"
+      ],
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "phase_2_core": {
+      "name": "Phase 2: Core Development",
+      "progress_percentage": 0,
+      "status": "not_started",
+      "tasks": [
+        "Implement core components/services",
+        "Build main features",
+        "Add unit tests"
+      ],
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "phase_3_integration": {
+      "name": "Phase 3: Integration",
+      "progress_percentage": 0,
+      "status": "not_started",
+      "tasks": [
+        "Connect all components",
+        "Implement workflows",
+        "Add integration tests"
+      ],
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "phase_4_deployment": {
+      "name": "Phase 4: Deployment",
+      "progress_percentage": 0,
+      "status": "not_started",
+      "tasks": [
+        "Set up deployment configurations",
+        "Deploy to staging",
+        "Deploy to production"
+      ],
+      "estimated_completion": null,
+      "actual_completion": null
+    },
+    "phase_5_finalization": {
+      "name": "Phase 5: Finalization",
+      "progress_percentage": 0,
+      "status": "not_started",
+      "tasks": [
+        "Complete documentation",
+        "Optimize performance",
+        "Final testing and bug fixes"
+      ],
+      "estimated_completion": null,
+      "actual_completion": null
+    }
+  },
+  
+  "next_recommended_tasks": [
+    {
+      "_comment": "These are the tasks the AI should work on next. The AI will update this automatically.",
+      "task": "Create project directory structure",
+      "agent": "architect",
+      "priority": "critical",
+      "blocking": true,
+      "_comment_blocking": "Set to true if other tasks depend on this",
+      "estimated_time": "5 minutes",
+      "dependencies_met": true
+    },
+    {
+      "task": "Set up development environment configuration",
+      "agent": "devops_engineer",
+      "priority": "high",
+      "blocking": false,
+      "estimated_time": "15 minutes",
+      "dependencies_met": true
+    },
+    {
+      "task": "Implement first core component",
+      "agent": "TEMPLATE_developer",
+      "priority": "high",
+      "blocking": true,
+      "estimated_time": "30 minutes",
+      "dependencies_met": false,
+      "_comment_dependencies": "Blocked by project structure creation"
+    }
+  ],
+  
+  "blockers": {
+    "_comment": "Issues preventing progress. The AI will populate this automatically.",
+    "active_blockers": [],
+    "resolved_blockers": []
+  },
+  
+  "metrics": {
+    "total_components": 0,
+    "completed_components": 0,
+    "in_progress_components": 0,
+    "not_started_components": 0,
+    "total_files_created": 0,
+    "total_lines_of_code": 0,
+    "test_coverage_percentage": 0
+  },
+  
+  "_customization_guide": {
+    "minimal": [
+      "Update project_name",
+      "Define your components in services section",
+      "Define initial next_recommended_tasks"
+    ],
+    "recommended": [
+      "Customize phases to match your project lifecycle",
+      "Define all component dependencies",
+      "Set appropriate priorities"
+    ],
+    "optional": [
+      "Remove sections you don't need (e.g., shared_libraries, staging deployment)",
+      "Add custom metrics relevant to your project",
+      "Add custom fields to track project-specific information"
+    ]
+  },
+  
+  "_examples": {
+    "simple_web_app": {
+      "services": {
+        "frontend": {
+          "home_page": {"status": "not_started", "dependencies": []},
+          "about_page": {"status": "not_started", "dependencies": []},
+          "contact_form": {"status": "not_started", "dependencies": ["api_client"]}
+        },
+        "backend": {
+          "api_server": {"status": "not_started", "dependencies": ["database"]},
+          "database": {"status": "not_started", "dependencies": []},
+          "api_client": {"status": "not_started", "dependencies": ["api_server"]}
+        }
+      }
+    },
+    "microservices": {
+      "services": {
+        "infrastructure": {
+          "service_registry": {"status": "not_started", "dependencies": []},
+          "event_bus": {"status": "not_started", "dependencies": []},
+          "api_gateway": {"status": "not_started", "dependencies": ["service_registry"]}
+        },
+        "business_services": {
+          "user_service": {"status": "not_started", "dependencies": ["service_registry", "event_bus"]},
+          "order_service": {"status": "not_started", "dependencies": ["service_registry", "event_bus", "user_service"]}
+        }
+      }
+    }
+  }
+}

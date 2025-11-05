@@ -1,0 +1,233 @@
+{
+  "_instructions": "Define your main workflows and track their implementation progress. Each workflow represents a key user or system process.",
+  "_required_customization": [
+    "Replace TEMPLATE workflows with your actual workflows",
+    "Define all steps in each workflow",
+    "Specify which component handles each step",
+    "Define dependencies between steps",
+    "Add event triggers if using event-driven architecture"
+  ],
+  
+  "workflows": {
+    "TEMPLATE_WORKFLOW_NAME_1": {
+      "_comment": "Replace with your actual workflow name. Examples: user_registration, order_processing, data_pipeline, content_creation",
+      "name": "Descriptive Workflow Name",
+      "description": "Step1 -> Step2 -> Step3 -> Step4",
+      "status": "not_started",
+      "progress_percentage": 0,
+      "steps": [
+        {
+          "step_number": 1,
+          "service": "TEMPLATE_component_name",
+          "_comment_service": "Which component/service handles this step",
+          "action": "action_name",
+          "_comment_action": "What action is performed (e.g., create_user, process_payment, extract_data)",
+          "output": "data_produced",
+          "_comment_output": "What data/result this step produces (e.g., user_id, transaction_id, extracted_content)",
+          "status": "not_started",
+          "implementation_status": "pending",
+          "files": [],
+          "dependencies": [],
+          "_comment_dependencies": "List previous steps this depends on. Use ['step_1', 'step_2'] format",
+          "event_triggers": ["event.name"],
+          "_comment_event_triggers": "What events does this step emit? Remove if not using events",
+          "event_handlers_needed": ["handle_event_function"],
+          "_comment_event_handlers": "What event handlers need to be implemented? Remove if not using events"
+        },
+        {
+          "step_number": 2,
+          "service": "TEMPLATE_component_name",
+          "action": "action_name",
+          "input": "data_from_step_1",
+          "_comment_input": "What data from previous steps is needed",
+          "output": "data_produced",
+          "status": "not_started",
+          "implementation_status": "pending",
+          "files": [],
+          "dependencies": ["step_1"],
+          "event_triggers": ["event.name"],
+          "event_handlers_needed": ["handle_event_function"]
+        }
+      ],
+      "saga_implementation": {
+        "_comment": "Saga pattern for distributed transaction handling. Remove this entire section if you have a simple monolithic app.",
+        "status": "not_started",
+        "compensating_transactions": [
+          {
+            "for_step": 1,
+            "action": "rollback_action_for_step_1",
+            "_comment": "What to do if workflow fails after this step",
+            "implemented": false
+          },
+          {
+            "for_step": 2,
+            "action": "rollback_action_for_step_2",
+            "implemented": false
+          }
+        ]
+      }
+    },
+    
+    "TEMPLATE_WORKFLOW_NAME_2": {
+      "name": "Another Workflow Name",
+      "description": "Brief workflow description",
+      "status": "not_started",
+      "progress_percentage": 0,
+      "steps": [
+        {
+          "step_number": 1,
+          "service": "component_name",
+          "action": "action_name",
+          "output": "output_data",
+          "status": "not_started",
+          "implementation_status": "pending",
+          "files": [],
+          "dependencies": []
+        }
+      ]
+    }
+  },
+  
+  "event_handlers": {
+    "_comment": "REMOVE THIS ENTIRE SECTION if you're not using event-driven architecture. Keep and customize if you are.",
+    "_instructions": "Define all events in your system and which components subscribe to them",
+    
+    "TEMPLATE_EVENT_CATEGORY": {
+      "_comment": "Group related events. Examples: user_events, payment_events, file_events, notification_events",
+      "event.name": {
+        "_comment": "Use dot notation for event names. Examples: user.created, payment.completed, file.uploaded",
+        "status": "not_started",
+        "subscribers": ["component1", "component2"],
+        "_comment_subscribers": "Which components need to handle this event",
+        "implementation_files": [],
+        "test_files": []
+      }
+    }
+  },
+  
+  "saga_orchestration": {
+    "_comment": "REMOVE THIS ENTIRE SECTION if you don't need saga pattern (most simple apps don't). Keep for complex distributed systems.",
+    "orchestrator_implementation": {
+      "status": "not_started",
+      "files": [],
+      "features": [
+        {
+          "feature": "Saga state management",
+          "status": "not_started"
+        },
+        {
+          "feature": "Step execution",
+          "status": "not_started"
+        },
+        {
+          "feature": "Compensation handler",
+          "status": "not_started"
+        },
+        {
+          "feature": "Timeout handling",
+          "status": "not_started"
+        },
+        {
+          "feature": "Retry logic",
+          "status": "not_started"
+        }
+      ]
+    }
+  },
+  
+  "integration_points": {
+    "_comment": "Define how components communicate with each other. Simplify or remove for monolithic apps.",
+    "component_to_component": {
+      "component1_to_component2": {
+        "status": "not_started",
+        "communication_type": "TEMPLATE",
+        "_comment_communication_type": "Options: 'event' for event-driven, 'sync' for direct API calls, 'async' for message queues",
+        "implementation_files": []
+      }
+    }
+  },
+  
+  "next_workflow_tasks": {
+    "_comment": "This will be auto-populated by the AI system, but you can add initial tasks",
+    "_example_tasks": [
+      {
+        "task": "Implement workflow orchestrator service",
+        "priority": "high",
+        "blocking": true,
+        "assigned_agent": null
+      },
+      {
+        "task": "Define all event types in event bus",
+        "priority": "high",
+        "blocking": false,
+        "assigned_agent": null
+      }
+    ]
+  },
+  
+  "_workflow_definition_guide": {
+    "simple_linear_workflow": {
+      "description": "Use this for simple sequential processes",
+      "example": "User signs up -> Email verification -> Profile creation -> Welcome email",
+      "pattern": "Each step depends on previous, no branching"
+    },
+    "parallel_workflow": {
+      "description": "Use when steps can happen simultaneously",
+      "example": "File upload -> (Extract text + Generate thumbnail + Scan for viruses) -> Store results",
+      "pattern": "Multiple steps with same dependency can run in parallel"
+    },
+    "conditional_workflow": {
+      "description": "Use when workflow branches based on conditions",
+      "example": "Process payment -> If approved: fulfill order, If declined: notify user",
+      "pattern": "Define different workflows for different conditions"
+    }
+  },
+  
+  "_customization_examples": {
+    "example_1_ecommerce": {
+      "workflow": "order_checkout",
+      "steps": [
+        {"step": 1, "service": "cart_service", "action": "validate_cart"},
+        {"step": 2, "service": "inventory_service", "action": "reserve_items"},
+        {"step": 3, "service": "payment_service", "action": "process_payment"},
+        {"step": 4, "service": "order_service", "action": "create_order"},
+        {"step": 5, "service": "fulfillment_service", "action": "ship_order"}
+      ]
+    },
+    "example_2_content_pipeline": {
+      "workflow": "content_processing",
+      "steps": [
+        {"step": 1, "service": "upload_service", "action": "receive_file"},
+        {"step": 2, "service": "validation_service", "action": "validate_format"},
+        {"step": 3, "service": "processing_service", "action": "extract_metadata"},
+        {"step": 4, "service": "ai_service", "action": "analyze_content"},
+        {"step": 5, "service": "storage_service", "action": "store_processed"}
+      ]
+    },
+    "example_3_user_onboarding": {
+      "workflow": "user_registration",
+      "steps": [
+        {"step": 1, "service": "auth_service", "action": "create_account"},
+        {"step": 2, "service": "email_service", "action": "send_verification"},
+        {"step": 3, "service": "profile_service", "action": "create_profile"},
+        {"step": 4, "service": "notification_service", "action": "send_welcome"}
+      ]
+    }
+  },
+  
+  "_simplification_tips": {
+    "for_simple_apps": [
+      "You may only need 1-2 workflows",
+      "Remove event_handlers section if not using events",
+      "Remove saga_orchestration if not using distributed transactions",
+      "Simplify integration_points to just list component interactions",
+      "Set communication_type to 'sync' for direct function/API calls"
+    ],
+    "for_microservices": [
+      "Define all inter-service workflows",
+      "Keep event_handlers section and populate with all events",
+      "Keep saga_orchestration for distributed transactions",
+      "Define all integration_points between services"
+    ]
+  }
+}
