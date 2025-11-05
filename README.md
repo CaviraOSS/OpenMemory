@@ -152,6 +152,9 @@ The global system installs OpenMemory + AI Agents **once** at `~/.openmemory-glo
 
 **Installation:**
 
+<details>
+<summary><b>Linux / macOS Installation</b></summary>
+
 ```bash
 # Clone repository
 git clone https://github.com/caviraoss/openmemory.git
@@ -166,6 +169,36 @@ source ~/.bashrc  # or source ~/.zshrc
 # Start backend (one time, serves all projects)
 openmemory-start
 ```
+</details>
+
+<details>
+<summary><b>Windows Installation (PowerShell)</b></summary>
+
+```powershell
+# Clone repository
+git clone https://github.com/caviraoss/openmemory.git
+cd openmemory
+
+# Run PowerShell installation script
+.\.ai-agents\enforcement\install-global.ps1
+
+# Close and reopen PowerShell
+
+# Start backend (one time, serves all projects)
+& "$env:USERPROFILE\.openmemory-global\bin\openmemory-start.ps1"
+```
+
+**Initialize projects on Windows:**
+```powershell
+# Navigate to your project
+cd $env:USERPROFILE\Desktop\Projects\MyProject
+
+# Initialize
+& "$env:USERPROFILE\.openmemory-global\bin\openmemory-init.ps1"
+```
+
+**📖 Complete Windows guide:** See [`.ai-agents/enforcement/WINDOWS_INSTALLATION.md`](.ai-agents/enforcement/WINDOWS_INSTALLATION.md)
+</details>
 
 **Initialize projects:**
 
