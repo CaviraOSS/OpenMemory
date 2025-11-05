@@ -4,6 +4,7 @@ import { getEmbeddingInfo } from '../../memory/embed'
 import { tier, env } from '../../core/cfg'
 
 const TIER_BENEFITS = {
+    hybrid: { recall: 98, qps: '700-800', ram: '0.5gb/10k', use: 'For high accuracy' },
     fast: { recall: 70, qps: '700-850', ram: '0.6GB/10k', use: 'Local apps, extensions' },
     smart: { recall: 85, qps: '500-600', ram: '0.9GB/10k', use: 'Production servers' },
     deep: { recall: 94, qps: '350-400', ram: '1.6GB/10k', use: 'Cloud, high-accuracy' }
