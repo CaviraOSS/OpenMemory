@@ -374,7 +374,106 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 9. Contributing
+## 9. AI Agents Integration
+
+OpenMemory now includes a fully integrated **AI Agents Autonomous Development System**. This powerful combination enables AI agents to work on projects with persistent long-term memory across multiple sessions.
+
+### What It Does
+
+- **Persistent State Management**: Project state stored in OpenMemory's semantic memory
+- **Development History**: All actions tracked in episodic memory
+- **Pattern Recognition**: Coding patterns stored in procedural memory
+- **Decision Tracking**: Architectural decisions recorded in reflective memory
+- **Cross-Session Continuity**: AI agents can resume work days or weeks later with full context
+- **Semantic Search**: Find relevant past decisions and patterns using natural language
+
+### Quick Start for AI Agents
+
+```python
+# Install and connect
+from .ai-agents.openmemory_client import OpenMemoryClient
+
+client = OpenMemoryClient(
+    base_url="http://localhost:8080",
+    project_name="YourProject"
+)
+
+# Detect mode
+mode = client.detect_mode()  # "INITIALIZE" or "RESUME"
+
+# Load full context
+context = client.get_full_context()
+
+# Record actions
+client.record_action(
+    agent_name="architect",
+    action="Created database schema",
+    outcome="success"
+)
+
+# Store patterns
+client.store_pattern(
+    pattern_name="Repository Pattern",
+    description="Data access abstraction layer"
+)
+
+# Record decisions
+client.record_decision(
+    decision="Use TypeScript",
+    rationale="Better type safety and tooling"
+)
+
+# Save state
+client.save_project_state(state_dict)
+```
+
+### Documentation
+
+- **`.ai-agents/README.md`** - Overview and quick start
+- **`.ai-agents/INTEGRATION_GUIDE.md`** - Comprehensive integration guide
+- **`.ai-agents/START_HERE.md`** - Original AI agents system documentation
+
+### API Endpoints
+
+The integration adds specialized endpoints for AI agents:
+
+- `POST /ai-agents/state` - Save project state
+- `GET /ai-agents/state/:project` - Load project state
+- `POST /ai-agents/action` - Record agent action
+- `POST /ai-agents/pattern` - Store coding pattern
+- `POST /ai-agents/decision` - Record architectural decision
+- `POST /ai-agents/query` - Query project memories
+- `GET /ai-agents/history/:project` - Get development history
+- `GET /ai-agents/patterns/:project` - Get all patterns
+- `GET /ai-agents/decisions/:project` - Get all decisions
+- `GET /ai-agents/context/:project` - Get comprehensive context
+
+### Benefits
+
+- **No Information Loss**: Everything is remembered across sessions
+- **Intelligent Recommendations**: AI agents learn from past patterns
+- **Multi-Session Projects**: Work can span days, weeks, or months
+- **Team Coordination**: Multiple agents share memory
+- **Explainable Development**: Every decision has a rationale
+- **Natural Decay**: Less important memories fade over time
+
+### Example Use Case
+
+An AI agent working on a complex project can:
+
+1. Start development and record all actions
+2. Stop work after implementing 50% of features
+3. Return weeks later
+4. Load full context including all past decisions and patterns
+5. Continue exactly where it left off
+6. Query past solutions for similar problems
+7. Build on established patterns without redundant work
+
+For detailed documentation, see `.ai-agents/INTEGRATION_GUIDE.md`.
+
+---
+
+## 10. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -482,19 +581,19 @@ make test
 
 ---
 
-## 10. License
+## 11. License
 
 MIT License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 11. Community
+## 12. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 12. Other Projects
+## 13. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM

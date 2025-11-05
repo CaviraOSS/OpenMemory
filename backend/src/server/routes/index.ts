@@ -6,6 +6,7 @@ import { compression } from './compression'
 import { lg } from './langgraph'
 import { usr } from './users'
 import { dash } from './dashboard'
+import { aiagents } from './ai-agents'
 
 export function routes(app: any) {
     sys(app)
@@ -16,4 +17,5 @@ export function routes(app: any) {
     lg(app)
     usr(app)
     dash(app)
+    aiagents(app)
 }
