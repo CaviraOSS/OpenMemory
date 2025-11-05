@@ -8,6 +8,9 @@
 import { add_hsg_memory, hsg_query, reinforce_memory } from '../../memory/hsg';
 import { now, j } from '../../utils';
 import { run_async, q, all_async } from '../../core/db';
+import { validateConsistency } from '../../memory/validators/consistency';
+import { trackPatternEffectiveness } from '../../memory/validators/pattern-effectiveness';
+import { assessDecisionQuality } from '../../memory/validators/decision-quality';
 
 export function aiagents(app: any) {
   /**
@@ -919,6 +922,154 @@ export function aiagents(app: any) {
       });
     } catch (error: any) {
       console.error('[ai-agents] Error retrieving important memories:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  // ============================================================================
+  // AUTO-VALIDATION SYSTEM: Consistency, Pattern Effectiveness, Decision Quality
+  // ============================================================================
+
+  /**
+   * Run consistency validation for project
+   * Detects contradicting decisions, circular dependencies, broken waypoints, orphaned memories
+   * GET /ai-agents/validate/consistency/:project_name
+   */
+  app.get('/ai-agents/validate/consistency/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running consistency validation for ${project_name}...`);
+
+      const report = await validateConsistency(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        report,
+        issues_found: report.issues.length,
+        auto_actions_taken: report.auto_actions_taken,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running consistency validation:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Run pattern effectiveness analysis for project
+   * Tracks success rates, calculates effectiveness scores, auto-reinforces/downgrades patterns
+   * GET /ai-agents/validate/effectiveness/:project_name
+   */
+  app.get('/ai-agents/validate/effectiveness/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running pattern effectiveness analysis for ${project_name}...`);
+
+      const report = await trackPatternEffectiveness(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        report,
+        patterns_analyzed: report.patterns_analyzed,
+        excellent_patterns: report.excellent_patterns,
+        failing_patterns: report.failing_patterns,
+        auto_actions_taken: report.auto_actions_taken,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running effectiveness analysis:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Run decision quality assessment for project
+   * Evaluates adherence, consistency, outcomes; auto-boosts validated decisions
+   * GET /ai-agents/validate/decisions/:project_name
+   */
+  app.get('/ai-agents/validate/decisions/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running decision quality assessment for ${project_name}...`);
+
+      const report = await assessDecisionQuality(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        report,
+        decisions_assessed: report.decisions_assessed,
+        validated_decisions: report.validated_decisions,
+        ignored_decisions: report.ignored_decisions,
+        reversed_decisions: report.reversed_decisions,
+        auto_actions_taken: report.auto_actions_taken,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running decision quality assessment:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Run comprehensive validation (all three validators)
+   * GET /ai-agents/validate/:project_name
+   */
+  app.get('/ai-agents/validate/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running comprehensive validation for ${project_name}...`);
+
+      // Run all three validators in parallel
+      const [consistencyReport, effectivenessReport, decisionQualityReport] = await Promise.all([
+        validateConsistency(project_name, user_id as string),
+        trackPatternEffectiveness(project_name, user_id as string),
+        assessDecisionQuality(project_name, user_id as string),
+      ]);
+
+      const totalAutoActions =
+        consistencyReport.auto_actions_taken +
+        effectivenessReport.auto_actions_taken +
+        decisionQualityReport.auto_actions_taken;
+
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        project_name,
+        validation: {
+          consistency: {
+            issues_found: consistencyReport.issues.length,
+            critical: consistencyReport.issues.filter(i => i.severity === 'CRITICAL').length,
+            warning: consistencyReport.issues.filter(i => i.severity === 'WARNING').length,
+            auto_actions_taken: consistencyReport.auto_actions_taken,
+          },
+          effectiveness: {
+            patterns_analyzed: effectivenessReport.patterns_analyzed,
+            excellent: effectivenessReport.excellent_patterns,
+            failing: effectivenessReport.failing_patterns,
+            auto_actions_taken: effectivenessReport.auto_actions_taken,
+          },
+          decisions: {
+            assessed: decisionQualityReport.decisions_assessed,
+            validated: decisionQualityReport.validated_decisions,
+            ignored: decisionQualityReport.ignored_decisions,
+            reversed: decisionQualityReport.reversed_decisions,
+            auto_actions_taken: decisionQualityReport.auto_actions_taken,
+          },
+        },
+        total_auto_actions: totalAutoActions,
+        detailed_reports: {
+          consistency: consistencyReport,
+          effectiveness: effectivenessReport,
+          decisions: decisionQualityReport,
+        },
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running comprehensive validation:', error);
       res.status(500).json({ err: error.message });
     }
   });
