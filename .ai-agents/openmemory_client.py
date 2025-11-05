@@ -137,6 +137,8 @@ class OpenMemoryClient:
         action: str,
         context: Optional[str] = None,
         outcome: Optional[str] = None,
+        related_decision: Optional[str] = None,  # NEW
+        used_pattern: Optional[str] = None,      # NEW
         project_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
@@ -147,10 +149,12 @@ class OpenMemoryClient:
             action: Description of the action
             context: Additional context
             outcome: Outcome of the action
+            related_decision: Optional decision ID that led to this action
+            used_pattern: Optional pattern ID used in this action
             project_name: Project name (uses default if not provided)
 
         Returns:
-            Response dict with memory_id
+            Response dict with memory_id and links
         """
         project_name = project_name or self.project_name
         if not project_name:
@@ -162,6 +166,8 @@ class OpenMemoryClient:
             "action": action,
             "context": context,
             "outcome": outcome,
+            "related_decision": related_decision,
+            "used_pattern": used_pattern,
             "user_id": self.user_id,
         }
 
@@ -394,6 +400,269 @@ class OpenMemoryClient:
         response.raise_for_status()
         data = response.json()
         return data.get("context", {})
+
+    # =========================================================================
+    # NEW METHODS: Emotional Memory, Waypoints, Pattern Detection, Smart Reinforcement
+    # =========================================================================
+
+    def record_emotion(
+        self,
+        agent_name: str,
+        feeling: str,
+        sentiment: str = "neutral",  # positive, negative, neutral, frustrated, confident
+        confidence: float = 0.5,  # 0.0 - 1.0
+        context: Optional[str] = None,
+        related_action: Optional[str] = None,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Record agent emotional state
+
+        Args:
+            agent_name: Name of the agent
+            feeling: Description of the feeling
+            sentiment: Sentiment category
+            confidence: Confidence level (0.0-1.0)
+            context: What triggered this feeling
+            related_action: Optional action ID this relates to
+            project_name: Project name
+
+        Returns:
+            Response dict with memory_id
+        """
+        project_name = project_name or self.project_name
+        if not project_name:
+            raise ValueError("project_name must be provided")
+
+        payload = {
+            "project_name": project_name,
+            "agent_name": agent_name,
+            "feeling": feeling,
+            "sentiment": sentiment,
+            "confidence": confidence,
+            "context": context,
+            "related_action": related_action,
+            "user_id": self.user_id,
+        }
+
+        response = self.session.post(
+            f"{self.base_url}/ai-agents/emotion",
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_emotional_timeline(
+        self,
+        limit: int = 50,
+        project_name: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Get emotional timeline for project"""
+        project_name = project_name or self.project_name
+        if not project_name:
+            raise ValueError("project_name must be provided")
+
+        response = self.session.get(
+            f"{self.base_url}/ai-agents/emotions/{project_name}",
+            params={"limit": limit, "user_id": self.user_id},
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("emotions", [])
+
+    def analyze_sentiment_trends(
+        self,
+        project_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Analyze sentiment trends over time"""
+        project_name = project_name or self.project_name
+        if not project_name:
+            raise ValueError("project_name must be provided")
+
+        response = self.session.get(
+            f"{self.base_url}/ai-agents/sentiment/{project_name}",
+            params={"user_id": self.user_id},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def link_memories(
+        self,
+        source_memory_id: str,
+        target_memory_id: str,
+        weight: float = 0.8,
+        relationship: str = "related_to",
+    ) -> Dict[str, Any]:
+        """
+        Create associative link between two memories
+
+        Args:
+            source_memory_id: Source memory ID
+            target_memory_id: Target memory ID
+            weight: Connection strength (0.0-1.0)
+            relationship: Type of relationship
+
+        Returns:
+            Response dict
+        """
+        payload = {
+            "source_memory_id": source_memory_id,
+            "target_memory_id": target_memory_id,
+            "weight": weight,
+            "relationship": relationship,
+        }
+
+        response = self.session.post(
+            f"{self.base_url}/ai-agents/link",
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_memory_graph(
+        self,
+        memory_id: str,
+        depth: int = 2,
+    ) -> Dict[str, Any]:
+        """
+        Get associative graph for a memory
+
+        Args:
+            memory_id: Root memory ID
+            depth: How many hops to traverse
+
+        Returns:
+            Dict with waypoints and relationships
+        """
+        response = self.session.get(
+            f"{self.base_url}/ai-agents/graph/{memory_id}",
+            params={"depth": depth},
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def trace_decision_to_actions(
+        self,
+        decision_memory_id: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Trace from decision → patterns used → actions taken
+
+        Returns full graph of related memories
+        """
+        graph = self.get_memory_graph(decision_memory_id, depth=3)
+        return graph.get("waypoints", [])
+
+    def reinforce_memory_smart(
+        self,
+        memory_id: str,
+        reason: str,  # success, frequent_use, critical_decision, reference
+    ) -> Dict[str, Any]:
+        """
+        Intelligently reinforce memory based on reason
+
+        Args:
+            memory_id: Memory ID to reinforce
+            reason: Why reinforcing (affects boost amount)
+
+        Returns:
+            Response dict
+        """
+        payload = {
+            "memory_id": memory_id,
+            "reason": reason,
+        }
+
+        response = self.session.post(
+            f"{self.base_url}/ai-agents/smart-reinforce",
+            json=payload,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_memory_metrics(
+        self,
+        memory_id: str,
+    ) -> Dict[str, Any]:
+        """Get importance metrics for a memory"""
+        response = self.session.get(
+            f"{self.base_url}/ai-agents/metrics/{memory_id}",
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("metrics", {})
+
+    def detect_patterns(
+        self,
+        lookback_days: int = 7,
+        min_frequency: int = 3,
+        project_name: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Automatically detect patterns from recent actions
+
+        Args:
+            lookback_days: How many days to analyze
+            min_frequency: Minimum occurrences to consider a pattern
+            project_name: Project name
+
+        Returns:
+            List of detected patterns
+        """
+        project_name = project_name or self.project_name
+        if not project_name:
+            raise ValueError("project_name must be provided")
+
+        payload = {
+            "project_name": project_name,
+            "lookback_days": lookback_days,
+            "min_frequency": min_frequency,
+            "user_id": self.user_id,
+        }
+
+        response = self.session.post(
+            f"{self.base_url}/ai-agents/detect-patterns",
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("patterns", [])
+
+    def get_most_important_memories(
+        self,
+        memory_type: str = "all",
+        limit: int = 10,
+        project_name: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get most important memories (by salience * coactivations)
+
+        Args:
+            memory_type: Type filter (patterns, decisions, etc.)
+            limit: How many to return
+            project_name: Project name
+
+        Returns:
+            List of memories sorted by importance
+        """
+        project_name = project_name or self.project_name
+        if not project_name:
+            raise ValueError("project_name must be provided")
+
+        payload = {
+            "project_name": project_name,
+            "memory_type": memory_type,
+            "limit": limit,
+            "user_id": self.user_id,
+        }
+
+        response = self.session.post(
+            f"{self.base_url}/ai-agents/important",
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data.get("memories", [])
 
 
 def main():

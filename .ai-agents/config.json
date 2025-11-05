@@ -26,19 +26,33 @@
       "sector": "episodic",
       "description": "Agent actions and development history stored as episodic memories",
       "tags": ["agent-action"],
-      "record_all_actions": true
+      "record_all_actions": true,
+      "auto_link_decisions": true,
+      "auto_link_patterns": true
     },
     "patterns": {
       "sector": "procedural",
       "description": "Coding patterns and best practices stored as procedural knowledge",
       "tags": ["coding-pattern"],
-      "min_confidence": 0.8
+      "min_confidence": 0.8,
+      "auto_detect": true,
+      "detection_frequency": "daily"
     },
     "decisions": {
       "sector": "reflective",
       "description": "Architectural decisions and rationale stored as reflective insights",
       "tags": ["architectural-decision"],
-      "require_rationale": true
+      "require_rationale": true,
+      "smart_reinforcement": true
+    },
+    "emotions": {
+      "sector": "emotional",
+      "description": "Agent sentiment, confidence, and success/failure feelings",
+      "tags": ["agent-emotion", "sentiment"],
+      "track_confidence": true,
+      "track_sentiment": true,
+      "track_success_feelings": true,
+      "auto_link_actions": true
     }
   },
 
@@ -46,9 +60,13 @@
     "record_actions": true,
     "record_decisions": true,
     "store_patterns": true,
+    "record_emotions": true,
     "query_context_on_resume": true,
     "context_window_size": 20,
-    "_comment_context_window": "Number of recent actions to retrieve on resume"
+    "_comment_context_window": "Number of recent actions to retrieve on resume",
+    "auto_link_waypoints": true,
+    "smart_reinforcement": true,
+    "track_sentiment": true
   },
 
   "state_management": {
@@ -70,7 +88,60 @@
     "cross_session_memory": true,
     "_comment_cross_session": "Maintain memory across multiple development sessions",
     "decay_management": true,
-    "_comment_decay": "Let less important memories naturally decay over time"
+    "_comment_decay": "Let less important memories naturally decay over time",
+    "emotional_intelligence": true,
+    "_comment_emotional": "Track agent sentiment and confidence levels",
+    "waypoint_graphs": true,
+    "_comment_waypoint": "Create associative memory networks (decision → pattern → action)",
+    "auto_pattern_detection": true,
+    "_comment_auto_pattern": "Detect patterns from repeated agent behaviors",
+    "smart_reinforcement": true,
+    "_comment_smart_reinforce": "Intelligently boost important memories based on usage"
+  },
+
+  "pattern_detection": {
+    "enabled": true,
+    "auto_detect": true,
+    "schedule": "daily",
+    "lookback_days": 7,
+    "min_frequency": 3,
+    "confidence_threshold": 0.7,
+    "_comment": "Automatic pattern detection from recent actions"
+  },
+
+  "waypoint_config": {
+    "enabled": true,
+    "auto_create": true,
+    "default_weights": {
+      "decision_to_pattern": 0.85,
+      "pattern_to_action": 0.75,
+      "decision_to_action": 0.80,
+      "action_to_emotion": 0.70
+    },
+    "max_graph_depth": 3,
+    "_comment": "Waypoint graph configuration for associative memory linking"
+  },
+
+  "reinforcement_config": {
+    "enabled": true,
+    "boost_amounts": {
+      "success": 0.20,
+      "frequent_use": 0.15,
+      "critical_decision": 0.25,
+      "reference": 0.10
+    },
+    "auto_reinforce_on_success": true,
+    "track_coactivations": true,
+    "_comment": "Smart memory reinforcement based on usage and success"
+  },
+
+  "emotional_config": {
+    "enabled": true,
+    "track_confidence": true,
+    "track_sentiment": true,
+    "sentiment_categories": ["positive", "negative", "neutral", "frustrated", "confident"],
+    "confidence_threshold_warning": 0.3,
+    "_comment": "Emotional intelligence tracking for agent sentiment analysis"
   },
 
   "environment": {
