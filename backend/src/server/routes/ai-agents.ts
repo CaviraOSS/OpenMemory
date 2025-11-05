@@ -11,6 +11,15 @@ import { run_async, q, all_async } from '../../core/db';
 import { validateConsistency } from '../../memory/validators/consistency';
 import { trackPatternEffectiveness } from '../../memory/validators/pattern-effectiveness';
 import { assessDecisionQuality } from '../../memory/validators/decision-quality';
+import { analyzeFailures, getLessonsLearned } from '../../memory/self-correction/failure-analyzer';
+import { autoAdjustConfidence, getConfidenceDistribution } from '../../memory/self-correction/confidence-adjuster';
+import { consolidateMemories, getConsolidationStats } from '../../memory/self-correction/memory-consolidator';
+import { detectPotentialConflicts } from '../../memory/proactive/conflict-detector';
+import { predictBlockers } from '../../memory/proactive/blocker-predictor';
+import { generateRecommendations } from '../../memory/proactive/context-recommender';
+import { extractSuccessPatterns, getLearningStats } from '../../memory/learning/success-pattern-extractor';
+import { runQualityGate, getQualityTrends } from '../../memory/quality/code-quality-gate';
+import { detectAnomalies } from '../../memory/quality/anomaly-detector';
 
 export function aiagents(app: any) {
   /**
@@ -1070,6 +1079,439 @@ export function aiagents(app: any) {
       });
     } catch (error: any) {
       console.error('[ai-agents] Error running comprehensive validation:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  // ============================================================================
+  // SELF-CORRECTION SYSTEM: Failure Analysis, Confidence Adjustment, Consolidation
+  // ============================================================================
+
+  /**
+   * Analyze failures and identify root causes
+   * GET /ai-agents/analyze/failures/:project_name
+   */
+  app.get('/ai-agents/analyze/failures/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', lookback_days = 30 } = req.query;
+
+      console.log(`[ai-agents] Running failure analysis for ${project_name}...`);
+
+      const report = await analyzeFailures(project_name, user_id as string, parseInt(lookback_days as string, 10));
+
+      res.json({
+        success: true,
+        report,
+        failures_analyzed: report.failures_analyzed,
+        lessons_created: report.lessons_created,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error analyzing failures:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Get lessons learned from failures
+   * GET /ai-agents/lessons/:project_name
+   */
+  app.get('/ai-agents/lessons/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', limit = 20 } = req.query;
+
+      const lessons = await getLessonsLearned(project_name, user_id as string, parseInt(limit as string, 10));
+
+      res.json({
+        success: true,
+        lessons,
+        count: lessons.length,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error retrieving lessons:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Auto-adjust confidence for all project memories
+   * POST /ai-agents/adjust/confidence/:project_name
+   */
+  app.post('/ai-agents/adjust/confidence/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.body;
+
+      console.log(`[ai-agents] Running confidence auto-adjustment for ${project_name}...`);
+
+      const report = await autoAdjustConfidence(project_name, user_id);
+
+      res.json({
+        success: true,
+        report,
+        adjustments_made: report.adjustments_made,
+        avg_confidence_before: report.average_confidence_before,
+        avg_confidence_after: report.average_confidence_after,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error adjusting confidence:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Get confidence distribution
+   * GET /ai-agents/confidence/distribution/:project_name
+   */
+  app.get('/ai-agents/confidence/distribution/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      const distribution = await getConfidenceDistribution(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        distribution,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error getting confidence distribution:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Consolidate memories (merge duplicates, archive low-value)
+   * POST /ai-agents/consolidate/:project_name
+   */
+  app.post('/ai-agents/consolidate/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', options = {} } = req.body;
+
+      console.log(`[ai-agents] Running memory consolidation for ${project_name}...`);
+
+      const report = await consolidateMemories(project_name, user_id, options);
+
+      res.json({
+        success: true,
+        report,
+        memories_before: report.memories_before,
+        memories_after: report.memories_after,
+        memories_merged: report.memories_merged,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error consolidating memories:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Get consolidation statistics
+   * GET /ai-agents/consolidation/stats/:project_name
+   */
+  app.get('/ai-agents/consolidation/stats/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      const stats = await getConsolidationStats(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error getting consolidation stats:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  // ============================================================================
+  // PROACTIVE INTELLIGENCE: Conflict Detection, Blocker Prediction, Recommendations
+  // ============================================================================
+
+  /**
+   * Detect potential conflicts proactively
+   * GET /ai-agents/detect/conflicts/:project_name
+   */
+  app.get('/ai-agents/detect/conflicts/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running conflict detection for ${project_name}...`);
+
+      const report = await detectPotentialConflicts(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        report,
+        conflicts_detected: report.conflicts_detected,
+        critical_conflicts: report.critical_conflicts,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error detecting conflicts:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Predict potential blockers
+   * GET /ai-agents/predict/blockers/:project_name
+   */
+  app.get('/ai-agents/predict/blockers/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', lookback_days = 30 } = req.query;
+
+      console.log(`[ai-agents] Running blocker prediction for ${project_name}...`);
+
+      const report = await predictBlockers(project_name, user_id as string, parseInt(lookback_days as string, 10));
+
+      res.json({
+        success: true,
+        report,
+        blockers_predicted: report.blockers_predicted,
+        high_probability: report.high_probability_blockers,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error predicting blockers:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Generate context-aware recommendations
+   * POST /ai-agents/recommend/:project_name
+   */
+  app.post('/ai-agents/recommend/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', context } = req.body;
+
+      console.log(`[ai-agents] Generating recommendations for ${project_name}...`);
+
+      const report = await generateRecommendations(project_name, user_id, context);
+
+      res.json({
+        success: true,
+        report,
+        recommendations_generated: report.recommendations_generated,
+        high_priority: report.high_priority,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error generating recommendations:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  // ============================================================================
+  // CONTINUOUS LEARNING: Success Pattern Extraction
+  // ============================================================================
+
+  /**
+   * Extract success patterns from project history
+   * POST /ai-agents/learn/patterns/:project_name
+   */
+  app.post('/ai-agents/learn/patterns/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', lookback_days = 30 } = req.body;
+
+      console.log(`[ai-agents] Extracting success patterns for ${project_name}...`);
+
+      const report = await extractSuccessPatterns(project_name, user_id, lookback_days);
+
+      res.json({
+        success: true,
+        report,
+        patterns_extracted: report.patterns_extracted,
+        high_confidence: report.high_confidence_patterns,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error extracting patterns:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Get learning statistics
+   * GET /ai-agents/learn/stats/:project_name
+   */
+  app.get('/ai-agents/learn/stats/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      const stats = await getLearningStats(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        stats,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error getting learning stats:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  // ============================================================================
+  // QUALITY & MONITORING: Quality Gates, Anomaly Detection
+  // ============================================================================
+
+  /**
+   * Run quality gate check
+   * POST /ai-agents/quality/gate/:project_name
+   */
+  app.post('/ai-agents/quality/gate/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', context } = req.body;
+
+      console.log(`[ai-agents] Running quality gate for ${project_name}...`);
+
+      const report = await runQualityGate(project_name, user_id, context);
+
+      res.json({
+        success: true,
+        report,
+        passed: report.passed,
+        quality_score: report.quality_score,
+        violations: report.violations_found,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running quality gate:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Get quality trends
+   * GET /ai-agents/quality/trends/:project_name
+   */
+  app.get('/ai-agents/quality/trends/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', days = 30 } = req.query;
+
+      const trends = await getQualityTrends(project_name, user_id as string, parseInt(days as string, 10));
+
+      res.json({
+        success: true,
+        trends,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error getting quality trends:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Detect anomalies in project activity
+   * GET /ai-agents/detect/anomalies/:project_name
+   */
+  app.get('/ai-agents/detect/anomalies/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system' } = req.query;
+
+      console.log(`[ai-agents] Running anomaly detection for ${project_name}...`);
+
+      const report = await detectAnomalies(project_name, user_id as string);
+
+      res.json({
+        success: true,
+        report,
+        anomalies_detected: report.anomalies_detected,
+        critical: report.critical_anomalies,
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error detecting anomalies:', error);
+      res.status(500).json({ err: error.message });
+    }
+  });
+
+  /**
+   * Run all autonomous intelligence checks (comprehensive report)
+   * POST /ai-agents/autonomous/:project_name
+   */
+  app.post('/ai-agents/autonomous/:project_name', async (req: any, res: any) => {
+    try {
+      const { project_name } = req.params;
+      const { user_id = 'ai-agent-system', context } = req.body;
+
+      console.log(`[ai-agents] Running comprehensive autonomous intelligence for ${project_name}...`);
+
+      // Run all systems in parallel for speed
+      const [
+        validationReport,
+        failureReport,
+        confidenceReport,
+        conflictReport,
+        blockerReport,
+        recommendationReport,
+        qualityReport,
+        anomalyReport,
+      ] = await Promise.all([
+        // Phase 1: Validation
+        Promise.all([
+          validateConsistency(project_name, user_id),
+          trackPatternEffectiveness(project_name, user_id),
+          assessDecisionQuality(project_name, user_id),
+        ]),
+        // Phase 2: Self-Correction
+        analyzeFailures(project_name, user_id, 30),
+        autoAdjustConfidence(project_name, user_id),
+        // Phase 3: Proactive Intelligence
+        detectPotentialConflicts(project_name, user_id),
+        predictBlockers(project_name, user_id, 30),
+        generateRecommendations(project_name, user_id, context),
+        // Phase 5: Quality & Monitoring
+        runQualityGate(project_name, user_id, context),
+        detectAnomalies(project_name, user_id),
+      ]);
+
+      res.json({
+        success: true,
+        timestamp: Date.now(),
+        project_name,
+        comprehensive_report: {
+          validation: {
+            consistency: validationReport[0],
+            effectiveness: validationReport[1],
+            decisions: validationReport[2],
+          },
+          self_correction: {
+            failures: failureReport,
+            confidence: confidenceReport,
+          },
+          proactive: {
+            conflicts: conflictReport,
+            blockers: blockerReport,
+            recommendations: recommendationReport,
+          },
+          quality: {
+            gate: qualityReport,
+            anomalies: anomalyReport,
+          },
+        },
+        summary: {
+          validation_issues: validationReport[0].issues.length,
+          patterns_analyzed: validationReport[1].patterns_analyzed,
+          decisions_assessed: validationReport[2].decisions_assessed,
+          failures_analyzed: failureReport.failures_analyzed,
+          confidence_adjustments: confidenceReport.adjustments_made,
+          conflicts_detected: conflictReport.conflicts_detected,
+          blockers_predicted: blockerReport.blockers_predicted,
+          recommendations_generated: recommendationReport.recommendations_generated,
+          quality_score: qualityReport.quality_score,
+          anomalies_detected: anomalyReport.anomalies_detected,
+        },
+      });
+    } catch (error: any) {
+      console.error('[ai-agents] Error running autonomous intelligence:', error);
       res.status(500).json({ err: error.message });
     }
   });
