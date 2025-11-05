@@ -7,6 +7,8 @@ import { authenticate_api_request, log_authenticated_request } from './middlewar
 import { start_reflection } from '../memory/reflect'
 import { start_user_summary_reflection } from '../memory/user_summary'
 import { req_tracker_mw } from './routes/dashboard'
+import { agentEnforcement, addEnforcementEndpoints } from './middleware/ai-agent-enforcement'
+import { watchdog } from '../../.ai-agents/enforcement/watchdog'
 
 const app = server({ max_payload_size: env.max_payload_size })
 
@@ -31,7 +33,14 @@ if (process.env.OM_LOG_AUTH === 'true') {
     app.use(log_authenticated_request)
 }
 
+// Add AI Agent Enforcement Middleware
+console.log('[AI Agent Enforcement] Middleware enabled - AI agents cannot bypass OpenMemory and .ai-agents systems')
+app.use(agentEnforcement.middleware())
+
 routes(app)
+
+// Add enforcement monitoring endpoints
+addEnforcementEndpoints(app)
 
 mcp(app)
 if (env.mode === 'langgraph') {
@@ -70,4 +79,8 @@ start_user_summary_reflection()
 console.log(`?? OpenMemory server starting on port ${env.port}`)
 app.listen(env.port, () => {
     console.log(`? Server running on http://localhost:${env.port}`)
+
+    // Start AI Agent Enforcement Watchdog
+    console.log('[AI Agent Enforcement] Starting watchdog service...')
+    watchdog.start()
 })
