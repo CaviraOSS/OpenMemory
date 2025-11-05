@@ -432,6 +432,35 @@ client.save_project_state(state_dict)
 - **`.ai-agents/README.md`** - Overview and quick start
 - **`.ai-agents/INTEGRATION_GUIDE.md`** - Comprehensive integration guide
 - **`.ai-agents/START_HERE.md`** - Original AI agents system documentation
+- **`.ai-agents/scripts/`** - Ready-to-use utility scripts for AI agents
+
+### Utility Scripts
+
+The `.ai-agents/scripts/` directory provides operational tools for working with the AI Agents integration:
+
+```bash
+cd .ai-agents/scripts
+
+# Load project context and check session mode
+python load_context.py
+
+# Record actions during development
+python record_action.py
+
+# Store discovered patterns and decisions
+python store_findings.py
+
+# Save comprehensive project state
+python save_state.py
+
+# Verify stored memories
+python verify_storage.py
+
+# Generate session summary
+python session_summary.py
+```
+
+See **`.ai-agents/scripts/README.md`** for detailed usage instructions.
 
 ### API Endpoints
 
