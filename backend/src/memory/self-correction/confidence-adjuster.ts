@@ -44,7 +44,7 @@ export async function autoAdjustConfidence(
   user_id: string
 ): Promise<ConfidenceReport> {
   const allMemories = await all_async(
-    `SELECT id, content, metadata, salience, coactivations, last_seen_at, created_at, updated_at, primary_sector
+    `SELECT id, content, meta, salience, coactivations, last_seen_at, created_at, updated_at, primary_sector
      FROM memories
      WHERE tags LIKE ?
      AND user_id = ?
@@ -146,7 +146,7 @@ async function calculateSignals(memory: any): Promise<ConfidenceAdjustment['sign
   if (memory.primary_sector === 'procedural' || memory.primary_sector === 'reflective') {
     // Get actions linked to this memory
     const linkedActions = await all_async(
-      `SELECT m.metadata
+      `SELECT m.meta
        FROM memories m
        JOIN waypoints w ON w.dst_id = m.id
        WHERE w.src_id = ?
@@ -157,7 +157,7 @@ async function calculateSignals(memory: any): Promise<ConfidenceAdjustment['sign
     if (linkedActions.length > 0) {
       let successes = 0;
       linkedActions.forEach((action: any) => {
-        const meta = action.metadata ? JSON.parse(action.metadata) : {};
+        const meta = action.meta ? JSON.parse(action.meta) : {};
         if (meta.outcome === 'success') successes++;
       });
       signals.success_rate = successes / linkedActions.length;

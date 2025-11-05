@@ -48,7 +48,7 @@ export async function analyzeFailures(
 
   // Get all failed actions
   const failedActions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
@@ -70,7 +70,7 @@ export async function analyzeFailures(
   };
 
   for (const action of failedActions) {
-    const metadata = action.metadata ? JSON.parse(action.metadata) : {};
+    const metadata = action.meta ? JSON.parse(action.meta) : {};
 
     // Only analyze failures and errors
     if (metadata.outcome !== 'failure' && metadata.outcome !== 'error') continue;
@@ -80,7 +80,7 @@ export async function analyzeFailures(
 
     // Check if this action used a pattern (via waypoint)
     const usedPatterns = await all_async(
-      `SELECT m.id, m.content, m.metadata
+      `SELECT m.id, m.content, m.meta
        FROM memories m
        JOIN waypoints w ON w.src_id = m.id
        WHERE w.dst_id = ?
@@ -90,7 +90,7 @@ export async function analyzeFailures(
 
     // Check if this action was based on a decision (via waypoint)
     const basedOnDecisions = await all_async(
-      `SELECT m.id, m.content, m.metadata
+      `SELECT m.id, m.content, m.meta
        FROM memories m
        JOIN waypoints w ON w.src_id = m.id
        WHERE w.dst_id = ?
@@ -111,7 +111,7 @@ export async function analyzeFailures(
       // Pattern failure: the pattern used didn't work
       rootCause = 'PATTERN_FAILURE';
       const pattern = usedPatterns[0];
-      const patternMeta = pattern.metadata ? JSON.parse(pattern.metadata) : {};
+      const patternMeta = pattern.meta ? JSON.parse(pattern.meta) : {};
       relatedPatternId = pattern.id;
       relatedPatternName = patternMeta.pattern_name || extractPatternName(pattern.content);
 
@@ -252,7 +252,7 @@ export async function getLessonsLearned(
   limit: number = 20
 ): Promise<any[]> {
   const lessons = await all_async(
-    `SELECT id, content, metadata, created_at, salience
+    `SELECT id, content, meta, created_at, salience
      FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
@@ -266,7 +266,7 @@ export async function getLessonsLearned(
   return lessons.map(lesson => ({
     id: lesson.id,
     content: lesson.content,
-    metadata: lesson.metadata ? JSON.parse(lesson.metadata) : {},
+    metadata: lesson.meta ? JSON.parse(lesson.meta) : {},
     created_at: lesson.created_at,
     salience: lesson.salience,
   }));

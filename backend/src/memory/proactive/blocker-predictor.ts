@@ -121,7 +121,7 @@ async function detectRepeatedFailures(
   const cutoffTime = Date.now() - (lookback_days * 86400000);
 
   const failures = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
@@ -135,7 +135,7 @@ async function detectRepeatedFailures(
   const failureGroups = new Map<string, any[]>();
 
   for (const failure of failures) {
-    const meta = failure.metadata ? JSON.parse(failure.metadata) : {};
+    const meta = failure.meta ? JSON.parse(failure.meta) : {};
     if (meta.outcome !== 'failure' && meta.outcome !== 'error') continue;
 
     const failureType = extractFailureType(failure.content);
@@ -193,7 +193,7 @@ async function detectMissingDependencies(
 
   // Get all decisions and patterns
   const decisions = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
      AND user_id = ?`,
@@ -201,7 +201,7 @@ async function detectMissingDependencies(
   );
 
   const patterns = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'procedural'
      AND tags LIKE ?
      AND user_id = ?`,
@@ -338,7 +338,7 @@ async function detectComplexitySpikes(
   // Get recent actions
   const recentPeriod = Date.now() - (lookback_days * 86400000);
   const actions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
@@ -418,7 +418,7 @@ async function detectKnowledgeGaps(
 
   // Get all decisions
   const decisions = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
      AND user_id = ?`,

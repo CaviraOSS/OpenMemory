@@ -43,7 +43,7 @@ export async function trackPatternEffectiveness(
   user_id: string
 ): Promise<EffectivenessReport> {
   const patterns = await all_async(
-    `SELECT id, content, metadata, salience, coactivations
+    `SELECT id, content, meta, salience, coactivations
      FROM memories
      WHERE primary_sector = 'procedural'
      AND tags LIKE ?
@@ -56,12 +56,12 @@ export async function trackPatternEffectiveness(
   let autoActionsTaken = 0;
 
   for (const pattern of patterns) {
-    const metadata = pattern.metadata ? JSON.parse(pattern.metadata) : {};
+    const metadata = pattern.meta ? JSON.parse(pattern.meta) : {};
     const patternName = metadata.pattern_name || extractPatternName(pattern.content);
 
     // Get all actions that used this pattern (via waypoints)
     const actions = await all_async(
-      `SELECT m.id, m.content, m.metadata, m.created_at
+      `SELECT m.id, m.content, m.meta, m.created_at
        FROM memories m
        JOIN waypoints w ON w.dst_id = m.id
        WHERE w.src_id = ?
@@ -77,7 +77,7 @@ export async function trackPatternEffectiveness(
     const recentOutcomes: Array<{ action: string; outcome: string; timestamp: number }> = [];
 
     for (const action of actions) {
-      const actionMeta = action.metadata ? JSON.parse(action.metadata) : {};
+      const actionMeta = action.meta ? JSON.parse(action.meta) : {};
       const outcome = actionMeta.outcome;
 
       if (outcome === 'success') successes++;
@@ -85,7 +85,7 @@ export async function trackPatternEffectiveness(
 
       // Get emotions linked to this action for confidence
       const emotions = await all_async(
-        `SELECT m.metadata
+        `SELECT m.meta
          FROM memories m
          JOIN waypoints w ON w.src_id = ?
          WHERE w.dst_id = m.id
@@ -95,7 +95,7 @@ export async function trackPatternEffectiveness(
       );
 
       if (emotions.length > 0) {
-        const emotionMeta = emotions[0].metadata ? JSON.parse(emotions[0].metadata) : {};
+        const emotionMeta = emotions[0].meta ? JSON.parse(emotions[0].meta) : {};
         if (emotionMeta.confidence !== undefined) {
           totalConfidence += emotionMeta.confidence;
           confidenceCount++;
@@ -223,7 +223,7 @@ export async function getPatternEffectiveness(
   if (pattern.length === 0) return null;
 
   // Use the main tracker but filter to this pattern
-  const metadata = pattern[0].metadata ? JSON.parse(pattern[0].metadata) : {};
+  const metadata = pattern[0].meta ? JSON.parse(pattern[0].meta) : {};
   const project_name = metadata.project_name || 'unknown';
   const user_id = pattern[0].user_id || 'unknown';
 

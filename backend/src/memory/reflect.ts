@@ -25,7 +25,7 @@ const cluster = (mems: any[]): any[] => {
     const cls: any[] = []
     const used = new Set()
     for (const m of mems) {
-        if (used.has(m.id) || m.primary_sector === 'reflective' || m.metadata?.consolidated) continue
+        if (used.has(m.id) || m.primary_sector === 'reflective' || m.meta?.consolidated) continue
         const c = { mem: [m], n: 1 }
         used.add(m.id)
         for (const o of mems) {

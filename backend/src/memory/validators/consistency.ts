@@ -87,7 +87,7 @@ async function checkDecisionConflicts(
   const issues: ValidationIssue[] = [];
 
   const decisions = await all_async(
-    `SELECT id, content, metadata, created_at, salience
+    `SELECT id, content, meta, created_at, salience
      FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?

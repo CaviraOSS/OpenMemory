@@ -587,10 +587,10 @@ export function aiagents(app: any) {
       let totalConfidence = 0;
 
       emotions.forEach((e: any) => {
-        const sentiment = e.metadata?.sentiment || 'neutral';
+        const sentiment = e.meta?.sentiment || 'neutral';
         if (sentiment === 'positive' || sentiment === 'confident') positive++;
         else if (sentiment === 'negative' || sentiment === 'frustrated') negative++;
-        totalConfidence += e.metadata?.confidence || 0.5;
+        totalConfidence += e.meta?.confidence || 0.5;
       });
 
       const avgConfidence = totalConfidence / emotions.length;
@@ -803,7 +803,7 @@ export function aiagents(app: any) {
 
       // Get recent actions
       const actions = await all_async(
-        `SELECT id, content, metadata FROM memories
+        `SELECT id, content, meta FROM memories
          WHERE primary_sector = 'episodic'
          AND tags LIKE ?
          AND user_id = ?
@@ -829,7 +829,7 @@ export function aiagents(app: any) {
 
         const entry = sequences.get(key)!;
         entry.frequency++;
-        const ctx = actions[i].metadata ? JSON.parse(actions[i].metadata as any) : {};
+        const ctx = actions[i].meta ? JSON.parse(actions[i].meta as any) : {};
         entry.contexts.push(ctx.context || '');
       }
 

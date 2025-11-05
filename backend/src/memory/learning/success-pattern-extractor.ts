@@ -48,7 +48,7 @@ export async function extractSuccessPatterns(
 
   // Get all successful actions
   const successfulActions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
@@ -59,7 +59,7 @@ export async function extractSuccessPatterns(
   );
 
   const successActions = successfulActions.filter(action => {
-    const meta = action.metadata ? JSON.parse(action.metadata) : {};
+    const meta = action.meta ? JSON.parse(action.meta) : {};
     return meta.outcome === 'success';
   });
 
@@ -177,7 +177,7 @@ async function extractSequencePatterns(
       timestamps: [actions[i].created_at, actions[i + 1].created_at, actions[i + 2].created_at],
     });
 
-    const meta = actions[i].metadata ? JSON.parse(actions[i].metadata) : {};
+    const meta = actions[i].meta ? JSON.parse(actions[i].meta) : {};
     if (meta.context) seq.contexts.add(meta.context);
   }
 
@@ -254,7 +254,7 @@ async function extractApproachPatterns(
         frequency: matchingActions.length,
         success_rate: 1.0,
         contexts: matchingActions.map(a => {
-          const meta = a.metadata ? JSON.parse(a.metadata) : {};
+          const meta = a.meta ? JSON.parse(a.meta) : {};
           return meta.context || 'general';
         }).filter((c: string, i: number, arr: string[]) => arr.indexOf(c) === i),
         source_actions: matchingActions.map((a: any) => ({
@@ -319,7 +319,7 @@ async function extractTechniquePatterns(
         frequency: matchingActions.length,
         success_rate: 1.0,
         contexts: matchingActions.map(a => {
-          const meta = a.metadata ? JSON.parse(a.metadata) : {};
+          const meta = a.meta ? JSON.parse(a.meta) : {};
           return meta.context || 'general';
         }).filter((c: string, i: number, arr: string[]) => arr.indexOf(c) === i),
         source_actions: matchingActions.map((a: any) => ({

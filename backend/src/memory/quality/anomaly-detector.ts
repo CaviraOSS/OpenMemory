@@ -220,7 +220,7 @@ async function detectFailureSpikes(
   );
 
   const failureCount = recentFailures.filter((a: any) => {
-    const meta = a.metadata ? JSON.parse(a.metadata) : {};
+    const meta = a.meta ? JSON.parse(a.meta) : {};
     return meta.outcome === 'failure' || meta.outcome === 'error';
   }).length;
 
@@ -247,7 +247,7 @@ async function detectFailureSpikes(
   );
 
   const historicalFailureCount = historicalFailures.filter((a: any) => {
-    const meta = a.metadata ? JSON.parse(a.metadata) : {};
+    const meta = a.meta ? JSON.parse(a.meta) : {};
     return meta.outcome === 'failure' || meta.outcome === 'error';
   }).length;
 
@@ -291,7 +291,7 @@ async function detectConfidenceDrops(
 
   // Get recent emotions
   const recentEmotions = await all_async(
-    `SELECT metadata FROM memories
+    `SELECT meta FROM memories
      WHERE primary_sector = 'emotional'
      AND tags LIKE ?
      AND user_id = ?
@@ -306,7 +306,7 @@ async function detectConfidenceDrops(
     let negativeCount = 0;
 
     for (const emotion of recentEmotions) {
-      const meta = emotion.metadata ? JSON.parse(emotion.metadata) : {};
+      const meta = emotion.meta ? JSON.parse(emotion.meta) : {};
       totalConfidence += meta.confidence || 0.5;
       if (meta.sentiment === 'negative' || meta.sentiment === 'frustrated') {
         negativeCount++;

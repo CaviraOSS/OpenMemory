@@ -203,7 +203,7 @@ if (is_pg) {
         db.run('PRAGMA wal_autocheckpoint=20000')
         db.run('PRAGMA locking_mode=EXCLUSIVE')
         db.run('PRAGMA busy_timeout=50')
-        db.run(`create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`)
+        db.run(`create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0,coactivations integer default 0)`)
         db.run(`create table if not exists vectors(id text not null,sector text not null,v blob not null,dim integer not null,primary key(id,sector))`)
         db.run(`create table if not exists waypoints(src_id text primary key,dst_id text not null,weight real not null,created_at integer,updated_at integer)`)
         db.run(`create table if not exists embed_logs(id text primary key,model text,status text,ts integer,err text)`)

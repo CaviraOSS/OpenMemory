@@ -53,7 +53,7 @@ export async function consolidateMemories(
 
   // Get all project memories (excluding very recent ones)
   const memories = await all_async(
-    `SELECT id, content, metadata, salience, coactivations, created_at, primary_sector, tags, embedding
+    `SELECT id, content, meta, salience, coactivations, created_at, primary_sector, tags, embedding
      FROM memories
      WHERE tags LIKE ?
      AND user_id = ?

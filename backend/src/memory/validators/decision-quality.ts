@@ -47,7 +47,7 @@ export async function assessDecisionQuality(
   user_id: string
 ): Promise<QualityReport> {
   const decisions = await all_async(
-    `SELECT id, content, metadata, salience, created_at
+    `SELECT id, content, meta, salience, created_at
      FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
@@ -60,7 +60,7 @@ export async function assessDecisionQuality(
   let autoActionsTaken = 0;
 
   for (const decision of decisions) {
-    const metadata = decision.metadata ? JSON.parse(decision.metadata) : {};
+    const metadata = decision.meta ? JSON.parse(decision.meta) : {};
     const decisionText = extractDecisionText(decision.content);
     const ageMs = Date.now() - decision.created_at;
     const ageDays = ageMs / (1000 * 60 * 60 * 24);
@@ -70,7 +70,7 @@ export async function assessDecisionQuality(
 
     // Get all actions that reference this decision
     const actions = await all_async(
-      `SELECT m.id, m.content, m.metadata, m.created_at
+      `SELECT m.id, m.content, m.meta, m.created_at
        FROM memories m
        JOIN waypoints w ON w.dst_id = m.id
        WHERE w.src_id = ?
@@ -81,7 +81,7 @@ export async function assessDecisionQuality(
 
     // Check if decision was reversed by a later decision
     const laterDecisions = await all_async(
-      `SELECT id, content, metadata, created_at
+      `SELECT id, content, meta, created_at
        FROM memories
        WHERE primary_sector = 'reflective'
        AND tags LIKE ?
@@ -107,7 +107,7 @@ export async function assessDecisionQuality(
     let failedActions = 0;
 
     for (const action of actions) {
-      const actionMeta = action.metadata ? JSON.parse(action.metadata) : {};
+      const actionMeta = action.meta ? JSON.parse(action.meta) : {};
       if (actionMeta.outcome === 'success') successfulActions++;
       else if (actionMeta.outcome === 'failure' || actionMeta.outcome === 'error') failedActions++;
     }
@@ -268,7 +268,7 @@ export async function getDecisionQuality(
 
   if (decision.length === 0) return null;
 
-  const metadata = decision[0].metadata ? JSON.parse(decision[0].metadata) : {};
+  const metadata = decision[0].meta ? JSON.parse(decision[0].meta) : {};
   const project_name = metadata.project_name || 'unknown';
   const user_id = decision[0].user_id || 'unknown';
 

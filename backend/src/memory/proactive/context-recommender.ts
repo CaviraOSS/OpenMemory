@@ -96,7 +96,7 @@ async function recommendPatterns(
 
   // Get highly successful patterns
   const patterns = await all_async(
-    `SELECT m.id, m.content, m.metadata, m.salience, m.coactivations
+    `SELECT m.id, m.content, m.meta, m.salience, m.coactivations
      FROM memories m
      WHERE m.primary_sector = 'procedural'
      AND m.tags LIKE ?
@@ -108,12 +108,12 @@ async function recommendPatterns(
   );
 
   for (const pattern of patterns) {
-    const metadata = pattern.metadata ? JSON.parse(pattern.metadata) : {};
+    const metadata = pattern.meta ? JSON.parse(pattern.meta) : {};
     const patternName = metadata.pattern_name || extractPatternName(pattern.content);
 
     // Calculate success rate by checking linked actions
     const linkedActions = await all_async(
-      `SELECT m.metadata
+      `SELECT m.meta
        FROM memories m
        JOIN waypoints w ON w.dst_id = m.id
        WHERE w.src_id = ?
@@ -123,7 +123,7 @@ async function recommendPatterns(
 
     let successes = 0;
     for (const action of linkedActions) {
-      const meta = action.metadata ? JSON.parse(action.metadata) : {};
+      const meta = action.meta ? JSON.parse(action.meta) : {};
       if (meta.outcome === 'success') successes++;
     }
 
@@ -183,7 +183,7 @@ async function recommendDecisions(
 
   // Get recent validated decisions
   const decisions = await all_async(
-    `SELECT m.id, m.content, m.metadata, m.salience
+    `SELECT m.id, m.content, m.meta, m.salience
      FROM memories m
      WHERE m.primary_sector = 'reflective'
      AND m.tags LIKE ?
@@ -195,7 +195,7 @@ async function recommendDecisions(
   );
 
   for (const decision of decisions) {
-    const metadata = decision.metadata ? JSON.parse(decision.metadata) : {};
+    const metadata = decision.meta ? JSON.parse(decision.meta) : {};
     const decisionText = extractDecisionText(decision.content);
 
     // Check if decision has been successfully followed
@@ -253,7 +253,7 @@ async function recommendActions(
 
   // Get project state
   const stateMemories = await all_async(
-    `SELECT content, metadata FROM memories
+    `SELECT content, meta FROM memories
      WHERE primary_sector = 'semantic'
      AND tags LIKE ?
      AND tags LIKE ?
@@ -301,7 +301,7 @@ async function recommendActions(
 
   // Check for incomplete actions (actions without outcome)
   const incompleteActions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
@@ -312,7 +312,7 @@ async function recommendActions(
   );
 
   const pendingActions = incompleteActions.filter(action => {
-    const meta = action.metadata ? JSON.parse(action.metadata) : {};
+    const meta = action.meta ? JSON.parse(action.meta) : {};
     return !meta.outcome || meta.outcome === 'pending';
   });
 
@@ -354,7 +354,7 @@ async function recommendCautions(
 
   // Get failed patterns (low success rate)
   const failedPatterns = await all_async(
-    `SELECT m.id, m.content, m.metadata, m.salience
+    `SELECT m.id, m.content, m.meta, m.salience
      FROM memories m
      WHERE m.primary_sector = 'procedural'
      AND m.tags LIKE ?
@@ -366,7 +366,7 @@ async function recommendCautions(
   );
 
   for (const pattern of failedPatterns) {
-    const metadata = pattern.metadata ? JSON.parse(pattern.metadata) : {};
+    const metadata = pattern.meta ? JSON.parse(pattern.meta) : {};
     const patternName = metadata.pattern_name || extractPatternName(pattern.content);
 
     recommendations.push({
@@ -396,8 +396,8 @@ async function recommendCautions(
 
   // Get warning memories
   const warnings = await all_async(
-    `SELECT id, content, metadata
-     FROM memories
+    `SELECT id, content, meta
+ FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
      AND tags LIKE ?

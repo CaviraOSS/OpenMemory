@@ -128,7 +128,7 @@ async function checkAntiPatterns(
 
   // Get recent actions
   const recentActions = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
      AND user_id = ?
@@ -292,7 +292,7 @@ async function checkDecisionCompliance(
 
   // Get high-confidence decisions
   const decisions = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
      AND user_id = ?
@@ -304,7 +304,7 @@ async function checkDecisionCompliance(
 
   // Check if recent actions comply with decisions
   const recentActions = await all_async(
-    `SELECT id, content, metadata FROM memories
+    `SELECT id, content, meta FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
      AND user_id = ?
@@ -352,7 +352,7 @@ async function checkDuplicateWork(
 
   // Get recent actions
   const recentActions = await all_async(
-    `SELECT id, content, metadata, created_at FROM memories
+    `SELECT id, content, meta, created_at FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
      AND user_id = ?

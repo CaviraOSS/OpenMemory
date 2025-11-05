@@ -112,7 +112,7 @@ async function detectDecisionConflicts(
   const conflicts: PotentialConflict[] = [];
 
   const decisions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
@@ -167,7 +167,7 @@ async function detectPatternIncompatibilities(
   const conflicts: PotentialConflict[] = [];
 
   const patterns = await all_async(
-    `SELECT id, content, metadata, salience
+    `SELECT id, content, meta, salience
      FROM memories
      WHERE primary_sector = 'procedural'
      AND tags LIKE ?
@@ -253,8 +253,8 @@ async function detectArchitecturalMismatches(
 
   // Get all decisions and patterns
   const decisions = await all_async(
-    `SELECT id, content, metadata
-     FROM memories
+    `SELECT id, content, meta
+ FROM memories
      WHERE primary_sector = 'reflective'
      AND tags LIKE ?
      AND user_id = ?`,
@@ -262,8 +262,8 @@ async function detectArchitecturalMismatches(
   );
 
   const patterns = await all_async(
-    `SELECT id, content, metadata
-     FROM memories
+    `SELECT id, content, meta
+ FROM memories
      WHERE primary_sector = 'procedural'
      AND tags LIKE ?
      AND user_id = ?`,
@@ -317,7 +317,7 @@ async function detectResourceConflicts(
 
   // Get recent actions to check for resource conflicts
   const recentActions = await all_async(
-    `SELECT id, content, metadata, created_at
+    `SELECT id, content, meta, created_at
      FROM memories
      WHERE primary_sector = 'episodic'
      AND tags LIKE ?
