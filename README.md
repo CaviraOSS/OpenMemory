@@ -380,12 +380,72 @@ OpenMemory now includes a fully integrated **AI Agents Autonomous Development Sy
 
 ### What It Does
 
+The `.ai-agents` system provides a complete framework for autonomous AI development with persistent memory:
+
 - **Persistent State Management**: Project state stored in OpenMemory's semantic memory
 - **Development History**: All actions tracked in episodic memory
 - **Pattern Recognition**: Coding patterns stored in procedural memory
 - **Decision Tracking**: Architectural decisions recorded in reflective memory
 - **Cross-Session Continuity**: AI agents can resume work days or weeks later with full context
 - **Semantic Search**: Find relevant past decisions and patterns using natural language
+- **Session Mode Detection**: Automatically detects INITIALIZE (new project) vs RESUME (existing project) modes
+- **Memory Reinforcement**: Important memories are automatically strengthened through retrieval
+
+### How It Works with OpenMemory
+
+The AI Agents system leverages OpenMemory's **Hierarchical Memory Decomposition (HMD)** architecture by intelligently mapping development activities to cognitive memory sectors:
+
+| Agent Activity | Memory Sector | OpenMemory Storage | Purpose |
+|---------------|---------------|-------------------|---------|
+| **Project State** | Semantic | Facts & Knowledge | Current project configuration, tech stack, architecture |
+| **Agent Actions** | Episodic | Events & Experiences | Development history, what was done and when |
+| **Coding Patterns** | Procedural | How-to & Processes | Reusable patterns, best practices, techniques |
+| **Architectural Decisions** | Reflective | Meta-cognition | Why decisions were made, alternatives, consequences |
+
+**Integration Architecture:**
+
+```
+AI Agent → openmemory_client.py → REST API (/ai-agents/*) → OpenMemory HSG Engine
+                                                                    ↓
+                                      Semantic, Episodic, Procedural, Reflective Sectors
+                                                                    ↓
+                                              SQLite/PostgreSQL Storage
+```
+
+**Key Features:**
+
+1. **Cognitive Memory Organization**: Memories are automatically classified into the appropriate sector based on content type
+2. **Composite Retrieval Scoring**: Queries use 60% similarity + 20% salience + 10% recency + 10% waypoint strength
+3. **Natural Memory Decay**: Less important memories fade over time at sector-specific rates
+4. **Graph Associations**: Memories link to related memories for contextual retrieval
+5. **User Isolation**: Each AI agent or project has separate memory namespace via `user_id`
+
+### Why This Is Beneficial
+
+**For AI Agents:**
+- **No Context Loss**: Unlike traditional LLMs limited to conversation context, agents remember everything across unlimited sessions
+- **Learning from History**: Agents can query past solutions when facing similar problems
+- **Consistency**: Architectural decisions persist, ensuring consistent development approach
+- **Efficiency**: No need to re-explain project context or re-discover patterns
+
+**For Development Projects:**
+- **Long-Running Projects**: Perfect for complex projects that span weeks or months
+- **Multiple Sessions**: Stop and resume work without losing any context
+- **Knowledge Accumulation**: Project knowledge grows over time, becoming more valuable
+- **Explainable Decisions**: Every architectural choice has documented rationale
+
+**For Teams:**
+- **Shared Memory**: Multiple AI agents can share the same project memory
+- **Coordination**: Agents build on each other's work without duplication
+- **Knowledge Transfer**: New agents can learn from previous agent's patterns and decisions
+- **Auditability**: Complete history of what was done, when, and why
+
+**Technical Advantages:**
+- **95% Recall Accuracy**: OpenMemory's HMD architecture provides superior retrieval
+- **Fast Queries**: Average 115ms response time with 338 QPS throughput
+- **Scalable**: Handles 1M+ memories with linear performance
+- **Self-Hosted**: Complete control and privacy, no vendor lock-in
+- **Zero Lock-In**: Works with any AI agent framework (Claude, GPT, local models)
 
 ### Quick Start for AI Agents
 
@@ -477,28 +537,67 @@ The integration adds specialized endpoints for AI agents:
 - `GET /ai-agents/decisions/:project` - Get all decisions
 - `GET /ai-agents/context/:project` - Get comprehensive context
 
-### Benefits
+### Real-World Example: Multi-Session Development
 
-- **No Information Loss**: Everything is remembered across sessions
-- **Intelligent Recommendations**: AI agents learn from past patterns
-- **Multi-Session Projects**: Work can span days, weeks, or months
-- **Team Coordination**: Multiple agents share memory
-- **Explainable Development**: Every decision has a rationale
-- **Natural Decay**: Less important memories fade over time
+**Scenario**: Building a complex e-commerce platform with an AI agent
 
-### Example Use Case
+**Day 1 - Initial Development:**
+```python
+# Agent starts fresh
+mode = client.detect_mode()  # Returns "INITIALIZE"
 
-An AI agent working on a complex project can:
+# Records decisions
+client.record_decision(
+    decision="Use microservices architecture",
+    rationale="Better scalability and independent deployment",
+    alternatives="Monolithic (simpler but less flexible)"
+)
 
-1. Start development and record all actions
-2. Stop work after implementing 50% of features
-3. Return weeks later
-4. Load full context including all past decisions and patterns
-5. Continue exactly where it left off
-6. Query past solutions for similar problems
-7. Build on established patterns without redundant work
+# Stores patterns as discovered
+client.store_pattern(
+    pattern_name="Repository Pattern for Data Access",
+    description="Abstract data layer for easier testing"
+)
 
-For detailed documentation, see `.ai-agents/INTEGRATION_GUIDE.md`.
+# Records progress
+client.record_action(
+    agent_name="architect",
+    action="Implemented user authentication service",
+    outcome="Complete with JWT tokens and refresh mechanism"
+)
+```
+
+**Day 15 - Agent Returns After 2 Weeks:**
+```python
+# Agent resumes work
+mode = client.detect_mode()  # Returns "RESUME"
+context = client.get_full_context()
+
+# Instantly recalls:
+# - 23 architectural decisions made
+# - 15 coding patterns discovered
+# - 47 implementation actions completed
+# - Current project state and tech stack
+
+# Queries past work when facing similar problem
+memories = client.query_memories(
+    query="how did we handle authentication tokens?",
+    memory_type="all"
+)
+# Returns: JWT implementation from Day 1 with full context
+
+# Continues building payment service using established patterns
+# No redundant work, consistent with previous architecture
+```
+
+**Benefits Demonstrated:**
+- ✅ Zero context loss across 2-week gap
+- ✅ Instant access to all past decisions and patterns
+- ✅ Consistent architecture maintained automatically
+- ✅ Faster development by reusing established patterns
+- ✅ Complete audit trail of all development activities
+
+For detailed documentation and advanced usage, see **`.ai-agents/INTEGRATION_GUIDE.md`**.
 
 ---
 
