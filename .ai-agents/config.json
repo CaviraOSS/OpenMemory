@@ -1,0 +1,86 @@
+{
+  "_comment": "OpenMemory + AI Agents System Configuration",
+  "_description": "This configuration connects the AI Agents autonomous development system with OpenMemory's long-term memory capabilities",
+
+  "openmemory": {
+    "enabled": true,
+    "base_url": "http://localhost:8080",
+    "api_key": null,
+    "_comment_api_key": "Set this if your OpenMemory instance requires authentication",
+    "user_id": "ai-agent-system",
+    "timeout": 30,
+    "retry_attempts": 3,
+    "fallback_to_local": true,
+    "_comment_fallback": "If true, falls back to local file system if OpenMemory is unavailable"
+  },
+
+  "memory_sectors": {
+    "state": {
+      "sector": "semantic",
+      "description": "Project state and configuration stored as semantic knowledge",
+      "tags": ["project-state", "ai-agents"],
+      "auto_save": true,
+      "save_interval": 300
+    },
+    "actions": {
+      "sector": "episodic",
+      "description": "Agent actions and development history stored as episodic memories",
+      "tags": ["agent-action"],
+      "record_all_actions": true
+    },
+    "patterns": {
+      "sector": "procedural",
+      "description": "Coding patterns and best practices stored as procedural knowledge",
+      "tags": ["coding-pattern"],
+      "min_confidence": 0.8
+    },
+    "decisions": {
+      "sector": "reflective",
+      "description": "Architectural decisions and rationale stored as reflective insights",
+      "tags": ["architectural-decision"],
+      "require_rationale": true
+    }
+  },
+
+  "agent_config": {
+    "record_actions": true,
+    "record_decisions": true,
+    "store_patterns": true,
+    "query_context_on_resume": true,
+    "context_window_size": 20,
+    "_comment_context_window": "Number of recent actions to retrieve on resume"
+  },
+
+  "state_management": {
+    "primary_storage": "openmemory",
+    "_comment_primary": "Options: openmemory, local, hybrid",
+    "sync_to_local": true,
+    "_comment_sync": "Keep local project-state.json in sync with OpenMemory",
+    "auto_backup": true,
+    "backup_interval": 3600
+  },
+
+  "integration_features": {
+    "semantic_search": true,
+    "_comment_semantic": "Use OpenMemory's semantic search to find relevant past decisions and patterns",
+    "pattern_recognition": true,
+    "_comment_pattern": "Automatically identify and store recurring code patterns",
+    "context_aware_resume": true,
+    "_comment_context": "Load full context (history, patterns, decisions) when resuming",
+    "cross_session_memory": true,
+    "_comment_cross_session": "Maintain memory across multiple development sessions",
+    "decay_management": true,
+    "_comment_decay": "Let less important memories naturally decay over time"
+  },
+
+  "environment": {
+    "project_root": ".",
+    "ai_agents_dir": ".ai-agents",
+    "state_file": ".ai-agents/project-state.json",
+    "log_level": "info",
+    "_comment_log_level": "Options: debug, info, warn, error"
+  },
+
+  "version": "1.0.0",
+  "schema_version": "1.0"
+}
