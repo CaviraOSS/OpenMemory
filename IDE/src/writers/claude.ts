@@ -15,14 +15,15 @@ export interface ClaudeConfig {
     api_key?: string;
 }
 
-export function generateClaudeConfig(backendUrl: string, apiKey?: string, useMCP = false): ClaudeConfig {
+export function generateClaudeConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): ClaudeConfig {
     if (useMCP) {
+        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
         return {
             mcpServers: {
                 openmemory: {
                     command: 'node',
-                    args: [path.join(os.homedir(), '.mcp', 'memory.mcp.json')],
-                    env: apiKey ? { OPENMEMORY_API_KEY: apiKey } : undefined
+                    args: [backendMcpPath],
+                    env: apiKey ? { OM_API_KEY: apiKey } : undefined
                 }
             }
         };
@@ -36,7 +37,7 @@ export function generateClaudeConfig(backendUrl: string, apiKey?: string, useMCP
     return config;
 }
 
-export async function writeClaudeConfig(backendUrl: string, apiKey?: string, useMCP = false): Promise<string> {
+export async function writeClaudeConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): Promise<string> {
     const claudeDir = path.join(os.homedir(), '.claude', 'providers');
     const configFile = path.join(claudeDir, 'openmemory.json');
 
@@ -44,7 +45,7 @@ export async function writeClaudeConfig(backendUrl: string, apiKey?: string, use
         fs.mkdirSync(claudeDir, { recursive: true });
     }
 
-    const config = generateClaudeConfig(backendUrl, apiKey, useMCP);
+    const config = generateClaudeConfig(backendUrl, apiKey, useMCP, mcpServerPath);
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
     return configFile;

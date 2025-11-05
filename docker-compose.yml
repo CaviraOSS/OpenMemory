@@ -2,16 +2,67 @@ version: '3.8'
 
 services:
   openmemory:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - '8080:8080'
     environment:
+      # Core Configuration
       - OM_PORT=${OM_PORT:-8080}
       - OM_MODE=${OM_MODE:-standard}
-      - OM_METADATA_BACKEND=${OM_METADATA_BACKEND:-sqlite}
+      - OM_TIER=${OM_TIER:-hybrid}
       - OM_DB_PATH=${OM_DB_PATH:-/data/openmemory.sqlite}
+      - OM_API_KEY=${OM_API_KEY:-}
+      - OM_IDE_MODE=${OM_IDE_MODE:-false}
+      - OM_IDE_ALLOWED_ORIGINS=${OM_IDE_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+
+      # Rate Limiting
+      - OM_RATE_LIMIT_ENABLED=${OM_RATE_LIMIT_ENABLED:-false}
+      - OM_RATE_LIMIT_WINDOW_MS=${OM_RATE_LIMIT_WINDOW_MS:-60000}
+      - OM_RATE_LIMIT_MAX_REQUESTS=${OM_RATE_LIMIT_MAX_REQUESTS:-100}
+
+      # Compression
+      - OM_COMPRESSION_ENABLED=${OM_COMPRESSION_ENABLED:-false}
+      - OM_COMPRESSION_ALGORITHM=${OM_COMPRESSION_ALGORITHM:-auto}
+      - OM_COMPRESSION_MIN_LENGTH=${OM_COMPRESSION_MIN_LENGTH:-100}
+
+      # Embeddings Configuration
+      - OM_EMBEDDINGS=${OM_EMBEDDINGS:-synthetic}
+      - OM_EMBED_MODE=${OM_EMBED_MODE:-simple}
+      - OM_ADV_EMBED_PARALLEL=${OM_ADV_EMBED_PARALLEL:-false}
+      - OM_EMBED_DELAY_MS=${OM_EMBED_DELAY_MS:-200}
+      - OM_VEC_DIM=${OM_VEC_DIM:-256}
+
+      # OpenAI Provider
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OM_OPENAI_API_KEY=${OM_OPENAI_API_KEY:-}
+      - OM_OPENAI_BASE_URL=${OM_OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OM_OPENAI_MODEL=${OM_OPENAI_MODEL:-}
+
+      # Gemini Provider
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OM_GEMINI_API_KEY=${OM_GEMINI_API_KEY:-}
+
+      # Ollama Provider
+      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
+      - OM_OLLAMA_URL=${OM_OLLAMA_URL:-http://localhost:11434}
+
+      # Local Model
+      - LOCAL_MODEL_PATH=${LOCAL_MODEL_PATH:-}
+      - OM_LOCAL_MODEL_PATH=${OM_LOCAL_MODEL_PATH:-}
+
+      # Memory & Search
+      - OM_MIN_SCORE=${OM_MIN_SCORE:-0.3}
+      - OM_MAX_PAYLOAD_SIZE=${OM_MAX_PAYLOAD_SIZE:-1000000}
+
+      # LangGraph Configuration
+      - OM_LG_NAMESPACE=${OM_LG_NAMESPACE:-default}
+      - OM_LG_MAX_CONTEXT=${OM_LG_MAX_CONTEXT:-50}
+      - OM_LG_REFLECTIVE=${OM_LG_REFLECTIVE:-true}
+
+      # Metadata Backend (SQLite/PostgreSQL)
+      - OM_METADATA_BACKEND=${OM_METADATA_BACKEND:-sqlite}
       - OM_PG_HOST=${OM_PG_HOST:-}
       - OM_PG_PORT=${OM_PG_PORT:-5432}
       - OM_PG_DB=${OM_PG_DB:-}
@@ -20,22 +71,52 @@ services:
       - OM_PG_SCHEMA=${OM_PG_SCHEMA:-public}
       - OM_PG_TABLE=${OM_PG_TABLE:-openmemory_memories}
       - OM_PG_SSL=${OM_PG_SSL:-disable}
+
+      # Vector Backend (SQLite/Weaviate)
       - OM_VECTOR_BACKEND=${OM_VECTOR_BACKEND:-sqlite}
       - OM_VECTOR_TABLE=${OM_VECTOR_TABLE:-openmemory_vectors}
       - OM_WEAVIATE_URL=${OM_WEAVIATE_URL:-}
       - OM_WEAVIATE_API_KEY=${OM_WEAVIATE_API_KEY:-}
       - OM_WEAVIATE_CLASS=${OM_WEAVIATE_CLASS:-OpenMemory}
-      - OM_API_KEY=${OM_API_KEY:-}
-      - OM_EMBEDDINGS=${OM_EMBEDDINGS:-openai}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OM_VEC_DIM=${OM_VEC_DIM:-1536}
-      - OM_MIN_SCORE=${OM_MIN_SCORE:-0.3}
+
+      # Auto Reflection
+      - OM_AUTO_REFLECT=${OM_AUTO_REFLECT:-false}
+      - OM_REFLECT_INTERVAL=${OM_REFLECT_INTERVAL:-10}
+      - OM_REFLECT_MIN_MEMORIES=${OM_REFLECT_MIN_MEMORIES:-20}
+
+      # User Summaries
+      - OM_USER_SUMMARY_INTERVAL=${OM_USER_SUMMARY_INTERVAL:-30}
+      - OM_USE_SUMMARY_ONLY=${OM_USE_SUMMARY_ONLY:-true}
+      - OM_SUMMARY_MAX_LENGTH=${OM_SUMMARY_MAX_LENGTH:-200}
+
+      # HSG Configuration
+      - OM_SEG_SIZE=${OM_SEG_SIZE:-10000}
+      - OM_CACHE_SEGMENTS=${OM_CACHE_SEGMENTS:-3}
+      - OM_MAX_ACTIVE=${OM_MAX_ACTIVE:-64}
+
+      # Decay System
       - OM_DECAY_LAMBDA=${OM_DECAY_LAMBDA:-0.02}
+      - OM_DECAY_INTERVAL_MINUTES=${OM_DECAY_INTERVAL_MINUTES:-1440}
+      - OM_DECAY_RATIO=${OM_DECAY_RATIO:-0.03}
+      - OM_DECAY_SLEEP_MS=${OM_DECAY_SLEEP_MS:-200}
+      - OM_DECAY_THREADS=${OM_DECAY_THREADS:-3}
+      - OM_DECAY_COLD_THRESHOLD=${OM_DECAY_COLD_THRESHOLD:-0.25}
+      - OM_DECAY_REINFORCE_ON_QUERY=${OM_DECAY_REINFORCE_ON_QUERY:-true}
+
+      # Compression & Regeneration
+      - OM_REGENERATION_ENABLED=${OM_REGENERATION_ENABLED:-true}
+      - OM_MAX_VECTOR_DIM=${OM_MAX_VECTOR_DIM:-256}
+      - OM_MIN_VECTOR_DIM=${OM_MIN_VECTOR_DIM:-64}
+      - OM_SUMMARY_LAYERS=${OM_SUMMARY_LAYERS:-3}
+
+      # Keyword Extraction
+      - OM_KEYWORD_BOOST=${OM_KEYWORD_BOOST:-2.5}
+      - OM_KEYWORD_MIN_LENGTH=${OM_KEYWORD_MIN_LENGTH:-3}
     volumes:
       - openmemory_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/health']
       interval: 30s
       timeout: 10s
       retries: 3

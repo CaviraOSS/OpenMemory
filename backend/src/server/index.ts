@@ -6,10 +6,13 @@ import { routes } from './routes'
 import { authenticate_api_request, log_authenticated_request } from './middleware/auth'
 import { start_reflection } from '../memory/reflect'
 import { start_user_summary_reflection } from '../memory/user_summary'
+import { req_tracker_mw } from './routes/dashboard'
 
 const app = server({ max_payload_size: env.max_payload_size })
 
 console.log(`[OpenMemory] Dim: ${env.vec_dim} | Cache: ${env.cache_segments} segments | Max Active: ${env.max_active}`)
+
+app.use(req_tracker_mw())
 
 app.use((req: any, res: any, next: any) => {
     res.setHeader('Access-Control-Allow-Origin', '*')

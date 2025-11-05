@@ -1,25 +1,22 @@
 import path from 'path'
 import dotenv from 'dotenv'
-import os from 'node:os'
 
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 const num = (v: string | undefined, d: number) => Number(v) || d
 const str = (v: string | undefined, d: string) => v || d
 const bool = (v: string | undefined) => v === 'true'
-type tier = 'fast' | 'smart' | 'deep'
-const detect_tier = (): tier => {
+type tier = 'fast' | 'smart' | 'deep' | 'hybrid'
+
+const get_tier = (): tier => {
     const man = process.env.OM_TIER as tier
-    if (man && ['fast', 'smart', 'deep'].includes(man)) return man
-    const cores = os.cpus().length
-    const ram_gb = os.totalmem() / (1024 ** 3)
-    if (cores >= 8 && ram_gb >= 16) return 'deep'
-    if (cores >= 4 && ram_gb >= 8) return 'smart'
-    return 'fast'
+    if (man && ['fast', 'smart', 'deep', 'hybrid'].includes(man)) return man
+    console.warn('[OpenMemory] OM_TIER not set! Please set OM_TIER=hybrid|fast|smart|deep in .env')
+    return 'hybrid'
 }
-export const tier = detect_tier()
-const tier_dims = { fast: 256, smart: 384, deep: 1536 }
-const tier_cache = { fast: 2, smart: 3, deep: 5 }
-const tier_max_active = { fast: 32, smart: 64, deep: 128 }
+export const tier = get_tier()
+const tier_dims = { fast: 256, smart: 384, deep: 1536, hybrid: 256 }
+const tier_cache = { fast: 2, smart: 3, deep: 5, hybrid: 3 }
+const tier_max_active = { fast: 32, smart: 64, deep: 128, hybrid: 64 }
 
 export const env = {
     port: num(process.env.OM_PORT, 8080),
@@ -64,5 +61,14 @@ export const env = {
     cache_segments: num(process.env.OM_CACHE_SEGMENTS, tier_cache[tier]),
     max_active: num(process.env.OM_MAX_ACTIVE, tier_max_active[tier]),
     decay_ratio: num(process.env.OM_DECAY_RATIO, 0.03),
-    decay_sleep_ms: num(process.env.OM_DECAY_SLEEP_MS, 200)
+    decay_sleep_ms: num(process.env.OM_DECAY_SLEEP_MS, 200),
+    decay_threads: num(process.env.OM_DECAY_THREADS, 3),
+    decay_cold_threshold: num(process.env.OM_DECAY_COLD_THRESHOLD, 0.25),
+    decay_reinforce_on_query: (process.env.OM_DECAY_REINFORCE_ON_QUERY ?? 'true') !== 'false',
+    regeneration_enabled: (process.env.OM_REGENERATION_ENABLED ?? 'true') !== 'false',
+    max_vector_dim: num(process.env.OM_MAX_VECTOR_DIM, tier_dims[tier]),
+    min_vector_dim: num(process.env.OM_MIN_VECTOR_DIM, 64),
+    summary_layers: num(process.env.OM_SUMMARY_LAYERS, 3),
+    keyword_boost: num(process.env.OM_KEYWORD_BOOST, 2.5),
+    keyword_min_length: num(process.env.OM_KEYWORD_MIN_LENGTH, 3)
 }

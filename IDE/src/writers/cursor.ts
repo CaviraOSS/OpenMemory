@@ -15,14 +15,15 @@ export interface CursorConfig {
     };
 }
 
-export function generateCursorConfig(backendUrl: string, apiKey?: string, useMCP = false): CursorConfig {
+export function generateCursorConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): CursorConfig {
     if (useMCP) {
+        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
         return {
             name: 'OpenMemory',
             type: 'mcp',
             mcp: {
-                server: path.join(os.homedir(), '.mcp', 'memory.mcp.json'),
-                tools: ['queryMemory', 'searchMemory', 'getPatterns', 'storeMemory']
+                server: backendMcpPath,
+                tools: ['openmemory_query', 'openmemory_store', 'openmemory_list', 'openmemory_get', 'openmemory_reinforce']
             }
         };
     }
@@ -44,7 +45,7 @@ export function generateCursorConfig(backendUrl: string, apiKey?: string, useMCP
     };
 }
 
-export async function writeCursorConfig(backendUrl: string, apiKey?: string, useMCP = false): Promise<string> {
+export async function writeCursorConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): Promise<string> {
     const cursorDir = path.join(os.homedir(), '.cursor', 'context_providers');
     const configFile = path.join(cursorDir, 'openmemory.json');
 
@@ -52,7 +53,7 @@ export async function writeCursorConfig(backendUrl: string, apiKey?: string, use
         fs.mkdirSync(cursorDir, { recursive: true });
     }
 
-    const config = generateCursorConfig(backendUrl, apiKey, useMCP);
+    const config = generateCursorConfig(backendUrl, apiKey, useMCP, mcpServerPath);
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
     return configFile;

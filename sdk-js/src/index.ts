@@ -20,6 +20,7 @@ export interface AddMemoryRequest {
     content: string
     tags?: string[]
     metadata?: Record<string, unknown>
+    user_id?: string
 }
 export interface AddMemoryResponse {
     id: string
@@ -35,6 +36,7 @@ export interface QueryRequest {
         sector?: SectorType
         sectors?: SectorType[]
         min_salience?: number
+        user_id?: string
     }
 }
 export type SectorType = 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'
@@ -186,6 +188,32 @@ export class OpenMemory {
     async getBySector(sector: SectorType, limit = 100, offset = 0): Promise<{ items: Memory[] }> {
         return this.getAll({ sector, limit, offset })
     }
+    async getUserMemories(userId: string, options: {
+        limit?: number
+        offset?: number
+    } = {}): Promise<{ user_id: string, items: Memory[] }> {
+        const params = new URLSearchParams()
+        if (options.limit) params.set('l', options.limit.toString())
+        if (options.offset) params.set('u', options.offset.toString())
+        const query = params.toString() ? `?${params}` : ''
+        return this.request('GET', `/users/${userId}/memories${query}`)
+    }
+    async getUserSummary(userId: string): Promise<{
+        user_id: string
+        summary: string
+        reflection_count: number
+        updated_at: number
+    }> {
+        return this.request('GET', `/users/${userId}/summary`)
+    }
+    async regenerateUserSummary(userId: string): Promise<{
+        ok: boolean
+        user_id: string
+        summary: string
+        reflection_count: number
+    }> {
+        return this.request('POST', `/users/${userId}/summary/regenerate`)
+    }
     async delete(id: string): Promise<{ ok: boolean }> {
         return this.request('DELETE', `/memory/${id}`)
     }
@@ -198,6 +226,148 @@ export class OpenMemory {
     }
     async getStats(): Promise<SectorsResponse> {
         return this.getSectors()
+    }
+    // IDE Routes
+    async ideStoreEvent(event: {
+        event_type: string
+        file_path?: string
+        content?: string
+        session_id?: string
+        metadata?: Record<string, unknown>
+    }): Promise<{
+        success: boolean
+        memory_id: string
+        primary_sector: SectorType
+        sectors: SectorType[]
+    }> {
+        return this.request('POST', '/api/ide/events', event)
+    }
+    async ideQueryContext(query: string, options: {
+        k?: number
+        limit?: number
+        session_id?: string
+        file_path?: string
+    } = {}): Promise<{
+        success: boolean
+        memories: Array<{
+            memory_id: string
+            content: string
+            primary_sector: SectorType
+            sectors: SectorType[]
+            score: number
+            salience: number
+            last_seen_at: number
+            path: string[]
+        }>
+        total: number
+        query: string
+    }> {
+        return this.request('POST', '/api/ide/context', { query, ...options })
+    }
+    async ideStartSession(session: {
+        user_id?: string
+        project_name?: string
+        ide_name?: string
+    } = {}): Promise<{
+        success: boolean
+        session_id: string
+        memory_id: string
+        started_at: number
+        user_id: string
+        project_name: string
+        ide_name: string
+    }> {
+        return this.request('POST', '/api/ide/session/start', session)
+    }
+    async ideEndSession(sessionId: string): Promise<{
+        success: boolean
+        session_id: string
+        ended_at: number
+        summary_memory_id: string
+        statistics: {
+            total_events: number
+            sectors: Record<string, number>
+            unique_files: number
+            files: string[]
+        }
+    }> {
+        return this.request('POST', '/api/ide/session/end', { session_id: sessionId })
+    }
+    async ideGetPatterns(sessionId: string): Promise<{
+        success: boolean
+        session_id: string
+        pattern_count: number
+        patterns: Array<{
+            pattern_id: string
+            description: string
+            salience: number
+            detected_at: number
+            last_reinforced: number
+        }>
+    }> {
+        return this.request('GET', `/api/ide/patterns/${sessionId}`)
+    }
+    // Compression Routes
+    async compress(text: string, algorithm?: 'semantic' | 'syntactic' | 'aggressive'): Promise<{
+        ok: boolean
+        comp: string
+        m: Record<string, unknown>
+        hash: string
+    }> {
+        return this.request('POST', '/api/compression/compress', { text, algorithm })
+    }
+    async compressBatch(texts: string[], algorithm: 'semantic' | 'syntactic' | 'aggressive' = 'semantic'): Promise<{
+        ok: boolean
+        results: Array<{ comp: string; m: Record<string, unknown>; hash: string }>
+        total: number
+    }> {
+        return this.request('POST', '/api/compression/batch', { texts, algorithm })
+    }
+    async analyzeCompression(text: string): Promise<{
+        ok: boolean
+        analysis: Record<string, unknown>
+        rec: { algo: string; save: string; lat: string }
+    }> {
+        return this.request('POST', '/api/compression/analyze', { text })
+    }
+    async getCompressionStats(): Promise<{
+        ok: boolean
+        stats: Record<string, unknown>
+    }> {
+        return this.request('GET', '/api/compression/stats')
+    }
+    // LangGraph Memory Routes
+    async lgmStore(data: {
+        node_id: string
+        namespace?: string
+        content: string
+        metadata?: Record<string, unknown>
+    }): Promise<Record<string, unknown>> {
+        return this.request('POST', '/lgm/store', data)
+    }
+    async lgmRetrieve(data: {
+        node_id: string
+        namespace?: string
+        query: string
+        k?: number
+    }): Promise<Record<string, unknown>> {
+        return this.request('POST', '/lgm/retrieve', data)
+    }
+    async lgmGetContext(data: {
+        node_id: string
+        namespace?: string
+    }): Promise<Record<string, unknown>> {
+        return this.request('POST', '/lgm/context', data)
+    }
+    async lgmCreateReflection(data: {
+        node_id: string
+        namespace?: string
+        content: string
+    }): Promise<Record<string, unknown>> {
+        return this.request('POST', '/lgm/reflection', data)
+    }
+    async lgmGetConfig(): Promise<Record<string, unknown>> {
+        return this.request('GET', '/lgm/config')
     }
 }
 export default OpenMemory

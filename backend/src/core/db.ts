@@ -50,6 +50,7 @@ let get_async: (sql: string, p?: any[]) => Promise<any>
 let all_async: (sql: string, p?: any[]) => Promise<any[]>
 let transaction: { begin: () => Promise<void>; commit: () => Promise<void>; rollback: () => Promise<void> }
 let q: q_type
+let memories_table: string
 
 const is_pg = env.metadata_backend === 'postgres'
 
@@ -68,6 +69,7 @@ if (is_pg) {
     let cli: PoolClient | null = null
     const sc = process.env.OM_PG_SCHEMA || 'public'
     const m = `"${sc}"."${process.env.OM_PG_TABLE || 'openmemory_memories'}"`
+    memories_table = m
     const v = `"${sc}"."${process.env.OM_VECTOR_TABLE || 'openmemory_vectors'}"`
     const w = `"${sc}"."openmemory_waypoints"`
     const l = `"${sc}"."openmemory_embed_logs"`
@@ -206,6 +208,7 @@ if (is_pg) {
         db.run(`create table if not exists waypoints(src_id text primary key,dst_id text not null,weight real not null,created_at integer,updated_at integer)`)
         db.run(`create table if not exists embed_logs(id text primary key,model text,status text,ts integer,err text)`)
         db.run(`create table if not exists users(user_id text primary key,summary text,reflection_count integer default 0,created_at integer,updated_at integer)`)
+        db.run(`create table if not exists stats(id integer primary key autoincrement,type text not null,count integer default 1,ts integer not null)`)
         db.run('create index if not exists idx_memories_sector on memories(primary_sector)')
         db.run('create index if not exists idx_memories_segment on memories(segment)')
         db.run('create index if not exists idx_memories_simhash on memories(simhash)')
@@ -213,7 +216,10 @@ if (is_pg) {
         db.run('create index if not exists idx_memories_user on memories(user_id)')
         db.run('create index if not exists idx_waypoints_src on waypoints(src_id)')
         db.run('create index if not exists idx_waypoints_dst on waypoints(dst_id)')
+        db.run('create index if not exists idx_stats_ts on stats(ts)')
+        db.run('create index if not exists idx_stats_type on stats(type)')
     })
+    memories_table = 'memories'
     const exec = (sql: string, p: any[] = []) => new Promise<void>((ok, no) => db.run(sql, p, err => err ? no(err) : ok()))
     const one = (sql: string, p: any[] = []) => new Promise<any>((ok, no) => db.get(sql, p, (err, row) => err ? no(err) : ok(row)))
     const many = (sql: string, p: any[] = []) => new Promise<any[]>((ok, no) => db.all(sql, p, (err, rows) => err ? no(err) : ok(rows)))
@@ -273,4 +279,13 @@ if (is_pg) {
     }
 }
 
-export { q, transaction, all_async, get_async, run_async }
+export const log_maint_op = async (type: 'decay' | 'reflect' | 'consolidate', cnt = 1) => {
+    try {
+        await run_async('insert into stats(type,count,ts) values(?,?,?)', [type, cnt, Date.now()])
+    } catch (e) {
+        console.error('[maint] log err:', e)
+    }
+}
+
+
+export { q, transaction, all_async, get_async, run_async, memories_table }

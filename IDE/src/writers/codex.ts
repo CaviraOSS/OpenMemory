@@ -21,19 +21,19 @@ export interface CodexConfig {
     };
 }
 
-export function generateCodexConfig(backendUrl: string, apiKey?: string, useMCP = false): CodexConfig {
+export function generateCodexConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): CodexConfig {
     if (useMCP) {
-        const mcpConfigPath = path.join(os.homedir(), '.mcp', 'memory.mcp.json');
+        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
         const config: CodexConfig = {
             mcpServers: {
                 openmemory: {
                     command: 'node',
-                    args: [mcpConfigPath]
+                    args: [backendMcpPath]
                 }
             }
         };
         if (apiKey) {
-            config.mcpServers!.openmemory.env = { OPENMEMORY_API_KEY: apiKey };
+            config.mcpServers!.openmemory.env = { OM_API_KEY: apiKey };
         }
         return config;
     }
@@ -54,7 +54,7 @@ export function generateCodexConfig(backendUrl: string, apiKey?: string, useMCP 
     };
 }
 
-export async function writeCodexConfig(backendUrl: string, apiKey?: string, useMCP = false): Promise<string> {
+export async function writeCodexConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): Promise<string> {
     const codexDir = path.join(os.homedir(), '.codex');
     const configFile = path.join(codexDir, 'context.json');
 
@@ -62,7 +62,7 @@ export async function writeCodexConfig(backendUrl: string, apiKey?: string, useM
         fs.mkdirSync(codexDir, { recursive: true });
     }
 
-    const config = generateCodexConfig(backendUrl, apiKey, useMCP);
+    const config = generateCodexConfig(backendUrl, apiKey, useMCP, mcpServerPath);
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
     return configFile;

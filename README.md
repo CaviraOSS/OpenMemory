@@ -59,7 +59,7 @@ This approach improves recall accuracy while reducing costs.
 | ---------------------------------------- | ----------------------------------------------------------- | ---------------------------------- | ------------------------------- | ----------------------------- | -------------------------- | --------------------------- | --------------------------------------------- |
 | **Open-source License**                  | ✅ MIT (verified)                                           | ✅ Apache 2.0                      | ✅ Source available (GPL-like)  | ✅ Apache 2.0                 | ❌ Closed                  | ✅ Apache 2.0               | ✅ Varies (OSS + Cloud)                       |
 | **Self-hosted / Local**                  | ✅ Full (Local / Docker / MCP) tested ✓                     | ✅ Local + Cloud SDK               | ⚠️ Mostly managed cloud tier    | ✅ Self-hosted ✓              | ❌ No                      | ✅ Yes (in your stack)      | ✅ Chroma / Weaviate ❌ Pinecone (cloud)      |
-| **Per-user namespacing (`user_id`)**     | ✅ Built-in (`user_id` linking added)             | ✅ Sessions / Users API            | ⚠️ Multi-tenant via API key     | ✅ Explicit `user_id` field ✓ | ❌ Internal only           | ✅ Namespaces via LangGraph | ✅ Collection-per-user schema                 |
+| **Per-user namespacing (`user_id`)**     | ✅ Built-in (`user_id` linking added)                       | ✅ Sessions / Users API            | ⚠️ Multi-tenant via API key     | ✅ Explicit `user_id` field ✓ | ❌ Internal only           | ✅ Namespaces via LangGraph | ✅ Collection-per-user schema                 |
 | **Architecture**                         | HSG v3 (Hierarchical Semantic Graph + Decay + Coactivation) | Flat embeddings + Postgres + FAISS | Graph + Embeddings              | Flat vector store             | Proprietary cache          | Context memory utils        | Vector index (ANN)                            |
 | **Avg Response Time (100k nodes)**       | **115 ms avg (measured)**                                   | 310 ms (docs)                      | 200–340 ms (on-prem/cloud)      | ~250 ms                       | 300 ms (observed)          | 200 ms (avg)                | 160 ms (avg)                                  |
 | **Throughput (QPS)**                     | **338 QPS avg (8 workers, P95 103 ms)** ✓                   | ~180 QPS (reported)                | ~220 QPS (on-prem)              | ~150 QPS                      | ~180 QPS                   | ~140 QPS                    | ~250 QPS typical                              |
@@ -133,6 +133,49 @@ docker compose up --build -d
 
 This starts OpenMemory on port 8080. Data persists in `/data/openmemory.sqlite`.
 
+### Dashboard Setup
+
+The dashboard provides a web interface to visualize and manage your memories.
+
+Requirements:
+
+- Node.js 20 or higher
+- Running OpenMemory backend (on port 8080)
+
+```bash
+cd dashboard
+npm install
+npm run dev
+```
+
+The dashboard runs on `http://localhost:3000`.
+
+**Configuration (.env.local):**
+
+```bash
+# OpenMemory backend URL
+NEXT_PUBLIC_API_URL=http://localhost:8080
+
+# Optional: API key if backend has OM_API_KEY configured
+NEXT_PUBLIC_API_KEY=your_api_key_here
+```
+
+**Features:**
+
+- View memory statistics and distribution across sectors
+- Browse and search memories by sector
+- Visualize memory decay over time
+- View waypoint connections and memory graphs
+- Monitor system health and performance
+- Manage user memories and summaries
+
+**Production Build:**
+
+```bash
+npm run build
+npm start
+```
+
 ---
 
 ## 4. Architecture
@@ -205,10 +248,20 @@ Provides `/lgm/*` endpoints for graph-based memory operations.
 
 OpenMemory includes a Model Context Protocol server at `POST /mcp`.
 
+**⚠️ Breaking Change in v2.1.0**: MCP tool names now use underscores instead of dots for compatibility with Windsurf IDE and strict MCP clients:
+
+- `openmemory.query` → `openmemory_query`
+- `openmemory.store` → `openmemory_store`
+- `openmemory.reinforce` → `openmemory_reinforce`
+- `openmemory.list` → `openmemory_list`
+- `openmemory.get` → `openmemory_get`
+
+See [MCP_MIGRATION.md](./MCP_MIGRATION.md) for migration guide.
+
 For stdio mode (Claude Desktop):
 
 ```bash
-node backend/dist/mcp/index.js
+node backend/dist/ai/mcp.js
 ```
 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
@@ -311,13 +364,13 @@ Tested with LongMemEval benchmark:
 
 ## 8. Roadmap
 
-| Version | Focus                     | Status         |
-| ------- | ------------------------- | -------------- |
-| v1.0    | Core memory backend       | ✅ Complete    |
-| v1.1    | Pluggable vector backends | ✅ Complete    |
-| v1.2    | Dashboard and metrics     | ⏳ In progress |
-| v1.3    | Learned sector classifier | 🔜 Planned     |
-| v1.4    | Federated multi-node      | 🔜 Planned     |
+| Version | Focus                     | Status      |
+| ------- | ------------------------- | ----------- |
+| v1.0    | Core memory backend       | ✅ Complete |
+| v1.1    | Pluggable vector backends | ✅ Complete |
+| v1.2    | Dashboard and metrics     | ✅ Complete |
+| v1.3    | Learned sector classifier | 🔜 Planned  |
+| v1.4    | Federated multi-node      | 🔜 Planned  |
 
 ---
 

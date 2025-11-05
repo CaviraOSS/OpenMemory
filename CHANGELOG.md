@@ -1,8 +1,18 @@
 # Changelog
 
-## [Unreleased]
+## 1.2
 
 ### Added
+
+- **HYBRID Tier Performance Mode**
+
+  - New tier achieving 100% keyword match accuracy with synthetic embeddings
+  - BM25 scoring algorithm for relevance ranking
+  - Exact phrase matching with case-insensitive search
+  - N-gram keyword extraction (unigrams, bigrams, trigrams)
+  - Performance: 800-1000 QPS, 0.5GB RAM per 10k memories
+  - Configurable via `OM_TIER=hybrid`, `OM_KEYWORD_BOOST`, `OM_KEYWORD_MIN_LENGTH`
+  - Best for: Documentation search, code search, technical references
 
 - **Memory Compression Engine**: Auto-compresses chat/memory content to reduce tokens and latency
 
@@ -47,6 +57,23 @@
 - Active voice, casual naming convention throughout compression engine
 - Streamlined memory routes with integrated compression
 - Ultra-compact compression implementation (<100 lines core logic)
+
+### Fixed
+
+- **MCP Tool Names (Breaking Change)**: Changed from dot notation to underscores for Windsurf IDE compatibility
+
+  - `openmemory.query` → `openmemory_query`
+  - `openmemory.store` → `openmemory_store`
+  - `openmemory.reinforce` → `openmemory_reinforce`
+  - `openmemory.list` → `openmemory_list`
+  - `openmemory.get` → `openmemory_get`
+  - Complies with MCP naming rule: `^[a-zA-Z0-9_-]{1,64}$`
+
+- **PostgreSQL Custom Table Name**: Fixed hardcoded `memories` table in `openmemory://config` resource
+  - Now correctly uses `OM_PG_TABLE` environment variable
+  - Exports `memories_table` from database module with fully-qualified name
+  - Fixes "relation 'memories' does not exist" error with custom table names
+  - Works for both PostgreSQL (with schema) and SQLite
 
 ### Fixed
 

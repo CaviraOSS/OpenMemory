@@ -11,12 +11,13 @@ export interface WindsurfConfig {
     };
 }
 
-export function generateWindsurfConfig(backendUrl: string, apiKey?: string, useMCP = false): WindsurfConfig {
+export function generateWindsurfConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): WindsurfConfig {
     if (useMCP) {
+        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
         return {
             contextProvider: 'openmemory-mcp',
             mcp: {
-                configPath: path.join(os.homedir(), '.mcp', 'memory.mcp.json')
+                configPath: backendMcpPath
             }
         };
     }
@@ -29,7 +30,7 @@ export function generateWindsurfConfig(backendUrl: string, apiKey?: string, useM
     return config;
 }
 
-export async function writeWindsurfConfig(backendUrl: string, apiKey?: string, useMCP = false): Promise<string> {
+export async function writeWindsurfConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): Promise<string> {
     const windsurfDir = path.join(os.homedir(), '.windsurf', 'context');
     const configFile = path.join(windsurfDir, 'openmemory.json');
 
@@ -37,7 +38,7 @@ export async function writeWindsurfConfig(backendUrl: string, apiKey?: string, u
         fs.mkdirSync(windsurfDir, { recursive: true });
     }
 
-    const config = generateWindsurfConfig(backendUrl, apiKey, useMCP);
+    const config = generateWindsurfConfig(backendUrl, apiKey, useMCP, mcpServerPath);
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
     return configFile;

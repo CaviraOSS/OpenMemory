@@ -1,4 +1,4 @@
-import { q } from '../core/db'
+import { q, log_maint_op } from '../core/db'
 import { add_hsg_memory } from './hsg'
 import { env } from '../core/cfg'
 import { j } from '../utils'
@@ -98,6 +98,7 @@ export const run_reflection = async () => {
         await boost(src)
         n++
     }
+    if (n > 0) await log_maint_op('reflect', n)
     console.log(`[reflect] job complete: created ${n} reflections`)
     return { created: n, clusters: cls.length }
 }

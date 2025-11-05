@@ -123,11 +123,11 @@ async function auto_link_all() {
             const mcpPath = await writeMCPConfig(backend_url, api_key);
             configs.push(mcpPath);
         }
-        configs.push(await writeCursorConfig(backend_url, api_key, use_mcp));
-        configs.push(await writeClaudeConfig(backend_url, api_key, use_mcp));
-        configs.push(await writeWindsurfConfig(backend_url, api_key, use_mcp));
-        configs.push(await writeCopilotConfig(backend_url, api_key, use_mcp));
-        configs.push(await writeCodexConfig(backend_url, api_key, use_mcp));
+        configs.push(await writeCursorConfig(backend_url, api_key, use_mcp, mcp_server_path));
+        configs.push(await writeClaudeConfig(backend_url, api_key, use_mcp, mcp_server_path));
+        configs.push(await writeWindsurfConfig(backend_url, api_key, use_mcp, mcp_server_path));
+        configs.push(await writeCopilotConfig(backend_url, api_key, use_mcp, mcp_server_path));
+        configs.push(await writeCodexConfig(backend_url, api_key, use_mcp, mcp_server_path));
 
         const mode = use_mcp ? 'MCP protocol' : 'Direct HTTP';
         vscode.window.showInformationMessage(`✅ Auto-linked OpenMemory to AI tools (${mode})`);

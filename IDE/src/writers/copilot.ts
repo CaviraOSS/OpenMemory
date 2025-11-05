@@ -17,19 +17,19 @@ export interface CopilotConfig {
     };
 }
 
-export function generateCopilotConfig(backendUrl: string, apiKey?: string, useMCP = false): CopilotConfig {
+export function generateCopilotConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): CopilotConfig {
     if (useMCP) {
-        const mcpConfigPath = path.join(os.homedir(), '.mcp', 'memory.mcp.json');
+        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
         const config: CopilotConfig = {
             name: 'OpenMemory',
             type: 'mcp',
             mcpServer: {
                 command: 'node',
-                args: [mcpConfigPath]
+                args: [backendMcpPath]
             }
         };
         if (apiKey) {
-            config.mcpServer!.env = { OPENMEMORY_API_KEY: apiKey };
+            config.mcpServer!.env = { OM_API_KEY: apiKey };
         }
         return config;
     }
@@ -50,7 +50,7 @@ export function generateCopilotConfig(backendUrl: string, apiKey?: string, useMC
     return config;
 }
 
-export async function writeCopilotConfig(backendUrl: string, apiKey?: string, useMCP = false): Promise<string> {
+export async function writeCopilotConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): Promise<string> {
     const copilotDir = path.join(os.homedir(), '.github', 'copilot');
     const configFile = path.join(copilotDir, 'openmemory.json');
 
@@ -58,7 +58,7 @@ export async function writeCopilotConfig(backendUrl: string, apiKey?: string, us
         fs.mkdirSync(copilotDir, { recursive: true });
     }
 
-    const config = generateCopilotConfig(backendUrl, apiKey, useMCP);
+    const config = generateCopilotConfig(backendUrl, apiKey, useMCP, mcpServerPath);
     fs.writeFileSync(configFile, JSON.stringify(config, null, 2));
 
     return configFile;

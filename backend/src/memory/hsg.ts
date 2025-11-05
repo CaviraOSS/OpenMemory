@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { canonical_token_set } from '../utils/text'
-import { inc_q, dec_q } from './decay'
+import { inc_q, dec_q, on_query_hit } from './decay'
 import { env, tier } from '../core/cfg'
 import { cos_sim, buf_to_vec, vec_to_buf } from '../utils/index'
 export interface sector_cfg {
@@ -290,16 +290,18 @@ export function compute_hybrid_score(
     sim: number,
     tok_ov: number,
     wp_wt: number,
-    rec_sc: number
+    rec_sc: number,
+    keyword_score: number = 0
 ): number {
     const s_p = boosted_sim(sim)
     const raw = scoring_weights.similarity * s_p +
         scoring_weights.overlap * tok_ov +
         scoring_weights.waypoint * wp_wt +
-        scoring_weights.recency * rec_sc
+        scoring_weights.recency * rec_sc +
+        keyword_score
     return sigmoid(raw)
 }
-import { q, transaction } from '../core/db'
+import { q, get_async, all_async, run_async, transaction, log_maint_op } from '../core/db'
 export async function create_cross_sector_waypoints(
     prim_id: string,
     prim_sec: string,
@@ -441,6 +443,7 @@ export async function prune_weak_waypoints(): Promise<number> {
 import { embedForSector, embedMultiSector, cosineSimilarity, bufferToVector, vectorToBuffer, EmbeddingResult } from './embed'
 import { chunk_text } from '../utils/chunking'
 import { j } from '../utils'
+import { keyword_filter_memories, extract_keywords } from '../utils/keyword'
 import {
     calculateCrossSectorResonanceScore,
     applyRetrievalTraceReinforcementToMemory,
@@ -576,6 +579,19 @@ export async function hsg_query(qt: string, k = 10, f?: { sectors?: string[], mi
         for (const r of Object.values(sr)) for (const x of r) ids.add(x.id)
         const exp = high_conf ? [] : await expand_via_waypoints(Array.from(ids), k * 2)
         for (const e of exp) ids.add(e.id)
+
+        let keyword_scores = new Map<string, number>()
+        if (tier === 'hybrid') {
+            const all_mems = await Promise.all(
+                Array.from(ids).map(async (id) => {
+                    const m = await q.get_mem.get(id)
+                    return m ? { id, content: m.content } : null
+                })
+            )
+            const valid_mems = all_mems.filter(m => m !== null) as Array<{ id: string; content: string }>
+            keyword_scores = await keyword_filter_memories(qt, valid_mems, 0.05)
+        }
+
         const res: hsg_q_result[] = []
         for (const mid of Array.from(ids)) {
             const m = await q.get_mem.get(mid)
@@ -595,7 +611,9 @@ export async function hsg_query(qt: string, k = 10, f?: { sectors?: string[], mi
             const mtk = canonical_token_set(m.content)
             const tok_ov = compute_token_overlap(qtk, mtk)
             const rec_sc = calc_recency_score(m.last_seen_at)
-            const fs = compute_hybrid_score(bs, tok_ov, ww, rec_sc)
+
+            const keyword_boost = tier === 'hybrid' ? (keyword_scores.get(mid) || 0) * env.keyword_boost : 0
+            const fs = compute_hybrid_score(bs, tok_ov, ww, rec_sc, keyword_boost)
             const msec = await q.get_vecs_by_id.all(mid)
             const sl = msec.map(v => v.sector)
             res.push({ id: mid, content: m.content, score: fs, sectors: sl, primary_sector: m.primary_sector, path: em?.path || [mid], salience: sal, last_seen_at: m.last_seen_at })
@@ -648,6 +666,11 @@ export async function hsg_query(qt: string, k = 10, f?: { sectors?: string[], mi
                 }
             }
         }
+
+        for (const r of top) {
+            on_query_hit(r.id, r.primary_sector, (text) => embedForSector(text, r.primary_sector)).catch(() => { })
+        }
+
         cache.set(h, { r: top, t: Date.now() })
         return top
     } finally {
@@ -664,6 +687,7 @@ export async function run_decay_process(): Promise<{ processed: number, decayed:
         if (ns !== m.salience) { await q.upd_seen.run(m.id, m.last_seen_at, ns, Date.now()); d++ }
         p++
     }
+    if (d > 0) await log_maint_op('decay', d)
     return { processed: p, decayed: d }
 }
 export async function add_hsg_memory(
@@ -758,6 +782,7 @@ export async function reinforce_memory(id: string, boost: number = 0.1): Promise
     if (!mem) throw new Error(`Memory ${id} not found`)
     const new_sal = Math.min(reinforcement.max_salience, mem.salience + boost)
     await q.upd_seen.run(Date.now(), new_sal, Date.now(), id)
+    if (new_sal > 0.8) await log_maint_op('consolidate', 1)
 }
 export async function update_memory(
     id: string,

@@ -27,7 +27,8 @@ Backend server required.
 
 - `openmemory.backendUrl`: Backend URL (default: `http://localhost:8080`)
 - `openmemory.apiKey`: API key for auth (optional)
-- `openmemory.useMCP`: Use MCP protocol mode (default: `false`)
+- `openmemory.useMCP`: Use MCP protocol mode (default: `false`) - connects to backend MCP server with tools: `openmemory_query`, `openmemory_store`, `openmemory_list`, `openmemory_get`, `openmemory_reinforce`
+- `openmemory.mcpServerPath`: Path to backend MCP server (default: `backend/dist/ai/mcp.js`)
 
 ## Commands
 

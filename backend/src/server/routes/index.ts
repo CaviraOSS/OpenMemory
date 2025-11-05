@@ -5,6 +5,7 @@ import { ide } from './ide'
 import { compression } from './compression'
 import { lg } from './langgraph'
 import { usr } from './users'
+import { dash } from './dashboard'
 
 export function routes(app: any) {
     sys(app)
@@ -14,4 +15,5 @@ export function routes(app: any) {
     compression(app)
     lg(app)
     usr(app)
+    dash(app)
 }

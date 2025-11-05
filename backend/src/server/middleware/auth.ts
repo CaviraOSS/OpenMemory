@@ -8,7 +8,7 @@ const auth_config = {
     rate_limit_enabled: env.rate_limit_enabled,
     rate_limit_window_ms: env.rate_limit_window_ms,
     rate_limit_max_requests: env.rate_limit_max_requests,
-    public_endpoints: ['/health', '/api/system/health', '/api/system/stats']
+    public_endpoints: ['/health', '/api/system/health', '/api/system/stats', '/dashboard/health']
 }
 
 function is_public_endpoint(path: string): boolean {
