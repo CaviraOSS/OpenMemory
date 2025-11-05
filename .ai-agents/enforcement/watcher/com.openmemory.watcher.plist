@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.openmemory.watcher</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>${HOME}/.openmemory-global/bin/openmemory-watch</string>
+        <string>start</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>${HOME}/.openmemory-global/watcher/watcher.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>${HOME}/.openmemory-global/watcher/watcher-error.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>${HOME}/.openmemory-global/ai-agents-template/enforcement/watcher</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>NODE_ENV</key>
+        <string>production</string>
+        <key>OPENMEMORY_GLOBAL_DIR</key>
+        <string>${HOME}/.openmemory-global</string>
+    </dict>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

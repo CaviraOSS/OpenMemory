@@ -1,0 +1,26 @@
+[Unit]
+Description=OpenMemory Project Auto-Detection Watcher
+Documentation=https://github.com/caviraoss/openmemory
+After=network.target
+
+[Service]
+Type=simple
+User=%u
+WorkingDirectory=%h/.openmemory-global/ai-agents-template/enforcement/watcher
+ExecStart=%h/.openmemory-global/bin/openmemory-watch start
+ExecStop=%h/.openmemory-global/bin/openmemory-watch stop
+Restart=on-failure
+RestartSec=10
+StandardOutput=append:%h/.openmemory-global/watcher/watcher.log
+StandardError=append:%h/.openmemory-global/watcher/watcher-error.log
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Environment
+Environment="NODE_ENV=production"
+Environment="OPENMEMORY_GLOBAL_DIR=%h/.openmemory-global"
+
+[Install]
+WantedBy=default.target
