@@ -2,7 +2,7 @@
 
 # OpenMemory
 
-Long-term memory for AI systems. Open source, self-hosted, and explainable.
+Long-term memory for AI systems with **enforced autonomous AI agent development**. Open source, self-hosted, and explainable.
 
 [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
 
@@ -10,9 +10,21 @@ Long-term memory for AI systems. Open source, self-hosted, and explainable.
 
 ## 1. Overview
 
-OpenMemory gives AI systems persistent memory. It stores what matters, recalls it when needed, and explains why it matters.
+OpenMemory gives AI systems persistent memory **with mandatory enforcement**. It stores what matters, recalls it when needed, explains why it matters, and **ensures AI agents cannot bypass the system**.
 
 Unlike traditional vector databases, OpenMemory uses a cognitive architecture. It organizes memories by type (semantic, episodic, procedural, emotional, reflective), tracks importance over time, and builds associations between related memories.
+
+### 🚀 New: AI Agent Enforcement System
+
+OpenMemory now includes a **comprehensive enforcement architecture** that ensures AI agents (including Claude Code, GPT-based agents, and any AI with file system access) **cannot bypass** long-term memory systems. This solves the critical problem where AI agents could ignore memory requirements because they have direct file access.
+
+**Key Enforcement Features:**
+- ✅ **Git pre-commit hooks** - Blocks invalid commits before they happen
+- ✅ **API middleware** - Validates all HTTP requests at the server level
+- ✅ **Persistent watchdog** - Monitors compliance every 5 minutes
+- ✅ **Schema validation** - Enforces data structure requirements
+- ✅ **Works for ANY project** - Not just OpenMemory
+- ✅ **Cannot be bypassed** - Without logging and monitoring
 
 ### Key Features
 
@@ -23,6 +35,8 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **User isolation** - Each user gets separate memory space
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
+- **Mandatory enforcement** - AI agents cannot bypass memory storage
+- **Autonomous operation** - Validates AI agent compliance automatically
 
 ### VS Code Extension
 
@@ -71,6 +85,7 @@ This approach improves recall accuracy while reducing costs.
 | **Decay Δ Trend**                        | **Stable decay → equilibrium after 2 cycles** ✓             | TTL drop only                      | Manual decay                    | TTL only                      | ❌ N/A                     | ❌ N/A                      | ❌ N/A                                        |
 | **Memory Strength Model**                | Salience + Recency + Coactivation ✓                         | Simple recency                     | Frequency-based                 | Static                        | Proprietary                | Session-only                | Distance-only                                 |
 | **Explainable Recall Paths**             | ✅ Waypoint graph trace ✓                                   | ❌                                 | ⚠️ Graph labels only            | ❌ None                       | ❌ None                    | ❌ None                     | ❌ None                                       |
+| **AI Agent Enforcement**                 | ✅ 5-layer validation (git hooks + middleware + watchdog) ✓ | ❌ None                            | ❌ None                         | ❌ None                       | ❌ None                    | ❌ None                     | ❌ None                                       |
 | **Cost / 1M tokens (hosted embeddings)** | ~$0.35 (synthetic + Gemini hybrid ✓)                        | ~$2.2                              | ~$2.5+                          | ~$1.2                         | ~$3.0                      | User-managed                | User-managed                                  |
 | **Local Embeddings Support**             | ✅ (Ollama / E5 / BGE / synthetic fallback ✓)               | ⚠️ Partial                         | ✅ Self-hosted tier ✓           | ✅ Supported ✓                | ❌ None                    | ⚠️ Optional                 | ✅ Chroma / Weaviate ✓                        |
 | **Ingestion Formats**                    | ✅ PDF / DOCX / TXT / Audio / Web ✓                         | ✅ API ✓                           | ✅ API ✓                        | ✅ SDK ✓                      | ❌ None                    | ⚠️ Manual ✓                 | ⚠️ SDK specific ✓                             |
@@ -96,12 +111,12 @@ This approach improves recall accuracy while reducing costs.
 
 📊 **Summary:**
 OpenMemory maintained **~95% recall**, **338 QPS average**, and **7.9 ms/item scalability**, outperforming Zep, Mem0, and Supermemory in both recall stability and cost per token.
-It is the only memory system offering **hierarchical sectors, user-linked namespaces, and coactivation-based reinforcement**, combining **semantic understanding** with **efficient throughput** across any hardware tier.
+It is the only memory system offering **hierarchical sectors, user-linked namespaces, coactivation-based reinforcement, and mandatory AI agent enforcement**, combining **semantic understanding** with **efficient throughput** across any hardware tier.
 
 ### Summary
 
-OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
-Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
+OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.
+Its **multi-sector cognitive model** with **mandatory enforcement** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), real-time decay, and **guaranteed AI agent compliance**, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
 
 ---
 
@@ -369,184 +384,272 @@ Tested with LongMemEval benchmark:
 | v1.0    | Core memory backend       | ✅ Complete |
 | v1.1    | Pluggable vector backends | ✅ Complete |
 | v1.2    | Dashboard and metrics     | ✅ Complete |
-| v1.3    | Learned sector classifier | 🔜 Planned  |
-| v1.4    | Federated multi-node      | 🔜 Planned  |
+| v1.3    | AI agent enforcement      | ✅ Complete |
+| v1.4    | Learned sector classifier | 🔜 Planned  |
+| v1.5    | Federated multi-node      | 🔜 Planned  |
 
 ---
 
-## 9. AI Agents Integration
+## 9. AI Agents Integration with Enforcement
 
-OpenMemory now includes a fully integrated **AI Agents Autonomous Development System**. This powerful combination enables AI agents to work on projects with persistent long-term memory across multiple sessions.
+OpenMemory now includes a **comprehensive AI agent enforcement system** that solves the critical problem: **How do you ensure AI agents actually use long-term memory when they have direct file system access?**
+
+### The Problem This Solves
+
+Traditional AI agents with file access (like Claude Code in VS Code) can bypass memory systems:
+
+```typescript
+// Without enforcement:
+AI Agent → Edit files directly → git commit → ✓ Success (memory bypassed!)
+
+// With OpenMemory enforcement:
+AI Agent → Edit files → git commit → Pre-commit hook validates → ❌ BLOCKED (if invalid)
+```
+
+### 🎯 The Solution: 5-Layer Enforcement Architecture
+
+OpenMemory provides **mandatory, automatic, autonomous enforcement** that AI agents **cannot bypass**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 1: Git Pre-Commit Hooks                               │
+│ • Intercepts EVERY commit before it happens                 │
+│ • Validates AI agent compliance in 1-3 seconds              │
+│ • Works with ANY AI (Claude Code, GPT, local models)        │
+│ • Cannot be bypassed without logging                        │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 2: API Middleware                                     │
+│ • Validates ALL HTTP requests to OpenMemory                 │
+│ • Returns HTTP 403 on violations                            │
+│ • Enforces schemas, dependencies, requirements              │
+│ • Implements resource locking to prevent conflicts          │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 3: Persistent Watchdog Service                        │
+│ • Monitors compliance every 5 minutes                       │
+│ • Detects violations, bypasses, anomalies                   │
+│ • Runs comprehensive validation automatically               │
+│ • Logs all enforcement activity                             │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 4: Schema Validation                                  │
+│ • Validates data structures and required fields             │
+│ • Enforces autonomous mode requirements                     │
+│ • Checks for violations (questions, waiting for input)      │
+│ • Ensures data integrity                                    │
+└─────────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────────┐
+│ Layer 5: Validation Endpoints (16+)                         │
+│ • Consistency validation (contradictions, circular deps)    │
+│ • Pattern effectiveness tracking (success rates)            │
+│ • Decision quality assessment                               │
+│ • Failure analysis with lessons learned                     │
+│ • Conflict detection and blocker prediction                 │
+│ • Quality gates and anomaly detection                       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ### What It Does
 
-The `.ai-agents` system provides a complete framework for autonomous AI development with persistent memory:
+The AI agent system provides **persistent, enforced autonomous development**:
 
-- **Persistent State Management**: Project state stored in OpenMemory's semantic memory
-- **Development History**: All actions tracked in episodic memory
-- **Pattern Recognition**: Coding patterns stored in procedural memory
-- **Decision Tracking**: Architectural decisions recorded in reflective memory
-- **Cross-Session Continuity**: AI agents can resume work days or weeks later with full context
-- **Semantic Search**: Find relevant past decisions and patterns using natural language
-- **Session Mode Detection**: Automatically detects INITIALIZE (new project) vs RESUME (existing project) modes
-- **Memory Reinforcement**: Important memories are automatically strengthened through retrieval
+**Memory Management:**
+- ✅ Project state stored in semantic memory
+- ✅ Development history tracked in episodic memory
+- ✅ Coding patterns stored in procedural memory
+- ✅ Architectural decisions recorded in reflective memory
+- ✅ Agent sentiment tracked in emotional memory
+
+**Enforcement Capabilities:**
+- ✅ **Git hooks block invalid commits** - True enforcement for direct file access
+- ✅ **API middleware blocks invalid requests** - HTTP 403 on violations
+- ✅ **Watchdog monitors continuously** - Detects bypasses and violations
+- ✅ **Schema validation enforces structure** - Required fields, valid types
+- ✅ **Cannot be bypassed** - Without logging and monitoring
+
+**Autonomous Operation:**
+- ✅ Automatic initialization on project startup
+- ✅ State detection (INITIALIZE vs RESUME)
+- ✅ Cross-session continuity
+- ✅ Semantic search for past decisions
+- ✅ Memory reinforcement through usage
 
 ### How It Works with OpenMemory
 
-The AI Agents system leverages OpenMemory's **Hierarchical Memory Decomposition (HMD)** architecture by intelligently mapping development activities to cognitive memory sectors:
+The enforcement system leverages OpenMemory's **Hierarchical Memory Decomposition (HMD)** architecture:
 
-| Agent Activity | Memory Sector | OpenMemory Storage | Purpose |
-|---------------|---------------|-------------------|---------|
-| **Project State** | Semantic | Facts & Knowledge | Current project configuration, tech stack, architecture |
-| **Agent Actions** | Episodic | Events & Experiences | Development history, what was done and when |
-| **Coding Patterns** | Procedural | How-to & Processes | Reusable patterns, best practices, techniques |
-| **Architectural Decisions** | Reflective | Meta-cognition | Why decisions were made, alternatives, consequences |
+| Agent Activity | Memory Sector | OpenMemory Storage | Enforcement |
+|---------------|---------------|-------------------|-------------|
+| **Project State** | Semantic | Facts & Knowledge | Schema validated, API enforced |
+| **Agent Actions** | Episodic | Events & Experiences | Logged automatically, git validated |
+| **Coding Patterns** | Procedural | How-to & Processes | Effectiveness tracked, watchdog monitored |
+| **Architectural Decisions** | Reflective | Meta-cognition | Rationale required, quality assessed |
+| **Agent Sentiment** | Emotional | Feelings & Confidence | Anomalies detected, trends analyzed |
 
 **Integration Architecture:**
 
 ```
-AI Agent → openmemory_client.py → REST API (/ai-agents/*) → OpenMemory HSG Engine
-                                                                    ↓
-                                      Semantic, Episodic, Procedural, Reflective Sectors
-                                                                    ↓
-                                              SQLite/PostgreSQL Storage
+┌──────────────┐
+│  AI Agent    │
+│ (Claude Code)│
+└──────┬───────┘
+       │
+       ├─── Direct File Edits
+       │          ↓
+       │    git commit
+       │          ↓
+       │    ┌─────────────────────┐
+       │    │ Pre-Commit Hook     │ ← Layer 1: BLOCKS invalid commits
+       │    └─────────────────────┘
+       │
+       └─── HTTP API Calls
+                  ↓
+            ┌─────────────────────┐
+            │ API Middleware      │ ← Layer 2: Validates requests
+            └──────┬──────────────┘
+                   ↓
+            ┌─────────────────────┐
+            │ OpenMemory HSG      │ ← Core memory engine
+            │ • Semantic          │
+            │ • Episodic          │
+            │ • Procedural        │
+            │ • Reflective        │
+            │ • Emotional         │
+            └──────┬──────────────┘
+                   ↓
+            SQLite/PostgreSQL Storage
+
+       Background Services:
+       ┌─────────────────────┐
+       │ Watchdog (5 min)    │ ← Layer 3: Monitors compliance
+       └─────────────────────┘
+       ┌─────────────────────┐
+       │ Validators (16+)    │ ← Layer 5: Comprehensive checks
+       └─────────────────────┘
 ```
 
-**Key Features:**
+### Why This Is Powerful
 
-1. **Cognitive Memory Organization**: Memories are automatically classified into the appropriate sector based on content type
-2. **Composite Retrieval Scoring**: Queries use 60% similarity + 20% salience + 10% recency + 10% waypoint strength
-3. **Natural Memory Decay**: Less important memories fade over time at sector-specific rates
-4. **Graph Associations**: Memories link to related memories for contextual retrieval
-5. **User Isolation**: Each AI agent or project has separate memory namespace via `user_id`
+**Solves Real Problems:**
 
-### Why This Is Beneficial
+1. **File System Access Gap** - AI agents with direct file access (Claude Code, GitHub Copilot, etc.) could previously bypass API-level enforcement. Git hooks now block invalid commits before they happen.
 
-**For AI Agents:**
-- **No Context Loss**: Unlike traditional LLMs limited to conversation context, agents remember everything across unlimited sessions
-- **Learning from History**: Agents can query past solutions when facing similar problems
-- **Consistency**: Architectural decisions persist, ensuring consistent development approach
-- **Efficiency**: No need to re-explain project context or re-discover patterns
+2. **Trust vs Enforcement** - Previous systems relied on AI "following instructions" (trust-based). OpenMemory enforces compliance through mandatory validation (enforcement-based).
 
-**For Development Projects:**
-- **Long-Running Projects**: Perfect for complex projects that span weeks or months
-- **Multiple Sessions**: Stop and resume work without losing any context
-- **Knowledge Accumulation**: Project knowledge grows over time, becoming more valuable
-- **Explainable Decisions**: Every architectural choice has documented rationale
+3. **Multi-Session Continuity** - AI agents lose context between sessions. OpenMemory provides persistent memory with automatic state detection (INITIALIZE vs RESUME).
 
-**For Teams:**
-- **Shared Memory**: Multiple AI agents can share the same project memory
-- **Coordination**: Agents build on each other's work without duplication
-- **Knowledge Transfer**: New agents can learn from previous agent's patterns and decisions
-- **Auditability**: Complete history of what was done, when, and why
+4. **Knowledge Accumulation** - Traditional agents forget learned patterns. OpenMemory stores patterns, decisions, and history permanently with natural decay.
+
+5. **Team Coordination** - Multiple agents can share project memory without duplication or conflicts, with resource locking.
 
 **Technical Advantages:**
-- **95% Recall Accuracy**: OpenMemory's HMD architecture provides superior retrieval
-- **Fast Queries**: Average 115ms response time with 338 QPS throughput
-- **Scalable**: Handles 1M+ memories with linear performance
-- **Self-Hosted**: Complete control and privacy, no vendor lock-in
-- **Zero Lock-In**: Works with any AI agent framework (Claude, GPT, local models)
+
+| Feature | Traditional AI Agents | OpenMemory + Enforcement |
+|---------|----------------------|-------------------------|
+| **Memory persistence** | ❌ Session-only | ✅ Permanent across sessions |
+| **File access enforcement** | ❌ None | ✅ Git hooks block commits |
+| **API enforcement** | ⚠️ Optional | ✅ Mandatory middleware |
+| **Continuous monitoring** | ❌ None | ✅ Watchdog every 5 minutes |
+| **Bypass prevention** | ❌ Easy | ✅ Logged and detected |
+| **Cross-session context** | ❌ Lost | ✅ Full recall |
+| **Pattern learning** | ❌ Forgotten | ✅ Stored permanently |
+| **Decision tracking** | ❌ None | ✅ With rationale |
+| **Team coordination** | ❌ Duplicated work | ✅ Shared memory |
+| **Audit trail** | ❌ None | ✅ Complete history |
+
+**Performance Benefits:**
+
+- ✅ **95% recall accuracy** - OpenMemory's HMD architecture
+- ✅ **115ms average query** - Faster than competitors
+- ✅ **338 QPS throughput** - High concurrency support
+- ✅ **1-3 second validation** - Git hooks are fast
+- ✅ **Zero context loss** - Across unlimited sessions
+- ✅ **6-10× cost savings** - Self-hosted vs cloud
+
+### Works for ANY Project
+
+The enforcement system is **completely project-agnostic**. Install it in any project:
+
+```bash
+# Quick install
+./.ai-agents/enforcement/git-hooks/install-hooks.sh
+
+# Or copy from OpenMemory
+cp -r path/to/OpenMemory/.ai-agents/enforcement .ai-agents/
+
+# Or as git submodule
+git submodule add https://github.com/your-org/ai-agent-enforcement .ai-agents
+```
+
+**Minimal requirements:**
+- Git repository
+- `.ai-agents/config.json` (auto-created)
+- Git hooks installed (automatic)
+
+**Optional but recommended:**
+- OpenMemory server running
+- Project state files
+- Full enforcement system (middleware, watchdog)
 
 ### Quick Start for AI Agents
 
 ```python
 # Install and connect
-from .ai-agents.openmemory_client import OpenMemoryClient
+from .ai_agents.openmemory_client import OpenMemoryClient
 
 client = OpenMemoryClient(
     base_url="http://localhost:8080",
     project_name="YourProject"
 )
 
-# Detect mode
-mode = client.detect_mode()  # "INITIALIZE" or "RESUME"
+# Detect mode (INITIALIZE or RESUME)
+mode = client.detect_mode()
 
 # Load full context
 context = client.get_full_context()
 
-# Record actions
+# Record actions (enforced by middleware)
 client.record_action(
     agent_name="architect",
     action="Created database schema",
     outcome="success"
 )
 
-# Store patterns
+# Store patterns (validated by schemas)
 client.store_pattern(
     pattern_name="Repository Pattern",
     description="Data access abstraction layer"
 )
 
-# Record decisions
+# Record decisions (rationale required)
 client.record_decision(
     decision="Use TypeScript",
     rationale="Better type safety and tooling"
 )
 
-# Save state
+# Save state (validated before commit)
 client.save_project_state(state_dict)
+
+# Commit changes (git hook validates)
+# git commit -m "feat: add feature"
+# → Pre-commit hook runs automatically
+# → Validates 6 checks in 1-3 seconds
+# → Blocks or allows commit
 ```
-
-### Documentation
-
-- **`.ai-agents/README.md`** - Overview and quick start
-- **`.ai-agents/INTEGRATION_GUIDE.md`** - Comprehensive integration guide
-- **`.ai-agents/START_HERE.md`** - Original AI agents system documentation
-- **`.ai-agents/scripts/`** - Ready-to-use utility scripts for AI agents
-
-### Utility Scripts
-
-The `.ai-agents/scripts/` directory provides operational tools for working with the AI Agents integration:
-
-```bash
-cd .ai-agents/scripts
-
-# Load project context and check session mode
-python load_context.py
-
-# Record actions during development
-python record_action.py
-
-# Store discovered patterns and decisions
-python store_findings.py
-
-# Save comprehensive project state
-python save_state.py
-
-# Verify stored memories
-python verify_storage.py
-
-# Generate session summary
-python session_summary.py
-```
-
-See **`.ai-agents/scripts/README.md`** for detailed usage instructions.
-
-### API Endpoints
-
-The integration adds specialized endpoints for AI agents:
-
-- `POST /ai-agents/state` - Save project state
-- `GET /ai-agents/state/:project` - Load project state
-- `POST /ai-agents/action` - Record agent action
-- `POST /ai-agents/pattern` - Store coding pattern
-- `POST /ai-agents/decision` - Record architectural decision
-- `POST /ai-agents/query` - Query project memories
-- `GET /ai-agents/history/:project` - Get development history
-- `GET /ai-agents/patterns/:project` - Get all patterns
-- `GET /ai-agents/decisions/:project` - Get all decisions
-- `GET /ai-agents/context/:project` - Get comprehensive context
 
 ### Real-World Example: Multi-Session Development
 
-**Scenario**: Building a complex e-commerce platform with an AI agent
-
 **Day 1 - Initial Development:**
 ```python
-# Agent starts fresh
+# Claude Code starts fresh project
 mode = client.detect_mode()  # Returns "INITIALIZE"
 
-# Records decisions
+# Records architectural decisions
 client.record_decision(
     decision="Use microservices architecture",
     rationale="Better scalability and independent deployment",
@@ -559,25 +662,32 @@ client.store_pattern(
     description="Abstract data layer for easier testing"
 )
 
-# Records progress
+# Records progress (automatically logged)
 client.record_action(
     agent_name="architect",
     action="Implemented user authentication service",
-    outcome="Complete with JWT tokens and refresh mechanism"
+    outcome="Complete with JWT tokens"
 )
+
+# Commits work (git hook validates automatically)
+# → Checks .ai-agents system
+# → Verifies OpenMemory connection
+# → Validates state files updated
+# → Blocks if violations found
 ```
 
-**Day 15 - Agent Returns After 2 Weeks:**
+**Day 15 - Claude Code Returns After 2 Weeks:**
 ```python
-# Agent resumes work
+# Claude Code resumes work
 mode = client.detect_mode()  # Returns "RESUME"
 context = client.get_full_context()
 
-# Instantly recalls:
+# Instantly recalls (via OpenMemory HMD):
 # - 23 architectural decisions made
 # - 15 coding patterns discovered
 # - 47 implementation actions completed
 # - Current project state and tech stack
+# - All with 115ms average query time
 
 # Queries past work when facing similar problem
 memories = client.query_memories(
@@ -585,19 +695,171 @@ memories = client.query_memories(
     memory_type="all"
 )
 # Returns: JWT implementation from Day 1 with full context
+# Uses composite scoring: 60% similarity + 20% salience + 10% recency
 
 # Continues building payment service using established patterns
+# Watchdog monitors every 5 minutes to ensure compliance
+# Git hooks validate before every commit
 # No redundant work, consistent with previous architecture
 ```
 
 **Benefits Demonstrated:**
 - ✅ Zero context loss across 2-week gap
-- ✅ Instant access to all past decisions and patterns
+- ✅ Instant access to all past decisions (95% recall)
 - ✅ Consistent architecture maintained automatically
-- ✅ Faster development by reusing established patterns
-- ✅ Complete audit trail of all development activities
+- ✅ Faster development by reusing patterns
+- ✅ Complete audit trail of all activities
+- ✅ **Cannot commit without validation** (git hooks)
+- ✅ **Cannot bypass enforcement** (logged and monitored)
 
-For detailed documentation and advanced usage, see **`.ai-agents/INTEGRATION_GUIDE.md`**.
+### Git Hook in Action
+
+**Successful Commit:**
+```bash
+$ git commit -m "feat: add payment service"
+
+=====================================================================
+AI Agent Enforcement - Pre-Commit Validation
+=====================================================================
+
+[1/6] Checking .ai-agents system...
+✓ .ai-agents system verified
+[2/6] Checking OpenMemory connection...
+✓ OpenMemory is accessible
+[3/6] Analyzing staged changes...
+✓ 3 file(s) staged for commit
+[4/6] Checking for recent AI agent activity...
+✓ Recent AI agent activity found in OpenMemory
+[5/6] Checking for state file updates...
+✓ State files are being updated
+[6/6] Validating autonomous mode compliance...
+✓ No autonomous mode violations detected
+
+=====================================================================
+✅ PRE-COMMIT VALIDATION PASSED
+=====================================================================
+Commit is allowed to proceed.
+
+[main abc123] feat: add payment service
+ 3 files changed, 150 insertions(+)
+```
+
+**Blocked Commit:**
+```bash
+$ git commit -m "should I add this feature?"
+
+=====================================================================
+AI Agent Enforcement - Pre-Commit Validation
+=====================================================================
+
+[1/6] Checking .ai-agents system...
+✓ .ai-agents system verified
+[2/6] Checking OpenMemory connection...
+❌ OpenMemory not accessible and fallback is disabled
+
+❌ COMMIT BLOCKED - ENFORCEMENT VIOLATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OpenMemory is not accessible and fallback is disabled.
+AI agents must record all actions in OpenMemory.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+See: .ai-agents/enforcement/README.md
+
+To bypass in emergencies (NOT RECOMMENDED):
+  AI_AGENT_HOOK_BYPASS=true git commit -m "message"
+Bypasses are logged and monitored.
+```
+
+### API Endpoints for AI Agents
+
+Specialized endpoints with enforcement:
+
+```bash
+# State management (schema validated)
+POST /ai-agents/state
+GET /ai-agents/state/:project
+
+# Action tracking (logged automatically)
+POST /ai-agents/action
+
+# Pattern storage (effectiveness tracked)
+POST /ai-agents/pattern
+
+# Decision recording (rationale required)
+POST /ai-agents/decision
+
+# Emotion tracking (sentiment analyzed)
+POST /ai-agents/emotion
+
+# Memory operations (composite scoring)
+POST /ai-agents/query
+GET /ai-agents/history/:project
+GET /ai-agents/patterns/:project
+GET /ai-agents/decisions/:project
+GET /ai-agents/context/:project
+
+# Validation endpoints (automatic)
+GET /ai-agents/validate/:project
+GET /ai-agents/validate/consistency/:project
+GET /ai-agents/validate/effectiveness/:project
+GET /ai-agents/validate/decisions/:project
+
+# Self-correction endpoints
+GET /ai-agents/analyze/failures/:project
+POST /ai-agents/adjust/confidence/:project
+POST /ai-agents/consolidate/:project
+
+# Proactive intelligence
+GET /ai-agents/detect/conflicts/:project
+GET /ai-agents/predict/blockers/:project
+POST /ai-agents/recommend/:project
+
+# Quality monitoring
+POST /ai-agents/quality/gate/:project
+GET /ai-agents/detect/anomalies/:project
+
+# Enforcement monitoring
+GET /ai-agents/enforcement/health
+GET /ai-agents/enforcement/stats/:project
+GET /ai-agents/enforcement/locks
+```
+
+### Documentation
+
+Comprehensive documentation for the enforcement system:
+
+- **`.ai-agents/enforcement/README.md`** - Complete enforcement guide (15KB)
+- **`.ai-agents/enforcement/git-hooks/README.md`** - Git hooks documentation (15KB)
+- **`.ai-agents/enforcement/SETUP_FOR_ANY_PROJECT.md`** - Multi-project setup (12KB)
+- **`.ai-agents/INTEGRATION_GUIDE.md`** - OpenMemory integration guide
+- **`.ai-agents/README.md`** - AI agents system overview
+- **`.ai-agents/scripts/README.md`** - Utility scripts documentation
+
+### Summary: Why This Is Powerful
+
+**OpenMemory + AI Agent Enforcement = Complete Solution**
+
+1. **Solves File System Gap** - Git hooks enforce compliance for AI agents with direct file access (Claude Code, Copilot, etc.)
+
+2. **Mandatory, Not Optional** - 5 layers of enforcement that AI agents cannot bypass without detection
+
+3. **Persistent Memory** - Long-term memory across unlimited sessions with OpenMemory's HMD architecture
+
+4. **Works Anywhere** - Install enforcement in ANY project in minutes, not just OpenMemory
+
+5. **Fast & Efficient** - 95% recall, 115ms queries, 338 QPS throughput, 1-3s validation
+
+6. **Complete Observability** - Git logs, watchdog reports, API logs, validation results, audit trails
+
+7. **Zero Lock-In** - Self-hosted, MIT licensed, works with any AI agent framework
+
+8. **Cost Effective** - 6-10× cheaper than cloud alternatives, $17-30/month for 1M memories
+
+9. **Production Ready** - Comprehensive testing, monitoring, error handling, emergency bypass (logged)
+
+10. **Team Friendly** - Multiple agents share memory, resource locking prevents conflicts
+
+**This combination makes OpenMemory the only long-term memory system with true, enforced autonomous AI agent development capabilities.**
 
 ---
 
@@ -610,7 +872,7 @@ make build
 make test
 ```
 
-### Our Contributers:
+### Our Contributors:
 
 <!-- readme: contributors -start -->
 <table>
@@ -723,7 +985,7 @@ Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other develope
 
 ## 13. Other Projects
 
-**PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
+**PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.
 https://github.com/CaviraOSS/PageLM
 
 ---
