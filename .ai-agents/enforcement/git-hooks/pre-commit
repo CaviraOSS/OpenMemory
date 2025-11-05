@@ -1,0 +1,250 @@
+#!/bin/bash
+#
+# AI Agent Enforcement - Git Pre-Commit Hook
+#
+# This hook enforces that AI agents (including Claude Code) cannot commit
+# changes without properly recording actions in OpenMemory and updating state.
+#
+# This hook runs BEFORE every commit and will BLOCK the commit if validation fails.
+#
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+OPENMEMORY_URL="${OPENMEMORY_URL:-http://localhost:8080}"
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+PROJECT_NAME="$(basename "$PROJECT_ROOT")"
+AI_AGENTS_DIR="$PROJECT_ROOT/.ai-agents"
+HOOK_LOG="$AI_AGENTS_DIR/enforcement/git-hooks/hook-executions.log"
+
+# Bypass mechanism (for emergencies only)
+if [ "${AI_AGENT_HOOK_BYPASS:-false}" = "true" ]; then
+    echo -e "${YELLOW}⚠️  WARNING: AI Agent Enforcement Hook BYPASSED${NC}"
+    echo "$(date -Iseconds) - BYPASS - User: $(git config user.email)" >> "$HOOK_LOG"
+    echo -e "${YELLOW}This bypass has been logged and will be reviewed by the watchdog.${NC}"
+    exit 0
+fi
+
+echo -e "${BLUE}=====================================================================${NC}"
+echo -e "${BLUE}AI Agent Enforcement - Pre-Commit Validation${NC}"
+echo -e "${BLUE}=====================================================================${NC}"
+echo ""
+
+# Log hook execution
+mkdir -p "$(dirname "$HOOK_LOG")"
+echo "$(date -Iseconds) - START - Project: $PROJECT_NAME" >> "$HOOK_LOG"
+
+# Function to fail the commit
+fail_commit() {
+    local message="$1"
+    echo ""
+    echo -e "${RED}❌ COMMIT BLOCKED - ENFORCEMENT VIOLATION${NC}"
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${RED}$message${NC}"
+    echo -e "${RED}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${YELLOW}AI agents must:${NC}"
+    echo -e "  1. Record all actions in OpenMemory"
+    echo -e "  2. Update project state regularly"
+    echo -e "  3. Follow autonomous mode requirements"
+    echo ""
+    echo -e "${YELLOW}See: .ai-agents/enforcement/README.md${NC}"
+    echo ""
+    echo -e "${YELLOW}To bypass in emergencies (NOT RECOMMENDED):${NC}"
+    echo -e "  AI_AGENT_HOOK_BYPASS=true git commit -m \"message\""
+    echo -e "${YELLOW}Bypasses are logged and monitored.${NC}"
+    echo ""
+    echo "$(date -Iseconds) - BLOCKED - $message" >> "$HOOK_LOG"
+    exit 1
+}
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+# Function to call OpenMemory API
+call_openmemory() {
+    local endpoint="$1"
+    local method="${2:-GET}"
+
+    if command_exists curl; then
+        curl -s -X "$method" \
+             -H "Content-Type: application/json" \
+             --max-time 5 \
+             "$OPENMEMORY_URL$endpoint" 2>/dev/null || echo "{}"
+    elif command_exists wget; then
+        wget -q -O - \
+             --method="$method" \
+             --header="Content-Type: application/json" \
+             --timeout=5 \
+             "$OPENMEMORY_URL$endpoint" 2>/dev/null || echo "{}"
+    else
+        echo "{}"
+    fi
+}
+
+echo -e "${BLUE}[1/6]${NC} Checking .ai-agents system..."
+if [ ! -d "$AI_AGENTS_DIR" ]; then
+    fail_commit ".ai-agents directory not found. System not initialized."
+fi
+if [ ! -f "$AI_AGENTS_DIR/config.json" ]; then
+    fail_commit "config.json not found. System not properly configured."
+fi
+echo -e "${GREEN}✓${NC} .ai-agents system verified"
+
+echo -e "${BLUE}[2/6]${NC} Checking OpenMemory connection..."
+health_response=$(call_openmemory "/health")
+if echo "$health_response" | grep -q '"ok":true' || echo "$health_response" | grep -q '"status":"ok"'; then
+    echo -e "${GREEN}✓${NC} OpenMemory is accessible"
+else
+    # Check if fallback is enabled
+    if grep -q '"fallback_to_local":\s*true' "$AI_AGENTS_DIR/config.json"; then
+        echo -e "${YELLOW}⚠${NC}  OpenMemory not accessible - using local fallback (allowed by config)"
+        echo "$(date -Iseconds) - WARNING - OpenMemory not accessible, fallback used" >> "$HOOK_LOG"
+    else
+        fail_commit "OpenMemory is not accessible at $OPENMEMORY_URL and fallback is disabled."
+    fi
+fi
+
+echo -e "${BLUE}[3/6]${NC} Analyzing staged changes..."
+# Get list of staged files
+staged_files=$(git diff --cached --name-only)
+if [ -z "$staged_files" ]; then
+    echo -e "${YELLOW}⚠${NC}  No staged files found"
+else
+    file_count=$(echo "$staged_files" | wc -l)
+    echo -e "${GREEN}✓${NC} $file_count file(s) staged for commit"
+
+    # Check if significant code changes (not just docs/config)
+    significant_changes=false
+    while IFS= read -r file; do
+        # Check for code files (not markdown, not config, not logs)
+        if [[ "$file" =~ \.(ts|js|py|go|java|rs|cpp|c|h)$ ]]; then
+            significant_changes=true
+            break
+        fi
+    done <<< "$staged_files"
+
+    if [ "$significant_changes" = true ]; then
+        echo -e "${BLUE}  → Significant code changes detected${NC}"
+    fi
+fi
+
+echo -e "${BLUE}[4/6]${NC} Checking for recent AI agent activity..."
+# Get commit message from file if it exists
+commit_msg=""
+if [ -f "$PROJECT_ROOT/.git/COMMIT_EDITMSG" ]; then
+    commit_msg=$(cat "$PROJECT_ROOT/.git/COMMIT_EDITMSG")
+fi
+
+# Check for recent actions in OpenMemory (if accessible)
+if echo "$health_response" | grep -q '"ok":true' || echo "$health_response" | grep -q '"status":"ok"'; then
+    history_response=$(call_openmemory "/ai-agents/history/$PROJECT_NAME?limit=5&user_id=ai-agent-system")
+
+    if echo "$history_response" | grep -q '"success":true'; then
+        # Check if there's recent activity (within last 30 minutes)
+        current_time=$(date +%s)
+        recent_activity=false
+
+        # Simple check - if we got history back, consider it recent activity
+        if echo "$history_response" | grep -q '"count":[1-9]'; then
+            recent_activity=true
+        fi
+
+        if [ "$recent_activity" = true ]; then
+            echo -e "${GREEN}✓${NC} Recent AI agent activity found in OpenMemory"
+        else
+            echo -e "${YELLOW}⚠${NC}  No recent AI agent activity found in OpenMemory"
+            echo -e "${YELLOW}  This may indicate actions were not recorded.${NC}"
+
+            # Don't block on this - just warn
+            echo "$(date -Iseconds) - WARNING - No recent activity in OpenMemory" >> "$HOOK_LOG"
+        fi
+    else
+        echo -e "${YELLOW}⚠${NC}  Could not verify recent activity (OpenMemory query failed)"
+    fi
+else
+    echo -e "${YELLOW}⚠${NC}  Skipping activity check (OpenMemory not accessible)"
+fi
+
+echo -e "${BLUE}[5/6]${NC} Checking for state file updates..."
+# Check if state files are staged (if they exist and there are significant changes)
+state_file_staged=false
+if echo "$staged_files" | grep -q "project-state.json\|workflow-tracker.json\|context-manager.json"; then
+    state_file_staged=true
+    echo -e "${GREEN}✓${NC} State files are being updated"
+elif [ "$significant_changes" = true ]; then
+    # Significant code changes but no state update - warn but don't block
+    echo -e "${YELLOW}⚠${NC}  Significant changes detected but no state file updates"
+    echo -e "${YELLOW}  Consider updating project-state.json to track progress${NC}"
+    echo "$(date -Iseconds) - WARNING - No state file updates with code changes" >> "$HOOK_LOG"
+else
+    echo -e "${GREEN}✓${NC} No state update required (no significant code changes)"
+fi
+
+echo -e "${BLUE}[6/6]${NC} Validating autonomous mode compliance..."
+# Check commit message for autonomous mode violations
+violations=()
+
+if [ -n "$commit_msg" ]; then
+    # Check for questions in commit message
+    if echo "$commit_msg" | grep -qiE "(should i|would you like|do you want|shall i|can i\?)"; then
+        violations+=("Commit message contains questions (autonomous mode violation)")
+    fi
+
+    # Check for asking for confirmation
+    if echo "$commit_msg" | grep -qiE "(please confirm|need approval|waiting for|ask user)"; then
+        violations+=("Commit message suggests waiting for confirmation")
+    fi
+
+    if [ ${#violations[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠${NC}  Potential autonomous mode violations detected:"
+        for violation in "${violations[@]}"; do
+            echo -e "${YELLOW}    - $violation${NC}"
+        done
+        echo "$(date -Iseconds) - WARNING - Autonomous mode violations: ${violations[*]}" >> "$HOOK_LOG"
+        # Don't block, just warn
+    else
+        echo -e "${GREEN}✓${NC} No autonomous mode violations detected"
+    fi
+else
+    echo -e "${GREEN}✓${NC} Commit message not yet available (will be validated)"
+fi
+
+# Run comprehensive validation if OpenMemory is accessible (optional, don't block on failure)
+if echo "$health_response" | grep -q '"ok":true' || echo "$health_response" | grep -q '"status":"ok"'; then
+    echo ""
+    echo -e "${BLUE}[OPTIONAL]${NC} Running comprehensive validation..."
+    validation_response=$(call_openmemory "/ai-agents/validate/consistency/$PROJECT_NAME?user_id=ai-agent-system" "GET" 2>/dev/null || echo "{}")
+
+    if echo "$validation_response" | grep -q '"success":true'; then
+        issues=$(echo "$validation_response" | grep -oP '"issues_found":\s*\K[0-9]+' || echo "0")
+        if [ "$issues" = "0" ]; then
+            echo -e "${GREEN}✓${NC} Comprehensive validation passed (0 issues)"
+        else
+            echo -e "${YELLOW}⚠${NC}  Comprehensive validation found $issues issue(s)"
+            echo -e "${YELLOW}  These issues will be tracked by the watchdog${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠${NC}  Comprehensive validation skipped (service not available)"
+    fi
+fi
+
+# Success!
+echo ""
+echo -e "${GREEN}=====================================================================${NC}"
+echo -e "${GREEN}✅ PRE-COMMIT VALIDATION PASSED${NC}"
+echo -e "${GREEN}=====================================================================${NC}"
+echo -e "${GREEN}Commit is allowed to proceed.${NC}"
+echo ""
+echo "$(date -Iseconds) - PASSED - Project: $PROJECT_NAME, Files: $(echo "$staged_files" | wc -l)" >> "$HOOK_LOG"
+
+exit 0

@@ -1,0 +1,7 @@
+{
+  "timestamp": "2025-11-05T22:04:34+00:00",
+  "git_hooks_installed": true,
+  "hooks": ["pre-commit"],
+  "enforcement_active": true,
+  "project": "OpenMemory"
+}

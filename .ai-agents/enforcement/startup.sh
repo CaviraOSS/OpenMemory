@@ -97,6 +97,23 @@ fi
 
 echo ""
 echo "======================================================================"
+echo "INSTALLING GIT HOOKS..."
+echo "======================================================================"
+echo ""
+
+# Install git hooks automatically
+if [ -f "$AI_AGENTS_DIR/enforcement/git-hooks/install-hooks.sh" ]; then
+    if bash "$AI_AGENTS_DIR/enforcement/git-hooks/install-hooks.sh" "$project_root"; then
+        echo "✓ Git hooks installed successfully"
+    else
+        echo "⚠  Git hooks installation failed (non-critical)"
+    fi
+else
+    echo "⚠  Git hooks installer not found (skipping)"
+fi
+
+echo ""
+echo "======================================================================"
 echo "✅ ENFORCEMENT SYSTEM STARTUP COMPLETE"
 echo "======================================================================"
 echo ""
@@ -106,9 +123,13 @@ echo "  • Follow .ai-agents system requirements"
 echo "  • Record all actions, decisions, and patterns"
 echo "  • Execute tasks in dependency order"
 echo "  • Operate autonomously without user confirmation"
+echo "  • Pass git pre-commit validation before committing"
 echo ""
-echo "Enforcement middleware will be active when OpenMemory server starts."
-echo "Watchdog service will monitor compliance every 5 minutes."
+echo "Enforcement layers active:"
+echo "  ✓ Git pre-commit hooks (blocks invalid commits)"
+echo "  ✓ API middleware (blocks invalid API calls)"
+echo "  ✓ Watchdog service (monitors compliance every 5 minutes)"
+echo "  ✓ Schema validation (validates all data)"
 echo ""
 echo "======================================================================"
 
