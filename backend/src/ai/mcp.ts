@@ -42,7 +42,7 @@ const uid = (val?: string | null) => val?.trim() ? val.trim() : undefined
 export const create_mcp_srv = () => {
     const srv = new McpServer({ name: 'openmemory-mcp', version: '2.1.0', protocolVersion: '2025-06-18' }, { capabilities: { tools: {}, resources: {}, logging: {} } })
 
-    srv.tool('openmemory.query', 'Run a semantic retrieval against OpenMemory', {
+    srv.tool('openmemory_query', 'Run a semantic retrieval against OpenMemory', {
         query: z.string().min(1, 'query text is required').describe('Free-form search text'),
         k: z.number().int().min(1).max(32).default(8).describe('Maximum results to return'),
         sector: sec_enum.optional().describe('Restrict search to a specific sector'),
@@ -61,7 +61,7 @@ export const create_mcp_srv = () => {
         return { content: [{ type: 'text', text: summ }, { type: 'text', text: JSON.stringify({ query, matches: pay }, null, 2) }] }
     })
 
-    srv.tool('openmemory.store', 'Persist new content into OpenMemory', {
+    srv.tool('openmemory_store', 'Persist new content into OpenMemory', {
         content: z.string().min(1).describe('Raw memory text to store'),
         tags: z.array(z.string()).optional().describe('Optional tag list'),
         metadata: z.record(z.any()).optional().describe('Arbitrary metadata blob'),
@@ -75,7 +75,7 @@ export const create_mcp_srv = () => {
         return { content: [{ type: 'text', text: txt }, { type: 'text', text: JSON.stringify(payload, null, 2) }] }
     })
 
-    srv.tool('openmemory.reinforce', 'Boost salience for an existing memory', {
+    srv.tool('openmemory_reinforce', 'Boost salience for an existing memory', {
         id: z.string().min(1).describe('Memory identifier to reinforce'),
         boost: z.number().min(0.01).max(1).default(0.1).describe('Salience boost amount (default 0.1)')
     }, async ({ id, boost }) => {
@@ -83,7 +83,7 @@ export const create_mcp_srv = () => {
         return { content: [{ type: 'text', text: `Reinforced memory ${id} by ${boost}` }] }
     })
 
-    srv.tool('openmemory.list', 'List recent memories for quick inspection', {
+    srv.tool('openmemory_list', 'List recent memories for quick inspection', {
         limit: z.number().int().min(1).max(50).default(10).describe('Number of memories to return'),
         sector: sec_enum.optional().describe('Optionally limit to a sector'),
         user_id: z.string().trim().min(1).optional().describe('Restrict results to a specific user identifier')
@@ -101,7 +101,7 @@ export const create_mcp_srv = () => {
         return { content: [{ type: 'text', text: lns.join('\n\n') || 'No memories stored yet.' }, { type: 'text', text: JSON.stringify({ items }, null, 2) }] }
     })
 
-    srv.tool('openmemory.get', 'Fetch a single memory by identifier', {
+    srv.tool('openmemory_get', 'Fetch a single memory by identifier', {
         id: z.string().min(1).describe('Memory identifier to load'),
         include_vectors: z.boolean().default(false).describe('Include sector vector metadata'),
         user_id: z.string().trim().min(1).optional().describe('Validate ownership against a specific user identifier')
@@ -130,7 +130,7 @@ export const create_mcp_srv = () => {
 
     srv.resource('openmemory-config', 'openmemory://config', { mimeType: 'application/json', description: 'Runtime configuration snapshot for the OpenMemory MCP server' }, async () => {
         const stats = await all_async(`select primary_sector as sector, count(*) as count, avg(salience) as avg_salience from memories group by primary_sector`)
-        const pay = { mode: env.mode, sectors: sector_configs, stats, embeddings: getEmbeddingInfo(), server: { version: '2.1.0', protocol: '2025-06-18' }, available_tools: ['openmemory.query', 'openmemory.store', 'openmemory.reinforce', 'openmemory.list', 'openmemory.get'] }
+        const pay = { mode: env.mode, sectors: sector_configs, stats, embeddings: getEmbeddingInfo(), server: { version: '2.1.0', protocol: '2025-06-18' }, available_tools: ['openmemory_query', 'openmemory_store', 'openmemory_reinforce', 'openmemory_list', 'openmemory_get'] }
         return { contents: [{ uri: 'openmemory://config', text: JSON.stringify(pay, null, 2) }] }
     })
 
