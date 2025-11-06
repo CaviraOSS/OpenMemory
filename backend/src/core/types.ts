@@ -25,12 +25,14 @@ export type ingest_req = {
     data: string
     metadata?: Record<string, unknown>
     config?: { force_root?: boolean, sec_sz?: number, lg_thresh?: number }
+    user_id?: string
 }
 
 export type ingest_url_req = {
     url: string
     metadata?: Record<string, unknown>
     config?: { force_root?: boolean, sec_sz?: number, lg_thresh?: number }
+    user_id?: string
 }
 
 export type lgm_store_req = {

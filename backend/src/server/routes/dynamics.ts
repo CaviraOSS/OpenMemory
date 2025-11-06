@@ -38,7 +38,7 @@ export function dynroutes(app: any) {
                 dynamics_constants_configuration: advanced_memory_dynamics_configuration_constants
             })
         } catch (unexpected_error_during_constants_retrieval) {
-            console.error('Error retrieving dynamics constants:', unexpected_error_during_constants_retrieval)
+            console.error('[DYNAMICS] Error retrieving dynamics constants:', unexpected_error_during_constants_retrieval)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -72,7 +72,7 @@ export function dynroutes(app: any) {
                 }
             })
         } catch (unexpected_error_during_salience_calculation) {
-            console.error('Error calculating dynamic salience:', unexpected_error_during_salience_calculation)
+            console.error('[DYNAMICS] Error calculating dynamic salience:', unexpected_error_during_salience_calculation)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -100,7 +100,7 @@ export function dynroutes(app: any) {
                 }
             })
         } catch (unexpected_error_during_resonance_calculation) {
-            console.error('Error calculating cross-sector resonance:', unexpected_error_during_resonance_calculation)
+            console.error('[DYNAMICS] Error calculating cross-sector resonance:', unexpected_error_during_resonance_calculation)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -143,7 +143,7 @@ export function dynroutes(app: any) {
                 }))
             })
         } catch (unexpected_error_during_energy_retrieval) {
-            console.error('Error performing energy-based retrieval:', unexpected_error_during_energy_retrieval)
+            console.error('[DYNAMICS] Error performing energy-based retrieval:', unexpected_error_during_energy_retrieval)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -206,7 +206,7 @@ export function dynroutes(app: any) {
                 linked_nodes_updates: propagated_reinforcement_updates_list
             })
         } catch (unexpected_error_during_trace_reinforcement) {
-            console.error('Error applying trace reinforcement:', unexpected_error_during_trace_reinforcement)
+            console.error('[DYNAMICS] Error applying trace reinforcement:', unexpected_error_during_trace_reinforcement)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -241,7 +241,7 @@ export function dynroutes(app: any) {
                 spreading_activation_results: activation_results_as_array
             })
         } catch (unexpected_error_during_spreading_activation) {
-            console.error('Error performing spreading activation:', unexpected_error_during_spreading_activation)
+            console.error('[DYNAMICS] Error performing spreading activation:', unexpected_error_during_spreading_activation)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -289,7 +289,7 @@ export function dynroutes(app: any) {
                 detailed_node_information: detailed_graph_nodes_array
             })
         } catch (unexpected_error_building_waypoint_graph) {
-            console.error('Error building waypoint graph:', unexpected_error_building_waypoint_graph)
+            console.error('[DYNAMICS] Error building waypoint graph:', unexpected_error_building_waypoint_graph)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })
@@ -344,7 +344,7 @@ export function dynroutes(app: any) {
                 }
             })
         } catch (unexpected_error_calculating_waypoint_weight) {
-            console.error('Error calculating waypoint weight:', unexpected_error_calculating_waypoint_weight)
+            console.error('[DYNAMICS] Error calculating waypoint weight:', unexpected_error_calculating_waypoint_weight)
             outgoing_http_response.status(500).json({ err: 'internal' })
         }
     })

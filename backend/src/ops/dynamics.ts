@@ -116,7 +116,7 @@ export async function applyDualPhaseDecayToAllMemories(): Promise<void> {
         await run_async('update memories set salience=?,updated_at=? where id=?', [Math.max(0, nsal), ts, m.id])
     })
     await Promise.all(ops)
-    console.log(`Decay applied to ${mems.length} memories`)
+    console.log(`[DECAY] Applied to ${mems.length} memories`)
 }
 
 export async function buildAssociativeWaypointGraphFromMemories(): Promise<Map<string, AssociativeWaypointGraphNode>> {

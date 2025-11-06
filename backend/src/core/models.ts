@@ -7,16 +7,16 @@ export const load_models = (): model_cfg => {
     if (cfg) return cfg
     const p = join(__dirname, '../../../models.yml')
     if (!existsSync(p)) {
-        console.warn('⚠️ models.yml not found, using defaults')
+        console.warn('[MODELS] models.yml not found, using defaults')
         return get_defaults()
     }
     try {
         const yml = readFileSync(p, 'utf-8')
         cfg = parse_yaml(yml)
-        console.log(`📋 loaded models.yml (${Object.keys(cfg).length} sectors)`)
+        console.log(`[MODELS] Loaded models.yml (${Object.keys(cfg).length} sectors)`)
         return cfg
     } catch (e) {
-        console.error('❌ failed to parse models.yml:', e)
+        console.error('[MODELS] Failed to parse models.yml:', e)
         return get_defaults()
     }
 }

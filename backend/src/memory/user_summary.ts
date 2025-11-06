@@ -95,7 +95,7 @@ export const auto_update_user_summaries = async (): Promise<{ updated: number }>
             await update_user_summary(uid as string)
             updated++
         } catch (e) {
-            console.error(`[user_summary] failed for ${uid}:`, e)
+            console.error(`[USER_SUMMARY] Failed for ${uid}:`, e)
         }
     }
 
@@ -107,7 +107,7 @@ let timer: NodeJS.Timeout | null = null
 export const start_user_summary_reflection = () => {
     if (timer) return
     const int = (env.user_summary_interval || 30) * 60000
-    timer = setInterval(() => auto_update_user_summaries().catch(e => console.error('[user_summary]', e)), int)
+    timer = setInterval(() => auto_update_user_summaries().catch(e => console.error('[USER_SUMMARY]', e)), int)
 }
 
 export const stop_user_summary_reflection = () => {

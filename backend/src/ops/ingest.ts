@@ -27,13 +27,13 @@ const split = (t: string, sz: number): string[] => {
     return secs
 }
 
-const mkRoot = async (txt: string, ex: ExtractionResult, meta?: Record<string, unknown>) => {
+const mkRoot = async (txt: string, ex: ExtractionResult, meta?: Record<string, unknown>, user_id?: string | null) => {
     const sum = txt.length > 500 ? txt.slice(0, 500) + '...' : txt
     const cnt = `[Document: ${ex.metadata.content_type.toUpperCase()}]\n\n${sum}\n\n[Full content split across ${Math.ceil(txt.length / SEC)} sections]`
     const id = rid(), ts = now()
     await transaction.begin()
     try {
-        await q.ins_mem.run(id, cnt, 'reflective', j([]), j({ ...meta, ...ex.metadata, is_root: true, ingestion_strategy: 'root-child', ingested_at: ts }), ts, ts, ts, 1.0, 0.1, 1, null, null)
+        await q.ins_mem.run(id, cnt, 'reflective', j([]), j({ ...meta, ...ex.metadata, is_root: true, ingestion_strategy: 'root-child', ingested_at: ts }), ts, ts, ts, 1.0, 0.1, 1, user_id || null, null)
         await transaction.commit()
         return id
     } catch (e) {
@@ -43,101 +43,101 @@ const mkRoot = async (txt: string, ex: ExtractionResult, meta?: Record<string, u
     }
 }
 
-const mkChild = async (txt: string, idx: number, tot: number, rid: string, meta?: Record<string, unknown>) => {
-    const r = await add_hsg_memory(txt, j([]), { ...meta, is_child: true, section_index: idx, total_sections: tot, parent_id: rid })
+const mkChild = async (txt: string, idx: number, tot: number, rid: string, meta?: Record<string, unknown>, user_id?: string | null) => {
+    const r = await add_hsg_memory(txt, j([]), { ...meta, is_child: true, section_index: idx, total_sections: tot, parent_id: rid }, user_id || undefined)
     return r.id
 }
 
-const link = async (rid: string, cid: string, idx: number) => {
+const link = async (rid: string, cid: string, idx: number, user_id?: string | null) => {
     const ts = now()
     await transaction.begin()
     try {
-        await q.ins_waypoint.run(rid, cid, 1.0, ts, ts)
+        await q.ins_waypoint.run(rid, cid, user_id || null, 1.0, ts, ts)
         await transaction.commit()
-        console.log(`🔗 Link: ${rid.slice(0, 8)} → ${cid.slice(0, 8)} (${idx})`)
+        console.log(`[INGEST] Linked: ${rid.slice(0, 8)} -> ${cid.slice(0, 8)} (section ${idx})`)
     } catch (e) {
         await transaction.rollback()
-        console.error(`❌ Link failed for ${idx}:`, e)
+        console.error(`[INGEST] Link failed for section ${idx}:`, e)
         throw e
     }
 }
 
-export async function ingestDocument(t: string, data: string | Buffer, meta?: Record<string, unknown>, cfg?: ingestion_cfg): Promise<IngestionResult> {
+export async function ingestDocument(t: string, data: string | Buffer, meta?: Record<string, unknown>, cfg?: ingestion_cfg, user_id?: string | null): Promise<IngestionResult> {
     const th = cfg?.lg_thresh || LG, sz = cfg?.sec_sz || SEC
     const ex = await extractText(t, data)
     const { text, metadata: exMeta } = ex
     const useRC = cfg?.force_root || exMeta.estimated_tokens > th
 
     if (!useRC) {
-        const r = await add_hsg_memory(text, j([]), { ...meta, ...exMeta, ingestion_strategy: 'single', ingested_at: now() })
+        const r = await add_hsg_memory(text, j([]), { ...meta, ...exMeta, ingestion_strategy: 'single', ingested_at: now() }, user_id || undefined)
         return { root_memory_id: r.id, child_count: 0, total_tokens: exMeta.estimated_tokens, strategy: 'single', extraction: exMeta }
     }
 
     const secs = split(text, sz)
-    console.log(`📄 Large doc: ${exMeta.estimated_tokens} tokens`)
-    console.log(`📑 Split into ${secs.length} sections`)
+    console.log(`[INGEST] Document: ${exMeta.estimated_tokens} tokens`)
+    console.log(`[INGEST] Splitting into ${secs.length} sections`)
 
     let rid: string
     const cids: string[] = []
 
     try {
-        rid = await mkRoot(text, ex, meta)
-        console.log(`📝 Root: ${rid}`)
+        rid = await mkRoot(text, ex, meta, user_id)
+        console.log(`[INGEST] Root memory created: ${rid}`)
         for (let i = 0; i < secs.length; i++) {
             try {
-                const cid = await mkChild(secs[i], i, secs.length, rid, meta)
+                const cid = await mkChild(secs[i], i, secs.length, rid, meta, user_id)
                 cids.push(cid)
-                await link(rid, cid, i)
-                console.log(`✅ Section ${i + 1}/${secs.length}: ${cid}`)
+                await link(rid, cid, i, user_id)
+                console.log(`[INGEST] Section ${i + 1}/${secs.length} processed: ${cid}`)
             } catch (e) {
-                console.error(`❌ Section ${i + 1}/${secs.length} failed:`, e)
+                console.error(`[INGEST] Section ${i + 1}/${secs.length} failed:`, e)
                 throw e
             }
         }
-        console.log(`🎉 Done: ${cids.length} sections → ${rid}`)
+        console.log(`[INGEST] Completed: ${cids.length} sections linked to ${rid}`)
         return { root_memory_id: rid, child_count: secs.length, total_tokens: exMeta.estimated_tokens, strategy: 'root-child', extraction: exMeta }
     } catch (e) {
-        console.error('❌ Ingestion failed:', e)
+        console.error('[INGEST] Document ingestion failed:', e)
         throw e
     }
 }
 
-export async function ingestURL(url: string, meta?: Record<string, unknown>, cfg?: ingestion_cfg): Promise<IngestionResult> {
+export async function ingestURL(url: string, meta?: Record<string, unknown>, cfg?: ingestion_cfg, user_id?: string | null): Promise<IngestionResult> {
     const { extractURL } = await import('./extract')
     const ex = await extractURL(url)
     const th = cfg?.lg_thresh || LG, sz = cfg?.sec_sz || SEC
     const useRC = cfg?.force_root || ex.metadata.estimated_tokens > th
 
     if (!useRC) {
-        const r = await add_hsg_memory(ex.text, j([]), { ...meta, ...ex.metadata, ingestion_strategy: 'single', ingested_at: now() })
+        const r = await add_hsg_memory(ex.text, j([]), { ...meta, ...ex.metadata, ingestion_strategy: 'single', ingested_at: now() }, user_id || undefined)
         return { root_memory_id: r.id, child_count: 0, total_tokens: ex.metadata.estimated_tokens, strategy: 'single', extraction: ex.metadata }
     }
 
     const secs = split(ex.text, sz)
-    console.log(`🌐 Large URL: ${ex.metadata.estimated_tokens} tokens`)
-    console.log(`📑 Split into ${secs.length} sections`)
+    console.log(`[INGEST] URL: ${ex.metadata.estimated_tokens} tokens`)
+    console.log(`[INGEST] Splitting into ${secs.length} sections`)
 
     let rid: string
     const cids: string[] = []
 
     try {
-        rid = await mkRoot(ex.text, ex, { ...meta, source_url: url })
-        console.log(`📝 Root for URL: ${rid}`)
+        rid = await mkRoot(ex.text, ex, { ...meta, source_url: url }, user_id)
+        console.log(`[INGEST] Root memory for URL: ${rid}`)
         for (let i = 0; i < secs.length; i++) {
             try {
-                const cid = await mkChild(secs[i], i, secs.length, rid, { ...meta, source_url: url })
+                const cid = await mkChild(secs[i], i, secs.length, rid, { ...meta, source_url: url }, user_id)
                 cids.push(cid)
-                await link(rid, cid, i)
-                console.log(`✅ URL section ${i + 1}/${secs.length}: ${cid}`)
+                await link(rid, cid, i, user_id)
+                console.log(`[INGEST] URL section ${i + 1}/${secs.length} processed: ${cid}`)
             } catch (e) {
-                console.error(`❌ URL section ${i + 1}/${secs.length} failed:`, e)
+                console.error(`[INGEST] URL section ${i + 1}/${secs.length} failed:`, e)
                 throw e
             }
         }
-        console.log(`🎉 URL done: ${cids.length} sections → ${rid}`)
+        console.log(`[INGEST] URL completed: ${cids.length} sections linked to ${rid}`)
         return { root_memory_id: rid, child_count: secs.length, total_tokens: ex.metadata.estimated_tokens, strategy: 'root-child', extraction: ex.metadata }
     } catch (e) {
-        console.error('❌ URL ingestion failed:', e)
+        console.error('[INGEST] URL ingestion failed:', e)
         throw e
     }
 }

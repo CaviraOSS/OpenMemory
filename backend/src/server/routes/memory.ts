@@ -26,7 +26,7 @@ export function mem(app: any) {
         const b = req.body as ingest_req;
         if (!b?.content_type || !b?.data) return res.status(400).json({ err: 'missing' });
         try {
-            const r = await ingestDocument(b.content_type, b.data, b.metadata, b.config);
+            const r = await ingestDocument(b.content_type, b.data, b.metadata, b.config, b.user_id);
             res.json(r);
         } catch (e: any) {
             res.status(500).json({ err: 'ingest_fail', msg: e.message });
@@ -37,7 +37,7 @@ export function mem(app: any) {
         const b = req.body as ingest_url_req;
         if (!b?.url) return res.status(400).json({ err: 'no_url' });
         try {
-            const r = await ingestURL(b.url, b.metadata, b.config);
+            const r = await ingestURL(b.url, b.metadata, b.config, b.user_id);
             res.json(r);
         } catch (e: any) {
             res.status(500).json({ err: 'url_fail', msg: e.message });
@@ -85,9 +85,18 @@ export function mem(app: any) {
 
     app.patch('/memory/:id', async (req: any, res: any) => {
         const id = req.params.id;
-        const b = req.body as { content?: string; tags?: string[]; metadata?: any };
+        const b = req.body as { content?: string; tags?: string[]; metadata?: any; user_id?: string };
         if (!id) return res.status(400).json({ err: 'id' });
         try {
+            // Check if memory exists and user has permission
+            const m = await q.get_mem.get(id);
+            if (!m) return res.status(404).json({ err: 'nf' });
+
+            // Check user ownership if user_id is provided
+            if (b.user_id && m.user_id !== b.user_id) {
+                return res.status(403).json({ err: 'forbidden' });
+            }
+
             const r = await update_memory(id, b.content, b.tags, b.metadata);
             res.json(r);
         } catch (e: any) {
@@ -104,9 +113,20 @@ export function mem(app: any) {
             const u = req.query.u ? parseInt(req.query.u) : 0;
             const l = req.query.l ? parseInt(req.query.l) : 100;
             const s = req.query.sector;
-            const r = s
-                ? await q.all_mem_by_sector.all(s, l, u)
-                : await q.all_mem.all(l, u);
+            const user_id = req.query.user_id;
+
+            let r;
+            if (user_id) {
+                // Filter by user_id
+                r = await q.all_mem_by_user.all(user_id, l, u);
+            } else if (s) {
+                // Filter by sector
+                r = await q.all_mem_by_sector.all(s, l, u);
+            } else {
+                // No filter
+                r = await q.all_mem.all(l, u);
+            }
+
             const i = r.map((x: any) => ({
                 id: x.id,
                 content: x.content,
@@ -118,7 +138,8 @@ export function mem(app: any) {
                 salience: x.salience,
                 decay_lambda: x.decay_lambda,
                 primary_sector: x.primary_sector,
-                version: x.version
+                version: x.version,
+                user_id: x.user_id
             }));
             res.json({ items: i });
         } catch (e: any) {
@@ -129,8 +150,15 @@ export function mem(app: any) {
     app.get('/memory/:id', async (req: any, res: any) => {
         try {
             const id = req.params.id;
+            const user_id = req.query.user_id;
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: 'nf' });
+
+            // Check user ownership if user_id is provided
+            if (user_id && m.user_id !== user_id) {
+                return res.status(403).json({ err: 'forbidden' });
+            }
+
             const v = await q.get_vecs_by_id.all(id);
             const sec = v.map((x: any) => x.sector);
             res.json({
@@ -145,7 +173,8 @@ export function mem(app: any) {
                 last_seen_at: m.last_seen_at,
                 salience: m.salience,
                 decay_lambda: m.decay_lambda,
-                version: m.version
+                version: m.version,
+                user_id: m.user_id
             });
         } catch (e: any) {
             res.status(500).json({ err: 'internal' });
@@ -155,8 +184,15 @@ export function mem(app: any) {
     app.delete('/memory/:id', async (req: any, res: any) => {
         try {
             const id = req.params.id;
+            const user_id = req.query.user_id || req.body.user_id;
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: 'nf' });
+
+            // Check user ownership if user_id is provided
+            if (user_id && m.user_id !== user_id) {
+                return res.status(403).json({ err: 'forbidden' });
+            }
+
             await q.del_mem.run(id);
             await q.del_vec.run(id);
             await q.del_waypoints.run(id, id);

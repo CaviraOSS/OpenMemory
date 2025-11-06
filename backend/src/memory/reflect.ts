@@ -76,30 +76,30 @@ const boost = async (ids: string[]) => {
 }
 
 export const run_reflection = async () => {
-    console.log('[reflect] starting reflection job...')
+    console.log('[REFLECT] Starting reflection job...')
     const min = env.reflect_min || 20
     const mems = await q.all_mem.all(100, 0)
-    console.log(`[reflect] fetched ${mems.length} memories (min required: ${min})`)
+    console.log(`[REFLECT] Fetched ${mems.length} memories (min required: ${min})`)
     if (mems.length < min) {
-        console.log('[reflect] not enough memories, skipping')
+        console.log('[REFLECT] Not enough memories, skipping')
         return { created: 0, reason: 'low' }
     }
     const cls = cluster(mems)
-    console.log(`[reflect] clustered into ${cls.length} groups`)
+    console.log(`[REFLECT] Clustered into ${cls.length} groups`)
     let n = 0
     for (const c of cls) {
         const txt = summ(c)
         const s = sal(c)
         const src = c.mem.map((m: any) => m.id)
         const meta = { type: 'auto_reflect', sources: src, freq: c.n, at: new Date().toISOString() }
-        console.log(`[reflect] creating reflection: ${c.n} memories, salience=${s.toFixed(3)}, sector=${c.mem[0].primary_sector}`)
+        console.log(`[REFLECT] Creating reflection: ${c.n} memories, salience=${s.toFixed(3)}, sector=${c.mem[0].primary_sector}`)
         await add_hsg_memory(txt, j(['reflect:auto']), meta)
         await mark(src)
         await boost(src)
         n++
     }
     if (n > 0) await log_maint_op('reflect', n)
-    console.log(`[reflect] job complete: created ${n} reflections`)
+    console.log(`[REFLECT] Job complete: created ${n} reflections`)
     return { created: n, clusters: cls.length }
 }
 
@@ -108,8 +108,8 @@ let timer: NodeJS.Timeout | null = null
 export const start_reflection = () => {
     if (!env.auto_reflect || timer) return
     const int = (env.reflect_interval || 10) * 60000
-    timer = setInterval(() => run_reflection().catch(e => console.error('[reflect]', e)), int)
-    console.log(`[reflect] started: every ${env.reflect_interval || 10}m`)
+    timer = setInterval(() => run_reflection().catch(e => console.error('[REFLECT]', e)), int)
+    console.log(`[REFLECT] Started: every ${env.reflect_interval || 10}m`)
 }
 
 export const stop_reflection = () => {

@@ -55,7 +55,7 @@ export function authenticate_api_request(req: any, res: any, next: any) {
     const path = req.path || req.url
     if (is_public_endpoint(path)) return next()
     if (!auth_config.api_key || auth_config.api_key === '') {
-        console.warn('⚠️  No API key configured')
+        console.warn('[AUTH] No API key configured')
         return next()
     }
     const provided = extract_api_key(req)
@@ -74,7 +74,7 @@ export function authenticate_api_request(req: any, res: any, next: any) {
 
 export function log_authenticated_request(req: any, res: any, next: any) {
     const key = extract_api_key(req)
-    if (key) console.log(`🔐 ${req.method} ${req.path} [${crypto.createHash('sha256').update(key).digest('hex').slice(0, 8)}...]`)
+    if (key) console.log(`[AUTH] ${req.method} ${req.path} [${crypto.createHash('sha256').update(key).digest('hex').slice(0, 8)}...]`)
     next()
 }
 

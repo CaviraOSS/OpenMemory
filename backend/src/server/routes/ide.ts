@@ -33,7 +33,7 @@ export function ide(app: any) {
                 sectors: result.sectors
             })
         } catch (err) {
-            console.error('Error storing IDE event:', err)
+            console.error('[IDE] Error storing IDE event:', err)
             res.status(500).json({ err: 'internal' })
         }
     })
@@ -86,7 +86,7 @@ export function ide(app: any) {
                 query: query
             })
         } catch (err) {
-            console.error('Error retrieving IDE context:', err)
+            console.error('[IDE] Error retrieving IDE context:', err)
             res.status(500).json({ err: 'internal' })
         }
     })
@@ -124,7 +124,7 @@ export function ide(app: any) {
                 ide_name: ide_name
             })
         } catch (err) {
-            console.error('Error starting IDE session:', err)
+            console.error('[IDE] Error starting IDE session:', err)
             res.status(500).json({ err: 'internal' })
         }
     })
@@ -188,7 +188,7 @@ export function ide(app: any) {
                 }
             })
         } catch (err) {
-            console.error('Error ending IDE session:', err)
+            console.error('[IDE] Error ending IDE session:', err)
             res.status(500).json({ err: 'internal' })
         }
     })
@@ -226,7 +226,7 @@ export function ide(app: any) {
                 patterns: patterns
             })
         } catch (err) {
-            console.error('Error detecting patterns:', err)
+            console.error('[IDE] Error detecting patterns:', err)
             res.status(500).json({ err: 'internal' })
         }
     })

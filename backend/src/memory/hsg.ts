@@ -305,13 +305,14 @@ import { q, get_async, all_async, run_async, transaction, log_maint_op } from '.
 export async function create_cross_sector_waypoints(
     prim_id: string,
     prim_sec: string,
-    add_secs: string[]
+    add_secs: string[],
+    user_id?: string | null
 ): Promise<void> {
     const now = Date.now()
     const wt = 0.5
     for (const sec of add_secs) {
-        await q.ins_waypoint.run(prim_id, `${prim_id}:${sec}`, wt, now, now)
-        await q.ins_waypoint.run(`${prim_id}:${sec}`, prim_id, wt, now, now)
+        await q.ins_waypoint.run(prim_id, `${prim_id}:${sec}`, user_id || null, wt, now, now)
+        await q.ins_waypoint.run(`${prim_id}:${sec}`, prim_id, user_id || null, wt, now, now)
     }
 }
 export function calc_mean_vec(emb_res: EmbeddingResult[], secs: string[]): number[] {
@@ -336,10 +337,13 @@ export function calc_mean_vec(emb_res: EmbeddingResult[], secs: string[]): numbe
 export async function create_single_waypoint(
     new_id: string,
     new_mean: number[],
-    ts: number
+    ts: number,
+    user_id?: string | null
 ): Promise<void> {
     const thresh = 0.75
-    const mems = await q.all_mem.all(1000, 0)
+    const mems = user_id
+        ? await q.all_mem_by_user.all(user_id, 1000, 0)
+        : await q.all_mem.all(1000, 0)
     let best: { id: string, similarity: number } | null = null
     for (const mem of mems) {
         if (mem.id === new_id || !mem.mean_vec) continue
@@ -350,16 +354,17 @@ export async function create_single_waypoint(
         }
     }
     if (best) {
-        await q.ins_waypoint.run(new_id, best.id, best.similarity, ts, ts)
+        await q.ins_waypoint.run(new_id, best.id, user_id || null, best.similarity, ts, ts)
     } else {
-        await q.ins_waypoint.run(new_id, new_id, 1.0, ts, ts)
+        await q.ins_waypoint.run(new_id, new_id, user_id || null, 1.0, ts, ts)
     }
 }
 export async function create_inter_mem_waypoints(
     new_id: string,
     prim_sec: string,
     new_vec: number[],
-    ts: number
+    ts: number,
+    user_id?: string | null
 ): Promise<void> {
     const thresh = 0.75
     const wt = 0.5
@@ -369,15 +374,16 @@ export async function create_inter_mem_waypoints(
         const ex_vec = buf_to_vec(vr.v)
         const sim = cos_sim(new Float32Array(new_vec), ex_vec)
         if (sim >= thresh) {
-            await q.ins_waypoint.run(new_id, vr.id, wt, ts, ts)
-            await q.ins_waypoint.run(vr.id, new_id, wt, ts, ts)
+            await q.ins_waypoint.run(new_id, vr.id, user_id || null, wt, ts, ts)
+            await q.ins_waypoint.run(vr.id, new_id, user_id || null, wt, ts, ts)
         }
     }
 }
 export async function create_contextual_waypoints(
     mem_id: string,
     rel_ids: string[],
-    base_wt: number = 0.3
+    base_wt: number = 0.3,
+    user_id?: string | null
 ): Promise<void> {
     const now = Date.now()
     for (const rel_id of rel_ids) {
@@ -387,7 +393,7 @@ export async function create_contextual_waypoints(
             const new_wt = Math.min(1.0, existing.weight + 0.1)
             await q.upd_waypoint.run(new_wt, now, mem_id, rel_id)
         } else {
-            await q.ins_waypoint.run(mem_id, rel_id, base_wt, now, now)
+            await q.ins_waypoint.run(mem_id, rel_id, user_id || null, base_wt, now, now)
         }
     }
 }
@@ -751,7 +757,7 @@ export async function add_hsg_memory(
         const emb_res = await embedMultiSector(id, content, all_sectors, use_chunking ? chunks : undefined)
         for (const result of emb_res) {
             const vec_buf = vectorToBuffer(result.vector)
-            await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
+            await q.ins_vec.run(id, result.sector, user_id || null, vec_buf, result.dim)
         }
         const mean_vec = calc_mean_vec(emb_res, all_sectors)
         const mean_vec_buf = vectorToBuffer(mean_vec)
@@ -764,7 +770,7 @@ export async function add_hsg_memory(
             await q.upd_compressed_vec.run(comp_buf, id)
         }
 
-        await create_single_waypoint(id, mean_vec, now)
+        await create_single_waypoint(id, mean_vec, now, user_id)
         await transaction.commit()
         return {
             id,
@@ -806,7 +812,7 @@ export async function update_memory(
             const emb_res = await embedMultiSector(id, new_content, all_sectors, use_chunking ? chunks : undefined)
             for (const result of emb_res) {
                 const vec_buf = vectorToBuffer(result.vector)
-                await q.ins_vec.run(id, result.sector, vec_buf, result.dim)
+                await q.ins_vec.run(id, result.sector, mem.user_id || null, vec_buf, result.dim)
             }
             const mean_vec = calc_mean_vec(emb_res, all_sectors)
             const mean_vec_buf = vectorToBuffer(mean_vec)

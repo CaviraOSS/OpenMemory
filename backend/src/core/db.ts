@@ -109,7 +109,7 @@ if (is_pg) {
                 const admin = pool('postgres')
                 try {
                     await admin.query(`CREATE DATABASE ${db_name}`)
-                    console.log(`[db] created ${db_name}`)
+                    console.log(`[DB] Created ${db_name}`)
                 } catch (e: any) {
                     if (e.code !== '42P04') throw e
                 } finally {
@@ -120,18 +120,20 @@ if (is_pg) {
             } else throw err
         }
         await pg.query(`create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0)`)
-        await pg.query(`create table if not exists ${v}(id uuid,sector text,v bytea,dim integer not null,primary key(id,sector))`)
-        await pg.query(`create table if not exists ${w}(src_id text primary key,dst_id text not null,weight double precision not null,created_at bigint,updated_at bigint)`)
+        await pg.query(`create table if not exists ${v}(id uuid,sector text,user_id text,v bytea,dim integer not null,primary key(id,sector))`)
+        await pg.query(`create table if not exists ${w}(src_id text,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint,primary key(src_id,user_id))`)
         await pg.query(`create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`)
         await pg.query(`create table if not exists "${sc}"."openmemory_users"(user_id text primary key,summary text,reflection_count integer default 0,created_at bigint,updated_at bigint)`)
         await pg.query(`create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`)
         await pg.query(`create index if not exists openmemory_memories_segment_idx on ${m}(segment)`)
         await pg.query(`create index if not exists openmemory_memories_simhash_idx on ${m}(simhash)`)
         await pg.query(`create index if not exists openmemory_memories_user_idx on ${m}(user_id)`)
+        await pg.query(`create index if not exists openmemory_vectors_user_idx on ${v}(user_id)`)
+        await pg.query(`create index if not exists openmemory_waypoints_user_idx on ${w}(user_id)`)
         ready = true
     }
     init().catch(err => {
-        console.error('[db] init failed:', err)
+        console.error('[DB] Init failed:', err)
         process.exit(1)
     })
     const safe_exec = async (sql: string, p: any[] = []) => {
@@ -159,7 +161,7 @@ if (is_pg) {
         get_max_segment: { get: () => get_async(`select coalesce(max(segment), 0) as max_seg from ${m}`, []) },
         get_segments: { all: () => all_async(`select distinct segment from ${m} order by segment desc`, []) },
         get_mem_by_segment: { all: (segment) => all_async(`select * from ${m} where segment=$1 order by created_at desc`, [segment]) },
-        ins_vec: { run: (...p) => run_async(`insert into ${v}(id,sector,v,dim) values($1,$2,$3,$4) on conflict(id,sector) do update set v=excluded.v,dim=excluded.dim`, p) },
+        ins_vec: { run: (...p) => run_async(`insert into ${v}(id,sector,user_id,v,dim) values($1,$2,$3,$4,$5) on conflict(id,sector) do update set user_id=excluded.user_id,v=excluded.v,dim=excluded.dim`, p) },
         get_vec: { get: (id, sector) => get_async(`select v,dim from ${v} where id=$1 and sector=$2`, [id, sector]) },
         get_vecs_by_id: { all: (id) => all_async(`select sector,v,dim from ${v} where id=$1`, [id]) },
         get_vecs_by_sector: { all: (sector) => all_async(`select id,v,dim from ${v} where sector=$1`, [sector]) },
@@ -172,7 +174,7 @@ if (is_pg) {
         },
         del_vec: { run: (...p) => run_async(`delete from ${v} where id=$1`, p) },
         del_vec_sector: { run: (...p) => run_async(`delete from ${v} where id=$1 and sector=$2`, p) },
-        ins_waypoint: { run: (...p) => run_async(`insert into ${w}(src_id,dst_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5) on conflict(src_id) do update set dst_id=excluded.dst_id,weight=excluded.weight,updated_at=excluded.updated_at`, p) },
+        ins_waypoint: { run: (...p) => run_async(`insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id,user_id) do update set dst_id=excluded.dst_id,weight=excluded.weight,updated_at=excluded.updated_at`, p) },
         get_neighbors: { all: (src) => all_async(`select dst_id,weight from ${w} where src_id=$1 order by weight desc`, [src]) },
         get_waypoints_by_src: { all: (src) => all_async(`select src_id,dst_id,weight,created_at,updated_at from ${w} where src_id=$1`, [src]) },
         get_waypoint: { get: (src, dst) => get_async(`select weight from ${w} where src_id=$1 and dst_id=$2`, [src, dst]) },
@@ -204,8 +206,8 @@ if (is_pg) {
         db.run('PRAGMA locking_mode=EXCLUSIVE')
         db.run('PRAGMA busy_timeout=50')
         db.run(`create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`)
-        db.run(`create table if not exists vectors(id text not null,sector text not null,v blob not null,dim integer not null,primary key(id,sector))`)
-        db.run(`create table if not exists waypoints(src_id text primary key,dst_id text not null,weight real not null,created_at integer,updated_at integer)`)
+        db.run(`create table if not exists vectors(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`)
+        db.run(`create table if not exists waypoints(src_id text,dst_id text not null,user_id text,weight real not null,created_at integer,updated_at integer,primary key(src_id,user_id))`)
         db.run(`create table if not exists embed_logs(id text primary key,model text,status text,ts integer,err text)`)
         db.run(`create table if not exists users(user_id text primary key,summary text,reflection_count integer default 0,created_at integer,updated_at integer)`)
         db.run(`create table if not exists stats(id integer primary key autoincrement,type text not null,count integer default 1,ts integer not null)`)
@@ -214,8 +216,10 @@ if (is_pg) {
         db.run('create index if not exists idx_memories_simhash on memories(simhash)')
         db.run('create index if not exists idx_memories_ts on memories(last_seen_at)')
         db.run('create index if not exists idx_memories_user on memories(user_id)')
+        db.run('create index if not exists idx_vectors_user on vectors(user_id)')
         db.run('create index if not exists idx_waypoints_src on waypoints(src_id)')
         db.run('create index if not exists idx_waypoints_dst on waypoints(dst_id)')
+        db.run('create index if not exists idx_waypoints_user on waypoints(user_id)')
         db.run('create index if not exists idx_stats_ts on stats(ts)')
         db.run('create index if not exists idx_stats_type on stats(type)')
     })
@@ -248,7 +252,7 @@ if (is_pg) {
         get_max_segment: { get: () => one('select coalesce(max(segment), 0) as max_seg from memories', []) },
         get_segments: { all: () => many('select distinct segment from memories order by segment desc', []) },
         get_mem_by_segment: { all: (segment) => many('select * from memories where segment=? order by created_at desc', [segment]) },
-        ins_vec: { run: (...p) => exec('insert into vectors(id,sector,v,dim) values(?,?,?,?)', p) },
+        ins_vec: { run: (...p) => exec('insert into vectors(id,sector,user_id,v,dim) values(?,?,?,?,?)', p) },
         get_vec: { get: (id, sector) => one('select v,dim from vectors where id=? and sector=?', [id, sector]) },
         get_vecs_by_id: { all: (id) => many('select sector,v,dim from vectors where id=?', [id]) },
         get_vecs_by_sector: { all: (sector) => many('select id,v,dim from vectors where sector=?', [sector]) },
@@ -261,7 +265,7 @@ if (is_pg) {
         },
         del_vec: { run: (...p) => exec('delete from vectors where id=?', p) },
         del_vec_sector: { run: (...p) => exec('delete from vectors where id=? and sector=?', p) },
-        ins_waypoint: { run: (...p) => exec('insert or replace into waypoints(src_id,dst_id,weight,created_at,updated_at) values(?,?,?,?,?)', p) },
+        ins_waypoint: { run: (...p) => exec('insert or replace into waypoints(src_id,dst_id,user_id,weight,created_at,updated_at) values(?,?,?,?,?,?)', p) },
         get_neighbors: { all: (src) => many('select dst_id,weight from waypoints where src_id=? order by weight desc', [src]) },
         get_waypoints_by_src: { all: (src) => many('select src_id,dst_id,weight,created_at,updated_at from waypoints where src_id=?', [src]) },
         get_waypoint: { get: (src, dst) => one('select weight from waypoints where src_id=? and dst_id=?', [src, dst]) },
@@ -283,7 +287,7 @@ export const log_maint_op = async (type: 'decay' | 'reflect' | 'consolidate', cn
     try {
         await run_async('insert into stats(type,count,ts) values(?,?,?)', [type, cnt, Date.now()])
     } catch (e) {
-        console.error('[maint] log err:', e)
+        console.error('[DB] Maintenance log error:', e)
     }
 }
 

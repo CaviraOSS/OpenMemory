@@ -4,6 +4,8 @@
 
 Long-term memory for AI systems. Open source, self-hosted, and explainable.
 
+⚠️ **Upgrading from v1.1?** Multi-user tenant support requires database migration. See [MIGRATION.md](./MIGRATION.md) for upgrade instructions.
+
 [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
 
 ---
@@ -204,7 +206,53 @@ OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
 ---
 
-## 5. API
+## 5. Migration Tool
+
+Migrate your existing memories from Zep, Mem0, or Supermemory to OpenMemory with our standalone migration tool.
+
+### Quick Start
+
+```bash
+cd migrate
+node index.js --from mem0 --api-key YOUR_KEY --verify
+```
+
+### Supported Providers
+
+- **Zep** - Exports sessions and messages with rate limiting (1 req/s)
+- **Mem0** - User-based export with proper Token authentication (20 req/s)
+- **Supermemory** - Document export with pagination support (5-25 req/s)
+
+### Features
+
+- ✅ API-based import (no backend dependencies required)
+- ✅ Automatic rate limiting for billion-scale exports
+- ✅ Preserves user isolation and metadata
+- ✅ Built-in verification mode
+- ✅ Progress tracking and resume support
+- ✅ JSONL export format for portability
+
+### Example Commands
+
+```bash
+# List of all args
+node index.js --help
+
+# Basic migration with verification
+node index.js --from mem0 --api-key MEM0_KEY --verify
+
+# Target remote OpenMemory instance
+node index.js --from zep --api-key ZEP_KEY \
+  --openmemory-url https://my-instance.com \
+  --openmemory-key SECRET
+
+# Custom rate limit for paid tier
+node index.js --from supermemory --api-key SM_KEY --rate-limit 25
+```
+
+---
+
+## 6. API
 
 **Full API documentation:** https://openmemory.cavira.app
 
@@ -268,11 +316,11 @@ node backend/dist/ai/mcp.js
 
 ---
 
-## 6. Performance
+## 7. Performance
 
 OpenMemory costs 6-12× less than cloud alternatives and delivers 2-3× faster queries.
 
-### 6.1 Speed
+### 7.1 Speed
 
 Based on tests with 100,000 memories:
 
@@ -284,7 +332,7 @@ Based on tests with 100,000 memories:
 | Pattern clustering | 60 ms      | N/A    | N/A         | N/A    | N/A       |
 | Reflection cycle   | 400 ms     | N/A    | N/A         | N/A    | N/A       |
 
-### 6.2 Throughput
+### 7.2 Throughput
 
 Queries per second with concurrent users:
 
@@ -295,7 +343,7 @@ Queries per second with concurrent users:
 | 50    | 650 | 75 ms           | 180 ms          |
 | 100   | 900 | 110 ms          | 280 ms          |
 
-### 6.3 Self-Hosted Cost
+### 7.3 Self-Hosted Cost
 
 Monthly costs for 100,000 memories:
 
@@ -316,7 +364,7 @@ With OpenAI embeddings: add $10-15/month
 
 OpenMemory costs 6-12× less than cloud alternatives.
 
-### 6.4 Cost at Scale
+### 7.4 Cost at Scale
 
 Per 1 million memories:
 
@@ -328,7 +376,7 @@ Per 1 million memories:
 | Supermemory         | Included | Included   | $80     | **$80**     |
 | Mem0                | Included | $12        | $20     | **$32**     |
 
-### 6.5 Accuracy
+### 7.5 Accuracy
 
 Tested with LongMemEval benchmark:
 
@@ -339,7 +387,7 @@ Tested with LongMemEval benchmark:
 | Overall accuracy | 95%        | 72%  | 82%         | 74%  | 68%       |
 | Response time    | 2.1s       | 3.2s | 3.1s        | 2.7s | 2.4s      |
 
-### 6.6 Storage
+### 7.6 Storage
 
 | Scale | SQLite | PostgreSQL | RAM    | Query Time |
 | ----- | ------ | ---------- | ------ | ---------- |
@@ -350,7 +398,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 7. Security
+## 8. Security
 
 - API key authentication for write operations
 - Optional AES-GCM encryption for content
@@ -362,7 +410,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 8. Roadmap
+## 9. Roadmap
 
 | Version | Focus                     | Status      |
 | ------- | ------------------------- | ----------- |
@@ -374,7 +422,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 9. Contributing
+## 10. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -482,19 +530,19 @@ make test
 
 ---
 
-## 10. License
+## 11. License
 
 MIT License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 11. Community
+## 12. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 12. Other Projects
+## 13. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM

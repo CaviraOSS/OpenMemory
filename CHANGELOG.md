@@ -4,6 +4,39 @@
 
 ### Added
 
+- **Multi-Tenant Support with User Isolation**
+
+  - Complete per-user memory isolation via `user_id` field
+  - Automatic user summary generation and management
+  - User-scoped queries, stats, and memory operations
+  - REST API endpoints:
+    - `GET /users/:userId/summary` - Get user memory summary
+    - `GET /users/:userId/stats` - Get user statistics
+    - `POST /memory/add` with `user_id` field
+    - `POST /memory/query` with `filters.user_id`
+  - Database schema with user_id indexing for performance
+  - Migration tool preserves user isolation during import
+  - Full user namespace separation in memory storage
+
+- **Migration Tool for Competitor Import**
+
+  - Standalone CLI tool to migrate from Zep, Mem0, and Supermemory to OpenMemory
+  - API-based architecture (no backend dependencies required)
+  - Automatic rate limiting for billion-scale exports:
+    - Zep: 1 req/s (session-based iteration)
+    - Mem0: 20 req/s (user-based export with Token authentication)
+    - Supermemory: 5-25 req/s (document pagination)
+  - Features:
+    - Preserves user isolation and metadata
+    - JSONL export format for portability
+    - Built-in verification via OpenMemory API
+    - Progress tracking and resume support
+    - Automatic retry on rate limit (429) errors
+  - Reads backend configuration from root `.env` file (`OM_PORT`, `OM_API_KEY`)
+  - Environment variable fallback chain: CLI flags → `OPENMEMORY_*` → `OM_*` → defaults
+  - Example: `node migrate/index.js --from mem0 --api-key KEY --verify`
+  - Full documentation in `migrate/README.md`
+
 - **HYBRID Tier Performance Mode**
 
   - New tier achieving 100% keyword match accuracy with synthetic embeddings
