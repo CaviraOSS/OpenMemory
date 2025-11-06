@@ -49,13 +49,18 @@ if (-not (Test-Path $bashScript)) {
 }
 
 # Convert Windows path to Unix path for bash
-$bashScriptUnix = $bashScript -replace '\\', '/' -replace '^([A-Z]):', { "/$(($_.Value[0]).ToString().ToLower())" }
+# C:\Users\... -> /c/Users/...
+$bashScriptUnix = $bashScript -replace '\\', '/'
+if ($bashScriptUnix -match '^([A-Z]):') {
+    $drive = $matches[1].ToLower()
+    $bashScriptUnix = $bashScriptUnix -replace '^[A-Z]:', "/$drive"
+}
 
 Write-Host "Running bash installation script..." -ForegroundColor Cyan
 Write-Host ""
 
 # Run the bash script
-& $bashPath -c "$bashScriptUnix"
+& $bashPath -l $bashScriptUnix
 
 $exitCode = $LASTEXITCODE
 
