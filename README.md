@@ -178,12 +178,15 @@ npm run build
 npm start
 ```
 
-## 💖 Support the Project
+# 💖 Support the Project
 If you find OpenMemory useful, please consider supporting:
 
-# Ethereum (ERC-20):
+## Ethereum (ERC-20):
 
+```
 0x5a12e3f48b6d761a120bc3cd0977e208c362a74e
+```
+
 Your support helps fund ongoing development and hosting.
 ---
 
