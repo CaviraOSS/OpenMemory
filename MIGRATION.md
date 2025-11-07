@@ -6,35 +6,45 @@ OpenMemory v1.2 introduces per-user memory isolation with `user_id` fields. The 
 
 ## Automatic Migration (Recommended)
 
-**Starting with v1.2, OpenMemory automatically runs database migrations on startup.**
+**OpenMemory includes an automatic migration script for safe database upgrades.**
 
-Simply start your backend server and migrations will run automatically:
+Run the migration before starting your server:
 
 ```bash
 cd backend
-npm run dev
-# or
-npm start
+npm run migrate
 ```
 
 **Console output:**
 
 ```
+OpenMemory Database Migration Tool
+
 [MIGRATE] Checking for pending migrations...
 [MIGRATE] Current database version: none
 [MIGRATE] Running migration: 1.2.0 - Multi-user tenant support
 [MIGRATE] Migration 1.2.0 completed successfully
 [MIGRATE] All migrations completed
-[SERVER] Starting on port 8080
+
+[SUCCESS] Migration completed
 ```
 
 **Features:**
 
 - ✅ Auto-detects applied migrations (won't re-run)
-- ✅ Safe execution (checks for existing columns)
+- ✅ Safe execution (checks for existing columns before altering)
 - ✅ Version tracking (stores applied versions in `schema_version` table)
 - ✅ Works with both SQLite and PostgreSQL
 - ✅ Gracefully handles errors (skips duplicates)
+- ✅ Runs before database is initialized
+
+**After migration, start your server normally:**
+
+```bash
+npm run dev
+# or
+npm start
+```
 
 **Location:** `backend/src/core/migrate.ts`
 
