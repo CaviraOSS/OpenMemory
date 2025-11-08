@@ -16,12 +16,12 @@ RUN curl -fsSL https://bun.sh/install | bash \
 ENV PATH="/opt/bun/bin:${PATH}"
 
 # Copy package manifests to install dependencies
-COPY bun*.lock ./
+COPY package*.json ./
 
 # Install all dependencies (including devDependencies) using Bun
 # --frozen-lockfile ensures reproducible builds
 # --concurrent-scripts and --network-concurrency optimize install speed
-RUN bun install --frozen-lockfile --concurrent-scripts=10 --network-concurrency=96
+RUN bun install --concurrent-scripts=10 --network-concurrency=96
 
 # Copy source code and build the application
 COPY src/ ./src/
