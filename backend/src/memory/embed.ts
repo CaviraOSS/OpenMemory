@@ -25,12 +25,28 @@ const compress_vec = (v: number[], td: number): number[] => {
 }
 
 const fuse_vecs = (syn: number[], sem: number[]): number[] => {
-    const f = [...syn.map(v => v * 0.6), ...sem.map(v => v * 0.4)]
-    let n = 0
-    for (let i = 0; i < f.length; i++) n += f[i] * f[i]
-    n = Math.sqrt(n)
-    if (n > 0) for (let i = 0; i < f.length; i++) f[i] /= n
-    return f
+    const synLength = syn.length;
+    const semLength = sem.length;
+    const totalLength = synLength + semLength;
+    const f = new Array(totalLength);
+    let sumOfSquares = 0;
+    for (let i = 0; i < synLength; i++) {
+        const val = syn[i] * 0.6;
+        f[i] = val;
+        sumOfSquares += val * val;
+    }
+    for (let i = 0; i < semLength; i++) {
+        const val = sem[i] * 0.4;
+        f[synLength + i] = val;
+        sumOfSquares += val * val;
+    }
+    if (sumOfSquares > 0) {
+        const norm = Math.sqrt(sumOfSquares);
+        for (let i = 0; i < totalLength; i++) {
+            f[i] /= norm;
+        }
+    }
+    return f;
 }
 
 export async function embedForSector(t: string, s: string): Promise<number[]> {
