@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: openmemory
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: OM_PORT
+        value: 8080

@@ -1,7 +1,10 @@
 {
     "name": "openmemory-backend",
-    "version": "1.0.0",
+    "version": "1.2.0",
     "author": "nullure",
+    "bin": {
+        "opm": "./bin/opm.js"
+    },
     "scripts": {
         "dev": "tsx src/server/index.ts",
         "build": "tsc -p tsconfig.json",

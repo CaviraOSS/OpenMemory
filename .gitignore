@@ -18,3 +18,4 @@ benchmark
 temp
 exports
 *.egg-info
+*.vsix

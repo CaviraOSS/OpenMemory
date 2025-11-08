@@ -1,0 +1,13 @@
+name: openmemory
+services:
+  - name: api
+    environment_slug: node-js
+    source_dir: backend
+    build_command: npm install && npm run build
+    run_command: npm start
+    http_port: 8080
+    envs:
+      - key: NODE_ENV
+        value: production
+      - key: OM_PORT
+        value: 8080

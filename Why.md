@@ -30,7 +30,7 @@ Vector databases like **Chroma**, **Weaviate**, or **Pinecone** are excellent fo
 
 | Factor                 | Supermemory (SaaS)   | OpenAI Memory   | OpenMemory                                    |
 | ---------------------- | -------------------- | --------------- | --------------------------------------------- |
-| **Ownership**          | Significantly closed | Closed SaaS     | Open-source MIT                               |
+| **Ownership**          | Significantly closed | Closed SaaS     | Open-source Apache 2.0                        |
 | **Hosting**            | Cloud only           | Cloud only      | Self-hosted or cloud                          |
 | **Explainability**     | Black-box            | Black-box       | Transparent                                   |
 | **Architecture**       | Flat embeddings      | Proprietary     | HMD v2 (multi-sector + single-waypoint graph) |

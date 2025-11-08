@@ -50,7 +50,7 @@ export default function Sidebar() {
             </span>
             <button className="rounded-full hover:bg-stone-900 hover:text-stone-200 duration-300 transition-all p-1">
               <Image
-                src="https://cdn.spectrumdevs.com/cavira/cavira2.png"
+                src="/favicon.ico"
                 alt="logo"
                 width={36}
                 height={36}
@@ -77,7 +77,7 @@ export default function Sidebar() {
 
         <div className="h-fit flex flex-col space-y-2 items-center">
           <Image
-            src="https://cdn.spectrumdevs.com/cavira/cavira2.png"
+            src="/favicon.ico"
             alt="pfp"
             width={40}
             height={40}

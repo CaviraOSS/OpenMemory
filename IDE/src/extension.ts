@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
-import { detectBackend } from './detectors/openmemory';
-import { writeMCPConfig } from './mcp/generator';
+import { shouldSkipEvent, getSectorFilter } from './hooks/ideEvents';
 import { writeCursorConfig } from './writers/cursor';
 import { writeClaudeConfig } from './writers/claude';
 import { writeWindsurfConfig } from './writers/windsurf';
 import { writeCopilotConfig } from './writers/copilot';
 import { writeCodexConfig } from './writers/codex';
-import { shouldSkipEvent, getSectorFilter } from './hooks/ideEvents';
 
 let session_id: string | null = null;
 let backend_url = 'http://localhost:8080';
@@ -16,9 +14,11 @@ let is_tracking = false;
 let auto_linked = false;
 let use_mcp = false;
 let mcp_server_path = '';
+let is_enabled = true;
 
 export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('openmemory');
+    is_enabled = config.get('enabled') ?? true;
     backend_url = config.get('backendUrl') || 'http://localhost:8080';
     api_key = config.get('apiKey') || undefined;
     use_mcp = config.get('useMCP') || false;
@@ -27,6 +27,12 @@ export function activate(context: vscode.ExtensionContext) {
     status_bar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     status_bar.command = 'openmemory.statusBarClick';
     context.subscriptions.push(status_bar);
+
+    if (!is_enabled) {
+        update_status_bar('disabled');
+        status_bar.show();
+        return;
+    }
 
     update_status_bar('connecting');
     status_bar.show();
@@ -81,7 +87,7 @@ export function activate(context: vscode.ExtensionContext) {
     const setup_cmd = vscode.commands.registerCommand('openmemory.setup', () => show_quick_setup());
 
     const change_listener = vscode.workspace.onDidChangeTextDocument((e) => {
-        if (is_tracking && e.document.uri.scheme === 'file') {
+        if (is_enabled && is_tracking && e.document.uri.scheme === 'file') {
             for (const change of e.contentChanges) {
                 const content = change.text;
                 if (shouldSkipEvent(e.document.uri.fsPath, 'edit', content)) continue;
@@ -91,19 +97,19 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const save_listener = vscode.workspace.onDidSaveTextDocument((doc) => {
-        if (is_tracking && doc.uri.scheme === 'file') {
+        if (is_enabled && is_tracking && doc.uri.scheme === 'file') {
             send_event({ event_type: 'save', file_path: doc.uri.fsPath, language: doc.languageId, content: doc.getText() });
         }
     });
 
     const open_listener = vscode.workspace.onDidOpenTextDocument((doc) => {
-        if (is_tracking && doc.uri.scheme === 'file') {
+        if (is_enabled && is_tracking && doc.uri.scheme === 'file') {
             send_event({ event_type: 'open', file_path: doc.uri.fsPath, language: doc.languageId, content: doc.getText() });
         }
     });
 
     const close_listener = vscode.workspace.onDidCloseTextDocument((doc) => {
-        if (is_tracking && doc.uri.scheme === 'file') {
+        if (is_enabled && is_tracking && doc.uri.scheme === 'file') {
             send_event({ event_type: 'close', file_path: doc.uri.fsPath, language: doc.languageId });
         }
     });
@@ -119,10 +125,6 @@ async function auto_link_all() {
     auto_linked = false;
     try {
         const configs: string[] = [];
-        if (use_mcp) {
-            const mcpPath = await writeMCPConfig(backend_url, api_key);
-            configs.push(mcpPath);
-        }
         configs.push(await writeCursorConfig(backend_url, api_key, use_mcp, mcp_server_path));
         configs.push(await writeClaudeConfig(backend_url, api_key, use_mcp, mcp_server_path));
         configs.push(await writeWindsurfConfig(backend_url, api_key, use_mcp, mcp_server_path));
@@ -137,23 +139,42 @@ async function auto_link_all() {
     }
 }
 
-function update_status_bar(state: 'active' | 'paused' | 'connecting' | 'disconnected') {
-    const icons = { active: '$(pulse) OpenMemory', paused: '$(debug-pause) OpenMemory', connecting: '$(sync~spin) OpenMemory', disconnected: '$(error) OpenMemory' };
+function update_status_bar(state: 'active' | 'paused' | 'connecting' | 'disconnected' | 'disabled') {
+    const icons = { active: '$(pulse) OpenMemory', paused: '$(debug-pause) OpenMemory', connecting: '$(sync~spin) OpenMemory', disconnected: '$(error) OpenMemory', disabled: '$(circle-slash) OpenMemory' };
     const mode = use_mcp ? 'MCP' : 'HTTP';
     const tooltips = {
         active: `OpenMemory: Tracking active (${mode}) • Click for options`,
         paused: `OpenMemory: Tracking paused (${mode}) • Click to resume`,
         connecting: `OpenMemory: Connecting (${mode})...`,
-        disconnected: `OpenMemory: Disconnected (${mode}) • Click to setup`
+        disconnected: `OpenMemory: Disconnected (${mode}) • Click to setup`,
+        disabled: 'OpenMemory: Disabled • Click to enable'
     };
     status_bar.text = icons[state];
     status_bar.tooltip = tooltips[state];
 }
 
 async function show_menu() {
+    if (!is_enabled) {
+        const choice = await vscode.window.showQuickPick([
+            { label: '$(check) Enable OpenMemory', action: 'enable' },
+            { label: '$(gear) Setup', action: 'setup' }
+        ], { placeHolder: 'OpenMemory is Disabled' });
+        if (!choice) return;
+        if (choice.action === 'enable') {
+            const config = vscode.workspace.getConfiguration('openmemory');
+            await config.update('enabled', true, vscode.ConfigurationTarget.Global);
+            is_enabled = true;
+            vscode.window.showInformationMessage('OpenMemory enabled. Reloading window...');
+            vscode.commands.executeCommand('workbench.action.reloadWindow');
+        } else if (choice.action === 'setup') {
+            show_quick_setup();
+        }
+        return;
+    }
+
     const items = [];
     items.push(is_tracking ? { label: '$(debug-pause) Pause Tracking', action: 'pause' } : { label: '$(play) Resume Tracking', action: 'resume' });
-    items.push({ label: '$(search) Query Context', action: 'query' }, { label: '$(graph) View Patterns', action: 'patterns' }, { label: use_mcp ? '$(link) Switch to Direct HTTP' : '$(server-process) Switch to MCP Mode', action: 'toggle_mcp' }, { label: '$(gear) Setup', action: 'setup' }, { label: '$(refresh) Reconnect', action: 'reconnect' });
+    items.push({ label: '$(search) Query Context', action: 'query' }, { label: '$(graph) View Patterns', action: 'patterns' }, { label: use_mcp ? '$(link) Switch to Direct HTTP' : '$(server-process) Switch to MCP Mode', action: 'toggle_mcp' }, { label: '$(circle-slash) Disable Extension', action: 'disable' }, { label: '$(gear) Setup', action: 'setup' }, { label: '$(refresh) Reconnect', action: 'reconnect' });
     const choice = await vscode.window.showQuickPick(items, { placeHolder: 'OpenMemory Actions' });
     if (!choice) return;
     switch (choice.action) {
@@ -163,10 +184,18 @@ async function show_menu() {
         case 'patterns': vscode.commands.executeCommand('openmemory.viewPatterns'); break;
         case 'toggle_mcp':
             use_mcp = !use_mcp;
-            const config = vscode.workspace.getConfiguration('openmemory');
-            await config.update('useMCP', use_mcp, vscode.ConfigurationTarget.Global);
+            const mcpConfig = vscode.workspace.getConfiguration('openmemory');
+            await mcpConfig.update('useMCP', use_mcp, vscode.ConfigurationTarget.Global);
             vscode.window.showInformationMessage(`Switched to ${use_mcp ? 'MCP' : 'Direct HTTP'} mode. Reconnecting...`);
             await auto_link_all();
+            break;
+        case 'disable':
+            const config = vscode.workspace.getConfiguration('openmemory');
+            await config.update('enabled', false, vscode.ConfigurationTarget.Global);
+            is_enabled = false;
+            if (session_id) await end_session();
+            update_status_bar('disabled');
+            vscode.window.showInformationMessage('OpenMemory disabled');
             break;
         case 'setup': show_quick_setup(); break;
         case 'reconnect':
@@ -183,16 +212,31 @@ async function show_menu() {
 }
 
 async function show_quick_setup() {
-    const choice = await vscode.window.showQuickPick([
+    const items = [
+        { label: is_enabled ? '$(circle-slash) Disable Extension' : '$(check) Enable Extension', action: 'toggle_enabled', description: is_enabled ? 'Turn off OpenMemory tracking' : 'Turn on OpenMemory tracking' },
         { label: '$(server-process) Toggle MCP Mode', action: 'mcp', description: use_mcp ? 'Currently: MCP (switch to Direct HTTP)' : 'Currently: Direct HTTP (switch to MCP)' },
         { label: '$(key) Configure API Key', action: 'apikey' },
         { label: '$(server) Change Backend URL', action: 'url' },
         { label: '$(file-code) Set MCP Server Path', action: 'mcppath', description: 'Optional: custom MCP server executable' },
         { label: '$(link-external) View Documentation', action: 'docs' },
         { label: '$(debug-restart) Test Connection', action: 'test' }
-    ], { placeHolder: 'OpenMemory Setup' });
+    ];
+    const choice = await vscode.window.showQuickPick(items, { placeHolder: 'OpenMemory Setup' });
     if (!choice) return;
     switch (choice.action) {
+        case 'toggle_enabled':
+            const enabledConfig = vscode.workspace.getConfiguration('openmemory');
+            is_enabled = !is_enabled;
+            await enabledConfig.update('enabled', is_enabled, vscode.ConfigurationTarget.Global);
+            if (is_enabled) {
+                vscode.window.showInformationMessage('OpenMemory enabled. Reloading window...');
+                vscode.commands.executeCommand('workbench.action.reloadWindow');
+            } else {
+                if (session_id) await end_session();
+                update_status_bar('disabled');
+                vscode.window.showInformationMessage('OpenMemory disabled');
+            }
+            break;
         case 'mcp':
             use_mcp = !use_mcp;
             const mcpConfig = vscode.workspace.getConfiguration('openmemory');

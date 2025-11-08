@@ -2,7 +2,7 @@
     "name": "openmemory-vscode",
     "displayName": "OpenMemory for VS Code",
     "description": "Cognitive memory system that remembers your coding context across sessions",
-    "version": "1.0.1",
+    "version": "1.0.3",
     "publisher": "Nullure",
     "icon": "icon.png",
     "engines": {
@@ -30,6 +30,11 @@
         "configuration": {
             "title": "OpenMemory",
             "properties": {
+                "openmemory.enabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable or disable OpenMemory tracking and features"
+                },
                 "openmemory.backendUrl": {
                     "type": "string",
                     "default": "http://localhost:8080",
@@ -61,6 +66,7 @@
         "lint": "eslint src --ext ts",
         "postinstall": "node postinstall.js"
     },
+    "dependencies": {},
     "devDependencies": {
         "@types/node": "^18.x",
         "@types/vscode": "^1.105.0",

@@ -59,7 +59,7 @@ This approach improves recall accuracy while reducing costs.
 
 | **Feature / Metric**                     | **OpenMemory (Our Tests – Nov 2025)**                       | **Zep (Their Benchmarks)**         | **Supermemory (Their Docs)**    | **Mem0 (Their Tests)**        | **OpenAI Memory**          | **LangChain Memory**        | **Vector DBs (Chroma / Weaviate / Pinecone)** |
 | ---------------------------------------- | ----------------------------------------------------------- | ---------------------------------- | ------------------------------- | ----------------------------- | -------------------------- | --------------------------- | --------------------------------------------- |
-| **Open-source License**                  | ✅ MIT (verified)                                           | ✅ Apache 2.0                      | ✅ Source available (GPL-like)  | ✅ Apache 2.0                 | ❌ Closed                  | ✅ Apache 2.0               | ✅ Varies (OSS + Cloud)                       |
+| **Open-source License**                  | ✅ Apache 2.0                                               | ✅ Apache 2.0                      | ✅ Source available (GPL-like)  | ✅ Apache 2.0                 | ❌ Closed                  | ✅ Apache 2.0               | ✅ Varies (OSS + Cloud)                       |
 | **Self-hosted / Local**                  | ✅ Full (Local / Docker / MCP) tested ✓                     | ✅ Local + Cloud SDK               | ⚠️ Mostly managed cloud tier    | ✅ Self-hosted ✓              | ❌ No                      | ✅ Yes (in your stack)      | ✅ Chroma / Weaviate ❌ Pinecone (cloud)      |
 | **Per-user namespacing (`user_id`)**     | ✅ Built-in (`user_id` linking added)                       | ✅ Sessions / Users API            | ⚠️ Multi-tenant via API key     | ✅ Explicit `user_id` field ✓ | ❌ Internal only           | ✅ Namespaces via LangGraph | ✅ Collection-per-user schema                 |
 | **Architecture**                         | HSG v3 (Hierarchical Semantic Graph + Decay + Coactivation) | Flat embeddings + Postgres + FAISS | Graph + Embeddings              | Flat vector store             | Proprietary cache          | Context memory utils        | Vector index (ANN)                            |
@@ -96,10 +96,6 @@ This approach improves recall accuracy while reducing costs.
 | Embedding Mode             | Synthetic + Gemini hybrid                  |
 | User Link                  | ✅ `user_id` association confirmed         |
 
-📊 **Summary:**
-OpenMemory maintained **~95% recall**, **338 QPS average**, and **7.9 ms/item scalability**, outperforming Zep, Mem0, and Supermemory in both recall stability and cost per token.
-It is the only memory system offering **hierarchical sectors, user-linked namespaces, and coactivation-based reinforcement**, combining **semantic understanding** with **efficient throughput** across any hardware tier.
-
 ### Summary
 
 OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
@@ -108,6 +104,28 @@ Its **multi-sector cognitive model** allows explainable recall paths, hybrid emb
 ---
 
 ## 3. Setup
+
+### One-Click Deploy
+
+Deploy OpenMemory to your favorite cloud platform:
+
+<p align="center">
+  <a href="https://vercel.com/new/clone?repository-url=https://github.com/CaviraOSS/OpenMemory&root-directory=backend&build-command=npm%20install%20&&%20npm%20run%20build">
+    <img src="https://vercel.com/button" alt="Deploy with Vercel" height="32">
+  </a>
+  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/CaviraOSS/OpenMemory/tree/main">
+    <img src="https://www.deploytodo.com/do-btn-blue.svg" alt="Deploy to DigitalOcean" height="32">
+  </a>
+  <a href="https://railway.app/new/template?template=https://github.com/CaviraOSS/OpenMemory&rootDir=backend">
+    <img src="https://railway.app/button.svg" alt="Deploy on Railway" height="32">
+  </a>
+  <a href="https://render.com/deploy">
+    <img src="https://render.com/images/deploy-to-render-button.svg" alt="Deploy to Render" height="32">
+  </a>
+  <a href="https://heroku.com/deploy?template=https://github.com/CaviraOSS/OpenMemory">
+    <img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku" height="32">
+  </a>
+</p>
 
 ### Quick Start (Local Development)
 
@@ -179,6 +197,7 @@ npm start
 ```
 
 # 💖 Support the Project
+
 If you find OpenMemory useful, please consider supporting:
 
 ## Ethereum (ERC-20):
@@ -187,8 +206,7 @@ If you find OpenMemory useful, please consider supporting:
 0x5a12e3f48b6d761a120bc3cd0977e208c362a74e
 ```
 
-Your support helps fund ongoing development and hosting.
----
+## Your support helps fund ongoing development and hosting.
 
 ## 4. Architecture
 
@@ -262,7 +280,61 @@ node index.js --from supermemory --api-key SM_KEY --rate-limit 25
 
 ---
 
-## 6. API
+## 6. CLI Tool
+
+OpenMemory includes a command-line tool for quick memory operations.
+
+### Installation
+
+```bash
+cd backend
+npm link
+```
+
+Now you can use `opm` from anywhere.
+
+### Commands
+
+```bash
+# Add a memory
+opm add "user likes dark mode" --user u123 --tags prefs
+
+# Query memories
+opm query "preferences" --user u123 --limit 5
+
+# List memories
+opm list --user u123 --limit 10
+
+# Delete a memory
+opm delete <memory-id>
+
+# Show statistics
+opm stats
+
+# List users
+opm users
+
+# Get user summary
+opm user u123
+
+# Check server health
+opm health
+```
+
+### Configuration
+
+The CLI reads from your root `.env` file:
+
+```ini
+OM_PORT=8080
+OM_API_KEY=your_secret_key
+OPENMEMORY_URL=http://localhost:8080  # Optional: override default
+OPENMEMORY_API_KEY=your_secret_key    # Optional: alt API key
+```
+
+---
+
+## 7. API
 
 **Full API documentation:** https://openmemory.cavira.app
 
@@ -283,7 +355,7 @@ curl -X POST http://localhost:8080/memory/query \
 curl http://localhost:8080/users/user123/summary
 ```
 
-### Key Features
+### Key Endpoints
 
 - **Memory operations** - Add, query, update, delete, reinforce
 - **User management** - Per-user isolation with automatic summaries
@@ -326,11 +398,11 @@ node backend/dist/ai/mcp.js
 
 ---
 
-## 7. Performance
+## 8. Performance
 
 OpenMemory costs 6-12× less than cloud alternatives and delivers 2-3× faster queries.
 
-### 7.1 Speed
+### 8.1 Speed
 
 Based on tests with 100,000 memories:
 
@@ -342,7 +414,7 @@ Based on tests with 100,000 memories:
 | Pattern clustering | 60 ms      | N/A    | N/A         | N/A    | N/A       |
 | Reflection cycle   | 400 ms     | N/A    | N/A         | N/A    | N/A       |
 
-### 7.2 Throughput
+### 8.2 Throughput
 
 Queries per second with concurrent users:
 
@@ -353,7 +425,7 @@ Queries per second with concurrent users:
 | 50    | 650 | 75 ms           | 180 ms          |
 | 100   | 900 | 110 ms          | 280 ms          |
 
-### 7.3 Self-Hosted Cost
+### 8.3 Self-Hosted Cost
 
 Monthly costs for 100,000 memories:
 
@@ -374,7 +446,7 @@ With OpenAI embeddings: add $10-15/month
 
 OpenMemory costs 6-12× less than cloud alternatives.
 
-### 7.4 Cost at Scale
+### 8.4 Cost at Scale
 
 Per 1 million memories:
 
@@ -386,7 +458,7 @@ Per 1 million memories:
 | Supermemory         | Included | Included   | $80     | **$80**     |
 | Mem0                | Included | $12        | $20     | **$32**     |
 
-### 7.5 Accuracy
+### 8.5 Accuracy
 
 Tested with LongMemEval benchmark:
 
@@ -397,7 +469,7 @@ Tested with LongMemEval benchmark:
 | Overall accuracy | 95%        | 72%  | 82%         | 74%  | 68%       |
 | Response time    | 2.1s       | 3.2s | 3.1s        | 2.7s | 2.4s      |
 
-### 7.6 Storage
+### 8.6 Storage
 
 | Scale | SQLite | PostgreSQL | RAM    | Query Time |
 | ----- | ------ | ---------- | ------ | ---------- |
@@ -408,7 +480,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 8. Security
+## 9. Security
 
 - API key authentication for write operations
 - Optional AES-GCM encryption for content
@@ -420,7 +492,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 9. Roadmap
+## 10. Roadmap
 
 | Version | Focus                     | Status      |
 | ------- | ------------------------- | ----------- |
@@ -432,7 +504,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 10. Contributing
+## 11. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -540,19 +612,19 @@ make test
 
 ---
 
-## 11. License
+## 12. License
 
-MIT License. Copyright (c) 2025 OpenMemory.
+Apache 2.0 License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 12. Community
+## 13. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 13. Other Projects
+## 14. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM

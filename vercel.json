@@ -1,0 +1,19 @@
+{
+    "version": 2,
+    "builds": [
+        {
+            "src": "backend/dist/index.js",
+            "use": "@vercel/node"
+        }
+    ],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "backend/dist/index.js"
+        }
+    ],
+    "buildCommand": "cd backend && npm install && npm run build",
+    "env": {
+        "NODE_ENV": "production"
+    }
+}
