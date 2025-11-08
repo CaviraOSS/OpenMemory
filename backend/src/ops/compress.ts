@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
 export interface CompressionMetrics {
     ogTok: number;
@@ -38,7 +38,7 @@ class MemoryCompressionEngine {
         avgRatio: 0,
         latency: 0,
         algos: {},
-        updated: Date.now()
+        updated: Date.now(),
     };
 
     private cache = new Map<string, CompressionResult>();
@@ -49,7 +49,7 @@ class MemoryCompressionEngine {
         if (!t) return 0;
         const w = t.split(/\s+/).length;
         const c = t.length;
-        return Math.ceil((c / 4) + (w / 2));
+        return Math.ceil(c / 4 + w / 2);
     }
 
     private sem(t: string): string {
@@ -62,24 +62,24 @@ class MemoryCompressionEngine {
             const p = a[i - 1].toLowerCase().trim();
             return n !== p;
         });
-        c = u.join('. ').trim();
+        c = u.join(". ").trim();
         const f = [
             /\b(just|really|very|quite|rather|somewhat|somehow)\b/gi,
             /\b(actually|basically|essentially|literally)\b/gi,
             /\b(I think that|I believe that|It seems that|It appears that)\b/gi,
             /\b(in order to)\b/gi,
         ];
-        for (const p of f) c = c.replace(p, '');
-        c = c.replace(/\s+/g, ' ').trim();
+        for (const p of f) c = c.replace(p, "");
+        c = c.replace(/\s+/g, " ").trim();
         const r: [RegExp, string][] = [
-            [/\bat this point in time\b/gi, 'now'],
-            [/\bdue to the fact that\b/gi, 'because'],
-            [/\bin the event that\b/gi, 'if'],
-            [/\bfor the purpose of\b/gi, 'to'],
-            [/\bin the near future\b/gi, 'soon'],
-            [/\ba number of\b/gi, 'several'],
-            [/\bprior to\b/gi, 'before'],
-            [/\bsubsequent to\b/gi, 'after'],
+            [/\bat this point in time\b/gi, "now"],
+            [/\bdue to the fact that\b/gi, "because"],
+            [/\bin the event that\b/gi, "if"],
+            [/\bfor the purpose of\b/gi, "to"],
+            [/\bin the near future\b/gi, "soon"],
+            [/\ba number of\b/gi, "several"],
+            [/\bprior to\b/gi, "before"],
+            [/\bsubsequent to\b/gi, "after"],
         ];
         for (const [p, x] of r) c = c.replace(p, x);
         return c;
@@ -103,10 +103,10 @@ class MemoryCompressionEngine {
             [/\bhave been\b/gi, "been"],
         ];
         for (const [p, x] of ct) c = c.replace(p, x);
-        c = c.replace(/\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+/gi, '$2, ');
-        c = c.replace(/\s*{\s*/g, '{').replace(/\s*}\s*/g, '}');
-        c = c.replace(/\s*\(\s*/g, '(').replace(/\s*\)\s*/g, ')');
-        c = c.replace(/\s*;\s*/g, ';');
+        c = c.replace(/\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+/gi, "$2, ");
+        c = c.replace(/\s*{\s*/g, "{").replace(/\s*}\s*/g, "}");
+        c = c.replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")");
+        c = c.replace(/\s*;\s*/g, ";");
         return c;
     }
 
@@ -114,38 +114,44 @@ class MemoryCompressionEngine {
         if (!t) return t;
         let c = this.sem(t);
         c = this.syn(c);
-        c = c.replace(/[*_~`#]/g, '');
-        c = c.replace(/https?:\/\/(www\.)?([^\/\s]+)(\/[^\s]*)?/gi, '$2');
+        c = c.replace(/[*_~`#]/g, "");
+        c = c.replace(/https?:\/\/(www\.)?([^\/\s]+)(\/[^\s]*)?/gi, "$2");
         const a: [RegExp, string][] = [
-            [/\bJavaScript\b/gi, 'JS'],
-            [/\bTypeScript\b/gi, 'TS'],
-            [/\bPython\b/gi, 'Py'],
-            [/\bapplication\b/gi, 'app'],
-            [/\bfunction\b/gi, 'fn'],
-            [/\bparameter\b/gi, 'param'],
-            [/\bargument\b/gi, 'arg'],
-            [/\breturn\b/gi, 'ret'],
-            [/\bvariable\b/gi, 'var'],
-            [/\bconstant\b/gi, 'const'],
-            [/\bdatabase\b/gi, 'db'],
-            [/\brepository\b/gi, 'repo'],
-            [/\benvironment\b/gi, 'env'],
-            [/\bconfiguration\b/gi, 'config'],
-            [/\bdocumentation\b/gi, 'docs'],
+            [/\bJavaScript\b/gi, "JS"],
+            [/\bTypeScript\b/gi, "TS"],
+            [/\bPython\b/gi, "Py"],
+            [/\bapplication\b/gi, "app"],
+            [/\bfunction\b/gi, "fn"],
+            [/\bparameter\b/gi, "param"],
+            [/\bargument\b/gi, "arg"],
+            [/\breturn\b/gi, "ret"],
+            [/\bvariable\b/gi, "var"],
+            [/\bconstant\b/gi, "const"],
+            [/\bdatabase\b/gi, "db"],
+            [/\brepository\b/gi, "repo"],
+            [/\benvironment\b/gi, "env"],
+            [/\bconfiguration\b/gi, "config"],
+            [/\bdocumentation\b/gi, "docs"],
         ];
         for (const [p, x] of a) c = c.replace(p, x);
-        c = c.replace(/\n{3,}/g, '\n\n');
-        c = c.split('\n').map(l => l.trim()).join('\n');
+        c = c.replace(/\n{3,}/g, "\n\n");
+        c = c
+            .split("\n")
+            .map((l) => l.trim())
+            .join("\n");
         return c.trim();
     }
 
-    compress(t: string, a: 'semantic' | 'syntactic' | 'aggressive' = 'semantic'): CompressionResult {
+    compress(
+        t: string,
+        a: "semantic" | "syntactic" | "aggressive" = "semantic",
+    ): CompressionResult {
         if (!t) {
             return {
                 og: t,
                 comp: t,
                 metrics: this.empty(a),
-                hash: this.hash(t)
+                hash: this.hash(t),
             };
         }
 
@@ -156,10 +162,17 @@ class MemoryCompressionEngine {
         let c: string;
 
         switch (a) {
-            case 'semantic': c = this.sem(t); break;
-            case 'syntactic': c = this.syn(t); break;
-            case 'aggressive': c = this.agg(t); break;
-            default: c = t;
+            case "semantic":
+                c = this.sem(t);
+                break;
+            case "syntactic":
+                c = this.syn(t);
+                break;
+            case "aggressive":
+                c = this.agg(t);
+                break;
+            default:
+                c = t;
         }
 
         const ct = this.tok(c);
@@ -176,28 +189,37 @@ class MemoryCompressionEngine {
             pct: p,
             latency: l,
             algo: a,
-            ts: Date.now()
+            ts: Date.now(),
         };
 
-        const res: CompressionResult = { og: t, comp: c, metrics: m, hash: this.hash(t) };
+        const res: CompressionResult = {
+            og: t,
+            comp: c,
+            metrics: m,
+            hash: this.hash(t),
+        };
         this.up(m);
         this.store(k, res);
         return res;
     }
 
-    batch(ts: string[], a: 'semantic' | 'syntactic' | 'aggressive' = 'semantic'): CompressionResult[] {
-        return ts.map(t => this.compress(t, a));
+    batch(
+        ts: string[],
+        a: "semantic" | "syntactic" | "aggressive" = "semantic",
+    ): CompressionResult[] {
+        return ts.map((t) => this.compress(t, a));
     }
 
     auto(t: string): CompressionResult {
-        if (!t || t.length < 50) return this.compress(t, 'semantic');
-        const code = /\b(function|const|let|var|def|class|import|export)\b/.test(t);
+        if (!t || t.length < 50) return this.compress(t, "semantic");
+        const code =
+            /\b(function|const|let|var|def|class|import|export)\b/.test(t);
         const urls = /https?:\/\//.test(t);
         const verb = t.split(/\s+/).length > 100;
-        let a: 'semantic' | 'syntactic' | 'aggressive';
-        if (code || urls) a = 'aggressive';
-        else if (verb) a = 'semantic';
-        else a = 'syntactic';
+        let a: "semantic" | "syntactic" | "aggressive";
+        if (code || urls) a = "aggressive";
+        else if (verb) a = "semantic";
+        else a = "syntactic";
         return this.compress(t, a);
     }
 
@@ -207,7 +229,7 @@ class MemoryCompressionEngine {
 
     analyze(t: string): Record<string, CompressionMetrics> {
         const r: Record<string, CompressionMetrics> = {};
-        for (const a of ['semantic', 'syntactic', 'aggressive'] as const) {
+        for (const a of ["semantic", "syntactic", "aggressive"] as const) {
             const x = this.compress(t, a);
             r[a] = x.metrics;
         }
@@ -223,7 +245,7 @@ class MemoryCompressionEngine {
             avgRatio: 0,
             latency: 0,
             algos: {},
-            updated: Date.now()
+            updated: Date.now(),
         };
     }
 
@@ -240,12 +262,12 @@ class MemoryCompressionEngine {
             pct: 0,
             latency: 0,
             algo: a,
-            ts: Date.now()
+            ts: Date.now(),
         };
     }
 
     private hash(t: string): string {
-        return createHash('md5').update(t).digest('hex').substring(0, 16);
+        return createHash("md5").update(t).digest("hex").substring(0, 16);
     }
 
     private up(m: CompressionMetrics): void {
@@ -254,7 +276,8 @@ class MemoryCompressionEngine {
         this.stats.compTok += m.compTok;
         this.stats.saved += m.saved;
         this.stats.latency += m.latency;
-        if (this.stats.ogTok > 0) this.stats.avgRatio = this.stats.compTok / this.stats.ogTok;
+        if (this.stats.ogTok > 0)
+            this.stats.avgRatio = this.stats.compTok / this.stats.ogTok;
         if (!this.stats.algos[m.algo]) this.stats.algos[m.algo] = 0;
         this.stats.algos[m.algo]++;
         this.stats.updated = Date.now();

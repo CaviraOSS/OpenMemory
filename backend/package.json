@@ -7,6 +7,7 @@
     },
     "scripts": {
         "dev": "tsx src/server/index.ts",
+        "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server/index.js",
         "migrate": "tsx src/migrate.ts"
@@ -25,6 +26,7 @@
     "devDependencies": {
         "@types/node": "^20.10.5",
         "@types/pg": "^8.15.5",
+        "prettier": "^3.6.2",
         "tsx": "^4.19.2",
         "typescript": "^5.6.3"
     }
