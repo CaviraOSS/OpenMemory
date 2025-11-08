@@ -21,6 +21,7 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Multi-sector memory** - Different memory types for different content
 - **Automatic decay** - Memories fade naturally unless reinforced
 - **Graph associations** - Memories link to related memories
+- **Temporal knowledge graph** - Time-aware relationships with fact evolution and historical reasoning
 - **Pattern recognition** - Finds and consolidates similar memories
 - **User isolation** - Each user gets separate memory space
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
@@ -234,7 +235,79 @@ OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
 ---
 
-## 5. Migration Tool
+## 5. Temporal Knowledge Graph
+
+OpenMemory includes a temporal knowledge graph system that tracks how facts evolve over time. This enables time-aware relationships and historical reasoning.
+
+### Core Concepts
+
+Every stored fact links to time with:
+
+- **valid_from** - When the fact became true
+- **valid_to** - When it stopped being true (null if still active)
+- **confidence** - System confidence level (0-1)
+
+### Key Features
+
+- **Temporal Querying** - Ask "what was true on a specific date"
+- **Auto-update Logic** - New facts automatically close old ones
+- **Fact Evolution** - Build complete timelines for any subject
+- **Confidence Decay** - Lower weight for older or uncertain data
+- **Historical Comparison** - Compare facts between two time points
+
+### Example Usage
+
+```javascript
+// Insert a time-bound fact
+POST /api/temporal/fact
+{
+  "subject": "OpenAI",
+  "predicate": "has_CEO",
+  "object": "Sam Altman",
+  "valid_from": "2019-03-01",
+  "confidence": 0.98
+}
+
+// Query fact at specific time
+GET /api/temporal/fact?subject=OpenAI&predicate=has_CEO&at=2023-01-01
+// Returns: "Sam Altman"
+
+// Get complete timeline
+GET /api/temporal/timeline?subject=OpenAI&predicate=has_CEO
+// Returns all historical changes
+
+// Compare two time points
+GET /api/temporal/compare?subject=OpenAI&time1=2023-01-01&time2=2024-12-01
+// Returns: added, removed, changed, unchanged facts
+```
+
+### API Endpoints
+
+| Endpoint                         | Method | Description                            |
+| -------------------------------- | ------ | -------------------------------------- |
+| `/api/temporal/fact`             | POST   | Insert or update time-bound fact       |
+| `/api/temporal/fact`             | GET    | Retrieve facts valid at given time     |
+| `/api/temporal/fact/current`     | GET    | Get current fact for subject-predicate |
+| `/api/temporal/fact/:id`         | PATCH  | Update fact confidence or metadata     |
+| `/api/temporal/fact/:id`         | DELETE | Invalidate fact (set valid_to)         |
+| `/api/temporal/timeline`         | GET    | Get complete timeline for entity       |
+| `/api/temporal/subject/:subject` | GET    | Get all facts for subject              |
+| `/api/temporal/search`           | GET    | Search facts by pattern                |
+| `/api/temporal/compare`          | GET    | Compare facts between two times        |
+| `/api/temporal/stats`            | GET    | Get temporal graph statistics          |
+| `/api/temporal/decay`            | POST   | Apply confidence decay to old facts    |
+| `/api/temporal/volatile`         | GET    | Get most frequently changing facts     |
+
+### Performance
+
+- Handles 100k+ facts in SQLite or Postgres
+- Query speed under 50ms for single date lookups
+- Automatically resolves overlapping facts
+- Optional integration with OpenMemory's decay model
+
+---
+
+## 6. Migration Tool
 
 Migrate your existing memories from Zep, Mem0, or Supermemory to OpenMemory with our standalone migration tool.
 
@@ -280,7 +353,7 @@ node index.js --from supermemory --api-key SM_KEY --rate-limit 25
 
 ---
 
-## 6. CLI Tool
+## 7. CLI Tool
 
 OpenMemory includes a command-line tool for quick memory operations.
 
@@ -334,7 +407,7 @@ OPENMEMORY_API_KEY=your_secret_key    # Optional: alt API key
 
 ---
 
-## 7. API
+## 8. API
 
 **Full API documentation:** https://openmemory.cavira.app
 
@@ -398,7 +471,7 @@ node backend/dist/ai/mcp.js
 
 ---
 
-## 8. Performance
+## 9. Performance
 
 OpenMemory costs 6-12× less than cloud alternatives and delivers 2-3× faster queries.
 
@@ -414,7 +487,7 @@ Based on tests with 100,000 memories:
 | Pattern clustering | 60 ms      | N/A    | N/A         | N/A    | N/A       |
 | Reflection cycle   | 400 ms     | N/A    | N/A         | N/A    | N/A       |
 
-### 8.2 Throughput
+### 9.2 Throughput
 
 Queries per second with concurrent users:
 
@@ -425,7 +498,7 @@ Queries per second with concurrent users:
 | 50    | 650 | 75 ms           | 180 ms          |
 | 100   | 900 | 110 ms          | 280 ms          |
 
-### 8.3 Self-Hosted Cost
+### 9.3 Self-Hosted Cost
 
 Monthly costs for 100,000 memories:
 
@@ -446,7 +519,7 @@ With OpenAI embeddings: add $10-15/month
 
 OpenMemory costs 6-12× less than cloud alternatives.
 
-### 8.4 Cost at Scale
+### 9.4 Cost at Scale
 
 Per 1 million memories:
 
@@ -458,7 +531,7 @@ Per 1 million memories:
 | Supermemory         | Included | Included   | $80     | **$80**     |
 | Mem0                | Included | $12        | $20     | **$32**     |
 
-### 8.5 Accuracy
+### 9.5 Accuracy
 
 Tested with LongMemEval benchmark:
 
@@ -469,7 +542,7 @@ Tested with LongMemEval benchmark:
 | Overall accuracy | 95%        | 72%  | 82%         | 74%  | 68%       |
 | Response time    | 2.1s       | 3.2s | 3.1s        | 2.7s | 2.4s      |
 
-### 8.6 Storage
+### 9.6 Storage
 
 | Scale | SQLite | PostgreSQL | RAM    | Query Time |
 | ----- | ------ | ---------- | ------ | ---------- |
@@ -480,7 +553,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 9. Security
+## 10. Security
 
 - API key authentication for write operations
 - Optional AES-GCM encryption for content
@@ -492,7 +565,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 10. Roadmap
+## 11. Roadmap
 
 | Version | Focus                     | Status      |
 | ------- | ------------------------- | ----------- |
@@ -504,7 +577,7 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 11. Contributing
+## 12. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -612,19 +685,19 @@ make test
 
 ---
 
-## 12. License
+## 13. License
 
 Apache 2.0 License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 13. Community
+## 14. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 14. Other Projects
+## 15. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM
