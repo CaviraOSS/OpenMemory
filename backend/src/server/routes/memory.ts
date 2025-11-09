@@ -1,57 +1,81 @@
-import { q } from '../../core/db';
-import { now, rid, j, p } from '../../utils';
-import { add_hsg_memory, hsg_query, reinforce_memory, update_memory } from '../../memory/hsg';
-import { ingestDocument, ingestURL } from '../../ops/ingest';
-import { env } from '../../core/cfg';
-import { update_user_summary } from '../../memory/user_summary';
-import type { add_req, q_req, ingest_req, ingest_url_req } from '../../core/types';
+import { q } from "../../core/db";
+import { now, rid, j, p } from "../../utils";
+import {
+    add_hsg_memory,
+    hsg_query,
+    reinforce_memory,
+    update_memory,
+} from "../../memory/hsg";
+import { ingestDocument, ingestURL } from "../../ops/ingest";
+import { env } from "../../core/cfg";
+import { update_user_summary } from "../../memory/user_summary";
+import type {
+    add_req,
+    q_req,
+    ingest_req,
+    ingest_url_req,
+} from "../../core/types";
 
 export function mem(app: any) {
-    app.post('/memory/add', async (req: any, res: any) => {
+    app.post("/memory/add", async (req: any, res: any) => {
         const b = req.body as add_req;
-        if (!b?.content) return res.status(400).json({ err: 'content' });
+        if (!b?.content) return res.status(400).json({ err: "content" });
         try {
-            const m = await add_hsg_memory(b.content, j(b.tags || []), b.metadata, b.user_id);
+            const m = await add_hsg_memory(
+                b.content,
+                j(b.tags || []),
+                b.metadata,
+                b.user_id,
+            );
             res.json(m);
 
             if (b.user_id) {
-                update_user_summary(b.user_id).catch(e => console.error('[mem] user summary update failed:', e));
+                update_user_summary(b.user_id).catch((e) =>
+                    console.error("[mem] user summary update failed:", e),
+                );
             }
         } catch (e: any) {
             res.status(500).json({ err: e.message });
         }
     });
 
-    app.post('/memory/ingest', async (req: any, res: any) => {
+    app.post("/memory/ingest", async (req: any, res: any) => {
         const b = req.body as ingest_req;
-        if (!b?.content_type || !b?.data) return res.status(400).json({ err: 'missing' });
+        if (!b?.content_type || !b?.data)
+            return res.status(400).json({ err: "missing" });
         try {
-            const r = await ingestDocument(b.content_type, b.data, b.metadata, b.config, b.user_id);
+            const r = await ingestDocument(
+                b.content_type,
+                b.data,
+                b.metadata,
+                b.config,
+                b.user_id,
+            );
             res.json(r);
         } catch (e: any) {
-            res.status(500).json({ err: 'ingest_fail', msg: e.message });
+            res.status(500).json({ err: "ingest_fail", msg: e.message });
         }
     });
 
-    app.post('/memory/ingest/url', async (req: any, res: any) => {
+    app.post("/memory/ingest/url", async (req: any, res: any) => {
         const b = req.body as ingest_url_req;
-        if (!b?.url) return res.status(400).json({ err: 'no_url' });
+        if (!b?.url) return res.status(400).json({ err: "no_url" });
         try {
             const r = await ingestURL(b.url, b.metadata, b.config, b.user_id);
             res.json(r);
         } catch (e: any) {
-            res.status(500).json({ err: 'url_fail', msg: e.message });
+            res.status(500).json({ err: "url_fail", msg: e.message });
         }
     });
 
-    app.post('/memory/query', async (req: any, res: any) => {
+    app.post("/memory/query", async (req: any, res: any) => {
         const b = req.body as q_req;
         const k = b.k || 8;
         try {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
                 minSalience: b.filters?.min_score,
-                user_id: b.filters?.user_id
+                user_id: b.filters?.user_id,
             };
             const m = await hsg_query(b.query, k, f);
             res.json({
@@ -64,51 +88,56 @@ export function mem(app: any) {
                     primary_sector: x.primary_sector,
                     path: x.path,
                     salience: x.salience,
-                    last_seen_at: x.last_seen_at
-                }))
+                    last_seen_at: x.last_seen_at,
+                })),
             });
         } catch (e: any) {
             res.json({ query: b.query, matches: [] });
         }
     });
 
-    app.post('/memory/reinforce', async (req: any, res: any) => {
+    app.post("/memory/reinforce", async (req: any, res: any) => {
         const b = req.body as { id: string; boost?: number };
-        if (!b?.id) return res.status(400).json({ err: 'id' });
+        if (!b?.id) return res.status(400).json({ err: "id" });
         try {
             await reinforce_memory(b.id, b.boost);
             res.json({ ok: true });
         } catch (e: any) {
-            res.status(404).json({ err: 'nf' });
+            res.status(404).json({ err: "nf" });
         }
     });
 
-    app.patch('/memory/:id', async (req: any, res: any) => {
+    app.patch("/memory/:id", async (req: any, res: any) => {
         const id = req.params.id;
-        const b = req.body as { content?: string; tags?: string[]; metadata?: any; user_id?: string };
-        if (!id) return res.status(400).json({ err: 'id' });
+        const b = req.body as {
+            content?: string;
+            tags?: string[];
+            metadata?: any;
+            user_id?: string;
+        };
+        if (!id) return res.status(400).json({ err: "id" });
         try {
             // Check if memory exists and user has permission
             const m = await q.get_mem.get(id);
-            if (!m) return res.status(404).json({ err: 'nf' });
+            if (!m) return res.status(404).json({ err: "nf" });
 
             // Check user ownership if user_id is provided
             if (b.user_id && m.user_id !== b.user_id) {
-                return res.status(403).json({ err: 'forbidden' });
+                return res.status(403).json({ err: "forbidden" });
             }
 
             const r = await update_memory(id, b.content, b.tags, b.metadata);
             res.json(r);
         } catch (e: any) {
-            if (e.message.includes('not found')) {
-                res.status(404).json({ err: 'nf' });
+            if (e.message.includes("not found")) {
+                res.status(404).json({ err: "nf" });
             } else {
-                res.status(500).json({ err: 'internal' });
+                res.status(500).json({ err: "internal" });
             }
         }
     });
 
-    app.get('/memory/all', async (req: any, res: any) => {
+    app.get("/memory/all", async (req: any, res: any) => {
         try {
             const u = req.query.u ? parseInt(req.query.u) : 0;
             const l = req.query.l ? parseInt(req.query.l) : 100;
@@ -139,24 +168,24 @@ export function mem(app: any) {
                 decay_lambda: x.decay_lambda,
                 primary_sector: x.primary_sector,
                 version: x.version,
-                user_id: x.user_id
+                user_id: x.user_id,
             }));
             res.json({ items: i });
         } catch (e: any) {
-            res.status(500).json({ err: 'internal' });
+            res.status(500).json({ err: "internal" });
         }
     });
 
-    app.get('/memory/:id', async (req: any, res: any) => {
+    app.get("/memory/:id", async (req: any, res: any) => {
         try {
             const id = req.params.id;
             const user_id = req.query.user_id;
             const m = await q.get_mem.get(id);
-            if (!m) return res.status(404).json({ err: 'nf' });
+            if (!m) return res.status(404).json({ err: "nf" });
 
             // Check user ownership if user_id is provided
             if (user_id && m.user_id !== user_id) {
-                return res.status(403).json({ err: 'forbidden' });
+                return res.status(403).json({ err: "forbidden" });
             }
 
             const v = await q.get_vecs_by_id.all(id);
@@ -174,23 +203,23 @@ export function mem(app: any) {
                 salience: m.salience,
                 decay_lambda: m.decay_lambda,
                 version: m.version,
-                user_id: m.user_id
+                user_id: m.user_id,
             });
         } catch (e: any) {
-            res.status(500).json({ err: 'internal' });
+            res.status(500).json({ err: "internal" });
         }
     });
 
-    app.delete('/memory/:id', async (req: any, res: any) => {
+    app.delete("/memory/:id", async (req: any, res: any) => {
         try {
             const id = req.params.id;
             const user_id = req.query.user_id || req.body.user_id;
             const m = await q.get_mem.get(id);
-            if (!m) return res.status(404).json({ err: 'nf' });
+            if (!m) return res.status(404).json({ err: "nf" });
 
             // Check user ownership if user_id is provided
             if (user_id && m.user_id !== user_id) {
-                return res.status(403).json({ err: 'forbidden' });
+                return res.status(403).json({ err: "forbidden" });
             }
 
             await q.del_mem.run(id);
@@ -198,7 +227,7 @@ export function mem(app: any) {
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
         } catch (e: any) {
-            res.status(500).json({ err: 'internal' });
+            res.status(500).json({ err: "internal" });
         }
     });
 }
