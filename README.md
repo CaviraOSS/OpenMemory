@@ -23,9 +23,12 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Graph associations** - Memories link to related memories
 - **Temporal knowledge graph** - Time-aware relationships with fact evolution and historical reasoning
 - **Pattern recognition** - Finds and consolidates similar memories
-- **User isolation** - Each user gets separate memory space
+- **User isolation** - Each user gets a separate memory space
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
+
+### Uses
+**We are featuring projects that use OpenMemory here. To get your project displayed, please email nullureq@gmail.com**
 
 ### VS Code Extension
 
