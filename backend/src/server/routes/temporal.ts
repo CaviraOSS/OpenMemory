@@ -317,3 +317,19 @@ export const get_most_volatile = async (req: any, res: any) => {
         res.status(500).json({ error: 'Failed to get volatile facts' })
     }
 }
+
+export function temporal(app: any) {
+    app.post('/api/temporal/fact', create_temporal_fact)
+    app.get('/api/temporal/fact', get_temporal_fact)
+    app.get('/api/temporal/fact/current', get_current_temporal_fact)
+    app.patch('/api/temporal/fact/:id', update_temporal_fact)
+    app.delete('/api/temporal/fact/:id', invalidate_temporal_fact)
+
+    app.get('/api/temporal/timeline', get_entity_timeline)
+    app.get('/api/temporal/subject/:subject', get_subject_facts)
+    app.get('/api/temporal/search', search_temporal_facts)
+    app.get('/api/temporal/compare', compare_facts)
+    app.get('/api/temporal/stats', get_temporal_stats)
+    app.post('/api/temporal/decay', apply_decay)
+    app.get('/api/temporal/volatile', get_most_volatile)
+}
