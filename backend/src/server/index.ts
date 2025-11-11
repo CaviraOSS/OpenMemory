@@ -3,6 +3,7 @@ import { env, tier } from "../core/cfg";
 import { run_decay_process, prune_weak_waypoints } from "../memory/hsg";
 import { mcp } from "../ai/mcp";
 import { routes } from "./routes";
+import { proxy_routes } from "./proxy";
 import {
     authenticate_api_request,
     log_authenticated_request,
@@ -55,6 +56,10 @@ if (process.env.OM_LOG_AUTH === "true") {
 routes(app);
 
 mcp(app);
+
+// Add MCP proxy routes
+proxy_routes(app);
+
 if (env.mode === "langgraph") {
     console.log("[MODE] LangGraph integration enabled");
 }

@@ -47,6 +47,20 @@ type q_type = {
     ins_user: { run: (...p: any[]) => Promise<void> };
     get_user: { get: (user_id: string) => Promise<any> };
     upd_user_summary: { run: (...p: any[]) => Promise<void> };
+    // Agent registration queries
+    ins_agent: { run: (...p: any[]) => Promise<void> };
+    upd_agent: { run: (...p: any[]) => Promise<void> };
+    del_agent: { run: (agent_id: string) => Promise<void> };
+    get_agent: { get: (agent_id: string) => Promise<any> };
+    get_agent_by_api_key: { get: (api_key: string) => Promise<any> };
+    all_agents: { all: () => Promise<any[]> };
+    upd_agent_access: { run: (agent_id: string, timestamp: number) => Promise<void> };
+    ins_namespace: { run: (...p: any[]) => Promise<void> };
+    upd_namespace: { run: (...p: any[]) => Promise<void> };
+    del_namespace: { run: (namespace: string) => Promise<void> };
+    get_namespace: { get: (namespace: string) => Promise<any> };
+    all_namespaces: { all: () => Promise<any[]> };
+    ins_access_log: { run: (...p: any[]) => Promise<void> };
 };
 
 let run_async: (sql: string, p?: any[]) => Promise<void>;
@@ -427,6 +441,96 @@ if (is_pg) {
                     p,
                 ),
         },
+        // Agent registration queries for PostgreSQL
+        ins_agent: {
+            run: (...p) =>
+                run_async(
+                    `insert into "${sc}"."agent_registrations"(agent_id,namespace,permissions,shared_namespaces,api_key,description,registration_date,last_access,active) values($1,$2,$3,$4,$5,$6,$7,$8,$9) on conflict(agent_id) do update set namespace=excluded.namespace,permissions=excluded.permissions,shared_namespaces=excluded.shared_namespaces,api_key=excluded.api_key,description=excluded.description,last_access=excluded.last_access,active=excluded.active`,
+                    p,
+                ),
+        },
+        upd_agent: {
+            run: (...p) =>
+                run_async(
+                    `update "${sc}"."agent_registrations" set namespace=$2,permissions=$3,shared_namespaces=$4,description=$5,last_access=$6 where agent_id=$1`,
+                    p,
+                ),
+        },
+        del_agent: {
+            run: (agent_id) =>
+                run_async(
+                    `delete from "${sc}"."agent_registrations" where agent_id=$1`,
+                    [agent_id],
+                ),
+        },
+        get_agent: {
+            get: (agent_id) =>
+                get_async(
+                    `select * from "${sc}"."agent_registrations" where agent_id=$1 and active=1`,
+                    [agent_id],
+                ),
+        },
+        get_agent_by_api_key: {
+            get: (api_key) =>
+                get_async(
+                    `select * from "${sc}"."agent_registrations" where api_key=$1 and active=1`,
+                    [api_key],
+                ),
+        },
+        all_agents: {
+            all: () =>
+                all_async(
+                    `select * from "${sc}"."agent_registrations" where active=1 order by registration_date desc`,
+                ),
+        },
+        upd_agent_access: {
+            run: (agent_id, timestamp) =>
+                run_async(
+                    `update "${sc}"."agent_registrations" set last_access=$2 where agent_id=$1`,
+                    [agent_id, timestamp],
+                ),
+        },
+        ins_namespace: {
+            run: (...p) =>
+                run_async(
+                    `insert into "${sc}"."namespace_groups"(namespace,group_type,description,created_by,created_at,updated_at,active) values($1,$2,$3,$4,$5,$6,$7) on conflict(namespace) do update set group_type=excluded.group_type,description=excluded.description,updated_at=excluded.updated_at,active=excluded.active`,
+                    p,
+                ),
+        },
+        upd_namespace: {
+            run: (...p) =>
+                run_async(
+                    `update "${sc}"."namespace_groups" set group_type=$2,description=$3,updated_at=$4 where namespace=$1`,
+                    p,
+                ),
+        },
+        del_namespace: {
+            run: (namespace) =>
+                run_async(
+                    `delete from "${sc}"."namespace_groups" where namespace=$1`,
+                    [namespace],
+                ),
+        },
+        get_namespace: {
+            get: (namespace) =>
+                get_async(
+                    `select * from "${sc}"."namespace_groups" where namespace=$1 and active=1`,
+                    [namespace],
+                ),
+        },
+        all_namespaces: {
+            all: () =>
+                all_async(
+                    `select * from "${sc}"."namespace_groups" where active=1 order by created_at desc`,
+                ),
+        },
+        ins_access_log: {
+            run: (...p) =>
+                run_async(
+                    `insert into "${sc}"."agent_access_log"(agent_id,operation,namespace,timestamp,success,error_message) values($1,$2,$3,$4,$5,$6)`,
+                    p,
+                ),
+        },
     };
 } else {
     const db_path = env.db_path || "./data/openmemory.sqlite";
@@ -755,6 +859,74 @@ if (is_pg) {
             run: (...p) =>
                 exec(
                     "update users set summary=?,reflection_count=reflection_count+1,updated_at=? where user_id=?",
+                    p,
+                ),
+        },
+        // Agent registration queries for SQLite
+        ins_agent: {
+            run: (...p) =>
+                exec(
+                    "insert or replace into agent_registrations(agent_id,namespace,permissions,shared_namespaces,api_key,description,registration_date,last_access,active) values(?,?,?,?,?,?,?,?,?)",
+                    p,
+                ),
+        },
+        upd_agent: {
+            run: (...p) =>
+                exec(
+                    "update agent_registrations set namespace=?,permissions=?,shared_namespaces=?,description=?,last_access=? where agent_id=?",
+                    p,
+                ),
+        },
+        del_agent: {
+            run: (agent_id) =>
+                exec("delete from agent_registrations where agent_id=?", [agent_id]),
+        },
+        get_agent: {
+            get: (agent_id) =>
+                one("select * from agent_registrations where agent_id=? and active=1", [agent_id]),
+        },
+        get_agent_by_api_key: {
+            get: (api_key) =>
+                one("select * from agent_registrations where api_key=? and active=1", [api_key]),
+        },
+        all_agents: {
+            all: () =>
+                many("select * from agent_registrations where active=1 order by registration_date desc"),
+        },
+        upd_agent_access: {
+            run: (agent_id, timestamp) =>
+                exec("update agent_registrations set last_access=? where agent_id=?", [timestamp, agent_id]),
+        },
+        ins_namespace: {
+            run: (...p) =>
+                exec(
+                    "insert or replace into namespace_groups(namespace,group_type,description,created_by,created_at,updated_at,active) values(?,?,?,?,?,?,?)",
+                    p,
+                ),
+        },
+        upd_namespace: {
+            run: (...p) =>
+                exec(
+                    "update namespace_groups set group_type=?,description=?,updated_at=? where namespace=?",
+                    p,
+                ),
+        },
+        del_namespace: {
+            run: (namespace) =>
+                exec("delete from namespace_groups where namespace=?", [namespace]),
+        },
+        get_namespace: {
+            get: (namespace) =>
+                one("select * from namespace_groups where namespace=? and active=1", [namespace]),
+        },
+        all_namespaces: {
+            all: () =>
+                many("select * from namespace_groups where active=1 order by created_at desc"),
+        },
+        ins_access_log: {
+            run: (...p) =>
+                exec(
+                    "insert into agent_access_log(agent_id,operation,namespace,timestamp,success,error_message) values(?,?,?,?,?,?)",
                     p,
                 ),
         },

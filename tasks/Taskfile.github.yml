@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+silent: true
+vars:
+  GITHUB_PATH:
+    sh: |
+      git remote get-url origin 2>/dev/null | sed -Ee 's/.*:(.+)\.git/\1/'
+  GITHUB_URL:
+    sh: 'echo ${GITHUB_URL:-"https://www.github.com"}'
+  GITHUB_UI_PATH: "{{.GITHUB_URL}}/{{.GITHUB_PATH}}"
+  GITHUB_TOKEN:
+    sh: echo ${GITHUB_TOKEN:-""}
+
+tasks:
+  show:
+    desc: Show github variables for this task
+    cmds:
+      - |
+        echo "GITHUB_PATH: {{.GITHUB_PATH}}"
+        echo "GITHUB_UI_PATH: {{.GITHUB_UI_PATH}}"
+
+  ui:
+    desc: Open website for github project
+    cmds:
+      - |
+        open {{.GITHUB_UI_PATH}}
+
+  actions:ui:
+    desc: Open website for github project actions
+    cmds:
+      - |
+        open {{.GITHUB_UI_PATH}}/actions
