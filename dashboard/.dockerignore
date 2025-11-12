@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+.next
+out
+dist
+
+# Environment variables (will be set via docker-compose)
+.env
+.env.local
+.env.production.local
+.env.development.local
+
+# Debug
+*.log
+*.tgz
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# IDE files
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+README.md
+CHAT_SETUP.md
+node_modules

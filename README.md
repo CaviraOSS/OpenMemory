@@ -155,13 +155,63 @@ The server runs on `http://localhost:8080`.
 docker compose up --build -d
 ```
 
-This starts OpenMemory on port 8080. Data persists in `/data/openmemory.sqlite`.
+This starts all OpenMemory services. Data persists in `/data/openmemory.sqlite`.
+
+#### Basic Deployment (Integrated)
+```bash
+# Start with integrated MCP proxy (default)
+docker-compose up openmemory
+
+# Access services:
+# - Main API: http://localhost:8080
+# - MCP Proxy: http://localhost:8080/mcp-proxy  
+# - Proxy API: http://localhost:8080/api/proxy-info
+```
+
+#### Full Deployment (All Services)
+```bash
+# Start all services (recommended)
+docker-compose up
+
+# Access services:
+# - Main API: http://localhost:8080
+# - Dashboard: http://localhost:3000
+# - Integrated MCP Proxy: http://localhost:8080/mcp-proxy
+# - Standalone MCP Proxy: http://localhost:8081/mcp-proxy
+# - Proxy APIs: http://localhost:8081/api/*
+```
+
+#### Individual Services
+```bash
+# Start only the backend
+docker-compose up openmemory
+
+# Start only the dashboard (requires backend)
+docker-compose up openmemory openmemory-dashboard
+
+# Start only the standalone proxy service
+docker-compose up openmemory-mcp-proxy
+
+# Access services individually:
+# - Backend: http://localhost:8080
+# - Dashboard: http://localhost:3000
+# - MCP Proxy: http://localhost:8081/mcp-proxy
+# - Proxy API: http://localhost:8081/api/proxy-info
+```
 
 ### Dashboard Setup
 
 The dashboard provides a web interface to visualize and manage your memories.
 
-Requirements:
+**Docker (Recommended):**
+```bash
+# Start with Docker Compose (includes backend)
+docker-compose up openmemory openmemory-dashboard
+
+# Access dashboard at http://localhost:3000
+```
+
+**Local Development:**
 
 - Node.js 20 or higher
 - Running OpenMemory backend (on port 8080)

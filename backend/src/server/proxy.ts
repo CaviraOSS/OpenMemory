@@ -14,11 +14,13 @@ export const get_proxy_instance = () => {
 };
 
 export const proxy_routes = (app: any) => {
-    const proxy = get_proxy_instance();
+    // Delay proxy creation until routes are actually called
+    const getProxy = () => get_proxy_instance();
 
     // MCP proxy HTTP endpoint
     app.post("/mcp-proxy", async (req: IncomingMessage, res: ServerResponse) => {
         try {
+            const proxy = getProxy();
             await proxy.httpHandler(req, res);
         } catch (error) {
             res.statusCode = 500;
@@ -29,6 +31,34 @@ export const proxy_routes = (app: any) => {
             }));
         }
     });
+
+    app.options("/mcp-proxy", (_req: any, res: any) => {
+        res.statusCode = 204;
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+        res.setHeader(
+            "Access-Control-Allow-Headers", 
+            "Content-Type,Authorization,Mcp-Session-Id"
+        );
+        res.end();
+    });
+
+    const methodNotAllowed = (_req: IncomingMessage, res: ServerResponse) => {
+        res.statusCode = 405;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({
+            jsonrpc: "2.0",
+            error: { 
+                code: -32600, 
+                message: "Method not supported. Use POST /mcp-proxy with JSON payload." 
+            },
+            id: null
+        }));
+    };
+    
+    app.get("/mcp-proxy", methodNotAllowed);
+    app.put("/mcp-proxy", methodNotAllowed);
+    app.delete("/mcp-proxy", methodNotAllowed);
 
     // REST endpoints for direct agent management using database queries
     app.get("/api/agents", async (req: any, res: any) => {

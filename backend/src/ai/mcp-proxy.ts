@@ -9,7 +9,7 @@ import {
     hsg_query,
     reinforce_memory,
 } from "../memory/hsg";
-import { q } from "../core/db";
+import { q, get_async } from "../core/db";
 import type { sector_type } from "../core/types";
 
 interface AgentRegistration {
@@ -54,6 +54,7 @@ export class OpenMemoryMCPProxy {
     private agents = new Map<string, AgentRegistration>();
     private namespaces = new Map<string, NamespaceGroup>();
     private srv: McpServer;
+    private transport?: StreamableHTTPServerTransport;
 
     constructor() {
         this.srv = new McpServer(
@@ -583,6 +584,13 @@ Ready to start using OpenMemory! 🚀`;
 
     private async loadPersistedData(): Promise<void> {
         try {
+            // Check if agent_registrations table exists before trying to load data
+            const tableExists = await this.checkTableExists('agent_registrations');
+            if (!tableExists) {
+                console.log(`[MCP Proxy] Agent registration tables not found, skipping data load. Run migration to create tables.`);
+                return;
+            }
+
             // Load agents from database
             const agents = await q.all_agents.all();
             for (const agent of agents) {
@@ -616,9 +624,68 @@ Ready to start using OpenMemory! 🚀`;
         }
     }
 
+    private async checkTableExists(tableName: string): Promise<boolean> {
+        try {
+            const result = await get_async(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`, [tableName]);
+            return !!result;
+        } catch (error) {
+            return false;
+        }
+    }
+
     private async persistAgentData(): Promise<void> {
         // Data is automatically persisted via database operations in the MCP tool handlers
         // This method is kept for compatibility but doesn't need to do anything
+    }
+
+    private setHeaders(res: ServerResponse): void {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+        res.setHeader(
+            "Access-Control-Allow-Headers",
+            "Content-Type,Authorization,Mcp-Session-Id",
+        );
+    }
+
+    private sendError(
+        res: ServerResponse,
+        code: number,
+        message: string,
+        id: number | string | null = null,
+        status = 400,
+    ): void {
+        if (!res.headersSent) {
+            res.statusCode = status;
+            this.setHeaders(res);
+            res.end(
+                JSON.stringify({
+                    jsonrpc: "2.0",
+                    error: { code, message },
+                    id,
+                }),
+            );
+        }
+    }
+
+    private async extractPayload(req: IncomingMessage): Promise<any> {
+        if ((req as any).body !== undefined) {
+            if (typeof (req as any).body === "string") {
+                if (!(req as any).body.trim()) return undefined;
+                return JSON.parse((req as any).body);
+            }
+            if (typeof (req as any).body === "object" && (req as any).body !== null) return (req as any).body;
+            return undefined;
+        }
+        const raw = await new Promise<string>((resolve, reject) => {
+            let buf = "";
+            req.on("data", (chunk) => {
+                buf += chunk;
+            });
+            req.on("end", () => resolve(buf));
+            req.on("error", reject);
+        });
+        if (!raw.trim()) return undefined;
+        return JSON.parse(raw);
     }
 
     public getServer(): McpServer {
@@ -626,11 +693,43 @@ Ready to start using OpenMemory! 🚀`;
     }
 
     public async httpHandler(req: IncomingMessage, res: ServerResponse): Promise<void> {
-        const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: undefined,
-            enableJsonResponse: true,
-        });
-        await this.srv.connect(transport);
+        try {
+            // Extract JSON payload from request
+            const pay = await this.extractPayload(req);
+            if (!pay || typeof pay !== "object") {
+                this.sendError(res, -32600, "Request body must be a JSON object");
+                return;
+            }
+            
+            console.log("[MCP PROXY] Incoming request:", JSON.stringify(pay));
+            this.setHeaders(res);
+            
+            // Use transport to handle the request
+            if (!this.transport) {
+                this.transport = new StreamableHTTPServerTransport({
+                    sessionIdGenerator: undefined,
+                    enableJsonResponse: true,
+                });
+                await this.srv.connect(this.transport);
+            }
+            
+            await this.transport.handleRequest(req, res, pay);
+        } catch (error) {
+            console.error("[MCP PROXY] Error handling request:", error);
+            if (error instanceof SyntaxError) {
+                this.sendError(res, -32600, "Invalid JSON payload");
+                return;
+            }
+            if (!res.headersSent) {
+                this.sendError(
+                    res,
+                    -32603,
+                    "Internal server error",
+                    (error as any)?.id ?? null,
+                    500,
+                );
+            }
+        }
     }
 
     public async stdioHandler(): Promise<void> {

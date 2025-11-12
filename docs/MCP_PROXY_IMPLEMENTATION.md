@@ -1,6 +1,10 @@
 # OpenMemory MCP Proxy Service
 
-This document outlines the implementation of an enhanced MCP proxy service for OpenMemory that provides agent registration, namespace management, and prompt templates.
+This document outlines the implementation of an enhanced MCP proxy service for OpenMemory that provides additional features including:
+
+- agent registration
+- namespace management
+- prompt templates
 
 ## 🚀 Features Implemented
 

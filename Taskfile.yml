@@ -253,10 +253,29 @@ tasks:
           --analyzers yara \
           -o security_scan_results.md
 
-  run:api:
-    desc: Run the API server
-    dir: ./api
+  run:om:
+    desc: Run OM
+    dir: ./backend
+    cmds:
+      - npm install
+      - npm run dev
+
+  build:proxy:
+    desc: Build MCP Proxy Docker image
+    dir: ./backend
     cmds:
       - |
-        uv pip install -e ".[dev]"
-        uv run uvicorn src.engine.main:app --host 0.0.0.0 --port 8000 --reload
+        npm run proxy:build
+
+  build:proxy:image:
+    desc: Build MCP Proxy Docker image
+    dir: ./backend
+    cmds:
+      - |
+        docker build -t openmemory-mcp-proxy:latest -f Dockerfile.proxy .
+  run:proxy:image:
+    desc: Run MCP Proxy Docker image
+    dir: ./backend
+    cmds:
+      - task: build:proxy:image
+      - docker run -d -p 8081:8081 --name openmemory-mcp-proxy openmemory-mcp-proxy:latest

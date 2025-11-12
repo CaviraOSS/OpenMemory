@@ -4,7 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { run_async, get_async } from "../core/db";
 
-const migrationsDir = path.join(__dirname, "../../migrations");
+// In production Docker environment, migrations are at the app root level
+const migrationsDir = process.env.NODE_ENV === 'production' || process.cwd().includes('/app') 
+    ? path.join(process.cwd(), "migrations") 
+    : path.join(__dirname, "../../migrations");
 
 async function runMigration() {
     console.log("Running agent registration migration...");
