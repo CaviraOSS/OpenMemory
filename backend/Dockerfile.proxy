@@ -1,4 +1,4 @@
-# ===== BUILD STAGE =====
+# Dockerfile for OpenMemory MCP Proxy Service
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -15,7 +15,7 @@ RUN curl -fsSL https://bun.sh/install | bash \
 # Ensure Bun is available in PATH for subsequent commands
 ENV PATH="/opt/bun/bin:${PATH}"
 
-# Copy package manifests to install dependencies
+# Copy package files
 COPY package*.json ./
 
 # Install all dependencies (including devDependencies) using Bun
@@ -23,16 +23,14 @@ COPY package*.json ./
 # --concurrent-scripts and --network-concurrency optimize install speed
 RUN bun install --concurrent-scripts=10 --network-concurrency=96
 
-# Copy source code and migrations
+# Copy source code and build the application
 COPY src/ ./src/
-COPY migrations/ ./migrations/
 COPY tsconfig.json ./
 RUN bun run build
 
 # Remove devDependencies to reduce image size 
 # (Removing all the devDependencies that we dont need in the final build)
 RUN npm prune --omit=dev
-
 
 # ===== PRODUCTION STAGE =====
 FROM node:20-alpine AS production
@@ -46,8 +44,9 @@ RUN addgroup -g 1001 -S appgroup \
 # Copy only production artifacts from the builder stage
 COPY --from=builder /app/node_modules ./node_modules/
 COPY --from=builder /app/dist ./dist/
-COPY --from=builder /app/migrations ./migrations/
+COPY --from=builder /app/src ./src
 COPY package.json ./
+COPY migrations/ ./migrations/
 
 # Create a directory for persistent data and secure file permissions
 RUN mkdir -p /data \
@@ -57,12 +56,20 @@ RUN mkdir -p /data \
 # Switch to non-root user
 USER appuser
 
-# Expose the application port
-EXPOSE 8080
+# Set environment variables for proxy mode
+ENV OM_MCP_PROXY_ENABLED=true
+ENV OM_MCP_PROXY_STANDALONE=true
+ENV OM_PORT=8081
+
+# Expose proxy port
+EXPOSE 8081
 
 # Define a lightweight health check that verifies the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:8081/api/proxy-health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+# # Start the proxy server
+CMD ["npx", "tsx", "src/proxy-server.ts"]
 
 # Start the application using npm
-ENTRYPOINT ["npm", "start"]
+#ENTRYPOINT ["npx", "tsx", "src/proxy-server.ts"]

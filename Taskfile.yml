@@ -1,0 +1,281 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+silent: true
+env:
+  PROJECT:
+    sh: 'echo "$(basename $(pwd))"'
+  LOCAL_BIN_PATH:
+    sh: 'echo "{{.ROOT_DIR}}/.venv/bin"'
+  BUILD_DATE:
+    sh: "date '+%Y-%m-%d-%H:%M:%S'"
+  BUILD_DATE_SHORT:
+    sh: "date '+%Y-%m-%d-%H%M%S'"
+  GIT_LATEST_TAG:
+    sh: 'git tag -l 2>/dev/null | sort -r -V | head -n 1 2>/dev/null || echo "not a git repo"'
+  TERM: screen-256color
+  DOCS_PATH: "{{.ROOT_DIR}}/docs"
+  PYTHON_VENV_PATH: "{{.ROOT_DIR}}/.venv"
+  SCRIPT_PATH: "{{.ROOT_DIR}}/scripts"
+  VERSION: '{{default "unknown" .GIT_LATEST_TAG}}'
+  COMPOSE_BAKE: true
+
+dotenv:
+  - ".env"
+
+includes:
+  docker:
+    taskfile: ./tasks/Taskfile.docker.yml
+    optional: true
+  github:
+    taskfile: ./tasks/Taskfile.github.yml
+    optional: true
+
+tasks:
+  default:
+    cmds:
+      - |
+        task -l
+
+  show:
+    desc: Show task variables
+    cmds:
+      - |
+        echo "ROOT_PATH: {{.ROOT_DIR}}"
+        echo "PROJECT: {{.PROJECT}}"
+        echo "VERSION: {{.VERSION}}"
+        echo "OS: {{OS}}"
+        echo "ARCH: {{ARCH}}"
+        echo "LOCAL_BIN_PATH: {{.LOCAL_BIN_PATH}}"
+        echo "PYTHON_VENV_PATH: {{.PYTHON_VENV_PATH}}"
+        echo "SCRIPT_PATH: {{.SCRIPT_PATH}}"
+        echo "BUILD_DATE: {{.BUILD_DATE}}"
+        echo "GIT_LATEST_TAG: {{.GIT_LATEST_TAG}}"
+
+  show:all:
+    desc: Show all variables for task namespaces
+    cmds:
+      - |
+        echo "## Show ##";
+        task show
+        echo ""
+        for taskitem in $(task -l | cut -d " " -f2 | grep show | sed 's/.$//'); do
+          if [[ "$taskitem" != "show:all" ]]; then
+            echo "## Show - ${taskitem} ##";
+            task $taskitem;
+            echo "";
+          fi
+        done
+
+  list:
+    desc: List tasks by namespace (task list -- <namespace>)
+    cmds:
+      - |
+        if [[ "{{.CLI_ARGS}}" != "" ]]; then
+          task -l | grep {{default "" .CLI_ARGS}}
+        else
+          task -l
+        fi
+
+  toc:
+    desc: Update the table of contents in README.md
+    cmds:
+      - uv pip install -e ".[docs]"
+      - uv run mdtoc README.md
+
+  secrets:
+    desc: Create template .SECRETS file if one does not already exist.
+    cmds:
+      - cp ./config/.SECRETS.example.env ./.SECRETS.env
+    status:
+      - "test -f .SECRETS.env"
+
+  autocomplete:
+    desc: Setup task autocomplete (zsh)
+    cmds:
+      - sudo curl https://raw.githubusercontent.com/go-task/task/main/completion/zsh/_task \
+        -o /usr/local/share/zsh/site-functions/_task
+    status:
+      - "test -f /usr/local/share/zsh/site-functions/_task"
+
+  install:
+    desc: Install everything required to run most scripts.
+    cmds:
+      - |
+        uv sync
+
+  run:
+    desc: Run the app
+    cmds:
+      - |
+        uv run -m terraform_ingest.cli
+
+  lint:
+    desc: Run python linting
+    dir: api
+    cmds:
+      - |
+        uv pip install -e ".[dev]"
+        uv run ruff check .
+        uv run black --check .
+
+  lint:fix:
+    desc: Run python linting and fix issues
+    dir: api
+    cmds:
+      - |
+        uv run ruff check --fix .
+
+  format:
+    desc: Run python formatting
+    dir: api
+    cmds:
+      - |
+        uv run ruff format .
+        uv run black .
+  
+  docs:
+    desc: Build the docs
+    dir: api
+    cmds:
+      - |
+        uv pip install -e ".[docs]"
+        uv run mkdocs build
+
+  test:
+    desc: Run the tests
+    dir: api
+    cmds:
+      - |
+        uv pip install -e ".[test]"
+        ENGINE_API_KEY=test-api-key python run_server.py &
+        sleep 5
+        uv run pytest --maxfail=1 --disable-warnings -v ./src/tests
+
+
+  typecheck:
+    desc: Run the type checker
+    dir: api
+    cmds:
+      - |
+        uv pip install -e ".[dev]"
+        uv run mypy src
+
+  secret:search:
+    desc: Find secrets in the codebase and in git history
+    cmds:
+      - |
+        gitleaks detect --source ./ -f json -r secret_results.json
+  
+  build:
+    desc: Build the project
+    dir: api
+    cmds:
+      - |
+        uv build
+
+  clean:
+    desc: Clean the project
+    cmds:
+      - |
+        find . -type d -name "__pycache__" -exec rm -rf {} +
+        find . -type d -name "*.egg-info" -exec rm -rf {} +
+        find . -type f -name ".DS_Store" -delete
+        find . -type f -name "*.pyc" -delete
+        find . -type f -name "*.pyo" -delete
+        rm -rf .mypy_cache
+        rm -rf .pytest_cache
+        rm -rf .ruff_cache
+        rm -rf dist
+        rm -rf .coverage
+        rm -rf .coverage.*
+        rm -rf .coverage.xml
+        rm -rf .DS_Store
+        rm -rf .pytest_cache
+        rm -rf .venv
+        rm -rf src/terraform_ingest/_version.py
+        rm -rf chromadb
+        rm -rf ./output
+        rm -rf ./repos
+        rm -rf ./site
+
+  deep:clean:
+    desc: Clean the project deeply. Includes uv cache removal.
+    dir: api
+    cmds:
+      - uv cache clean
+      - task: clean
+
+  repomix:
+    desc: Run the repo mixin
+    cmds:
+      - |
+        repomix --style=markdown --output=docs/repomix.md --compress
+
+  build:api:image:
+    desc: Build API Docker image
+    dir: ./api
+    cmds:
+      - |
+        pwd
+      - task: docker:build
+        vars:
+          DOCKER_BUILD_ARGS: "--build-arg DEPLOY_VERSION={{.VERSION}}-$(git rev-parse --short HEAD)"
+
+  mcp:inspector:
+    desc: Start MCP Inspector
+    cmds:
+      - npx -y @modelcontextprotocol/inspector
+    env:
+      DANGEROUSLY_OMIT_AUTH: true
+
+  update:actions:
+    desc: Update GitHub Actions in workflows
+    cmds:
+      - npx actions-up -y
+  
+  mcp:scan:
+    desc: Scan MCP package for issues
+    env:
+      MCP_SCANNER_LLM_API_KEY: test
+      MCP_SCANNER_API_KEY: test
+      MCP_SCANNER_LLM_ENDPOINT: http://linbox5:11434
+      MCP_SCANNER_LLM_MODEL: gemma3:12b
+    cmds:
+      - |
+        uv tool install cisco-ai-mcp-scanner
+        uv tool upgrade cisco-ai-mcp-scanner
+        mcp-scanner --format summary \
+          --stdio-command uvx \
+          --stdio-arg=terraform-ingest --stdio-arg=mcp --stdio-arg=-c --stdio-arg=config.yaml \
+          --stdio-arg=--no-ingest-on-startup \
+          --format table \
+          --analyzers yara \
+          -o security_scan_results.md
+
+  run:om:
+    desc: Run OM
+    dir: ./backend
+    cmds:
+      - npm install
+      - npm run dev
+
+  build:proxy:
+    desc: Build MCP Proxy Docker image
+    dir: ./backend
+    cmds:
+      - |
+        npm run proxy:build
+
+  build:proxy:image:
+    desc: Build MCP Proxy Docker image
+    dir: ./backend
+    cmds:
+      - |
+        docker build -t openmemory-mcp-proxy:latest -f Dockerfile.proxy .
+  run:proxy:image:
+    desc: Run MCP Proxy Docker image
+    dir: ./backend
+    cmds:
+      - task: build:proxy:image
+      - docker run -d -p 8081:8081 --name openmemory-mcp-proxy openmemory-mcp-proxy:latest

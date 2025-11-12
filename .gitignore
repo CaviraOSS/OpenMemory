@@ -19,3 +19,4 @@ temp
 exports
 *.egg-info
 *.vsix
+.tmp

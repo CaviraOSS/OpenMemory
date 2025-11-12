@@ -1,0 +1,44 @@
+{
+  "servers": {
+    "git": {
+      "command": "uvx",
+      "args": ["mcp-server-git"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "type": "stdio"
+    },
+    "server-filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "."
+      ],
+      "type": "stdio"
+    },
+    "searxng": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-searxng"
+      ],
+      "env": {
+        "SEARXNG_URL": "http://localhost:8080"
+      },
+    },
+    "openmemory-mcp": {
+      "url": "http://localhost:8080/mcp",
+      "type": "http"
+    }
+  },
+  "inputs": []
+}

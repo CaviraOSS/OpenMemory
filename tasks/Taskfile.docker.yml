@@ -1,0 +1,100 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: "3"
+silent: true
+vars:
+  local_bin_path:
+    sh: if [[ "{{.LOCAL_BIN_PATH}}" == "" ]]; then echo "./.local/bin"; else echo "{{.LOCAL_BIN_PATH}}"; fi
+  ROVER_VERSION: '{{default "0.2.2" .ROVER_VERSION}}'
+  DOCKER_BUILDKIT: 1
+  DOCKER_SERVER: '{{default "{{cookiecutter.docker_registry}}" .DOCKER_SERVER}}'
+  DOCKER_FILE: '{{default "Dockerfile" .DOCKER_FILE}}'
+  DOCKER_PATH: '{{default "." .DOCKER_PATH}}'
+  DOCKER_EXTRACT_PATH: '{{default "." .DOCKER_EXTRACT_PATH}}'
+  DOCKER_IMAGE: '{{default "." .PROJECT}}'
+  docker: docker
+  IS_CI: "{{default 0 .IS_CI}}"
+
+tasks:
+  show:
+    desc: Show terraform variables for this task
+    cmds:
+      - |
+        echo "DOCKER_IMAGE: {{.DOCKER_IMAGE}}"
+        echo "DOCKER_FILE: {{.DOCKER_FILE}}"
+        echo "DOCKER_PATH: {{.DOCKER_PATH}}"
+        echo "local_bin_path: {{.local_bin_path}}"
+
+  login:
+    desc: Login to container registry
+    cmds:
+      - |
+        {{.docker}} login {{.DOCKER_SERVER}}
+
+  tag:
+    desc: Tag container image
+    cmds:
+      - |
+        {{.docker}} tag {{.DOCKER_IMAGE}}:local {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:{{.GIT_COMMIT}}
+        {{.docker}} tag {{.DOCKER_IMAGE}}:local {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:{{.VERSION}}
+        {{.docker}} tag {{.DOCKER_IMAGE}}:local {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:latest
+
+  push:
+    desc: Push tagged images to registry
+    cmds:
+      - |
+        echo "Pushing container image to registry: latest {{.VERSION}} {{.GIT_COMMIT}}"
+        {{.docker}} push {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:{{.GIT_COMMIT}}
+        {{.docker}} push {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:{{.VERSION}}
+        {{.docker}} push {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:latest
+
+  run:
+    desc: Run a local container image for the app
+    cmds:
+      - |
+        {{.docker}} run -t --rm -i --name={{.DOCKER_IMAGE}} {{.DOCKER_IMAGE}}:local {{.CLI_ARGS}}
+
+  scan:
+    desc: Run a {{.docker}} snyk security scan
+    cmds:
+      - |
+        {{.docker}} scan {{.DOCKER_SERVER}}/{{.DOCKER_IMAGE}}:latest
+
+  shell:
+    desc: Run a local container image for the app
+    cmds:
+      - |
+        {{.docker}} run -t --rm -i --name={{.DOCKER_IMAGE}} {{.DOCKER_IMAGE}}:local /bin/sh
+
+  extract:
+    desc: Example of using buildkit to extract files from an image
+    cmds:
+      - |
+        mkdir -p {{.ROOT_DIR}} /.local/artifacts
+        {{.docker}} build -f {{.DOCKER_FILE}} \
+          --target artifact \
+            --output type=local,dest=./.local/artifacts .
+
+  build:
+    desc: Build container image
+    cmds:
+      - |
+        {{.docker}} build {{.DOCKER_BUILD_ARGS}} -t {{.DOCKER_IMAGE}}:local -f {{.DOCKER_FILE}} {{.DOCKER_PATH}}
+
+  build:base:
+    desc: Build base container image
+    cmds:
+      - |
+        echo "Attempting to build the base image: ./.docker/{{.DOCKER_FILE}}.base"
+        {{.docker}} build {{.DOCKER_BUILD_ARGS}} -t {{.DOCKER_IMAGE}}:local-base -f ./.docker/{{.DOCKER_FILE}}.base {{.DOCKER_PATH}}
+
+  build:clean:
+    desc: Build container image (no cache)
+    cmds:
+      - |
+        {{.docker}} build --no-cache {{.DOCKER_BUILD_ARGS}} -t {{.DOCKER_IMAGE}}:local -f {{.DOCKER_FILE}} {{.DOCKER_PATH}}
+
+  clean:
+    desc: Clean local cached {{.docker}} elements
+    cmds:
+      - |
+        {{.docker}} system prune

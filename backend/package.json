@@ -7,10 +7,14 @@
     },
     "scripts": {
         "dev": "tsx src/server/index.ts",
+        "proxy:dev": "tsx src/proxy-server.ts",
+        "proxy:build": "tsc -p tsconfig.json && node dist/proxy-server.js",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server/index.js",
-        "migrate": "tsx src/migrate.ts"
+        "proxy:start": "node dist/proxy-server.js",
+        "migrate": "tsx src/migrate.ts",
+        "migrate:agents": "tsx src/scripts/migrate-agent-tables.ts"
     },
     "dependencies": {
         "@modelcontextprotocol/sdk": "^1.20.2",
