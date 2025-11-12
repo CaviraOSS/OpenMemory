@@ -671,14 +671,21 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/amihos">
+                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
+                    <br />
+                    <sub><b>Hossein Amirkhalili</b></sub>
+                </a>
+            </td>
+		</tr>
+		<tr>
+            <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
                     <sub><b>Jason Kneen</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/muhammad-fiaz">
                     <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
@@ -705,13 +712,6 @@ make test
                     <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
                     <br />
                     <sub><b>Dhravya Shah</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/amihos">
-                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
-                    <br />
-                    <sub><b>Hossein Amirkhalili</b></sub>
                 </a>
             </td>
             <td align="center">
