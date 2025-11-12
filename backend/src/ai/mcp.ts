@@ -381,7 +381,8 @@ export const create_mcp_srv = () => {
     );
 
     srv.server.oninitialized = () => {
-        console.log(
+        // Use stderr for debug output, not stdout
+        console.error(
             "[MCP] initialization completed with client:",
             srv.server.getClientVersion(),
         );
@@ -481,7 +482,7 @@ export const start_mcp_stdio = async () => {
     const srv = create_mcp_srv();
     const trans = new StdioServerTransport();
     await srv.connect(trans);
-    console.log("[MCP] STDIO transport connected");
+    // console.error("[MCP] STDIO transport connected"); // Use stderr for debug output, not stdout
 };
 
 if (typeof require !== "undefined" && require.main === module) {
