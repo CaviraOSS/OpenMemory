@@ -1,0 +1,186 @@
+.sidebar {
+  width: 280px;
+  background-color: #f9fafb;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  transition: background-color 0.3s ease;
+}
+
+.dark-mode .sidebar {
+  background-color: #111827;
+  border-right-color: #374151;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark-mode .sidebar-header {
+  border-bottom-color: #374151;
+}
+
+.sidebar-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #3b82f6;
+}
+
+.new-chat-btn {
+  width: 100%;
+  padding: 12px 16px;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.new-chat-btn:hover {
+  background-color: #2563eb;
+}
+
+.conversations-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.conversation-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.conversation-item:hover {
+  background-color: #e5e7eb;
+}
+
+.dark-mode .conversation-item:hover {
+  background-color: #374151;
+}
+
+.conversation-item.active {
+  background-color: #dbeafe;
+}
+
+.dark-mode .conversation-item.active {
+  background-color: #1e3a8a;
+}
+
+.conversation-title {
+  flex: 1;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.conversation-item:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  color: #ef4444;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dark-mode .sidebar-footer {
+  border-top-color: #374151;
+}
+
+.theme-toggle-btn,
+.clear-all-btn {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: transparent;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  color: inherit;
+}
+
+.dark-mode .theme-toggle-btn,
+.dark-mode .clear-all-btn {
+  border-color: #374151;
+}
+
+.theme-toggle-btn:hover,
+.clear-all-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.dark-mode .theme-toggle-btn:hover,
+.dark-mode .clear-all-btn:hover {
+  background-color: #374151;
+}
+
+.clear-all-btn:hover {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .dark-mode .sidebar {
+    border-bottom-color: #374151;
+  }
+
+  .conversations-list {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px;
+  }
+
+  .conversation-item {
+    min-width: 150px;
+    margin-right: 8px;
+    margin-bottom: 0;
+  }
+}

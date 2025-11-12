@@ -1,0 +1,18 @@
+{
+  "name": "nyomi-ai",
+  "version": "1.0.0",
+  "description": "Nyomi AI - A fully intelligent chatbot powered by OpenAI GPT-4",
+  "scripts": {
+    "install-all": "cd backend && npm install && cd ../frontend && npm install",
+    "start-backend": "cd backend && npm start",
+    "start-frontend": "cd frontend && npm start",
+    "start": "concurrently \"npm run start-backend\" \"npm run start-frontend\"",
+    "build": "cd frontend && npm run build"
+  },
+  "keywords": ["ai", "chatbot", "openai", "gpt-4", "react", "nodejs"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
