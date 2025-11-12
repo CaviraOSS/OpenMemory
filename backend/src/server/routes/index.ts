@@ -5,6 +5,7 @@ import { ide } from "./ide";
 import { compression } from "./compression";
 import { lg } from "./langgraph";
 import { usr } from "./users";
+import { temporal } from "./temporal";
 import { dash } from "./dashboard";
 
 export function routes(app: any) {
@@ -15,5 +16,7 @@ export function routes(app: any) {
     compression(app);
     lg(app);
     usr(app);
+    temporal(app);
     dash(app);
 }
+

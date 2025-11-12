@@ -520,6 +520,46 @@ For stdio mode (Claude Desktop):
 node backend/dist/ai/mcp.js
 ```
 
+#### Claude Code Integration
+
+Claude Code supports HTTP MCP servers natively. Since OpenMemory provides an HTTP endpoint at `/mcp`, you can connect directly without additional configuration.
+
+**Method 1: Using CLI (Recommended)**
+
+```bash
+# Add globally (available in all projects)
+claude mcp add --transport http --scope user openmemory http://localhost:3000/mcp
+
+# Or add to current project only
+claude mcp add --transport http openmemory http://localhost:3000/mcp
+```
+
+**Method 2: Manual Configuration**
+
+Add to `~/.claude.json` (global) or `.mcp.json` (project-specific):
+
+```json
+{
+  "mcpServers": {
+    "openmemory": {
+      "type": "http",
+      "url": "http://localhost:3000/mcp"
+    }
+  }
+}
+```
+
+Then restart Claude Code.
+
+**Available Tools:**
+- `mcp__openmemory__query` - Semantic search across memories
+- `mcp__openmemory__store` - Store new memories
+- `mcp__openmemory__list` - List recent memories
+- `mcp__openmemory__get` - Retrieve specific memory by ID
+- `mcp__openmemory__reinforce` - Boost memory salience
+
+**Note**: Make sure your OpenMemory Docker container is running on `http://localhost:3000` before connecting.
+
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
 
 ---
@@ -681,14 +721,21 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/amihos">
+                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
+                    <br />
+                    <sub><b>Hossein Amirkhalili</b></sub>
+                </a>
+            </td>
+		</tr>
+		<tr>
+            <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
                     <sub><b>Jason Kneen</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/muhammad-fiaz">
                     <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
@@ -724,6 +771,8 @@ make test
                     <sub><b>Joseph Goksu</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/lwsinclair">
                     <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>

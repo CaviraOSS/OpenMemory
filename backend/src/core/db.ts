@@ -545,8 +545,8 @@ if (is_pg) {
         db.run("PRAGMA mmap_size=134217728");
         db.run("PRAGMA foreign_keys=OFF");
         db.run("PRAGMA wal_autocheckpoint=20000");
-        db.run("PRAGMA locking_mode=EXCLUSIVE");
-        db.run("PRAGMA busy_timeout=50");
+        db.run("PRAGMA locking_mode=NORMAL"); // Changed from EXCLUSIVE to allow MCP access
+        db.run("PRAGMA busy_timeout=5000"); // Increased timeout to handle concurrent access
         db.run(
             `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
         );
