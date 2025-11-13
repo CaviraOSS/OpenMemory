@@ -26,8 +26,10 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **User isolation** - Each user gets a separate memory space
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
+- **Migration** - Easily migrate from Mem0, Zep and Supermemory.
 
 ### Uses
+
 **We are featuring projects that use OpenMemory here. To get your project displayed, please email nullureq@gmail.com**
 
 ### VS Code Extension
@@ -502,6 +504,7 @@ Add to `~/.claude.json` (global) or `.mcp.json` (project-specific):
 Then restart Claude Code.
 
 **Available Tools:**
+
 - `mcp__openmemory__query` - Semantic search across memories
 - `mcp__openmemory__store` - Store new memories
 - `mcp__openmemory__list` - List recent memories
@@ -620,7 +623,11 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 12. Contributing
+
+## 12. Telemetry
+OpenMemory sends a single anonymous ping on startup so we know which configurations are being used. Collected fields: hostname, operating system, chosen embedding provider (`OM_EMBEDDINGS`), metadata backend (`OM_METADATA_BACKEND`), package version, RAM/storage estimates, and CPU model. No memory contents or user data leave your server. Opt out anytime via `OM_TELEMETRY=false`.
+
+## 13. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -737,19 +744,19 @@ make test
 
 ---
 
-## 13. License
+## 14. License
 
 Apache 2.0 License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 14. Community
+## 15. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 15. Other Projects
+## 16. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM
