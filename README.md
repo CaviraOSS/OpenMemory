@@ -747,6 +747,13 @@ make test
                     <sub><b>Lawrence Sinclair</b></sub>
                 </a>
             </td>
+            <td align="center">
+                <a href="https://github.com/Hchunjun">
+                    <img src="https://avatars.githubusercontent.com/u/11238835?v=4" width="100;" alt="Hchunjun"/>
+                    <br />
+                    <sub><b>鱼</b></sub>
+                </a>
+            </td>
 		</tr>
 	<tbody>
 </table>
