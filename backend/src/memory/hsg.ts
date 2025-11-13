@@ -948,7 +948,8 @@ export async function add_hsg_memory(
         const seg_cnt = seg_cnt_res?.c ?? 0;
         if (seg_cnt >= env.seg_size) {
             cur_seg++;
-            console.log(
+            // Use stderr for debug output to avoid breaking MCP JSON-RPC protocol
+            console.error(
                 `[HSG] Rotated to segment ${cur_seg} (previous segment full: ${seg_cnt} memories)`,
             );
         }

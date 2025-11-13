@@ -23,7 +23,7 @@ export const insert_fact = async (
     for (const old of existing) {
         if (old.valid_from < valid_from_ts) {
             await run_async(`UPDATE temporal_facts SET valid_to = ? WHERE id = ?`, [valid_from_ts - 1, old.id])
-            console.log(`[TEMPORAL] Closed fact ${old.id} at ${new Date(valid_from_ts - 1).toISOString()}`)
+            console.error(`[TEMPORAL] Closed fact ${old.id} at ${new Date(valid_from_ts - 1).toISOString()}`) // Use stderr for MCP compatibility
         }
     }
 
@@ -32,7 +32,7 @@ export const insert_fact = async (
         VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)
     `, [id, subject, predicate, object, valid_from_ts, confidence, now, metadata ? JSON.stringify(metadata) : null])
 
-    console.log(`[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence})`)
+    console.error(`[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence})`) // Use stderr for MCP compatibility
     return id
 }
 
@@ -57,18 +57,18 @@ export const update_fact = async (id: string, confidence?: number, metadata?: Re
 
     if (updates.length > 0) {
         await run_async(`UPDATE temporal_facts SET ${updates.join(', ')} WHERE id = ?`, params)
-        console.log(`[TEMPORAL] Updated fact ${id}`)
+        console.error(`[TEMPORAL] Updated fact ${id}`) // Use stderr for MCP compatibility
     }
 }
 
 export const invalidate_fact = async (id: string, valid_to: Date = new Date()): Promise<void> => {
     await run_async(`UPDATE temporal_facts SET valid_to = ?, last_updated = ? WHERE id = ?`, [valid_to.getTime(), Date.now(), id])
-    console.log(`[TEMPORAL] Invalidated fact ${id} at ${valid_to.toISOString()}`)
+    console.error(`[TEMPORAL] Invalidated fact ${id} at ${valid_to.toISOString()}`) // Use stderr for MCP compatibility
 }
 
 export const delete_fact = async (id: string): Promise<void> => {
     await run_async(`DELETE FROM temporal_facts WHERE id = ?`, [id])
-    console.log(`[TEMPORAL] Deleted fact ${id}`)
+    console.error(`[TEMPORAL] Deleted fact ${id}`) // Use stderr for MCP compatibility
 }
 
 export const insert_edge = async (
