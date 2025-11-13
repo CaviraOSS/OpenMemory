@@ -51,7 +51,10 @@ function server(config = {}) {
                 x = '';
             if (typeof x === 'object')
                 return res.json(x);
-            res.writeHead(res.statusCode || 200, { 'Content-Type': 'text/plain' });
+            // Check if Content-Type header is already set
+            const existingContentType = res.getHeader('Content-Type');
+            const contentType = existingContentType || 'text/plain';
+            res.writeHead(res.statusCode || 200, { 'Content-Type': contentType });
             res.end(String(x));
         };
         res.set = (k, v) => { res.setHeader(k, v); return res; };

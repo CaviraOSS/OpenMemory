@@ -16,6 +16,8 @@ const auth_config = {
         "/api/system/health",
         "/api/system/stats",
         "/dashboard/health",
+        "/api-docs",
+        "/openapi.json",
     ],
 };
 

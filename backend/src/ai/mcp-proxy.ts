@@ -209,6 +209,60 @@ export class OpenMemoryMCPProxy {
             }
         );
 
+        // Get specific agent details
+        this.srv.tool("get_agent",
+            "Get detailed information about a specific agent",
+            {
+                agent_id: z.string().min(1).describe("Agent ID to retrieve"),
+                include_api_key: z.boolean().default(false).describe("Whether to include the API key in response"),
+                include_access_log: z.boolean().default(false).describe("Whether to include recent access log entries")
+            },
+            async (params: any) => {
+                const { agent_id, include_api_key, include_access_log } = params;
+                
+                const agent = this.agents.get(agent_id);
+                if (!agent) {
+                    throw new Error(`Agent '${agent_id}' not found`);
+                }
+
+                const agentDetails = {
+                    agent_id: agent.agent_id,
+                    namespace: agent.namespace,
+                    permissions: agent.permissions,
+                    shared_namespaces: agent.shared_namespaces,
+                    description: agent.description,
+                    registration_date: new Date(agent.registration_date).toISOString(),
+                    last_access: new Date(agent.last_access).toISOString(),
+                    status: "active",
+                    ...(include_api_key && { api_key: agent.api_key })
+                };
+
+                // Add access log if requested
+                if (include_access_log) {
+                    try {
+                        const accessLogs = await q.get_agent_access_log.all(agent_id, 10); // Last 10 entries
+                        agentDetails.recent_access_log = accessLogs.map(log => ({
+                            action: log.action,
+                            namespace: log.namespace,
+                            timestamp: new Date(log.timestamp * 1000).toISOString(),
+                            success: log.success === 1,
+                            error_message: log.error_message
+                        }));
+                    } catch (error) {
+                        console.warn(`[MCP PROXY] Could not fetch access log for agent ${agent_id}:`, error);
+                        agentDetails.recent_access_log = [];
+                    }
+                }
+
+                return { 
+                    content: [{ 
+                        type: "text", 
+                        text: JSON.stringify(agentDetails, null, 2)
+                    }] 
+                };
+            }
+        );
+
         // Namespaced memory operations
         this.srv.tool("query_memory",
             "Query memories from agent's authorized namespaces",
@@ -480,6 +534,7 @@ Namespace-aware proxy for OpenMemory that provides secure multi-agent access wit
 - \`get_proxy_info\` - This information
 - \`register_agent\` - Register a new agent with namespace access
 - \`list_agents\` - View all registered agents
+- \`get_agent\` - Get detailed information about a specific agent
 
 ### Memory Operations  
 - \`query_memory\` - Search memories in authorized namespaces

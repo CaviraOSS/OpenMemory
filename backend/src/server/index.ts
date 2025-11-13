@@ -67,6 +67,10 @@ async function initializeServer() {
         next();
     });
 
+    // Setup Swagger documentation before authentication middleware
+    const { setupSwagger } = await import("./swagger");
+    setupSwagger(app);
+
     app.use(authenticate_api_request);
 
     if (process.env.OM_LOG_AUTH === "true") {

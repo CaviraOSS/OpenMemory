@@ -110,6 +110,112 @@ export const proxy_routes = (app: any) => {
         }
     });
 
+    app.post("/api/agents", async (req: any, res: any) => {
+        try {
+            const { agent_id, namespace, permissions = ['read', 'write'], shared_namespaces = [], description = '' } = req.body;
+
+            // Validate required fields
+            if (!agent_id || !namespace) {
+                return res.status(400).json({ 
+                    error: "Missing required fields", 
+                    message: "agent_id and namespace are required" 
+                });
+            }
+
+            // Validate agent_id format
+            if (!/^[a-zA-Z0-9_-]+$/.test(agent_id)) {
+                return res.status(400).json({ 
+                    error: "Invalid agent_id", 
+                    message: "agent_id must contain only alphanumeric characters, hyphens, and underscores" 
+                });
+            }
+
+            // Check if agent already exists
+            const existingAgent = await q.get_agent.get(agent_id);
+            const now = Math.floor(Date.now() / 1000);
+            
+            let api_key: string;
+            let operation: string;
+            let message: string;
+
+            if (existingAgent) {
+                // Update existing agent (idempotent operation)
+                api_key = existingAgent.api_key; // Keep existing API key
+                operation = 'update';
+                message = `Agent '${agent_id}' updated successfully`;
+
+                // Database query parameter order differs between PostgreSQL and SQLite
+                if (env.metadata_backend === 'postgres') {
+                    // PostgreSQL: agent_id, namespace, permissions, shared_namespaces, description, last_access
+                    await q.upd_agent.run(
+                        agent_id,
+                        namespace,
+                        JSON.stringify(permissions),
+                        JSON.stringify(shared_namespaces),
+                        description,
+                        now
+                    );
+                } else {
+                    // SQLite: namespace, permissions, shared_namespaces, description, last_access, agent_id
+                    await q.upd_agent.run(
+                        namespace,
+                        JSON.stringify(permissions),
+                        JSON.stringify(shared_namespaces),
+                        description,
+                        now,
+                        agent_id
+                    );
+                }
+            } else {
+                // Create new agent
+                const generateApiKey = () => 'omp_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
+                api_key = generateApiKey();
+                operation = 'register';
+                message = `Agent '${agent_id}' registered successfully`;
+
+                await q.ins_agent.run(
+                    agent_id,
+                    namespace,
+                    JSON.stringify(permissions),
+                    JSON.stringify(shared_namespaces),
+                    api_key,
+                    description,
+                    now,  // registration_date
+                    now,  // last_access
+                    1     // active
+                );
+            }
+
+            // Log the operation
+            await q.ins_access_log.run(
+                agent_id,
+                operation,
+                namespace,
+                now,
+                1,    // success
+                null  // error_message
+            );
+
+            res.json({
+                success: true,
+                agent_id: agent_id,
+                api_key: api_key,
+                namespace: namespace,
+                permissions: permissions,
+                shared_namespaces: shared_namespaces,
+                description: description,
+                message: message
+            });
+
+        } catch (error) {
+            console.error('[AGENT REGISTRATION] Error:', error);
+            res.status(500).json({ 
+                error: "Failed to register agent", 
+                message: error instanceof Error ? error.message : String(error)
+            });
+        }
+    });
+
     app.get("/api/namespaces", async (req: any, res: any) => {
         try {
             const namespaces = await q.all_namespaces.all();

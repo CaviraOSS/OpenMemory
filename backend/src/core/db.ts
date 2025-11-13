@@ -61,6 +61,7 @@ type q_type = {
     get_namespace: { get: (namespace: string) => Promise<any> };
     all_namespaces: { all: () => Promise<any[]> };
     ins_access_log: { run: (...p: any[]) => Promise<void> };
+    get_agent_access_log: { all: (agent_id: string, limit?: number) => Promise<any[]> };
 };
 
 let run_async: (sql: string, p?: any[]) => Promise<void>;
@@ -531,6 +532,13 @@ if (is_pg) {
                     p,
                 ),
         },
+        get_agent_access_log: {
+            all: (agent_id: string, limit = 10) =>
+                all_async(
+                    `select * from "${sc}"."agent_access_log" where agent_id=$1 order by timestamp desc limit $2`,
+                    [agent_id, limit],
+                ),
+        },
     };
 } else {
     const db_path = env.db_path || "./data/openmemory.sqlite";
@@ -928,6 +936,13 @@ if (is_pg) {
                 exec(
                     "insert into agent_access_log(agent_id,operation,namespace,timestamp,success,error_message) values(?,?,?,?,?,?)",
                     p,
+                ),
+        },
+        get_agent_access_log: {
+            all: (agent_id, limit = 10) =>
+                many(
+                    "select * from agent_access_log where agent_id=? order by timestamp desc limit ?",
+                    [agent_id, limit],
                 ),
         },
     };
