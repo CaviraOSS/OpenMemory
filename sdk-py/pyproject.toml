@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmemory-py"
-version = "0.3.0"
+version = "0.4.0"
 authors = [
     {name = "OpenMemory Project", email = "bob@holacorp.net"},
 ]
-description = "Brain-inspired memory system client for Python applications"
+description = "Brain-inspired memory system with agent registration and namespace management for Python applications"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.8"
@@ -35,7 +35,12 @@ keywords = [
     "semantic-search",
     "artificial-intelligence",
     "machine-learning",
-    "nlp"
+    "nlp",
+    "agent-registration",
+    "namespace-management", 
+    "multi-agent",
+    "collaboration",
+    "mcp-proxy"
 ]
 dependencies = [
     # Zero dependencies - uses only Python standard library

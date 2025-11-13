@@ -26,8 +26,10 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **User isolation** - Each user gets a separate memory space
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
+- **Migration** - Easily migrate from Mem0, Zep and Supermemory.
 
 ### Uses
+
 **We are featuring projects that use OpenMemory here. To get your project displayed, please email nullureq@gmail.com**
 
 ### VS Code Extension
@@ -222,7 +224,7 @@ npm install
 npm run dev
 ```
 
-The dashboard runs on `http://localhost:3000`.
+The dashboard runs on `http://localhost:8080`.
 
 **Configuration (.env.local):**
 
@@ -528,10 +530,10 @@ Claude Code supports HTTP MCP servers natively. Since OpenMemory provides an HTT
 
 ```bash
 # Add globally (available in all projects)
-claude mcp add --transport http --scope user openmemory http://localhost:3000/mcp
+claude mcp add --transport http --scope user openmemory http://localhost:8080/mcp
 
 # Or add to current project only
-claude mcp add --transport http openmemory http://localhost:3000/mcp
+claude mcp add --transport http openmemory http://localhost:8080/mcp
 ```
 
 **Method 2: Manual Configuration**
@@ -543,22 +545,40 @@ Add to `~/.claude.json` (global) or `.mcp.json` (project-specific):
   "mcpServers": {
     "openmemory": {
       "type": "http",
-      "url": "http://localhost:3000/mcp"
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
+
+or
+
+{
+  "mcpServers": {
+    "openmemory": {
+      "headers": {
+        "Accept": "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "x-api-key": "{OM_API_KEY}"
+      },
+      "type": "http",
+      "url": "http://120.0.0.1:8080/mcp"
+    }
+  }
+}
+
 ```
 
 Then restart Claude Code.
 
 **Available Tools:**
+
 - `mcp__openmemory__query` - Semantic search across memories
 - `mcp__openmemory__store` - Store new memories
 - `mcp__openmemory__list` - List recent memories
 - `mcp__openmemory__get` - Retrieve specific memory by ID
 - `mcp__openmemory__reinforce` - Boost memory salience
 
-**Note**: Make sure your OpenMemory Docker container is running on `http://localhost:3000` before connecting.
+**Note**: Make sure your OpenMemory Docker container is running on `http://localhost:8080` before connecting.
 
 [![MseeP.ai Security Assessment Badge](https://mseep.net/pr/caviraoss-openmemory-badge.png)](https://mseep.ai/app/caviraoss-openmemory)
 
@@ -670,7 +690,11 @@ Tested with LongMemEval benchmark:
 
 ---
 
-## 12. Contributing
+
+## 12. Telemetry
+OpenMemory sends a single anonymous ping on startup so we know which configurations are being used. Collected fields: hostname, operating system, chosen embedding provider (`OM_EMBEDDINGS`), metadata backend (`OM_METADATA_BACKEND`), package version, RAM/storage estimates, and CPU model. No memory contents or user data leave your server. Opt out anytime via `OM_TELEMETRY=false`.
+
+## 13. Contributing
 
 See `CONTRIBUTING.md`, `GOVERNANCE.md`, and `CODE_OF_CONDUCT.md` for guidelines.
 
@@ -780,6 +804,13 @@ make test
                     <sub><b>Lawrence Sinclair</b></sub>
                 </a>
             </td>
+            <td align="center">
+                <a href="https://github.com/Hchunjun">
+                    <img src="https://avatars.githubusercontent.com/u/11238835?v=4" width="100;" alt="Hchunjun"/>
+                    <br />
+                    <sub><b>鱼</b></sub>
+                </a>
+            </td>
 		</tr>
 	<tbody>
 </table>
@@ -787,19 +818,19 @@ make test
 
 ---
 
-## 13. License
+## 14. License
 
 Apache 2.0 License. Copyright (c) 2025 OpenMemory.
 
 ---
 
-## 14. Community
+## 15. Community
 
 Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other developers and contributors.
 
 ---
 
-## 15. Other Projects
+## 16. Other Projects
 
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM

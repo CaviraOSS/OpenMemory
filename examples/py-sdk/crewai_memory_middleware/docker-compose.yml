@@ -1,0 +1,92 @@
+# Exposes the following services:
+# - http://localhost:6333/dashboard - qdrant (ui)
+# - http://localhost:8080 - searxng (ui)
+# - valkey (internal, for searxng)
+
+services:
+  valkey:
+    container_name: valkey
+    image: docker.io/valkey/valkey:8-alpine
+    command: valkey-server --save 30 1 --loglevel warning
+    restart: unless-stopped
+    volumes:
+      - valkey-data2:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  searxng:
+    container_name: searxng
+    image: docker.io/searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - searxng-data:/var/cache/searxng:rw
+    configs:
+      - source: searxng_limiter_config
+        target: /etc/searxng/limiter.toml
+      - source: searxng_config
+        target: /etc/searxng/settings.yml
+    environment:
+      - SEARXNG_BASE_URL=http://${SEARXNG_HOSTNAME:-localhost}/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "1"
+    depends_on:
+      valkey:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+volumes:
+  valkey-data2:
+  searxng-data:
+
+configs:
+  searxng_limiter_config:
+    content: |
+      # This configuration file updates the default configuration file
+      # See https://github.com/searxng/searxng/blob/master/searx/limiter.toml
+
+      [botdetection.ip_limit]
+      # activate advanced bot protection
+      # enable this when running the instance for a public usage on the internet
+      link_token = false
+  searxng_config:
+    content: |
+      # see https://docs.searxng.org/admin/settings/settings.html#settings-use-default-settings
+      use_default_settings: true
+        # engines:
+        #   keep_only:
+        #     - google
+        #     - duckduckgo
+      server:
+        # base_url is defined in the SEARXNG_BASE_URL environment variable, see .env and docker-compose.yml
+        secret_key: "some_secret_key123"
+        limiter: false  # enable this when running the instance for a public usage on the internet
+        image_proxy: true
+      search:
+        formats:
+          - html
+          - csv
+          - rss
+          - json
+      valkey:
+        url: valkey://valkey:6379/0
+  qdrant_config:
+    content: |
+      log_level: INFO

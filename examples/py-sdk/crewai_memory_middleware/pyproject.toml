@@ -1,0 +1,25 @@
+[project]
+name = "crewai_memory_middleware"
+version = "0.1.0"
+description = "crewai-memory-middleware using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[tools]==1.4.1",
+    "litellm>=1.79.3",
+]
+
+[project.scripts]
+crewai_memory_middleware = "crewai_memory_middleware.main:run"
+run_crew = "crewai_memory_middleware.main:run"
+train = "crewai_memory_middleware.main:train"
+replay = "crewai_memory_middleware.main:replay"
+test = "crewai_memory_middleware.main:test"
+run_with_trigger = "crewai_memory_middleware.main:run_with_trigger"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "crew"

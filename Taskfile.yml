@@ -279,3 +279,9 @@ tasks:
     cmds:
       - task: build:proxy:image
       - docker run -d -p 8081:8081 --name openmemory-mcp-proxy openmemory-mcp-proxy:latest
+  merge:upstream:
+    desc: Merge upstream changes from main branch
+    cmds:
+      - |
+        git fetch upstream
+        git merge upstream/main

@@ -2,7 +2,6 @@ node_modules
 .env
 dist
 data
-.vscode
 target/
 .pypirc
 logs
@@ -20,3 +19,6 @@ exports
 *.egg-info
 *.vsix
 .tmp
+__pycache__
+*.pyc
+*.egg
