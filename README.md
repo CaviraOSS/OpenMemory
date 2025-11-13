@@ -48,7 +48,7 @@ Features:
 
 ### Architecture
 
-OpenMemory uses Hierarchical Memory Decomposition (HMD):
+OpenMemory utilizes a **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay. It uses Hierarchical Memory Decomposition (HMD):
 
 - One canonical node per memory (no duplication)
 - Multiple embeddings per memory (one per sector)

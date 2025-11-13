@@ -1,3 +1,19 @@
+# Docker Compose configuration for OpenMemory application
+# This setup includes the main OpenMemory service with an integrated MCP proxy
+# and the OpenMemory Dashboard for memory visualization and management.
+# 
+# Simplified Architecture (Recommended):
+# - Single OpenMemory backend with integrated MCP proxy
+# - Dashboard for visualization and management
+# 
+# Exposed URLs:
+# - API: http://localhost:8080/api/*
+# - MCP Endpoint: http://localhost:8080/mcp
+# - MCP Proxy: http://localhost:8080/mcp-proxy
+# - API Documentation: http://localhost:8080/api-docs
+# - OpenAPI spec: http://localhost:8080/openapi.json
+# - Health Check: http://localhost:8080/health
+# - Dashboard: http://localhost:3000
 services:
   # Main OpenMemory service with integrated MCP proxy
   openmemory:
@@ -126,89 +142,6 @@ services:
       retries: 3
       start_period: 30s
 
-  openmemory-mcp-proxy:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.proxy
-    ports:
-      - '8081:8081'
-    environment:
-      # Core Configuration - Use different port for proxy
-      - OM_PORT=8081
-      - OM_MODE=${OM_MODE:-standard}
-      - OM_TIER=${OM_TIER:-hybrid}
-      - OM_DB_PATH=${OM_DB_PATH:-/data/openmemory.sqlite}
-      - OM_API_KEY=${OM_API_KEY:-proxy_service}
-      - OM_IDE_MODE=${OM_IDE_MODE:-false}
-
-      # MCP Proxy Specific Configuration
-      - OM_MCP_PROXY_ENABLED=true
-      - OM_MCP_PROXY_PORT=8081
-      - OM_MCP_PROXY_STANDALONE=true
-
-      # Rate Limiting
-      - OM_RATE_LIMIT_ENABLED=${OM_RATE_LIMIT_ENABLED:-true}
-      - OM_RATE_LIMIT_WINDOW_MS=${OM_RATE_LIMIT_WINDOW_MS:-60000}
-      - OM_RATE_LIMIT_MAX_REQUESTS=${OM_RATE_LIMIT_MAX_REQUESTS:-1000}
-
-      # Embeddings Configuration - Inherit from main service
-      - OM_EMBEDDINGS=${OM_EMBEDDINGS:-synthetic}
-      - OM_EMBED_MODE=${OM_EMBED_MODE:-simple}
-      - OM_ADV_EMBED_PARALLEL=${OM_ADV_EMBED_PARALLEL:-false}
-      - OM_EMBED_DELAY_MS=${OM_EMBED_DELAY_MS:-200}
-      - OM_VEC_DIM=${OM_VEC_DIM:-256}
-
-      # OpenAI Provider
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - OM_OPENAI_API_KEY=${OM_OPENAI_API_KEY:-}
-      - OM_OPENAI_BASE_URL=${OM_OPENAI_BASE_URL:-https://api.openai.com/v1}
-      - OM_OPENAI_MODEL=${OM_OPENAI_MODEL:-}
-
-      # Gemini Provider
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - OM_GEMINI_API_KEY=${OM_GEMINI_API_KEY:-}
-
-      # Ollama Provider
-      - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
-      - OM_OLLAMA_URL=${OM_OLLAMA_URL:-http://localhost:11434}
-
-      # Local Model
-      - LOCAL_MODEL_PATH=${LOCAL_MODEL_PATH:-}
-      - OM_LOCAL_MODEL_PATH=${OM_LOCAL_MODEL_PATH:-}
-
-      # Memory & Search
-      - OM_MIN_SCORE=${OM_MIN_SCORE:-0.3}
-      - OM_MAX_PAYLOAD_SIZE=${OM_MAX_PAYLOAD_SIZE:-1000000}
-
-      # Metadata Backend (SQLite/PostgreSQL) - Shared with main service
-      - OM_METADATA_BACKEND=${OM_METADATA_BACKEND:-sqlite}
-      - OM_PG_HOST=${OM_PG_HOST:-}
-      - OM_PG_PORT=${OM_PG_PORT:-5432}
-      - OM_PG_DB=${OM_PG_DB:-}
-      - OM_PG_USER=${OM_PG_USER:-}
-      - OM_PG_PASSWORD=${OM_PG_PASSWORD:-}
-      - OM_PG_SCHEMA=${OM_PG_SCHEMA:-public}
-      - OM_PG_TABLE=${OM_PG_TABLE:-openmemory_memories}
-      - OM_PG_SSL=${OM_PG_SSL:-disable}
-
-      # Vector Backend (SQLite/Weaviate) - Shared with main service
-      - OM_VECTOR_BACKEND=${OM_VECTOR_BACKEND:-sqlite}
-      - OM_VECTOR_TABLE=${OM_VECTOR_TABLE:-openmemory_vectors}
-      - OM_WEAVIATE_URL=${OM_WEAVIATE_URL:-}
-      - OM_WEAVIATE_API_KEY=${OM_WEAVIATE_API_KEY:-}
-      - OM_WEAVIATE_CLASS=${OM_WEAVIATE_CLASS:-OpenMemory}
-    volumes:
-      - openmemory_proxy_data:/data
-    depends_on:
-      - openmemory
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:8081/api/proxy-health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
   # OpenMemory Dashboard - Web interface for memory visualization and management
   openmemory-dashboard:
     build:
@@ -245,5 +178,5 @@ services:
 volumes:
   openmemory_data:
     driver: local
-  openmemory_proxy_data:
-    driver: local
+  # openmemory_proxy_data: # No longer needed with integrated approach
+  #   driver: local

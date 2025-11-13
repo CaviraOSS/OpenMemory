@@ -15,7 +15,11 @@
         "docker:build": "docker-compose build",
         "docker:backend": "docker-compose up -d openmemory",
         "docker:dashboard": "docker-compose up -d openmemory openmemory-dashboard",
-        "docker:proxy": "docker-compose up -d openmemory-mcp-proxy",
-        "docker:all": "docker-compose up -d openmemory openmemory-dashboard openmemory-mcp-proxy"
+        "docker:all": "docker-compose up -d openmemory openmemory-dashboard",
+        "mcp:report": "node scripts/generate-mcp-report.js",
+        "mcp:tools": "node scripts/query-mcp-tools.js --list",
+        "mcp:apis": "node scripts/query-mcp-tools.js --apis",
+        "mcp:search": "node scripts/query-mcp-tools.js --search",
+        "mcp:tool": "node scripts/query-mcp-tools.js --tool"
     }
 }
