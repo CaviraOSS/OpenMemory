@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tooltip 方向測試</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #2d2d30;
+            --text-primary: #cccccc;
+            --text-secondary: #969696;
+            --accent-color: #007acc;
+            --border-color: #464647;
+            --transition-fast: 0.2s;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .test-header {
+            background: var(--bg-secondary);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 會話ID顯示樣式 */
+        .session-id-display {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 122, 204, 0.1);
+            border: 1px solid transparent;
+            transition: all var(--transition-fast) ease;
+            position: relative;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .session-id-display:hover {
+            background: rgba(0, 122, 204, 0.2);
+            border-color: var(--accent-color);
+            transform: scale(1.02);
+        }
+
+        .session-id-display:active {
+            transform: scale(0.98);
+        }
+
+        /* 會話ID tooltip - 向下顯示 */
+        .session-id-display::after {
+            content: attr(data-full-id);
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-fast) ease;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+
+        .session-id-display:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* 對比：向上顯示的tooltip */
+        .session-id-display-up {
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(0, 122, 204, 0.1);
+            border: 1px solid transparent;
+            transition: all var(--transition-fast) ease;
+            position: relative;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .session-id-display-up:hover {
+            background: rgba(0, 122, 204, 0.2);
+            border-color: var(--accent-color);
+            transform: scale(1.02);
+        }
+
+        .session-id-display-up::after {
+            content: attr(data-full-id);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            opacity: 0;
+            visibility: hidden;
+            transition: all var(--transition-fast) ease;
+            z-index: 1000;
+            margin-bottom: 4px;
+        }
+
+        .session-id-display-up:hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .description {
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .test-item {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .test-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid #4caf50;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Tooltip 方向測試</h1>
+
+        <!-- 頂部測試 - 模擬實際使用場景 -->
+        <div class="test-header">
+            <span>📋 當前會話:
+                <span class="session-id-display"
+                      data-full-id="6a674dda-1b98-4f86-824b-afdfd8c581f2"
+                      title="點擊複製完整會話ID">6a674dda...</span>
+            </span>
+        </div>
+
+        <div class="test-section">
+            <h3>測試說明</h3>
+            <div class="description">
+                以下是不同位置的tooltip顯示測試。將滑鼠懸停在會話ID上查看tooltip的顯示方向。
+            </div>
+
+            <div class="test-item">
+                <span class="test-label">✅ 新版本 - 向下顯示 (推薦)</span>
+                <span class="session-id-display"
+                      data-full-id="6a674dda-1b98-4f86-824b-afdfd8c581f2">6a674dda...</span>
+            </div>
+
+            <div class="test-item">
+                <span class="test-label">❌ 舊版本 - 向上顯示 (會超出畫面)</span>
+                <span class="session-id-display-up"
+                      data-full-id="6a674dda-1b98-4f86-824b-afdfd8c581f2">6a674dda...</span>
+            </div>
+
+            <div class="status-message">
+                ✅ 新版本的tooltip向下顯示，確保在頁面頂部也能完整看到完整的會話ID
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>實際應用場景</h3>
+            <div class="description">
+                在實際應用中，會話ID位於頁面頂部的連線狀態欄中。向下顯示tooltip可以確保用戶始終能看到完整的會話ID，而不會被瀏覽器視窗邊界截斷。
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <span style="color: var(--text-secondary);">
+                    💡 提示：將滑鼠懸停在上方頂部區域的會話ID上測試實際效果
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 添加點擊複製功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const sessionIdElements = document.querySelectorAll('.session-id-display, .session-id-display-up');
+
+            sessionIdElements.forEach(function(element) {
+                element.addEventListener('click', function() {
+                    const fullId = this.getAttribute('data-full-id');
+
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(fullId).then(function() {
+                            showMessage('會話ID已複製到剪貼板: ' + fullId);
+                        }).catch(function(err) {
+                            console.error('複製失敗:', err);
+                            fallbackCopy(fullId);
+                        });
+                    } else {
+                        fallbackCopy(fullId);
+                    }
+                });
+            });
+        });
+
+        function fallbackCopy(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showMessage('會話ID已複製到剪貼板: ' + text);
+        }
+
+        function showMessage(message) {
+            // 創建臨時消息提示
+            const messageEl = document.createElement('div');
+            messageEl.textContent = message;
+            messageEl.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                padding: 12px 20px;
+                border-radius: 6px;
+                z-index: 10000;
+                font-size: 14px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            `;
+
+            document.body.appendChild(messageEl);
+
+            setTimeout(function() {
+                messageEl.style.opacity = '0';
+                messageEl.style.transition = 'opacity 0.3s ease';
+                setTimeout(function() {
+                    document.body.removeChild(messageEl);
+                }, 300);
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

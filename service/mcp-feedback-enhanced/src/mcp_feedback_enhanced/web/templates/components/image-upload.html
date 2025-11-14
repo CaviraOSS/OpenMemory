@@ -1,0 +1,43 @@
+{#
+圖片上傳組件
+============
+
+參數:
+- id_prefix: ID 前綴，用於區分不同實例 (例如: "feedback", "combined")
+- label_text: 標籤文字 (預設: "圖片附件（可選）")
+- upload_text: 上傳提示文字
+- min_height: 最小高度 (預設: "120px")
+
+使用方式:
+{% include 'components/image-upload.html' with context %}
+或
+{% include 'components/image-upload.html' with id_prefix="feedback" %}
+#}
+
+{% set id_prefix = id_prefix or "default" %}
+{% set label_text = label_text or "圖片附件（可選）" %}
+{% set min_height = min_height or "120px" %}
+{% set upload_text = upload_text or "📎 點擊選擇圖片或拖放圖片到此處<br><small>支援 PNG、JPG、JPEG、GIF、BMP、WebP 等格式</small>" %}
+
+
+
+<div class="input-group">
+    <label class="input-label" data-i18n="feedback.imageLabel">{{ label_text }}</label>
+
+    <!-- 相容性提示區域 -->
+    <div id="{{ id_prefix }}CompatibilityHint" class="compatibility-hint" style="display: none;">
+        <span data-i18n="images.settings.compatibilityHint">💡 圖片無法正確識別？</span>
+        <button type="button" id="{{ id_prefix }}EnableBase64Hint" class="compatibility-hint-btn" data-i18n="images.settings.enableBase64Hint">
+            嘗試啟用 Base64 相容模式
+        </button>
+    </div>
+
+    <!-- 圖片上傳區域 -->
+    <div id="{{ id_prefix }}ImageUploadArea" class="image-upload-area" style="min-height: {{ min_height }};">
+        <div id="{{ id_prefix }}ImageUploadText" data-i18n="feedback.imageUploadText">
+            {{ upload_text|safe }}
+        </div>
+        <div id="{{ id_prefix }}ImagePreviewContainer" class="image-preview-container"></div>
+        <input type="file" id="{{ id_prefix }}ImageInput" multiple accept="image/*" style="display: none;">
+    </div>
+</div>

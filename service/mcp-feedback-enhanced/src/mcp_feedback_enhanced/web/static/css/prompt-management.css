@@ -1,0 +1,566 @@
+/**
+ * 提示詞管理功能樣式
+ * ===================
+ * 
+ * 包含提示詞管理相關的所有 UI 樣式
+ */
+
+/* ===== 提示詞彈窗樣式 ===== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+    opacity: 1;
+}
+
+.modal-overlay.hide {
+    opacity: 0;
+}
+
+.modal-container {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-container.modal-large {
+    max-width: 700px;
+}
+
+.modal-overlay.show .modal-container {
+    transform: scale(1) translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.modal-close-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* ===== 提示詞表單樣式 ===== */
+
+.prompt-form .input-group {
+    margin-bottom: 20px;
+}
+
+.prompt-form .input-group:last-child {
+    margin-bottom: 0;
+}
+
+.prompt-form .text-input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.prompt-form input[type="text"].text-input {
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    padding: 8px 12px !important;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.prompt-form textarea.text-input {
+    min-height: 200px !important;
+    height: 200px !important;
+    padding: 12px !important;
+    font-size: 14px;
+    line-height: 1.4;
+    resize: vertical;
+}
+
+/* ===== 提示詞列表樣式 ===== */
+
+.prompt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.prompt-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.prompt-item:hover {
+    border-color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.05);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 122, 204, 0.1);
+}
+
+.prompt-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.prompt-item-name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.prompt-item-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.prompt-item-content {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    margin-bottom: 8px;
+}
+
+.prompt-item-used {
+    font-size: 11px;
+    color: var(--accent-color);
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 40px 20px;
+}
+
+/* ===== 設定頁籤中的提示詞管理樣式 ===== */
+
+.prompt-management-section {
+    margin-top: 20px;
+}
+
+.prompt-management-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.prompt-management-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.prompt-add-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+.prompt-settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.prompt-settings-item {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+}
+
+.prompt-settings-item:hover {
+    border-color: rgba(0, 122, 204, 0.5);
+    background: rgba(0, 122, 204, 0.05);
+}
+
+.prompt-settings-info {
+    flex: 1;
+    margin-right: 12px;
+}
+
+.prompt-settings-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.prompt-settings-content {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    max-height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.prompt-settings-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.prompt-settings-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.prompt-action-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.prompt-action-btn:hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.1);
+}
+
+.prompt-action-btn.delete:hover {
+    border-color: #dc3545;
+    color: #dc3545;
+    background: rgba(220, 53, 69, 0.1);
+}
+
+/* ===== input-group 按鈕樣式 ===== */
+
+.prompt-input-buttons {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.prompt-input-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    min-width: fit-content;
+}
+
+.prompt-input-btn:hover {
+    border-color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.1);
+    color: var(--accent-color);
+}
+
+.prompt-input-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.prompt-input-btn:disabled:hover {
+    border-color: var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+/* ===== 響應式設計 ===== */
+
+@media (max-width: 768px) {
+    .modal-container {
+        width: 95%;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 12px 16px;
+    }
+    
+    .modal-body {
+        padding: 16px;
+    }
+    
+    .modal-footer {
+        padding: 12px 16px;
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .prompt-management-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .prompt-settings-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .prompt-settings-actions {
+        margin-top: 8px;
+        justify-content: flex-end;
+    }
+    
+    .prompt-input-buttons {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .prompt-input-btn {
+        justify-content: center;
+        flex: 1;
+        min-width: 80px;
+    }
+}
+
+/* ===== 動畫效果 ===== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.prompt-settings-item,
+.prompt-item {
+    animation: fadeIn 0.3s ease;
+}
+
+/* ===== 無障礙改進 ===== */
+
+.prompt-item:focus,
+.prompt-action-btn:focus,
+.prompt-input-btn:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* ===== 自動提交提示詞樣式 ===== */
+
+/* 自動提交提示詞項目特殊樣式 */
+.prompt-settings-item.auto-submit-prompt {
+    border-left: 4px solid var(--accent-color);
+    background: rgba(0, 122, 204, 0.05);
+    position: relative;
+}
+
+.prompt-settings-item.auto-submit-prompt::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-color), transparent);
+}
+
+/* 自動提交徽章樣式 */
+.auto-submit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    color: white;
+    border-radius: 50%;
+    font-size: 10px;
+    margin-right: 6px;
+    font-weight: bold;
+    vertical-align: middle;
+}
+
+/* 自動提交狀態文字 */
+.auto-submit-status {
+    color: var(--accent-color);
+    font-weight: 500;
+    font-size: 11px;
+    background: rgba(0, 122, 204, 0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 8px;
+}
+
+/* 自動提交按鈕樣式 */
+.prompt-action-btn.auto-submit-btn {
+    font-size: 14px;
+    padding: 4px 8px;
+    min-width: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prompt-action-btn.auto-submit-btn.active {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.prompt-action-btn.auto-submit-btn.active:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+.prompt-action-btn.auto-submit-btn:not(.active):hover {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.1);
+}
+
+/* 提示詞名稱中的自動提交標示 */
+.prompt-settings-name .auto-submit-badge {
+    margin-right: 8px;
+    margin-left: 0;
+}
+
+/* 自動提交提示詞在列表中的排序指示 */
+.prompt-settings-item.auto-submit-prompt .prompt-settings-name {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* 自動提交提示詞的懸停效果 */
+.prompt-settings-item.auto-submit-prompt:hover {
+    border-color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 122, 204, 0.2);
+}
+
+/* 自動提交提示詞的動畫效果 */
+.prompt-settings-item.auto-submit-prompt {
+    animation: autoSubmitGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes autoSubmitGlow {
+    from {
+        box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
+    }
+    to {
+        box-shadow: 0 0 15px rgba(0, 122, 204, 0.5);
+    }
+}
+
+/* 停用動畫當用戶偏好減少動畫時 */
+@media (prefers-reduced-motion: reduce) {
+    .prompt-settings-item.auto-submit-prompt {
+        animation: none;
+    }
+}
+
+/* ===== 深色主題適配 ===== */
+
+@media (prefers-color-scheme: dark) {
+    .modal-overlay {
+        background: rgba(0, 0, 0, 0.7);
+    }
+
+    .prompt-item:hover,
+    .prompt-settings-item:hover {
+        background: rgba(0, 122, 204, 0.1);
+    }
+
+    .auto-submit-badge {
+        box-shadow: 0 0 8px rgba(0, 122, 204, 0.4);
+    }
+}

@@ -1,0 +1,40 @@
+# Simple Dockerfile for MCP Feedback Enhanced
+# This version installs from PyPI instead of building from source
+# Use this if you encounter SSL certificate issues during build
+
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install the package from PyPI
+# This requires the package to be published
+RUN pip install --no-cache-dir mcp-feedback-enhanced
+
+# Default environment variables for HTTP mode
+ENV MCP_TRANSPORT=sse \
+    MCP_WEB_HOST=0.0.0.0 \
+    MCP_WEB_PORT=8765 \
+    MCP_DESKTOP_MODE=false \
+    MCP_DEBUG=false \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Expose the default web UI port
+EXPOSE 8765
+
+# Health check endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${MCP_WEB_PORT:-8765}/health || exit 1
+
+# Create directory for session storage
+RUN mkdir -p /app/sessions
+
+# Run the MCP server with explicit server command
+CMD ["/bin/sh", "-c", "python -m mcp_feedback_enhanced server --transport ${MCP_TRANSPORT}"]

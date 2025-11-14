@@ -1,0 +1,79 @@
+services:
+  # MCP Feedback Enhanced server with SSE transport
+  mcp-feedback-sse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-feedback-enhanced-sse
+    ports:
+      - "8765:8765"
+    environment:
+      # Transport mode: sse or streamable-http
+      - MCP_TRANSPORT=sse
+      # Allow connections from any host (required for Docker)
+      - MCP_WEB_HOST=0.0.0.0
+      - MCP_WEB_PORT=8765
+      # Desktop mode must be disabled for HTTP transport
+      - MCP_DESKTOP_MODE=false
+      # Enable debug logging if needed
+      - MCP_DEBUG=false
+      # Set language: en, zh-CN, or zh-TW
+      - MCP_LANGUAGE=en
+    volumes:
+      # Persist session data
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  # Alternative: MCP Feedback Enhanced server with streamable-http transport
+  mcp-feedback-http:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-feedback-enhanced-http
+    ports:
+      - "8766:8765"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_WEB_HOST=0.0.0.0
+      - MCP_WEB_PORT=8765
+      - MCP_DESKTOP_MODE=false
+      - MCP_DEBUG=false
+      - MCP_LANGUAGE=en
+    volumes:
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+    profiles:
+      # This service won't start by default, use: docker compose --profile http up
+      - http
+
+  # Example: Running with debug mode enabled
+  mcp-feedback-debug:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-feedback-enhanced-debug
+    ports:
+      - "8767:8765"
+    environment:
+      - MCP_TRANSPORT=sse
+      - MCP_WEB_HOST=0.0.0.0
+      - MCP_WEB_PORT=8765
+      - MCP_DESKTOP_MODE=false
+      - MCP_DEBUG=true
+      - MCP_LANGUAGE=en
+    volumes:
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+    profiles:
+      # This service won't start by default, use: docker compose --profile debug up
+      - debug
+
+volumes:
+  sessions:
+    driver: local

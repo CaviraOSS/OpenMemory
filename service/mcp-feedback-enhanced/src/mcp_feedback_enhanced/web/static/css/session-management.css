@@ -1,0 +1,1428 @@
+/**
+ * 會話管理和連線監控專用樣式
+ * =============================
+ * 
+ * 為 WebSocket 連線狀態顯示器和會話管理功能提供樣式支援
+ */
+
+/* ===== CSS 變數擴展 ===== */
+:root {
+  /* 連線狀態色彩 */
+  --status-connected: #4caf50;
+  --status-connecting: #ff9800;
+  --status-disconnected: #f44336;
+  --status-error: #e91e63;
+  --status-reconnecting: #9c27b0;
+  
+  /* 會話狀態色彩 */
+  --session-active: #2196f3;
+  --session-waiting: #9c27b0;
+  --session-completed: #4caf50;
+  --session-error: #f44336;
+  --session-timeout: #ff5722;
+  
+  /* 面板色彩 - 與主要內容區域統一 */
+  --panel-bg: var(--bg-secondary);
+  --panel-border: var(--border-color);
+  --panel-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --panel-header-bg: var(--bg-tertiary);
+  
+  /* 動畫時間和緩動函數 */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.4s;
+  --transition-slow: 0.6s;
+  --easing-smooth: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* ===== 頂部連線監控狀態列 ===== */
+.connection-monitor-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel-header-bg);
+  border-bottom: 1px solid var(--panel-border);
+  padding: 12px 20px;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 20px;
+}
+
+/* 緊湊版頂部欄 */
+.connection-monitor-bar.compact {
+  padding: 4px 12px;
+  gap: 0;
+  font-size: 12px;
+  height: 32px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* 緊湊版元素樣式 */
+.app-title-compact {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.info-separator {
+  margin: 0 6px;
+  color: var(--text-secondary);
+  opacity: 0.4;
+  font-size: 10px;
+}
+
+.project-info-compact,
+.session-info-compact,
+.countdown-display-compact,
+.connection-status-compact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 11px;
+}
+
+.project-info-compact .project-path-display {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+}
+
+.session-info-compact .session-id-display {
+  font-size: 11px;
+  padding: 1px 4px;
+}
+
+.countdown-display-compact {
+  color: var(--warning-color);
+}
+
+.countdown-display-compact .countdown-timer {
+  font-weight: bold;
+  font-size: 12px;
+}
+
+/* 倒數計時器控制按鈕 */
+.countdown-control-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--warning-color);
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+}
+
+.countdown-control-btn:hover {
+  background: rgba(255, 152, 0, 0.2);
+}
+
+.countdown-control-btn:active {
+  transform: scale(0.95);
+}
+
+/* 暫停狀態的計時器樣式 */
+.countdown-display-compact.paused .countdown-timer {
+  opacity: 0.6;
+  animation: pause-blink 1.5s ease-in-out infinite;
+}
+
+@keyframes pause-blink {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+.connection-status-compact {
+  margin-left: auto;
+}
+
+.connection-status-compact .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.connection-status-compact.connected {
+  color: var(--status-connected);
+}
+
+.connection-status-compact.disconnected {
+  color: var(--status-disconnected);
+}
+
+.connection-status-compact.connecting {
+  color: var(--status-connecting);
+}
+
+/* 應用資訊區域 */
+.app-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.app-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.countdown-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid var(--warning-color);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--warning-color);
+}
+
+.countdown-timer {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: bold;
+}
+
+.project-info {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+  min-width: 0;
+}
+
+.connection-status-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 2;
+  justify-content: space-between;
+}
+
+/* 會話狀態資訊區域 */
+.session-status-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.session-status-info .current-session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.session-status-info .session-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.session-status-info .session-age {
+  font-size: 10px;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin-left: 20px;
+}
+
+/* 會話ID顯示樣式 */
+.session-id-display {
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 122, 204, 0.1);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast) ease;
+  position: relative;
+  font-weight: 500;
+}
+
+.session-id-display:hover {
+  background: rgba(0, 122, 204, 0.2);
+  border-color: var(--accent-color);
+  transform: scale(1.02);
+}
+
+.session-id-display:active {
+  transform: scale(0.98);
+}
+
+/* 會話ID tooltip */
+.session-id-display::after {
+  content: attr(data-full-id);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast) ease;
+  z-index: 1000;
+  margin-top: 4px;
+}
+
+.session-id-display:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 專案路徑顯示樣式 - 模仿會話ID顯示 */
+.project-path-display {
+  font-family: 'Consolas', 'Monaco', monospace;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 122, 204, 0.1);
+  border: 1px solid transparent;
+  transition: all var(--transition-fast) ease;
+  position: relative;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.project-path-display:hover {
+  background: rgba(0, 122, 204, 0.2);
+  border-color: var(--accent-color);
+  transform: scale(1.02);
+}
+
+.project-path-display:active {
+  transform: scale(0.98);
+}
+
+/* 專案路徑 tooltip */
+.project-path-display::after {
+  content: attr(data-full-path);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-fast) ease;
+  z-index: 1000;
+  margin-top: 4px;
+  max-width: 400px;
+  word-break: break-all;
+}
+
+.project-path-display:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 專案路徑 tooltip 位置自動調整 */
+.project-path-display.tooltip-up::after {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+
+.project-path-display.tooltip-left::after {
+  left: 0;
+  transform: translateX(0);
+}
+
+.project-path-display.tooltip-right::after {
+  left: auto;
+  right: 0;
+  transform: translateX(0);
+}
+
+/* 連線和狀態資訊組合容器 */
+.connection-status-combined {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+  justify-content: center;
+}
+
+/* 詳細狀態資訊 */
+.detailed-status-info {
+  display: flex;
+  gap: 16px;
+  margin-left: 0;
+}
+
+.websocket-metrics,
+.session-metrics {
+  display: flex;
+  gap: 8px;
+}
+
+.metric {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.metric span {
+  color: var(--accent-color);
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-weight: 500;
+}
+
+.connection-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid transparent;
+  transition: all var(--transition-normal) ease;
+}
+
+.connection-indicator.connected {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: var(--status-connected);
+  color: var(--status-connected);
+}
+
+.connection-indicator.connecting {
+  background: rgba(255, 152, 0, 0.15);
+  border-color: var(--status-connecting);
+  color: var(--status-connecting);
+}
+
+.connection-indicator.disconnected {
+  background: rgba(244, 67, 54, 0.15);
+  border-color: var(--status-disconnected);
+  color: var(--status-disconnected);
+}
+
+.connection-indicator.reconnecting {
+  background: rgba(156, 39, 176, 0.15);
+  border-color: var(--status-reconnecting);
+  color: var(--status-reconnecting);
+}
+
+.status-icon {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  position: relative;
+}
+
+.status-icon.pulse::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: pulse-ring 2s infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.5); opacity: 0.1; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.connection-quality {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.latency-indicator {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.signal-strength {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+.signal-bar {
+  width: 3px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+  transition: background var(--transition-fast) ease;
+}
+
+.signal-bar:nth-child(2) { height: 8px; }
+.signal-bar:nth-child(3) { height: 10px; }
+
+.signal-bar.active {
+  background: currentColor;
+}
+
+.connection-details {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.btn-icon {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-icon:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+}
+
+/* ===== 會話管理頁籤樣式 ===== */
+.session-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.session-panel-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.panel-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.session-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+
+
+/* ===== 會話卡片 ===== */
+.session-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  transition: all var(--transition-fast) ease;
+  cursor: pointer;
+}
+
+.session-card:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 8px rgba(0, 122, 204, 0.2);
+}
+
+.session-card.active {
+  border-color: var(--session-active);
+  background: rgba(33, 150, 243, 0.1);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.session-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.waiting {
+  background: rgba(156, 39, 176, 0.2);
+  color: var(--session-waiting);
+  border: 1px solid var(--session-waiting);
+}
+
+.status-badge.active {
+  background: rgba(33, 150, 243, 0.2);
+  color: var(--session-active);
+  border: 1px solid var(--session-active);
+}
+
+.status-badge.completed {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--session-completed);
+  border: 1px solid var(--session-completed);
+}
+
+.status-badge.error {
+  background: rgba(244, 67, 54, 0.2);
+  color: var(--session-error);
+  border: 1px solid var(--session-error);
+}
+
+.session-info {
+  margin-bottom: 8px;
+}
+
+.session-time,
+.session-project,
+.session-duration {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.session-summary {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.4;
+  max-height: 40px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.session-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-small {
+  padding: 4px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-small:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* 匯出按鈕樣式 */
+.btn-export {
+  background: var(--bg-primary) !important;
+  border-color: var(--success-color) !important;
+  color: var(--success-color) !important;
+}
+
+.btn-export:hover {
+  background: var(--success-color) !important;
+  color: white !important;
+  border-color: var(--success-color) !important;
+}
+
+/* 會話歷史管理按鈕樣式 */
+#exportSessionHistoryBtn {
+  background: var(--success-color);
+  border-color: var(--success-color);
+  color: white;
+}
+
+#exportSessionHistoryBtn:hover {
+  background: var(--success-color-dark, #28a745);
+  border-color: var(--success-color-dark, #28a745);
+}
+
+#clearSessionHistoryBtn {
+  background: var(--bg-primary);
+}
+
+#clearSessionHistoryBtn:hover {
+  background: var(--error-color);
+  color: white;
+}
+
+/* ===== 會話統計 ===== */
+.session-stats-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--accent-color);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== 響應式設計 ===== */
+@media (max-width: 768px) {
+  /* 緊湊版頂部欄在移動設備上的調整 */
+  .connection-monitor-bar.compact {
+    padding: 4px 10px;
+    font-size: 11px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* 隱藏專案路徑以節省空間 */
+  .project-info-compact {
+    display: none;
+  }
+  
+  /* 隱藏相關的分隔符 */
+  .project-info-compact + .info-separator {
+    display: none;
+  }
+  
+  /* 調整標題字體 */
+  .app-title-compact {
+    font-size: 12px;
+  }
+  
+  /* 減少分隔符間距 */
+  .info-separator {
+    margin: 0 6px;
+  }
+  
+  /* 確保倒數計時器始終可見 */
+  .countdown-display-compact {
+    font-weight: bold;
+  }
+
+  /* 會話管理頁籤響應式調整 */
+  .session-panel-content {
+    gap: 16px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+/* 超小螢幕調整 */
+@media (max-width: 480px) {
+  /* 隱藏會話 ID */
+  .session-info-compact {
+    display: none;
+  }
+  
+  /* 隱藏相關的分隔符 */
+  .session-info-compact + .info-separator {
+    display: none;
+  }
+  
+  /* 保留核心資訊：標題、倒數計時器、連線狀態 */
+  .connection-monitor-bar.compact {
+    justify-content: space-between;
+  }
+  
+  .connection-status-compact {
+    margin-left: 0;
+  }
+}
+
+/* ===== 載入狀態 ===== */
+.loading-skeleton {
+  background: linear-gradient(90deg, 
+    var(--bg-tertiary) 25%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    var(--bg-tertiary) 75%);
+  background-size: 200% 100%;
+  animation: loading-shimmer 1.5s infinite;
+}
+
+@keyframes loading-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ===== 無障礙支援 ===== */
+.session-card:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.btn-icon:focus,
+.btn-small:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* ===== 會話歷史區塊標題樣式 ===== */
+.session-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.session-history-header h4 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.session-history-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* 響應式設計 - 小螢幕上的調整 */
+@media (max-width: 768px) {
+  .session-history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .session-history-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  
+  .session-history-actions .btn-small {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+/* 超小螢幕上使用下拉選單替代 */
+@media (max-width: 480px) {
+  .session-history-actions {
+    position: relative;
+  }
+  
+  .session-history-actions .btn-small:not(:first-child) {
+    display: none;
+  }
+  
+  /* 可選：將第一個按鈕改為下拉選單觸發器 */
+  .session-history-actions .btn-small:first-child::after {
+    content: ' ▼';
+    font-size: 10px;
+    margin-left: 4px;
+  }
+}
+
+/* ===== 會話詳情彈窗 ===== */
+.session-details-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  position: relative;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  max-width: 750px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  animation: modalSlideIn var(--transition-fast) var(--easing-smooth);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all var(--transition-fast) ease;
+}
+
+.modal-close:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 12px;
+  align-items: flex-start;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 80px;
+  margin-right: 12px;
+  font-size: 13px;
+}
+
+.detail-value {
+  flex: 1;
+  color: var(--text-primary);
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.detail-value.session-id {
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: var(--bg-tertiary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.detail-value.project-path {
+  font-family: 'Consolas', 'Monaco', monospace;
+  background: var(--bg-tertiary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  word-break: break-all;
+}
+
+.detail-value.summary {
+  background: var(--bg-secondary);
+  padding: 0;
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-color);
+  line-height: 1.4;
+  margin-top: 4px;
+  position: relative;
+}
+
+.summary-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+}
+
+.btn-copy-summary {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  opacity: 0.8;
+}
+
+.btn-copy-summary:hover {
+  opacity: 1;
+  background: #1976d2;
+  transform: scale(1.05);
+}
+
+.summary-content {
+  padding: 8px 12px;
+  padding-right: 50px; /* 为复制按钮留出空间 */
+}
+
+/* 为会话详情弹窗中的摘要内容应用与反馈页面相同的 Markdown 样式 */
+.detail-value.summary .summary-content h1,
+.detail-value.summary .summary-content h2,
+.detail-value.summary .summary-content h3,
+.detail-value.summary .summary-content h4,
+.detail-value.summary .summary-content h5,
+.detail-value.summary .summary-content h6 {
+  color: var(--text-primary);
+  margin: 16px 0 8px 0;
+  font-weight: 600;
+}
+
+.detail-value.summary .summary-content h1 { font-size: 20px; }
+.detail-value.summary .summary-content h2 { font-size: 18px; }
+.detail-value.summary .summary-content h3 { font-size: 16px; }
+.detail-value.summary .summary-content h4 { font-size: 14px; }
+.detail-value.summary .summary-content h5 { font-size: 13px; }
+.detail-value.summary .summary-content h6 { font-size: 12px; }
+
+.detail-value.summary .summary-content p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.detail-value.summary .summary-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.detail-value.summary .summary-content em {
+  font-style: italic;
+  color: var(--text-primary);
+}
+
+.detail-value.summary .summary-content code {
+  background: var(--bg-tertiary);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 11px;
+  color: var(--accent-color);
+}
+
+.detail-value.summary .summary-content pre {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 12px 0;
+  border-left: 3px solid var(--accent-color);
+}
+
+.detail-value.summary .summary-content pre code {
+  background: none;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+.detail-value.summary .summary-content ul,
+.detail-value.summary .summary-content ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.detail-value.summary .summary-content li {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.detail-value.summary .summary-content blockquote {
+  border-left: 4px solid var(--accent-color);
+  margin: 12px 0;
+  padding: 8px 16px;
+  background: rgba(0, 122, 204, 0.05);
+  font-style: italic;
+}
+
+/* 复制提示样式 */
+.copy-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  z-index: 10000;
+  opacity: 0;
+  transform: translateX(100px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.copy-toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.copy-toast-success {
+  background: var(--success-color);
+}
+
+.copy-toast-error {
+  background: var(--error-color);
+}
+
+.modal-footer {
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all var(--transition-fast) ease;
+}
+
+.btn-secondary:hover {
+  background: var(--accent-color);
+  color: white;
+  border-color: var(--accent-color);
+}
+
+/* ===== 用戶訊息記錄樣式 ===== */
+.user-messages-section {
+  margin-top: 16px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+}
+
+.user-messages-summary {
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.user-messages-list {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+}
+
+.user-message-item {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background var(--transition-fast) ease;
+}
+
+.user-message-item:last-child {
+  border-bottom: none;
+}
+
+.user-message-item:hover {
+  background: var(--bg-secondary);
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.message-header .btn-copy-message {
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  border-radius: 3px;
+  padding: 2px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast) ease;
+  opacity: 0.7;
+  margin-left: 8px;
+}
+
+.message-header .btn-copy-message:hover {
+  opacity: 1;
+  background: #1976d2;
+  transform: scale(1.05);
+}
+
+.user-message-item:hover .btn-copy-message {
+  opacity: 0.9;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.message-index {
+  background: var(--accent-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.message-time {
+  color: var(--text-secondary);
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.message-method {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.message-method:contains("自動") {
+  background: rgba(255, 152, 0, 0.2);
+  color: var(--warning-color);
+  border: 1px solid var(--warning-color);
+}
+
+.message-method:contains("手動") {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success-color);
+  border: 1px solid var(--success-color);
+}
+
+.message-content,
+.message-stats {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  padding: 8px 12px;
+  border-radius: 4px;
+  border-left: 3px solid var(--accent-color);
+}
+
+.message-content strong,
+.message-stats strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.message-images {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* 隱私等級選擇器樣式增強 */
+#userMessagePrivacyLevel {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  transition: all var(--transition-fast) ease;
+}
+
+#userMessagePrivacyLevel:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+#userMessagePrivacyLevel option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* 用戶訊息記錄開關樣式已整合到標準切換開關樣式中 */
+
+/* 切換開關容器樣式 */
+.toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 減少動畫偏好 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 響應式設計 - 緊湊版頂部欄 */
+@media (max-width: 768px) {
+  /* 小螢幕隱藏專案路徑 */
+  .connection-monitor-bar.compact .project-info-compact {
+    display: none;
+  }
+  
+  /* 隱藏相鄰的分隔符 */
+  .connection-monitor-bar.compact .project-info-compact + .info-separator {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  /* 極小螢幕只顯示最關鍵資訊 */
+  .connection-monitor-bar.compact .session-info-compact {
+    display: none;
+  }
+  
+  .connection-monitor-bar.compact .session-info-compact + .info-separator {
+    display: none;
+  }
+  
+  /* 調整標題字體大小 */
+  .app-title-compact {
+    font-size: 12px;
+  }
+}

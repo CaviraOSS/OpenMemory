@@ -1,0 +1,152 @@
+/**
+ * MCP Feedback Enhanced - 瀏覽器通知設定樣式
+ * ========================================
+ */
+
+/* 權限狀態顯示 */
+.permission-status {
+    font-size: 12px;
+    margin-top: 8px;
+    display: block;  /* 使用 block 讓內容自然流動 */
+}
+
+.permission-status span {
+    display: inline-block;  /* 確保內容在同一行 */
+    white-space: nowrap;  /* 防止文字換行 */
+    line-height: 1.2;  /* 適當的行高 */
+}
+
+/* 權限狀態樣式 */
+.status-granted {
+    color: #059669;
+}
+
+.status-denied {
+    color: #dc2626;
+}
+
+.status-default {
+    color: #6366f1;
+}
+
+.status-unsupported {
+    color: #d97706;
+}
+
+/* 觸發情境選項 */
+.notification-trigger {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.trigger-options {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: var(--bg-secondary, #f9fafb);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.radio-option:hover {
+    background-color: var(--bg-hover, #f3f4f6);
+}
+
+.radio-option input[type="radio"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.radio-option span {
+    font-size: 14px;
+    color: var(--text-primary, #1f2937);
+    line-height: 1.4;
+}
+
+/* 測試按鈕區塊 */
+.notification-actions {
+    margin-top: 16px;
+}
+
+.notification-actions .btn-primary {
+    padding: 8px 16px;
+    font-size: 14px;
+    background-color: var(--primary-color, #007acc);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.notification-actions .btn-primary:hover {
+    background-color: var(--primary-hover, #0066b3);
+}
+
+/* 通知設定專用的 setting-info 調整 */
+#notificationSettings .setting-info {
+    max-width: calc(100% - 100px);  /* 為開關預留空間 */
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .permission-status {
+        font-size: 11px;
+    }
+    
+    #notificationSettings .setting-info {
+        max-width: calc(100% - 80px);  /* 小螢幕上調整空間 */
+    }
+    
+    .radio-option {
+        padding: 6px 10px;
+    }
+    
+    .radio-option span {
+        font-size: 13px;
+    }
+}
+
+/* 深色模式支援 */
+@media (prefers-color-scheme: dark) {
+    .status-granted {
+        color: #34d399;
+    }
+    
+    .status-denied {
+        color: #f87171;
+    }
+    
+    .status-default {
+        color: #a5b4fc;
+    }
+    
+    .status-unsupported {
+        color: #fbbf24;
+    }
+    
+    .notification-trigger {
+        border-top-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .radio-option {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .radio-option:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .radio-option span {
+        color: #e5e7eb;
+    }
+}

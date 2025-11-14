@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 診斷工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #2d5a2d; }
+        .error { background: #5a2d2d; }
+        .info { background: #2d4a5a; }
+        .warning { background: #5a5a2d; }
+        .log {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        button {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #357abd;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #555;
+            background: #333;
+            color: white;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 WebSocket 診斷工具</h1>
+
+        <div id="status" class="status info">
+            準備開始診斷...
+        </div>
+
+        <div>
+            <label>WebSocket URL:</label>
+            <input type="text" id="wsUrl" value="ws://127.0.0.1:8767/ws" style="width: 300px;">
+            <button onclick="testConnection()">🔗 測試連接</button>
+            <button onclick="clearLog()">🗑️ 清除日誌</button>
+        </div>
+
+        <div>
+            <label>發送消息:</label>
+            <input type="text" id="messageInput" placeholder='{"type": "get_status"}' style="width: 300px;">
+            <button onclick="sendMessage()">📤 發送</button>
+        </div>
+
+        <div id="log" class="log">等待操作...</div>
+    </div>
+
+    <script>
+        let websocket = null;
+        let logElement = document.getElementById('log');
+        let statusElement = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+
+            // 更新狀態
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function clearLog() {
+            logElement.textContent = '';
+            log('日誌已清除');
+        }
+
+        function testConnection() {
+            const url = document.getElementById('wsUrl').value;
+
+            if (websocket) {
+                log('關閉現有連接...', 'warning');
+                websocket.close();
+                websocket = null;
+            }
+
+            log(`嘗試連接到: ${url}`, 'info');
+
+            try {
+                websocket = new WebSocket(url);
+
+                websocket.onopen = function(event) {
+                    log('✅ WebSocket 連接成功！', 'success');
+                };
+
+                websocket.onmessage = function(event) {
+                    log(`📨 收到消息: ${event.data}`, 'success');
+
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`📋 解析後的數據: ${JSON.stringify(data, null, 2)}`, 'info');
+                    } catch (e) {
+                        log(`⚠️ JSON 解析失敗: ${e.message}`, 'warning');
+                    }
+                };
+
+                websocket.onclose = function(event) {
+                    log(`🔌 連接已關閉 - Code: ${event.code}, Reason: ${event.reason}`, 'warning');
+                    websocket = null;
+                };
+
+                websocket.onerror = function(error) {
+                    log(`❌ WebSocket 錯誤: ${error}`, 'error');
+                    console.error('WebSocket error:', error);
+                };
+
+            } catch (error) {
+                log(`❌ 連接失敗: ${error.message}`, 'error');
+            }
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                log('⚠️ 請輸入要發送的消息', 'warning');
+                return;
+            }
+
+            if (!websocket || websocket.readyState !== WebSocket.OPEN) {
+                log('❌ WebSocket 未連接', 'error');
+                return;
+            }
+
+            try {
+                websocket.send(message);
+                log(`📤 已發送: ${message}`, 'info');
+                messageInput.value = '';
+            } catch (error) {
+                log(`❌ 發送失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 頁面加載時自動測試
+        window.onload = function() {
+            log('🚀 WebSocket 診斷工具已載入');
+            log('💡 點擊 "測試連接" 開始診斷');
+        };
+
+        // Enter 鍵發送消息
+        document.getElementById('messageInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

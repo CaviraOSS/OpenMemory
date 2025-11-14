@@ -1,0 +1,19 @@
+{#
+切換開關組件
+============
+
+參數:
+- id: 開關 ID
+- active: 是否預設啟用 (預設: false)
+- class: 額外的 CSS 類別 (可選)
+
+使用方式:
+{% include 'components/toggle-switch.html' with id="autoCloseToggle", active=true %}
+#}
+
+{% set active = active or false %}
+{% set class = class or "" %}
+
+<div id="{{ id }}" class="toggle-switch{% if active %} active{% endif %}{% if class %} {{ class }}{% endif %}">
+    <div class="toggle-knob"></div>
+</div>
