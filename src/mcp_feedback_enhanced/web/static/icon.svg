@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- 背景圆形 -->
+  <circle cx="16" cy="16" r="15" fill="#2563eb" stroke="#1e40af" stroke-width="2"/>
+  
+  <!-- MCP 字母 M -->
+  <path d="M6 10 L6 22 L8 22 L8 14 L10 18 L12 14 L12 22 L14 22 L14 10 L11 10 L10 14 L9 10 Z" fill="white"/>
+  
+  <!-- 反馈图标 - 对话气泡 -->
+  <path d="M18 8 C20.2 8 22 9.8 22 12 L22 16 C22 18.2 20.2 20 18 20 L16 20 L14 22 L14 20 L16 20 C16 20 18 20 18 20 C19.1 20 20 19.1 20 18 L20 14 C20 12.9 19.1 12 18 12 L16 12 C14.9 12 14 12.9 14 14 L14 16 C14 17.1 14.9 18 16 18" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- 反馈箭头 -->
+  <path d="M24 14 L26 16 L24 18" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- 小点表示活跃状态 -->
+  <circle cx="19" cy="15" r="1" fill="#10b981"/>
+</svg>

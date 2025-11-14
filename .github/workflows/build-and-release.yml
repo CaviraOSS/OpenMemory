@@ -1,0 +1,148 @@
+name: Build Desktop & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type (ignored if custom_version is provided)'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+        - patch    # 2.0.0 -> 2.0.1 (bug fixes, security patches, documentation updates)
+        - minor    # 2.0.0 -> 2.1.0 (new features, enhancements, backward-compatible changes)
+        - major    # 2.0.0 -> 3.0.0 (breaking changes, architecture refactoring, API changes)
+      custom_version:
+        description: 'Custom version number (e.g., 2.5.0) - overrides version_type if provided'
+        required: false
+        type: string
+      platforms:
+        description: '選擇要構建的平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - macos
+        - linux
+      skip_release:
+        description: '只構建桌面應用，不進行發佈'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # 第一步：構建桌面應用
+  build-desktop:
+    name: Build Desktop Applications
+    uses: ./.github/workflows/build-desktop.yml
+    with:
+      platforms: ${{ github.event.inputs.platforms }}
+      upload_artifacts: true
+
+  # 第二步：等待構建完成並檢查結果
+  check-build:
+    name: Check Build Results
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    outputs:
+      can_release: ${{ steps.check.outputs.can_release }}
+      build_run_id: ${{ steps.check.outputs.build_run_id }}
+
+    steps:
+    - name: Check build results
+      id: check
+      run: |
+        echo "🔍 檢查桌面應用構建結果..."
+
+        # 檢查構建是否成功
+        if [ "${{ needs.build-desktop.result }}" = "success" ]; then
+          echo "✅ 桌面應用構建成功"
+          echo "can_release=true" >> $GITHUB_OUTPUT
+          echo "build_run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+        else
+          echo "❌ 桌面應用構建失敗"
+          echo "can_release=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+
+    - name: Generate summary
+      run: |
+        echo "## 🖥️ 桌面應用構建完成" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### ✅ 構建結果" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **狀態**: 成功 ✅" >> $GITHUB_STEP_SUMMARY
+        echo "- **平台**: ${{ github.event.inputs.platforms }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Run ID**: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ github.event.inputs.skip_release }}" = "true" ]; then
+          echo "### ⏭️ 跳過發佈" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "根據設置，已跳過自動發佈。" >> $GITHUB_STEP_SUMMARY
+          echo "如需發佈，請手動運行 [Auto Release to PyPI](../../actions/workflows/publish.yml) 工作流程。" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### 🚀 準備發佈" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "桌面應用構建成功，正在準備自動發佈..." >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # 第三步：自動發佈（如果沒有跳過）
+  release:
+    name: Auto Release to PyPI
+    needs: [build-desktop, check-build]
+    if: ${{ needs.check-build.outputs.can_release == 'true' && github.event.inputs.skip_release != 'true' }}
+    uses: ./.github/workflows/publish.yml
+    with:
+      version_type: ${{ github.event.inputs.version_type }}
+      custom_version: ${{ github.event.inputs.custom_version }}
+      include_desktop: true
+      desktop_build_run_id: ${{ needs.check-build.outputs.build_run_id }}
+    secrets: inherit
+
+  # 最終摘要
+  summary:
+    name: Workflow Summary
+    needs: [build-desktop, check-build, release]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Generate final summary
+      run: |
+        echo "## 🎯 構建和發佈摘要" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # 桌面構建狀態
+        echo "### 🖥️ 桌面應用構建" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ needs.build-desktop.result }}" = "success" ]; then
+          echo "- ✅ **成功** - 所有選定平台構建完成" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ❌ **失敗** - 構建過程中出現錯誤" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        # 發佈狀態
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 發佈狀態" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ github.event.inputs.skip_release }}" = "true" ]; then
+          echo "- ⏭️ **已跳過** - 根據用戶設置跳過發佈" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.release.result }}" = "success" ]; then
+          echo "- ✅ **成功** - 已發佈到 PyPI 和 GitHub Releases" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.release.result }}" = "failure" ]; then
+          echo "- ❌ **失敗** - 發佈過程中出現錯誤" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.release.result }}" = "skipped" ]; then
+          echo "- ⏭️ **已跳過** - 由於桌面構建失敗而跳過" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- ⏳ **進行中** - 發佈正在進行中" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🔗 相關鏈接" >> $GITHUB_STEP_SUMMARY
+        echo "- [桌面構建工作流程](../../actions/workflows/build-desktop.yml)" >> $GITHUB_STEP_SUMMARY
+        echo "- [發佈工作流程](../../actions/workflows/publish.yml)" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ needs.release.result }}" = "success" ]; then
+          echo "- [PyPI 頁面](https://pypi.org/project/mcp-feedback-enhanced/)" >> $GITHUB_STEP_SUMMARY
+          echo "- [GitHub Releases](../../releases)" >> $GITHUB_STEP_SUMMARY
+        fi

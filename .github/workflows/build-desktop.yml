@@ -1,0 +1,364 @@
+name: Build Desktop Applications
+
+on:
+  workflow_dispatch:  # 手動觸發
+    inputs:
+      platforms:
+        description: '選擇要構建的平台'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - macos
+        - linux
+      upload_artifacts:
+        description: '是否上傳構建產物'
+        required: true
+        default: true
+        type: boolean
+
+  push:
+    paths:
+      - 'src-tauri/**'  # 桌面應用代碼變更時自動觸發
+      - 'scripts/build_desktop.py'
+    branches:
+      - main
+
+  pull_request:
+    paths:
+      - 'src-tauri/**'
+      - 'scripts/build_desktop.py'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 多平台桌面應用構建
+  build-desktop:
+    strategy:
+      fail-fast: false  # 允許部分平台失敗
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: mcp-feedback-enhanced-desktop.exe
+            name: windows
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: mcp-feedback-enhanced-desktop
+            name: macos-intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary: mcp-feedback-enhanced-desktop
+            name: macos-arm64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: mcp-feedback-enhanced-desktop
+            name: linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Check if platform should be built
+      id: check_platform
+      shell: bash
+      run: |
+        SHOULD_BUILD="false"
+        PLATFORM_INPUT="${{ github.event.inputs.platforms }}"
+        MATRIX_NAME="${{ matrix.name }}"
+
+        # 檢查是否應該構建此平台
+        if [ "$PLATFORM_INPUT" = "all" ] || [ "$PLATFORM_INPUT" = "" ]; then
+          SHOULD_BUILD="true"
+        elif [ "$PLATFORM_INPUT" = "windows" ] && [ "$MATRIX_NAME" = "windows" ]; then
+          SHOULD_BUILD="true"
+        elif [ "$PLATFORM_INPUT" = "macos" ] && ([ "$MATRIX_NAME" = "macos-intel" ] || [ "$MATRIX_NAME" = "macos-arm64" ]); then
+          SHOULD_BUILD="true"
+        elif [ "$PLATFORM_INPUT" = "linux" ] && [ "$MATRIX_NAME" = "linux" ]; then
+          SHOULD_BUILD="true"
+        fi
+
+        echo "should_build=$SHOULD_BUILD" >> $GITHUB_OUTPUT
+        echo "Platform: $MATRIX_NAME, Input: $PLATFORM_INPUT, Should build: $SHOULD_BUILD"
+
+    - name: Checkout code
+      if: steps.check_platform.outputs.should_build == 'true'
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      if: steps.check_platform.outputs.should_build == 'true'
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install uv
+      if: steps.check_platform.outputs.should_build == 'true'
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      if: steps.check_platform.outputs.should_build == 'true'
+      run: uv python install
+
+    - name: Install dependencies
+      if: steps.check_platform.outputs.should_build == 'true'
+      run: uv sync --dev
+
+    - name: Cache Rust dependencies
+      if: steps.check_platform.outputs.should_build == 'true'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          src-tauri/target
+        key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.target }}-
+          ${{ runner.os }}-cargo-
+
+    - name: Install platform-specific dependencies (Linux)
+      if: ${{ steps.check_platform.outputs.should_build == 'true' && matrix.os == 'ubuntu-latest' }}
+      run: |
+        sudo apt-get update
+        # 安裝基本依賴
+        sudo apt-get install -y \
+          libwebkit2gtk-4.1-dev \
+          librsvg2-dev \
+          patchelf \
+          libgtk-3-dev
+
+        # 嘗試安裝 ayatana-appindicator，如果失敗則使用傳統的 appindicator
+        if ! sudo apt-get install -y libayatana-appindicator3-dev; then
+          echo "⚠️ libayatana-appindicator3-dev 安裝失敗，嘗試使用 libappindicator3-dev"
+          sudo apt-get install -y libappindicator3-dev
+        fi
+
+    - name: Build desktop application for ${{ matrix.name }}
+      if: steps.check_platform.outputs.should_build == 'true'
+      run: |
+        cd src-tauri
+        echo "🔨 開始構建 ${{ matrix.name }} (${{ matrix.target }})..."
+        cargo build --release --target ${{ matrix.target }} --bin mcp-feedback-enhanced-desktop
+        echo "✅ 構建完成"
+
+    - name: Verify build output
+      if: steps.check_platform.outputs.should_build == 'true'
+      run: |
+        echo "🔍 檢查構建產物..."
+        BINARY_PATH="src-tauri/target/${{ matrix.target }}/release/${{ matrix.binary }}"
+
+        if [ -f "$BINARY_PATH" ]; then
+          echo "✅ 找到二進制文件: $BINARY_PATH"
+          ls -la "$BINARY_PATH"
+
+          # 檢查文件大小
+          FILE_SIZE=$(stat -f%z "$BINARY_PATH" 2>/dev/null || stat -c%s "$BINARY_PATH" 2>/dev/null || echo "unknown")
+          echo "📏 文件大小: $FILE_SIZE bytes"
+
+          # 檢查文件類型 (僅在 Linux/macOS)
+          if [ "${{ matrix.os }}" != "windows-latest" ]; then
+            file "$BINARY_PATH" || echo "無法檢查文件類型"
+          fi
+        else
+          echo "❌ ${{ matrix.name }} 二進制文件不存在: $BINARY_PATH"
+          echo "🔍 檢查目標目錄內容:"
+          ls -la "src-tauri/target/${{ matrix.target }}/release/" || echo "目標目錄不存在"
+          exit 1
+        fi
+      shell: bash
+
+    - name: Upload desktop binary
+      if: ${{ steps.check_platform.outputs.should_build == 'true' && github.event.inputs.upload_artifacts != 'false' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: desktop-${{ matrix.name }}
+        path: src-tauri/target/${{ matrix.target }}/release/${{ matrix.binary }}
+        retention-days: 30  # 保留 30 天
+        compression-level: 6
+        if-no-files-found: error  # 如果沒有找到文件則失敗
+
+  # 構建摘要和驗證
+  build-summary:
+    needs: build-desktop
+    runs-on: ubuntu-latest
+    if: always()
+    outputs:
+      build_success: ${{ steps.check_results.outputs.success }}
+      platforms_built: ${{ steps.check_results.outputs.platforms }}
+
+    steps:
+    - name: Check build results
+      id: check_results
+      run: |
+        echo "🔍 檢查構建結果..."
+
+        # 檢查構建狀態
+        BUILD_SUCCESS="false"
+        PLATFORMS_BUILT=""
+
+        if [ "${{ needs.build-desktop.result }}" = "success" ]; then
+          BUILD_SUCCESS="true"
+          PLATFORMS_BUILT="windows,macos-intel,macos-arm64,linux"
+          echo "✅ 所有平台構建成功"
+        else
+          echo "❌ 構建失敗或部分失敗"
+        fi
+
+        echo "success=$BUILD_SUCCESS" >> $GITHUB_OUTPUT
+        echo "platforms=$PLATFORMS_BUILT" >> $GITHUB_OUTPUT
+
+    - name: Generate build summary
+      run: |
+        echo "## 🖥️ 桌面應用構建摘要" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 構建結果" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # 檢查各平台構建狀態
+        if [ "${{ needs.build-desktop.result }}" = "success" ]; then
+          echo "✅ **所有平台構建成功**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 平台 | 狀態 | 產物名稱 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows x64 | ✅ 成功 | \`desktop-windows\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS Intel | ✅ 成功 | \`desktop-macos-intel\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ARM64 | ✅ 成功 | \`desktop-macos-arm64\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux x64 | ✅ 成功 | \`desktop-linux\` |" >> $GITHUB_STEP_SUMMARY
+        elif [ "${{ needs.build-desktop.result }}" = "failure" ]; then
+          echo "❌ **部分平台構建失敗**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "請檢查各平台的構建日誌以了解失敗原因。" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **構建狀態**: ${{ needs.build-desktop.result }}" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 產物信息" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **保留期限**: 30 天" >> $GITHUB_STEP_SUMMARY
+        echo "- **下載位置**: GitHub Actions Artifacts" >> $GITHUB_STEP_SUMMARY
+        echo "- **使用方式**: 在發佈工作流程中自動下載" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🚀 下一步" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        if [ "${{ needs.build-desktop.result }}" = "success" ]; then
+          echo "✅ **可以進行發佈**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. 前往 [Auto Release to PyPI](../../actions/workflows/publish.yml)" >> $GITHUB_STEP_SUMMARY
+          echo "2. 點擊 'Run workflow'" >> $GITHUB_STEP_SUMMARY
+          echo "3. 設置 'include_desktop' 為 true" >> $GITHUB_STEP_SUMMARY
+          echo "4. 可選：指定此次構建的 Run ID: \`${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **請修復構建問題後重新運行**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- 檢查構建日誌中的錯誤信息" >> $GITHUB_STEP_SUMMARY
+          echo "- 修復問題後重新觸發此工作流程" >> $GITHUB_STEP_SUMMARY
+          echo "- 確保所有平台都能成功構建後再進行發佈" >> $GITHUB_STEP_SUMMARY
+        fi
+
+  # 新增：將構建的二進制文件提交到 Git
+  commit-binaries:
+    name: 提交桌面二進制文件到 Git
+    runs-on: ubuntu-latest
+    needs: [build-desktop, build-summary]
+    if: needs.build-desktop.result == 'success'
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Download all desktop artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: desktop-artifacts
+
+    - name: Prepare desktop binaries for commit
+      run: |
+        echo "📦 準備桌面二進制文件以提交到 Git..."
+
+        # 創建桌面應用目錄
+        mkdir -p src/mcp_feedback_enhanced/desktop_release
+
+        # 確保 __init__.py 存在
+        if [ ! -f "src/mcp_feedback_enhanced/desktop_release/__init__.py" ]; then
+          echo '"""桌面應用程式二進制檔案"""' > src/mcp_feedback_enhanced/desktop_release/__init__.py
+        fi
+
+        # 定義平台映射
+        declare -A PLATFORM_MAP=(
+          ["desktop-windows"]="mcp-feedback-enhanced-desktop.exe"
+          ["desktop-macos-intel"]="mcp-feedback-enhanced-desktop-macos-intel"
+          ["desktop-macos-arm64"]="mcp-feedback-enhanced-desktop-macos-arm64"
+          ["desktop-linux"]="mcp-feedback-enhanced-desktop-linux"
+        )
+
+        # 複製並重命名二進制文件
+        COPIED_COUNT=0
+
+        for platform_dir in desktop-windows desktop-macos-intel desktop-macos-arm64 desktop-linux; do
+          echo "🔍 處理平台: $platform_dir"
+
+          # 查找該平台的二進制文件
+          BINARY_FILE=""
+          if [ -d "desktop-artifacts/$platform_dir" ]; then
+            BINARY_FILE=$(find "desktop-artifacts/$platform_dir" -name "mcp-feedback-enhanced-desktop*" -type f | head -1)
+          fi
+
+          if [ -n "$BINARY_FILE" ] && [ -f "$BINARY_FILE" ]; then
+            TARGET_NAME="${PLATFORM_MAP[$platform_dir]}"
+            cp "$BINARY_FILE" "src/mcp_feedback_enhanced/desktop_release/$TARGET_NAME"
+
+            # 設置執行權限（非 Windows）
+            if [[ "$TARGET_NAME" != *.exe ]]; then
+              chmod +x "src/mcp_feedback_enhanced/desktop_release/$TARGET_NAME"
+            fi
+
+            echo "✅ $platform_dir: $BINARY_FILE -> $TARGET_NAME"
+            COPIED_COUNT=$((COPIED_COUNT + 1))
+          else
+            echo "⚠️ $platform_dir: 未找到二進制文件"
+          fi
+        done
+
+        echo ""
+        echo "📊 複製結果統計："
+        echo "  成功複製: $COPIED_COUNT/4 個平台"
+
+        # 顯示最終文件列表
+        echo ""
+        echo "📦 最終的桌面應用二進制文件："
+        ls -la src/mcp_feedback_enhanced/desktop_release/
+
+    - name: Commit desktop binaries
+      run: |
+        echo "📝 提交桌面二進制文件到 Git..."
+
+        # 檢查是否有變更
+        if [ -n "$(git status --porcelain src/mcp_feedback_enhanced/desktop_release/)" ]; then
+          # 添加桌面二進制文件
+          git add src/mcp_feedback_enhanced/desktop_release/
+
+          # 提交變更
+          git commit -m "🖥️ 更新桌面應用二進制文件 - 自動構建多平台版本 (Run ${{ github.run_id }})"
+
+          # 推送到遠程倉庫
+          git push origin main
+
+          echo "✅ 桌面二進制文件已成功提交並推送到 Git"
+        else
+          echo "ℹ️ 沒有檢測到桌面二進制文件的變更，跳過提交"
+        fi

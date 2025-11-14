@@ -1,0 +1,93 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Linting and type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.trunk/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+
+# Documentation
+docs/
+*.md
+!README.md
+RELEASE_NOTES/
+
+# Desktop application files (not needed for HTTP mode)
+src-tauri/
+
+# Example files
+examples/
+
+# Scripts (not needed in runtime)
+scripts/
+
+# Development files
+.pre-commit-config.yaml
+.python-version
+.bumpversion.cfg
+Makefile
+pytest.ini
+
+# Temporary files
+*.log
+*.tmp
+debug_websocket.html
+release_body.md
+highlights.txt
+
+# Test files
+tests/

@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABILAAASCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///wAAAAA">
+    <link rel="apple-touch-icon" href="/static/icon.svg">
+
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="/static/css/session-management.css">
+    <link rel="stylesheet" href="/static/css/prompt-management.css">
+    <link rel="stylesheet" href="/static/css/audio-management.css">
+    <link rel="stylesheet" href="/static/css/notification-settings.css">
+    <style>
+        /* 僅保留必要的頁面特定樣式和響應式調整 */
+
+        /* 響應式調整 */
+        @media (max-width: 768px) {
+            .timeout-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .timeout-separator {
+                display: none;
+            }
+        }
+
+        /* 頁面特定的佈局模式樣式 */
+
+        /* 佈局模式樣式 - 工作區模式 */
+        /* 工作區模式 - 顯示工作區頁籤，隱藏回饋和AI摘要頁籤 */
+        body.layout-combined-vertical .tab-button[data-tab="combined"],
+        body.layout-combined-horizontal .tab-button[data-tab="combined"] {
+            display: inline-block;
+        }
+
+        body.layout-combined-vertical .tab-button[data-tab="feedback"],
+        body.layout-combined-vertical .tab-button[data-tab="summary"],
+        body.layout-combined-horizontal .tab-button[data-tab="feedback"],
+        body.layout-combined-horizontal .tab-button[data-tab="summary"] {
+            display: none;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .timeout-controls {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .timeout-separator {
+                display: none;
+            }
+        }
+
+
+
+        /* 工作區分頁的水平佈局樣式 */
+        #tab-combined.active.combined-horizontal .combined-content {
+            display: flex !important;
+            flex-direction: row !important;
+            gap: 16px;
+            height: calc(100% - 60px); /* 減去描述區塊的高度 */
+        }
+
+        #tab-combined.active.combined-horizontal .combined-section:first-child {
+            flex: 1 !important;
+            min-width: 300px;
+            max-width: 50%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 確保容器不超出範圍 */
+        }
+
+        #tab-combined.active.combined-horizontal .combined-section:last-child {
+            flex: 1 !important;
+            min-width: 400px;
+        }
+
+        #tab-combined.active.combined-horizontal .combined-summary {
+            flex: 1; /* 讓摘要區域自動填滿剩餘空間 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 確保摘要容器不超出範圍 */
+        }
+
+        #tab-combined.active.combined-horizontal #combinedSummaryContent {
+            flex: 1; /* 讓內容區域自動填滿摘要容器 */
+            min-height: 200px; /* 降低最小高度 */
+            overflow-y: auto; /* 添加垂直滾動條 */
+            overflow-x: hidden; /* 隱藏水平滾動條 */
+        }
+
+        #tab-combined.active.combined-horizontal .text-input {
+            min-height: 200px;
+        }
+
+        /* 工作區分頁的垂直佈局樣式 */
+        #tab-combined.active.combined-vertical .combined-content {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 16px;
+            height: calc(100% - 60px); /* 減去描述區塊的高度 */
+        }
+
+        #tab-combined.active.combined-vertical .combined-section:first-child {
+            flex: 1 !important;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 確保容器不超出範圍 */
+        }
+
+        #tab-combined.active.combined-vertical .combined-section:last-child {
+            flex: 2 !important;
+            min-height: 300px;
+        }
+
+        #tab-combined.active.combined-vertical .combined-summary {
+            flex: 1; /* 讓摘要區域自動填滿剩餘空間 */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* 確保摘要容器不超出範圍 */
+        }
+
+        #tab-combined.active.combined-vertical #combinedSummaryContent {
+            flex: 1; /* 讓內容區域自動填滿摘要容器 */
+            min-height: 150px; /* 降低最小高度 */
+            overflow-y: auto; /* 添加垂直滾動條 */
+            overflow-x: hidden; /* 隱藏水平滾動條 */
+        }
+
+        #tab-combined.active.combined-vertical .text-input {
+            min-height: 200px;
+        }
+
+        /* 預設的合併內容布局 */
+        .combined-content {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+            height: 100%; /* 確保充滿父容器 */
+        }
+
+        /* 工作區基礎樣式 */
+        .combined-section {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        /* 確保 AI 摘要區域能夠自動擴展 */
+        .combined-section .section-header {
+            flex-shrink: 0; /* 標題區域不收縮 */
+        }
+
+        .combined-summary {
+            display: flex;
+            flex-direction: column;
+            flex: 1; /* 讓摘要容器自動填滿剩餘空間 */
+            min-height: 0; /* 允許收縮 */
+        }
+
+        #combinedSummaryContent {
+            flex: 1; /* 讓內容區域自動填滿摘要容器 */
+            min-height: 150px; /* 設定合理的最小高度 */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .combined-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .combined-summary {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #combinedSummaryContent {
+            padding: 12px !important;
+            line-height: 1.6 !important;
+            font-family: inherit !important;
+            color: var(--text-primary) !important;
+            background: transparent !important;
+            border: none !important;
+            resize: none !important;
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+        }
+
+        #summaryContent {
+            padding: 12px !important;
+            line-height: 1.6 !important;
+            font-family: inherit !important;
+            color: var(--text-primary) !important;
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+        }
+
+        /* 圖片設定樣式 */
+        .image-settings-details {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-tertiary);
+            margin-bottom: 8px;
+        }
+
+        .image-settings-summary {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 13px;
+            user-select: none;
+            transition: color 0.3s ease;
+        }
+
+        .image-settings-summary:hover {
+            color: var(--text-primary);
+        }
+
+        .image-settings-content {
+            padding: 12px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .image-setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .image-setting-row:last-of-type {
+            margin-bottom: 8px;
+        }
+
+        .image-setting-label {
+            color: var(--text-primary);
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .image-setting-select {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            min-width: 80px;
+        }
+
+        .image-setting-checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .image-setting-checkbox {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-color);
+        }
+
+        .image-setting-help {
+            color: var(--warning-color);
+            font-size: 11px;
+            margin-left: auto;
+        }
+
+        .image-setting-help-text {
+            color: var(--text-secondary);
+            font-size: 11px;
+            line-height: 1.4;
+            margin-top: 4px;
+            padding: 8px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* 相容性提示樣式 */
+        .compatibility-hint {
+            background: rgba(33, 150, 243, 0.1);
+            border: 1px solid var(--info-color);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--info-color);
+        }
+
+        .compatibility-hint-btn {
+            background: var(--info-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .compatibility-hint-btn:hover {
+            background: #1976d2;
+        }
+
+        /* 回饋狀態指示器樣式 */
+        .feedback-status-indicator {
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 8px;
+            border: 1px solid;
+            background: var(--bg-secondary);
+            transition: all 0.3s ease;
+        }
+
+        .feedback-status-indicator .status-text {
+            width: 100%;
+        }
+
+        .feedback-status-indicator .status-text strong,
+        .feedback-status-indicator .status-title {
+            display: block;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .feedback-status-indicator .status-text span,
+        .feedback-status-indicator .status-message {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .feedback-status-indicator.status-waiting {
+            border-color: var(--accent-color);
+            background: rgba(74, 144, 226, 0.1);
+        }
+
+        .feedback-status-indicator.status-processing {
+            border-color: #ffa500;
+            background: rgba(255, 165, 0, 0.1);
+            animation: pulse 2s infinite;
+        }
+
+        .feedback-status-indicator.status-submitted {
+            border-color: var(--success-color);
+            background: rgba(40, 167, 69, 0.1);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        /* 禁用狀態的樣式 */
+        .image-upload-area.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+            cursor: not-allowed;
+        }
+
+        .text-input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="layout-{{ layout_mode }}">
+    <!-- ===== 頂部連線監控狀態列（緊湊版） ===== -->
+    <div class="connection-monitor-bar compact">
+        <!-- 標題 -->
+        <div class="app-title-compact">
+            <span data-i18n="app.title">MCP Feedback</span>
+        </div>
+
+        <!-- 分隔符 -->
+        <span class="info-separator">·</span>
+
+        <!-- 專案路徑 -->
+        <div class="project-info-compact">
+            <span>📂</span>
+            <span id="projectPathDisplay" class="project-path-display"
+                  data-full-path="{{ project_directory }}"
+                  data-i18n-title="app.clickToCopyPath"
+                  title="點擊複製完整路徑">{{ project_directory[-30:] if project_directory|length > 30 else project_directory }}</span>
+        </div>
+
+        <!-- 分隔符 -->
+        <span class="info-separator">·</span>
+
+        <!-- 會話 ID -->
+        <div class="session-info-compact">
+            <span>📋</span>
+            <span id="currentSessionId" class="session-id-display"
+                  data-full-id="{{ session_id if session_id else 'loading' }}"
+                  data-i18n-title="app.clickToCopySessionId"
+                  title="點擊複製完整會話ID">{{ session_id[:6] if session_id else '--' }}</span>
+        </div>
+
+        <!-- 倒數計時器（條件顯示） -->
+        <div id="countdownDisplay" class="countdown-display-compact auto-submit-display" style="display: none;">
+            <span class="info-separator">·</span>
+            <span>⏱️</span>
+            <span class="countdown-label" data-i18n="autoSubmit.countdownLabel">提交倒數:</span>
+            <span id="countdownTimer" class="countdown-timer">--:--</span>
+            <button id="countdownPauseBtn" class="countdown-control-btn"
+                    data-i18n-title="autoSubmit.pauseCountdown"
+                    title="暫停倒數"
+                    aria-label="暫停/恢復倒數">
+                <span class="pause-icon">⏸</span>
+                <span class="resume-icon" style="display: none;">▶</span>
+            </button>
+        </div>
+
+        <!-- 會話超時倒數（條件顯示） -->
+        <div id="sessionTimeoutDisplay" class="countdown-display-compact session-timeout-display" style="display: none;">
+            <span class="info-separator">·</span>
+            <span>⏰</span>
+            <span class="timeout-label" data-i18n="sessionTimeout.label">會話超時:</span>
+            <span id="sessionTimeoutTimer" class="countdown-timer">--:--</span>
+        </div>
+
+        <!-- 分隔符 -->
+        <span class="info-separator">·</span>
+
+        <!-- 連線狀態 -->
+        <div class="connection-status-compact" id="connectionStatusMinimal">
+            <span class="status-dot"></span>
+            <span class="status-text" data-i18n="connectionMonitor.connected">已連線</span>
+        </div>
+    </div>
+
+    <div class="container">
+
+
+        <!-- ===== 主內容區域 ===== -->
+        <main class="main-content">
+            <!-- ===== 主要內容區域 ===== -->
+            <div class="main-content-area">
+
+                <!-- 分頁導航 -->
+                <div class="tabs">
+                <div class="tab-buttons">
+                    <!-- 工作區分頁 - 主要分頁 -->
+                    <button class="tab-button active" data-tab="combined" data-i18n="tabs.combined">
+                        📝 工作區
+                    </button>
+                    <button class="tab-button" data-tab="summary" data-i18n="tabs.summary">
+                        📋 AI 摘要
+                    </button>
+                    <button class="tab-button" data-tab="command" data-i18n="tabs.command">
+                        ⚡ 命令
+                    </button>
+                    <button class="tab-button" data-tab="sessions" data-i18n="tabs.sessions">
+                        📋 會話管理
+                    </button>
+                    <button class="tab-button" data-tab="settings" data-i18n="tabs.settings">
+                        ⚙️ 設定
+                    </button>
+                    <button class="tab-button" data-tab="about" data-i18n="tabs.about">
+                        ℹ️ 關於
+                    </button>
+                </div>
+            </div>
+
+
+
+
+
+            <!-- ===== AI 摘要分頁 ===== -->
+            <div id="tab-summary" class="tab-content">
+                <div class="input-group">
+                    <div id="summaryContent" class="text-input" style="min-height: 300px; cursor: text; padding: 12px; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word;" data-dynamic-content="aiSummary">
+                        {{ summary }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 命令分頁 -->
+            <div id="tab-command" class="tab-content">
+                <!-- 命令輸出區域 - 放在上面 -->
+                <div class="input-group">
+                    <div id="commandOutput" class="command-output"></div>
+                </div>
+
+                <!-- 命令輸入區域 -->
+                <div class="input-group" style="margin-bottom: 20px;">
+                    <label class="input-label" data-i18n="command.inputLabel">命令輸入</label>
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <div style="flex: 1; display: flex; align-items: center; gap: 8px;">
+                            <span style="color: var(--accent-color); font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-weight: bold;">$</span>
+                            <input
+                                type="text"
+                                id="commandInput"
+                                class="command-input-line"
+                                data-i18n-placeholder="command.placeholder"
+                                placeholder="輸入要執行的命令..."
+                                style="flex: 1; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px 12px; color: var(--text-primary); font-family: 'Consolas', 'Monaco', 'Courier New', monospace; font-size: 14px;"
+                            />
+                        </div>
+                        <button id="runCommandBtn" class="btn btn-primary" data-i18n="command.runButton" style="white-space: nowrap;">
+                            ▶️ 執行
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 自動執行命令設定 -->
+                <div class="command-auto-settings">
+                    <div class="settings-header">
+                        <h4 class="settings-title" data-i18n="command.autoCommand.title">🤖 自動執行命令設定</h4>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoCommandEnabled" class="toggle-input">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <p class="settings-description" data-i18n="command.autoCommand.description">設定在特定時機自動執行的命令</p>
+
+                    <div class="settings-content" id="autoCommandContent">
+                        <!-- 新會話建立時執行 -->
+                        <div class="auto-command-item">
+                            <div class="command-label">
+                                <span class="command-icon">🆕</span>
+                                <span data-i18n="command.autoCommand.onNewSession">新會話建立時執行</span>
+                            </div>
+                            <div class="command-input-wrapper">
+                                <span class="command-prefix">$</span>
+                                <input type="text"
+                                       id="commandOnNewSession"
+                                       class="auto-command-input"
+                                       data-i18n-placeholder="command.autoCommand.onNewSessionPlaceholder"
+                                       placeholder="輸入要自動執行的命令...">
+                            </div>
+                            <div class="command-actions">
+                                <button class="btn-small btn-test" id="testNewSessionCommand" data-i18n="command.autoCommand.testOnNewSession">測試新會話命令</button>
+                                <span class="command-hint" data-i18n="command.autoSettings.exampleNewSession">💡 範例：pwd, git status, ls -la</span>
+                            </div>
+                        </div>
+
+                        <!-- 提交回饋後執行 -->
+                        <div class="auto-command-item">
+                            <div class="command-label">
+                                <span class="command-icon">✅</span>
+                                <span data-i18n="command.autoCommand.onFeedbackSubmit">提交回饋後執行</span>
+                            </div>
+                            <div class="command-input-wrapper">
+                                <span class="command-prefix">$</span>
+                                <input type="text"
+                                       id="commandOnFeedbackSubmit"
+                                       class="auto-command-input"
+                                       data-i18n-placeholder="command.autoCommand.onFeedbackSubmitPlaceholder"
+                                       placeholder="輸入要自動執行的命令...">
+                            </div>
+                            <div class="command-actions">
+                                <button class="btn-small btn-test" id="testFeedbackCommand" data-i18n="command.autoCommand.testOnFeedbackSubmit">測試回饋提交命令</button>
+                                <span class="command-hint" data-i18n="command.autoSettings.exampleFeedback">💡 範例：date, echo "Done", git log -1</span>
+                            </div>
+                        </div>
+
+                        <!-- 說明文字 -->
+                        <div class="auto-command-help">
+                            <p class="help-text" data-i18n="command.autoCommand.help">這些命令會在對應的時機自動執行。留空表示不執行任何命令。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工作區分頁 - 主要分頁 -->
+            <div id="tab-combined" class="tab-content active">
+                <div class="combined-content">
+                    <!-- AI 摘要區域 -->
+                    <div class="combined-section">
+                        <div class="section-header">
+                            <h3 class="combined-section-title" data-i18n="combined.summaryTitle">📋 AI 工作摘要</h3>
+                        </div>
+                        <div class="combined-summary">
+                            <div id="combinedSummaryContent" class="text-input" style="min-height: 200px; cursor: text; padding: 12px; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word;" data-dynamic-content="aiSummary">{{ summary }}</div>
+                        </div>
+                    </div>
+
+                    <!-- 回饋輸入區域 -->
+                    <div class="combined-section">
+                        <div class="feedback-title-container">
+                            <h3 class="combined-section-title" data-i18n="combined.feedbackTitle">💬 提供回饋</h3>
+                            <button id="submitBtn" class="btn btn-success combined-submit-btn" data-i18n="buttons.submit">
+                                ✅ 提交回饋
+                            </button>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label" data-i18n="feedback.textLabel">文字回饋</label>
+
+                            <textarea
+                                id="combinedFeedbackText"
+                                class="text-input"
+                                data-i18n-placeholder="feedback.detailedPlaceholder"
+                                placeholder="請在這裡輸入您的回饋...
+
+💡 小提示：
+• 按 Ctrl+Enter/Cmd+Enter (支援數字鍵盤) 可快速提交
+• 按 Ctrl+V/Cmd+V 可直接貼上剪貼板圖片"
+                                style="min-height: 150px;"
+                            ></textarea>
+
+                            <!-- 提示詞按鈕 - 移至輸入框下方 -->
+                            <div class="prompt-input-buttons" id="combinedPromptButtons" style="margin-top: 8px;">
+                                <button type="button" class="prompt-input-btn select-prompt-btn" data-container-index="1">
+                                    <span>📝</span>
+                                    <span class="button-text" data-i18n="prompts.buttons.selectPrompt">Templates</span>
+                                </button>
+                                <button type="button" class="prompt-input-btn last-prompt-btn" data-container-index="1">
+                                    <span>🔄</span>
+                                    <span class="button-text" data-i18n="prompts.buttons.useLastPrompt">Last Used</span>
+                                </button>
+                                <button type="button" class="prompt-input-btn copy-user-content-btn" id="copyUserFeedback">
+                                    <span>📋</span>
+                                    <span class="button-text" data-i18n="sessionManagement.copyUserContent">複製用戶內容</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 圖片上傳組件 -->
+                        {% set id_prefix = "combined" %}
+                        {% set min_height = "100px" %}
+                        {% include 'components/image-upload.html' %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 會話管理分頁 ===== -->
+            <div id="tab-sessions" class="tab-content">
+                <div class="section-description" data-i18n="sessionManagement.description">
+                    管理當前會話和歷史會話記錄，查看會話統計資訊。
+                </div>
+
+                <!-- 面板標題和控制 -->
+                <div class="session-panel-header">
+                    <h3 data-i18n="sessionManagement.title">會話管理</h3>
+                    <div class="panel-controls">
+                        <button class="btn-icon" id="refreshSessions" data-i18n-title="sessionManagement.refresh" title="重新整理">
+                            🔄
+                        </button>
+                    </div>
+                </div>
+
+                <div class="session-panel-content">
+                    <!-- 當前活躍會話 -->
+                    <div class="current-session-section">
+                        <h4 data-i18n="sessionManagement.currentSession">當前會話</h4>
+                        <div class="session-card active" id="currentSessionCard">
+                            <div class="session-header">
+                                <div class="session-id"><span data-i18n="sessionManagement.sessionId">會話 ID</span>: {{ session_id[:8] if session_id else 'loading' }}...</div>
+                                <div class="session-status">
+                                    <span class="status-badge waiting" data-i18n="connectionMonitor.waiting">等待中</span>
+                                </div>
+                            </div>
+                            <div class="session-info">
+                                <div class="session-time"><span data-i18n="sessionManagement.createdTime">建立時間</span>: --:--:--</div>
+                                <div class="session-project"><span data-i18n="sessionManagement.project">專案</span>: {{ project_directory }}</div>
+                                <div class="session-summary"><span data-i18n="sessionManagement.aiSummary">AI 摘要</span>: <span data-i18n="sessionManagement.loading">載入中...</span></div>
+                            </div>
+                            <div class="session-actions">
+                                <button class="btn-small" id="viewSessionDetails" data-i18n="sessionManagement.viewDetails">詳細資訊</button>
+                                <button class="btn-small btn-primary" id="copyCurrentSessionContent"
+                                        data-i18n="sessionManagement.copySessionContent"
+                                        data-i18n-title="sessionManagement.copySessionContent"
+                                        aria-label="複製會話內容">
+                                    📋 <span data-i18n="sessionManagement.copySessionContent">複製會話內容</span>
+                                </button>
+                                <button class="btn-small btn-secondary" id="copyCurrentUserContent"
+                                        data-i18n="sessionManagement.copyUserContent"
+                                        data-i18n-title="sessionManagement.copyUserContent"
+                                        aria-label="複製用戶內容">
+                                    📝 <span data-i18n="sessionManagement.copyUserContent">複製用戶內容</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 會話歷史記錄 -->
+                    <div class="session-history-section">
+                        <div class="session-history-header">
+                            <h4 data-i18n="sessionManagement.sessionHistory">會話歷史</h4>
+                            <div class="session-history-actions">
+                                <button class="btn-small btn-secondary" id="sessionTabExportAllBtn"
+                                        data-i18n="sessionHistory.management.exportAll"
+                                        data-i18n-title="sessionHistory.management.exportAllTitle"
+                                        aria-label="匯出全部會話">
+                                    匯出全部
+                                </button>
+                                <button class="btn-small btn-secondary" id="sessionTabClearMessagesBtn"
+                                        style="color: var(--warning-color);"
+                                        data-i18n="sessionHistory.userMessages.clearAll"
+                                        data-i18n-title="sessionHistory.userMessages.clearAllTitle"
+                                        aria-label="清空訊息記錄">
+                                    清空訊息記錄
+                                </button>
+                                <button class="btn-small btn-secondary" id="sessionTabClearAllBtn"
+                                        style="color: var(--error-color);"
+                                        data-i18n="sessionHistory.management.clear"
+                                        data-i18n-title="sessionHistory.management.clearTitle"
+                                        aria-label="清空所有會話">
+                                    清空
+                                </button>
+                            </div>
+                        </div>
+                        <div class="session-list" id="sessionHistoryList">
+                            <div class="no-sessions" data-i18n="sessionManagement.noHistory">暫無歷史會話</div>
+                        </div>
+                    </div>
+
+                    <!-- 會話統計 -->
+                    <div class="session-stats-section">
+                        <h4 data-i18n="sessionManagement.statistics">統計資訊</h4>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value stat-today-count">0</div>
+                                <div class="stat-label" data-i18n="sessionManagement.todaySessions">今日會話</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value stat-average-duration">--</div>
+                                <div class="stat-label" data-i18n="sessionManagement.todayAverageDuration">今日平均時長</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 設定分頁 -->
+            <div id="tab-settings" class="tab-content">
+                <!-- 介面設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="settingsUI.interface">🎨 介面設定</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="settingsUI.layoutMode">界面佈局模式</div>
+                                <div class="setting-description" data-i18n="settingsUI.layoutModeDesc">
+                                    選擇 AI 摘要和回饋輸入的顯示方式
+                                </div>
+                            </div>
+                            <div class="layout-mode-selector">
+                                <div class="layout-option">
+                                    <input type="radio" id="combinedVertical" name="layoutMode" value="combined-vertical" checked>
+                                    <label for="combinedVertical">
+                                        <div class="layout-option-title" data-i18n="settingsUI.combinedVertical">垂直布局</div>
+                                        <div class="layout-option-desc" data-i18n="settingsUI.combinedVerticalDesc">AI 摘要在上，回饋輸入在下，摘要和回饋在同一頁面</div>
+                                    </label>
+                                </div>
+                                <div class="layout-option">
+                                    <input type="radio" id="combinedHorizontal" name="layoutMode" value="combined-horizontal">
+                                    <label for="combinedHorizontal">
+                                        <div class="layout-option-title" data-i18n="settingsUI.combinedHorizontal">水平布局</div>
+                                        <div class="layout-option-desc" data-i18n="settingsUI.combinedHorizontalDesc">AI 摘要在左，回饋輸入在右，增大摘要可視區域</div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+
+                <!-- 語言設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="settingsUI.language">🌍 語言設定</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="settingsUI.currentLanguage">當前語言</div>
+                                <div class="setting-description" data-i18n="settingsUI.languageDesc">
+                                    選擇界面顯示語言
+                                </div>
+                            </div>
+                            <div class="language-selector-dropdown">
+                                <select id="settingsLanguageSelect" class="language-setting-select">
+                                    <option value="zh-CN" data-i18n="languages.zh-CN">简体中文</option>
+                                    <option value="zh-TW" data-i18n="languages.zh-TW">繁體中文</option>
+                                    <option value="en" data-i18n="languages.en">English</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 圖片設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="images.settings.title">🖼️ 圖片設定</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="images.settings.sizeLimit">圖片大小限制</div>
+                                <div class="setting-description" data-i18n="images.settings.sizeLimitDesc">
+                                    設定上傳圖片的最大檔案大小限制
+                                </div>
+                            </div>
+                            <div class="image-size-limit-selector">
+                                <select id="settingsImageSizeLimit" class="image-size-limit-select">
+                                    <option value="0" data-i18n="images.settings.sizeLimitOptions.unlimited">無限制</option>
+                                    <option value="1048576" data-i18n="images.settings.sizeLimitOptions.1mb">1MB</option>
+                                    <option value="3145728" data-i18n="images.settings.sizeLimitOptions.3mb">3MB</option>
+                                    <option value="5242880" data-i18n="images.settings.sizeLimitOptions.5mb">5MB</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="images.settings.base64Detail">Base64 相容模式</div>
+                                <div class="setting-description" data-i18n="images.settings.base64DetailHelp">
+                                    啟用後會在文字中包含完整的 Base64 圖片資料，提升與某些 AI 模型的相容性
+                                </div>
+                                <div class="setting-warning" data-i18n="images.settings.base64Warning">⚠️ 會增加傳輸量</div>
+                            </div>
+                            <div class="base64-toggle-container">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="settingsEnableBase64Detail" class="toggle-input">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 自動定時提交設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="autoSubmit.title">⏰ 自動定時提交</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="autoSubmit.enable">啟用自動提交</div>
+                                <div class="setting-description" data-i18n="autoSubmit.enableDesc">
+                                    啟用後將在指定時間自動提交選定的提示詞內容
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <button type="button" id="autoSubmitToggle" class="toggle-btn" data-i18n-aria-label="aria.toggleAutoSubmit">
+                                    <span class="toggle-slider"></span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="autoSubmit.timeout">倒數時間（秒）</div>
+                                <div class="setting-description" data-i18n="autoSubmit.timeoutDesc">
+                                    設定自動提交的倒數時間，範圍：1-86400 秒
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <input type="number" id="autoSubmitTimeout" min="1" max="86400" value="30"
+                                       class="form-input" style="width: 120px;">
+                                <span class="input-suffix" data-i18n="autoSubmit.seconds">秒</span>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="autoSubmit.prompt">自動提交提示詞</div>
+                                <div class="setting-description" data-i18n="autoSubmit.promptDesc">
+                                    選擇要自動提交的提示詞內容
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <select id="autoSubmitPromptSelect" class="form-select" style="width: 200px;">
+                                    <option value="" data-i18n="autoSubmit.selectPrompt">請選擇提示詞</option>
+                                    <!-- 提示詞選項將動態載入 -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="autoSubmit.status">目前狀態</div>
+                            </div>
+                            <div class="setting-control">
+                                <button type="button" id="autoSubmitStatus" class="auto-submit-status-btn" disabled>
+                                    <span>⏸️</span>
+                                    <span class="button-text" data-i18n="autoSubmit.disabled">已停用</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 音效通知設定 -->
+                <div id="audioManagementContainer">
+                    <!-- 音效管理 UI 將在這裡動態生成 -->
+                </div>
+
+                <!-- 瀏覽器通知設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title">
+                            <span data-i18n="notification.title">🔔 瀏覽器通知</span>
+                        </h3>
+                    </div>
+                    <div class="settings-card-body" id="notificationSettingsContainer">
+                        <!-- 通知設定 UI 將在這裡動態生成 -->
+                    </div>
+                </div>
+
+                <!-- 會話超時設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="settingsUI.sessionTimeoutTitle">⏱️ 會話超時設定</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="settingsUI.sessionTimeoutEnable">啟用會話超時</div>
+                                <div class="setting-description" data-i18n="settingsUI.sessionTimeoutEnableDesc">
+                                    啟用後，會話將在指定時間後自動關閉
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="sessionTimeoutEnabled" class="toggle-input">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="settingsUI.sessionTimeoutDuration">超時時間（秒）</div>
+                                <div class="setting-description" data-i18n="settingsUI.sessionTimeoutDurationDesc">
+                                    設定會話超時時間，範圍：300-86400 秒（5分鐘-24小時）
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <input type="number" id="sessionTimeoutSeconds" min="300" max="86400" value="3600"
+                                       class="form-input" style="width: 120px;">
+                                <span class="input-suffix" data-i18n="settingsUI.sessionTimeoutSeconds">秒</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 會話歷史管理卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="sessionHistory.management.title">📚 會話歷史管理</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="sessionHistory.management.retentionPeriod">保存期限</div>
+                                <div class="setting-description" data-i18n="sessionHistory.management.description">
+                                    管理本地儲存的會話歷史記錄，包括保存期限設定和資料匯出功能
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <select id="sessionHistoryRetentionHours" class="form-select" style="width: 150px;">
+                                    <option value="24" data-i18n="sessionHistory.retention.24hours">24 小時</option>
+                                    <option value="72" data-i18n="sessionHistory.retention.72hours">72 小時</option>
+                                    <option value="168" data-i18n="sessionHistory.retention.168hours">7 天</option>
+                                    <option value="720" data-i18n="sessionHistory.retention.720hours">30 天</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="sessionHistory.userMessages.title">用戶訊息記錄</div>
+                                <div class="setting-description" data-i18n="sessionHistory.userMessages.description">
+                                    控制是否記錄用戶提交的回饋訊息到會話歷史中
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <div class="toggle-container">
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="userMessageRecordingToggle" class="toggle-input">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                    <span class="toggle-label" data-i18n="sessionHistory.userMessages.recordingEnabled">啟用訊息記錄</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-item">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="sessionHistory.userMessages.privacyLevel">隱私等級</div>
+                                <div class="setting-description" id="userMessagePrivacyDescription" data-i18n="sessionHistory.userMessages.privacyDescription.full">
+                                    記錄完整的訊息內容和圖片資訊
+                                </div>
+                            </div>
+                            <div class="setting-control">
+                                <select id="userMessagePrivacyLevel" class="form-select" style="width: 150px;">
+                                    <option value="full" data-i18n="sessionHistory.userMessages.privacyLevels.full">完整記錄</option>
+                                    <option value="basic" data-i18n="sessionHistory.userMessages.privacyLevels.basic">基本統計</option>
+                                    <option value="disabled" data-i18n="sessionHistory.userMessages.privacyLevels.disabled">停用記錄</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="setting-item" style="border-bottom: none;">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="sessionHistory.management.export">資料管理</div>
+                                <div class="setting-description" data-i18n="sessionHistory.management.exportDescription">
+                                    匯出或清空本地儲存的會話歷史記錄
+                                </div>
+                            </div>
+                            <div class="setting-control" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button id="exportSessionHistoryBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;">
+                                    <span data-i18n="sessionHistory.management.exportAll">匯出全部</span>
+                                </button>
+                                <button id="clearUserMessagesBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; color: var(--warning-color); border-color: var(--warning-color);">
+                                    <span data-i18n="sessionHistory.userMessages.clearAll">清空訊息記錄</span>
+                                </button>
+                                <button id="clearSessionHistoryBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; color: var(--error-color); border-color: var(--error-color);">
+                                    <span data-i18n="sessionHistory.management.clear">清空</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 提示詞管理卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="prompts.management.title">📝 常用提示詞管理</h3>
+                    </div>
+                    <div class="settings-card-body" id="promptManagementContainer">
+                        <!-- 提示詞管理 UI 將在這裡動態生成 -->
+                    </div>
+                </div>
+
+                <!-- 重置設定卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="settingsUI.advanced">🔧 進階設定</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item" style="border-bottom: none;">
+                            <div class="setting-info">
+                                <div class="setting-label" data-i18n="settingsUI.reset">重置設定</div>
+                                <div class="setting-description" data-i18n="settingsUI.resetDesc">
+                                    清除所有已保存的設定，恢復到預設狀態
+                                </div>
+                            </div>
+                            <button id="resetSettingsBtn" class="btn btn-secondary" style="font-size: 12px; padding: 6px 16px;">
+                                <span data-i18n="settingsUI.reset">重置設定</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 關於分頁 -->
+            <div id="tab-about" class="tab-content">
+                <!-- 主要資訊卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <h3 class="settings-card-title" style="margin: 0;">MCP Feedback Enhanced</h3>
+                            <span style="color: var(--accent-color); font-weight: bold; font-size: 16px;">v{{ version }}</span>
+                        </div>
+                    </div>
+                    <div class="settings-card-body">
+                        <!-- 應用程式描述 -->
+                        <div class="setting-item" style="border-bottom: none; padding-bottom: 16px;">
+                            <div class="setting-info">
+                                <div class="setting-description" data-i18n="about.description" style="color: var(--text-secondary); font-size: 13px; line-height: 1.5;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 分隔線 -->
+                        <div style="height: 1px; background: var(--border-color); margin: 16px 0;"></div>
+
+                        <!-- GitHub 專案 -->
+                        <div class="setting-item" style="border-bottom: none; padding-bottom: 12px;">
+                            <div class="setting-info">
+                                <div class="setting-label">📂 <span data-i18n="about.githubProject">GitHub 專案</span></div>
+                                <div class="setting-description" style="color: var(--text-secondary); font-size: 11px; margin-left: 24px;">
+                                    https://github.com/Minidoracat/mcp-feedback-enhanced
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="window.open('https://github.com/Minidoracat/mcp-feedback-enhanced', '_blank')" style="font-size: 12px; padding: 6px 16px;">
+                                <span data-i18n="about.visitGithub">訪問 GitHub</span>
+                            </button>
+                        </div>
+
+                        <!-- 分隔線 -->
+                        <div style="height: 1px; background: var(--border-color); margin: 16px 0;"></div>
+
+                        <!-- Discord 支援 -->
+                        <div class="setting-item" style="border-bottom: none; padding-bottom: 12px;">
+                            <div class="setting-info">
+                                <div class="setting-label">💬 <span data-i18n="about.discordSupport">Discord 支援</span></div>
+                                <div class="setting-description" style="color: var(--text-secondary); font-size: 11px; margin-left: 24px;">
+                                    https://discord.gg/ACjf9Q58
+                                </div>
+                                <div class="setting-description" data-i18n="about.contactDescription" style="color: var(--text-secondary); font-size: 12px; margin-left: 24px; margin-top: 8px;">
+                                    如需技術支援、問題回報或功能建議，歡迎透過 Discord 社群或 GitHub Issues 與我們聯繫。
+                                </div>
+                            </div>
+                            <button class="btn" onclick="window.open('https://discord.gg/ACjf9Q58', '_blank')" style="background: #5865F2; color: white; font-size: 12px; padding: 6px 16px; border: none;">
+                                <span data-i18n="about.joinDiscord">加入 Discord</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 致謝與貢獻卡片 -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <h3 class="settings-card-title" data-i18n="about.thanks">🙏 致謝與貢獻</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="setting-item" style="border-bottom: none;">
+                            <div class="setting-info">
+                                <div class="text-input" data-i18n="about.thanksText" style="background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; color: var(--text-primary); font-size: 12px; line-height: 1.5; min-height: 140px; max-height: 200px; overflow-y: auto; white-space: pre-wrap;">感謝原作者 Fábio Ferreira (@fabiomlferreira) 創建了原始的 interactive-feedback-mcp 專案。
+
+本增強版本由 Minidoracat 開發和維護，大幅擴展了專案功能，新增了 Web UI 介面、圖片支援、多語言能力以及許多其他改進功能。
+
+同時感謝 sanshao85 的 mcp-feedback-collector 專案提供的 UI 設計靈感。
+
+開源協作讓技術變得更美好！</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div> <!-- 關閉 main-content-area -->
+        </main>
+
+
+    </div>
+
+    <!-- WebSocket 和 JavaScript -->
+    <!-- Markdown 支援庫 - 本地版本 -->
+    <script src="/static/js/vendor/marked.min.js"></script>
+    <script src="/static/js/vendor/purify.min.js"></script>
+    <script src="/static/js/i18n.js?v=2025010510"></script>
+    <!-- 載入所有模組 -->
+    <!-- 核心模組（最先載入） -->
+    <script src="/static/js/modules/logger.js?v=2025010510"></script>
+
+    <!-- 工具模組 -->
+    <script src="/static/js/modules/utils/dom-utils.js?v=2025010510"></script>
+    <script src="/static/js/modules/utils/time-utils.js?v=2025010510"></script>
+    <script src="/static/js/modules/utils/status-utils.js?v=2025010510"></script>
+
+    <!-- 會話管理模組 -->
+    <script src="/static/js/modules/session/session-data-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/session/session-ui-renderer.js?v=2025010510"></script>
+    <script src="/static/js/modules/session/session-details-modal.js?v=2025010510"></script>
+
+    <!-- 提示詞管理模組 -->
+    <script src="/static/js/modules/prompt/prompt-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/prompt/prompt-modal.js?v=2025010510"></script>
+    <script src="/static/js/modules/prompt/prompt-settings-ui.js?v=2025010510"></script>
+    <script src="/static/js/modules/prompt/prompt-input-buttons.js?v=2025010510"></script>
+
+    <!-- 音效管理模組 -->
+    <script src="/static/js/modules/audio/audio-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/audio/audio-settings-ui.js?v=2025010510"></script>
+
+    <!-- 通知模組 -->
+    <script src="/static/js/modules/notification/notification-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/notification/notification-settings.js?v=2025010510"></script>
+
+    <!-- 其他模組 -->
+    <script src="/static/js/modules/utils.js?v=2025010510"></script>
+    <script src="/static/js/modules/tab-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/websocket-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/connection-monitor.js?v=2025010510"></script>
+    <script src="/static/js/modules/session-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/file-upload-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/image-handler.js?v=2025010510"></script>
+    <script src="/static/js/modules/settings-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/ui-manager.js?v=2025010510"></script>
+    <script src="/static/js/modules/textarea-height-manager.js?v=2025010510"></script>
+
+    <!-- 主應用程式 -->
+    <script src="/static/js/app.js?v=2025010510"></script>
+    <script>
+        // 等待所有模組載入完成後再初始化 FeedbackApp
+        async function initializeApp() {
+            const sessionId = '{{ session_id }}';
+
+            // 檢查 Markdown 依賴庫
+            if (typeof window.marked === 'undefined' || typeof window.DOMPurify === 'undefined') {
+                const logger = window.MCPFeedback?.logger || console;
+                logger.warn('Markdown 依賴庫尚未載入，等待中...');
+                setTimeout(initializeApp, 100);
+                return;
+            }
+
+            // 檢查核心依賴
+            const requiredModules = [
+                'MCPFeedback',
+                'MCPFeedback.Logger',
+                'MCPFeedback.Utils',
+                'MCPFeedback.DOMUtils',
+                'MCPFeedback.TimeUtils',
+                'MCPFeedback.StatusUtils',
+                'MCPFeedback.ConnectionMonitor',
+                'MCPFeedback.SessionManager',
+                'MCPFeedback.FeedbackApp'
+            ];
+
+            const missingModules = requiredModules.filter(modulePath => {
+                const parts = modulePath.split('.');
+                let current = window;
+                for (const part of parts) {
+                    if (!current[part]) return true;
+                    current = current[part];
+                }
+                return false;
+            });
+
+            if (missingModules.length > 0) {
+                const logger = window.MCPFeedback?.logger || console;
+                logger.warn('模組載入不完整，缺少:', missingModules.join(', '));
+                setTimeout(initializeApp, 100);
+                return;
+            }
+
+            try {
+                const logger = window.MCPFeedback.logger;
+                logger.info('開始初始化應用程式...');
+
+                // 確保 I18nManager 已經初始化
+                if (window.i18nManager) {
+                    logger.debug('初始化國際化管理器...');
+                    await window.i18nManager.init();
+                }
+
+                // 初始化 FeedbackApp（使用新的命名空間）
+                logger.debug('創建 FeedbackApp 實例...');
+                window.feedbackApp = new window.MCPFeedback.FeedbackApp(sessionId);
+
+                // 初始化應用程式
+                logger.debug('初始化 FeedbackApp...');
+                await window.feedbackApp.init();
+
+                // 設置全域引用，讓 SessionManager 可以被 HTML 中的 onclick 調用
+                if (window.feedbackApp.sessionManager) {
+                    window.MCPFeedback.app = window.feedbackApp;
+                }
+
+                // 初始化完成後，立即渲染現有的 AI 摘要內容為 Markdown
+                setTimeout(function() {
+                    if (window.feedbackApp && window.feedbackApp.uiManager) {
+                        // 獲取當前的摘要內容
+                        const summaryElement = document.querySelector('#combinedSummaryContent');
+                        const summaryTabElement = document.querySelector('#summaryContent');
+
+                        if (summaryElement && summaryElement.textContent) {
+                            console.log('🔧 初始化時渲染 Markdown 內容...');
+                            window.feedbackApp.uiManager.updateAISummaryContent(summaryElement.textContent);
+                        }
+                    }
+                }, 100);
+
+                logger.info('應用程式初始化完成');
+            } catch (error) {
+                const logger = window.MCPFeedback?.logger || console;
+                logger.error('應用程式初始化失敗:', error);
+            }
+        }
+
+        // 頁面載入完成後初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        } else {
+            initializeApp();
+        }
+    </script>
+
+    <!-- 可折疊統計面板 -->
+    <div class="stats-panel-floating collapsed" id="statsPanel">
+        <div class="stats-panel-header" onclick="toggleStatsPanel()">
+            <div class="stats-panel-title">
+                <span>📊</span>
+                <span data-i18n="stats.detailedStats">詳細統計資訊</span>
+            </div>
+            <span class="stats-toggle-icon">▲</span>
+        </div>
+        <div class="stats-panel-content">
+            <!-- 連線資訊 -->
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.connectionTime">連線時間</span>
+                <span class="stats-item-value" id="statsConnectionTime">--:--</span>
+            </div>
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.reconnectCount">重連次數</span>
+                <span class="stats-item-value" id="statsReconnectCount">0</span>
+            </div>
+            <!-- WebSocket 統計 -->
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.metrics.messages">訊息數</span>
+                <span class="stats-item-value" id="statsMessageCount">0</span>
+            </div>
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.metrics.latencyMs">延遲</span>
+                <span class="stats-item-value" id="statsLatency">--ms</span>
+            </div>
+            <!-- 會話統計 -->
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.metrics.sessions">會話數</span>
+                <span class="stats-item-value" id="statsSessionCount">1</span>
+            </div>
+            <div class="stats-item-detailed">
+                <span class="stats-item-label" data-i18n="connectionMonitor.statusText">狀態</span>
+                <span class="stats-item-value" id="statsSessionStatus" data-i18n="connectionMonitor.waiting">等待中</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 統計面板切換功能
+        function toggleStatsPanel() {
+            const panel = document.getElementById('statsPanel');
+            panel.classList.toggle('collapsed');
+        }
+    </script>
+</body>
+</html>

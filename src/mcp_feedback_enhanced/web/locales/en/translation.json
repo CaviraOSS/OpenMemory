@@ -1,0 +1,644 @@
+{
+    "app": {
+        "title": "MCP Interactive Feedback System",
+        "subtitle": "AI Assistant Interactive Feedback Platform",
+        "projectDirectory": "Project Directory",
+        "clickToCopyPath": "Click to copy full path",
+        "clickToCopySessionId": "Click to copy full session ID",
+        "pathCopied": "Project path copied to clipboard",
+        "pathCopyFailed": "Failed to copy path",
+        "sessionIdCopied": "Session ID copied to clipboard",
+        "sessionIdCopyFailed": "Failed to copy session ID",
+        "updateFailed": "Failed to update content, please manually refresh the page to view new AI work summary"
+    },
+    "tabs": {
+        "summary": "📋 AI Summary",
+        "commands": "⚡ Commands",
+        "command": "⚡ Commands",
+        "sessions": "📋 Session Management",
+        "settings": "⚙️ Settings",
+        "combined": "📝 Workspace",
+        "about": "ℹ️ About"
+    },
+    "feedback": {
+        "title": "💬 Provide Feedback",
+        "description": "Please provide your feedback on the AI assistant's work. You can enter text feedback and upload related images.",
+        "textLabel": "Text Feedback",
+        "placeholder": "Please enter your feedback here...",
+        "detailedPlaceholder": "Please enter your feedback here...\n\n💡 Tips:\n• Press Ctrl+Enter/Cmd+Enter (numpad supported) for quick submit\n• Press Ctrl+I/Cmd+I to focus input box\n• Press Ctrl+V/Cmd+V to paste clipboard images directly",
+        "imageLabel": "Image Attachments (Optional)",
+        "imageUploadText": "📎 Click to select images or drag and drop images here\nSupports PNG, JPG, JPEG, GIF, BMP, WebP formats",
+        "submit": "✅ Submit Feedback",
+        "uploading": "Uploading...",
+        "dragdrop": "Drag and drop images here or click to upload",
+        "selectfiles": "Select Files",
+        "processing": "Processing...",
+        "success": "Feedback submitted successfully!",
+        "error": "Error submitting feedback",
+        "shortcuts": {
+            "submit": "Ctrl+Enter to submit (Cmd+Enter on Mac, numpad supported)",
+            "clear": "Ctrl+Delete to clear (Cmd+Delete on Mac)",
+            "paste": "Ctrl+V to paste images (Cmd+V on Mac)"
+        },
+        "submitSuccess": "Feedback submitted successfully!",
+        "submittedWaiting": "Feedback submitted, waiting for next MCP call...",
+        "waitingForUser": "Waiting for user feedback...",
+        "alreadySubmitted": "Feedback already submitted, please wait for next MCP call",
+        "processingFeedback": "Processing, please wait",
+        "connectingMessage": "WebSocket connecting, feedback will be submitted automatically when connection is ready...",
+        "invalidState": "Current state does not allow submission",
+        "sendFailed": "Send failed, please retry",
+        "noContent": "No content to copy",
+        "copySuccess": "Content copied to clipboard",
+        "copyFailed": "Failed to copy",
+        "provideTextOrImage": "Please provide feedback text or upload an image"
+    },
+    "summary": {
+        "title": "📋 AI Work Summary",
+        "description": "Below is the work summary completed by the AI assistant. Please review carefully and provide your feedback.",
+        "placeholder": "AI work summary will be displayed here...",
+        "empty": "No summary content available",
+        "lastupdate": "Last updated",
+        "refresh": "Refresh"
+    },
+    "commands": {
+        "title": "⚡ Command Execution",
+        "description": "Execute commands here to verify results or collect more information. Commands will be executed in the project directory.",
+        "inputLabel": "Command Input",
+        "placeholder": "Enter command to execute...",
+        "execute": "▶️ Execute",
+        "runButton": "▶️ Execute",
+        "clear": "Clear",
+        "output": "Command Output",
+        "outputLabel": "Command Output",
+        "running": "Running...",
+        "completed": "Completed",
+        "error": "Execution Error",
+        "history": "Command History",
+        "notConnected": "WebSocket not connected, cannot execute command",
+        "emptyCommand": "Please enter a command",
+        "sendFailed": "Failed to send command",
+        "executing": "Executing..."
+    },
+    "command": {
+        "title": "⚡ Command Execution",
+        "inputLabel": "Command Input",
+        "placeholder": "Enter command to execute...",
+        "execute": "▶️ Execute",
+        "runButton": "▶️ Execute",
+        "clear": "Clear",
+        "output": "Command Output",
+        "running": "Running...",
+        "completed": "Completed",
+        "error": "Execution Error",
+        "history": "Command History",
+        "autoCommand": {
+            "title": "🤖 Auto Command Settings",
+            "description": "Configure commands to execute automatically at specific times",
+            "enabled": "Enable Auto Commands",
+            "onNewSession": "Execute on New Session",
+            "onNewSessionPlaceholder": "e.g., pwd or git status",
+            "onFeedbackSubmit": "Execute on Feedback Submit",
+            "onFeedbackSubmitPlaceholder": "e.g., echo 'Feedback submitted'",
+            "testOnNewSession": "Test New Session Command",
+            "testOnFeedbackSubmit": "Test Feedback Submit Command",
+            "help": "These commands will execute automatically at the corresponding times. Leave empty to skip execution."
+        },
+        "autoSettings": {
+            "exampleNewSession": "💡 Example: pwd, git status, ls -la",
+            "exampleFeedback": "💡 Example: date, echo \"Done\", git log -1"
+        }
+    },
+    "combined": {
+        "summaryTitle": "📋 AI Work Summary",
+        "feedbackTitle": "💬 Provide Feedback"
+    },
+    "settingsUI": {
+        "title": "⚙️ Settings",
+        "language": "🌍 Language",
+        "currentLanguage": "Current Language",
+        "languageDesc": "Select interface display language",
+        "interface": "🎨 Interface Settings",
+        "layoutMode": "Interface Layout Mode",
+        "layoutModeDesc": "Select how AI summary and feedback input are displayed",
+        "combinedVertical": "Vertical Layout",
+        "combinedVerticalDesc": "AI summary on top, feedback input below, suitable for standard screens",
+        "combinedHorizontal": "Horizontal Layout",
+        "combinedHorizontalDesc": "AI summary on left, feedback input on right, suitable for widescreen displays",
+        "autoClose": "Auto Close Page",
+        "autoCloseDesc": "Automatically close page after submitting feedback",
+        "theme": "Theme",
+        "notifications": "Notifications",
+        "advanced": "🔧 Advanced Settings",
+        "save": "Save Settings",
+        "reset": "Reset Settings",
+        "resetDesc": "Clear all saved settings and restore to default state",
+        "resetConfirm": "Are you sure you want to reset all settings? This will clear all saved preferences.",
+        "resetSuccess": "Settings have been reset to default values",
+        "resetError": "Error occurred while resetting settings",
+        "timeout": "Connection Timeout (seconds)",
+        "autorefresh": "Auto Refresh",
+        "debug": "Debug Mode",
+        "sessionTimeoutTitle": "⏱️ Session Timeout Settings",
+        "sessionTimeoutEnable": "Enable Session Timeout",
+        "sessionTimeoutEnableDesc": "When enabled, the session will automatically close after the specified time",
+        "sessionTimeoutDuration": "Timeout Duration (seconds)",
+        "sessionTimeoutDurationDesc": "Set session timeout duration, range: 300-86400 seconds (5 minutes - 24 hours)",
+        "sessionTimeoutSeconds": "seconds"
+    },
+    "languages": {
+        "zh-TW": "繁體中文",
+        "zh-CN": "简体中文",
+        "en": "English"
+    },
+    "themes": {
+        "dark": "Dark",
+        "light": "Light",
+        "auto": "Auto"
+    },
+    "timeUnits": {
+        "seconds": "seconds",
+        "minutes": "minutes",
+        "hours": "hours",
+        "days": "days",
+        "ago": "ago",
+        "justNow": "just now",
+        "about": "about"
+    },
+    "status": {
+        "connected": "Connected",
+        "connecting": "Connecting...",
+        "disconnected": "Disconnected",
+        "reconnecting": "Reconnecting...",
+        "error": "Connection Error",
+        "waiting": {
+            "title": "Waiting for Feedback",
+            "message": "Please provide your feedback"
+        },
+        "processing": {
+            "title": "Processing",
+            "message": "Submitting your feedback..."
+        },
+        "submitted": {
+            "title": "Submitted",
+            "message": "Waiting for next MCP call"
+        },
+        "completed": {
+            "title": "Completed",
+            "message": "Session completed"
+        }
+    },
+    "notifications": {
+        "feedback_sent": "Feedback sent",
+        "command_executed": "Command executed",
+        "settings_saved": "Settings saved",
+        "connection_lost": "Connection lost",
+        "connection_restored": "Connection restored"
+    },
+    "connection": {
+        "waiting": "Connected - Waiting for feedback",
+        "submitted": "Connected - Feedback submitted",
+        "processing": "Connected - Processing"
+    },
+    "errors": {
+        "connection_failed": "Connection failed",
+        "upload_failed": "Upload failed",
+        "command_failed": "Command execution failed",
+        "invalid_input": "Invalid input",
+        "timeout": "Request timeout"
+    },
+    "buttons": {
+        "ok": "OK",
+        "cancel": "❌ Cancel",
+        "submit": "✅ Submit Feedback",
+        "processing": "Processing...",
+        "submitted": "Submitted",
+        "retry": "Retry",
+        "close": "Close",
+        "upload": "Upload",
+        "download": "Download"
+    },
+    "sessionTimeout": {
+        "timeout": "⏰ Session has timed out, interface will close automatically",
+        "timeoutWarning": "Session is about to timeout",
+        "timeoutDescription": "Due to prolonged inactivity, the session has timed out. The interface will automatically close in 3 seconds.",
+        "closing": "Closing...",
+        "label": "Session Timeout:"
+    },
+    "autoRefresh": {
+        "enable": "Auto Detect",
+        "seconds": "seconds",
+        "disabled": "Disabled",
+        "enabled": "Detecting",
+        "checking": "Checking",
+        "detected": "Detected",
+        "error": "Failed"
+    },
+    "sessionManagement": {
+        "title": "Session Management",
+        "description": "Manage current and historical session records, view session statistics.",
+        "currentSession": "Current Session",
+        "sessionHistory": "Session History",
+        "statistics": "Statistics",
+        "sessionId": "Session ID",
+        "status": "Status",
+        "activeTime": "Active Time",
+        "switchSession": "Switch Session",
+        "viewDetails": "View Details",
+        "refresh": "Refresh",
+        "noHistory": "No session history",
+        "todaySessions": "Today's Sessions",
+        "todayAverageDuration": "Today's Average Duration",
+        "createdTime": "Created Time",
+        "project": "Project",
+        "aiSummary": "AI Summary",
+        "noSummary": "No summary",
+        "loading": "Loading...",
+        "collapsePanel": "Collapse Panel",
+        "expandPanel": "Expand Panel",
+        "sessionPanel": "Session",
+        "sessionDetails": {
+            "title": "Session Details",
+            "close": "Close",
+            "duration": "Duration",
+            "projectDirectory": "Project Directory",
+            "summary": "Summary",
+            "noSummary": "No summary available",
+            "unknown": "Unknown"
+        },
+        "copySessionContent": "Copy Session Content",
+        "copyUserContent": "Copy User Content",
+        "exportSession": "Export This Session"
+    },
+    "sessionHistory": {
+        "management": {
+            "title": "📚 Session History Management",
+            "retentionPeriod": "Retention Period",
+            "retentionHours": "hours",
+            "export": "Export",
+            "clear": "Clear",
+            "exportAll": "Export All",
+            "exportAllTitle": "Export all session history to file",
+            "exportSingle": "Export This Session",
+            "confirmClear": "Are you sure you want to clear all session history?",
+            "exportSuccess": "Session history exported successfully",
+            "clearSuccess": "Session history cleared successfully",
+            "clearTitle": "Clear all session history records",
+            "description": "Manage locally stored session history records, including retention period settings and data export functionality",
+            "exportDescription": "Export or clear locally stored session history records",
+            "exportFailed": "Export failed: {error}",
+            "clearFailed": "Clear failed: {error}",
+            "clearFailedGeneric": "Clear failed"
+        },
+        "retention": {
+            "24hours": "24 hours",
+            "72hours": "72 hours",
+            "168hours": "7 days",
+            "720hours": "30 days",
+            "custom": "Custom"
+        },
+        "userMessages": {
+            "title": "User Message Recording",
+            "description": "Control whether to record user submitted feedback messages in session history",
+            "recordingEnabled": "Enable Message Recording",
+            "privacyLevel": "Privacy Level",
+            "privacyLevels": {
+                "full": "Full Recording",
+                "basic": "Basic Statistics",
+                "disabled": "Disable Recording"
+            },
+            "privacyDescription": {
+                "full": "Record complete message content and image information",
+                "basic": "Only record message length, image count and other statistics",
+                "disabled": "Do not record any user message content"
+            },
+            "messageCount": "Message Count",
+            "submissionMethod": "Submission Method",
+            "manual": "Manual Submit",
+            "auto": "Auto Submit",
+            "contentLength": "Content Length",
+            "imageCount": "Image Count",
+            "timestamp": "Timestamp",
+            "clearAll": "Clear Message Records",
+            "clearAllTitle": "Clear all user message records from all sessions",
+            "confirmClearAll": "Are you sure you want to clear all user message records from all sessions? This action cannot be undone.",
+            "clearSuccess": "User message records cleared successfully"
+        },
+        "noActiveSession": "No active session data",
+        "sessionNotFound": "Session data not found",
+        "currentSession": {
+            "noData": "No current session data",
+            "noUserMessages": "Current session has no user message records",
+            "copyFailed": "Copy failed, please try again",
+            "dataManagerNotInit": "Data manager not initialized"
+        }
+    },
+    "connectionMonitor": {
+        "connecting": "Connecting...",
+        "connected": "Connected",
+        "disconnected": "Disconnected",
+        "reconnecting": "Reconnecting... (attempt {attempt})",
+        "connectionFailed": "Connection failed",
+        "connectionError": "Connection error",
+        "noActiveSession": "No active session",
+        "maxReconnectReached": "WebSocket connection failed, please refresh the page to retry",
+        "latency": "Latency",
+        "connectionTime": "Connection Time",
+        "reconnectCount": "Reconnects",
+        "messageCount": "Messages",
+        "sessionCount": "Sessions",
+        "statusText": "Status",
+        "waiting": "Waiting",
+        "times": "times",
+        "quality": {
+            "excellent": "Excellent",
+            "good": "Good",
+            "fair": "Fair",
+            "poor": "Poor",
+            "unknown": "Unknown"
+        },
+        "metrics": {
+            "messages": "Messages",
+            "latencyMs": "Latency",
+            "sessions": "Sessions",
+            "reconnects": "Reconnects"
+        },
+        "unknown": "Unknown"
+    },
+    "stats": {
+        "detailedStats": "Detailed Statistics"
+    },
+
+    "dynamic": {
+        "aiSummary": "Test Web UI Functionality\n\n🎯 **Test Items:**\n- Web UI server startup and operation\n- WebSocket real-time communication\n- Feedback submission functionality\n- Image upload and preview\n- Command execution functionality\n- Smart Ctrl+V image pasting\n- Multi-language interface functionality\n\n📋 **Test Steps:**\n1. Test image upload (drag-drop, file selection, clipboard)\n2. Press Ctrl+V in text box to test smart pasting\n3. Try switching languages (Traditional Chinese/Simplified Chinese/English)\n4. Test command execution functionality\n5. Submit feedback and images\n\nPlease test these features and provide feedback!",
+        "terminalWelcome": "Welcome to Interactive Feedback Terminal\n========================================\nProject Directory: {sessionId}\nEnter commands and press Enter or click Execute button\nSupported commands: ls, dir, pwd, cat, type, etc.\n\n$ "
+    },
+    "prompts": {
+        "management": {
+            "title": "📝 Prompt Templates Management",
+            "description": "Manage your frequently used prompt templates for quick selection during feedback input",
+            "addNew": "Add New Prompt",
+            "edit": "Edit",
+            "delete": "Delete",
+            "confirmDelete": "Are you sure you want to delete this prompt?",
+            "emptyState": "No prompt templates created yet",
+            "emptyHint": "Click the 'Add New Prompt' button above to create your first prompt template",
+            "created": "Created",
+            "lastUsed": "Last Used",
+            "autoSubmit": "Auto Submit",
+            "setAutoSubmit": "Set as Auto Submit",
+            "cancelAutoSubmit": "Cancel Auto Submit",
+            "autoSubmitSet": "Set as auto submit prompt: ",
+            "autoSubmitCancelled": "Auto submit setting cancelled",
+            "notFound": "Prompt not found",
+            "addSuccess": "Prompt added successfully",
+            "updateSuccess": "Prompt updated successfully",
+            "deleteSuccess": "Prompt deleted successfully"
+        },
+        "buttons": {
+            "selectPrompt": "Templates",
+            "useLastPrompt": "Last Used",
+            "noPrompts": "No prompt templates available, please add one in settings first",
+            "noLastPrompt": "No recently used prompt available",
+            "lastPromptApplied": "Last used prompt applied successfully",
+            "promptNotFound": "Prompt not found",
+            "promptApplied": "Prompt applied: ",
+            "selectPromptTooltipEmpty": "No prompt templates available",
+            "selectPromptTooltipAvailable": "Select prompt template ({count} available)",
+            "lastPromptTooltipEmpty": "No recently used prompt available",
+            "lastPromptTooltipAvailable": "Use last prompt: {name}"
+        },
+        "select": {
+            "title": "Select Prompt Template"
+        },
+        "modal": {
+            "addTitle": "Add New Prompt",
+            "editTitle": "Edit Prompt",
+            "nameLabel": "Prompt Name",
+            "contentLabel": "Prompt Content",
+            "namePlaceholder": "Enter prompt name...",
+            "contentPlaceholder": "Enter prompt content...",
+            "save": "Save",
+            "cancel": "Cancel",
+            "emptyFields": "Please fill in all required fields"
+        }
+    },
+    "about": {
+        "title": "ℹ️ About",
+        "description": "A powerful MCP server that provides human-in-the-loop feedback functionality for AI-assisted development tools. Features a Web UI interface with rich capabilities including image upload, command execution, and multi-language support.",
+        "appInfo": "Application Information",
+        "version": "Version",
+        "projectLinks": "Project Links",
+        "githubProject": "GitHub Project",
+        "visitGithub": "Visit GitHub",
+        "contact": "Contact & Support",
+        "discordSupport": "Discord Support",
+        "joinDiscord": "Join Discord",
+        "contactDescription": "For technical support, issue reports, or feature suggestions, please contact us through Discord community or GitHub Issues.",
+        "thanks": "Thanks & Contributions",
+        "thanksText": "Thanks to the original author Fábio Ferreira (@fabiomlferreira) for creating the original interactive-feedback-mcp project.\n\nThis enhanced version is developed and maintained by Minidoracat, greatly expanding the project functionality with Web UI interface, image support, multi-language capabilities, and many other improvements.\n\nSpecial thanks to sanshao85's mcp-feedback-collector project for UI design inspiration.\n\nOpen source collaboration makes technology better!"
+    },
+    "images": {
+        "settings": {
+            "title": "🖼️ Image Settings",
+            "sizeLimit": "Image Size Limit",
+            "sizeLimitDesc": "Set the maximum file size limit for uploaded images",
+            "sizeLimitOptions": {
+                "unlimited": "Unlimited",
+                "1mb": "1MB",
+                "3mb": "3MB",
+                "5mb": "5MB"
+            },
+            "base64Detail": "Base64 Compatibility Mode",
+            "base64DetailHelp": "When enabled, includes full Base64 image data in text, improving compatibility with certain AI models",
+            "base64Warning": "⚠️ Increases transmission size",
+            "compatibilityHint": "💡 Images not recognized correctly?",
+            "enableBase64Hint": "Try enabling Base64 compatibility mode"
+        },
+        "sizeLimitExceeded": "Image {filename} size is {size}, exceeds {limit} limit!",
+        "sizeLimitExceededAdvice": "Consider compressing the image with editing software before uploading, or adjust the image size limit settings."
+    },
+    "autoSubmit": {
+        "title": "⏰ Auto Timed Submit",
+        "enable": "Enable Auto Submit",
+        "enableDesc": "When enabled, automatically submit selected prompt content after specified time",
+        "timeout": "Countdown Time (seconds)",
+        "timeoutDesc": "Set countdown time for auto submit, range: 1-86400 seconds",
+        "seconds": "seconds",
+        "prompt": "Auto Submit Prompt",
+        "promptDesc": "Select prompt content for auto submission",
+        "selectPrompt": "Please select a prompt",
+        "status": "Current Status",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "executing": "Executing auto submit...",
+        "countdownLabel": "Submit Countdown",
+        "pauseCountdown": "Pause Countdown",
+        "resumeCountdown": "Resume Countdown",
+        "paused": "Auto submit paused",
+        "autoCommitNoPrompt": "Please select a prompt as auto-submit content first"
+    },
+    "audio": {
+        "notification": {
+            "title": "🔊 Audio Notification Settings",
+            "description": "Configure audio notifications for session updates",
+            "enabled": "Enable Audio Notifications",
+            "enabledDesc": "Play audio notifications when there are new session updates",
+            "volume": "Volume",
+            "selectAudio": "Select Audio",
+            "testPlay": "Test Play",
+            "uploadCustom": "Upload Custom Audio",
+            "chooseFile": "Choose File",
+            "supportedFormats": "Supports MP3, WAV, OGG formats",
+            "customAudios": "Custom Audio Files",
+            "defaultBeep": "Classic Beep",
+            "notificationDing": "Notification Ding",
+            "softChime": "Soft Chime",
+            "default": "Default",
+            "customAudio": "Custom Audio",
+            "noCustomAudios": "No custom audio files uploaded yet",
+            "created": "Created",
+            "format": "Format",
+            "enterAudioName": "Enter Audio Name",
+            "audioName": "Audio Name",
+            "audioNamePlaceholder": "Please enter audio name...",
+            "audioNameHint": "Leave empty to use default filename",
+            "nameRequired": "Audio name cannot be empty",
+            "uploading": "Uploading...",
+            "uploadSuccess": "Audio uploaded successfully: ",
+            "deleteConfirm": "Are you sure you want to delete audio \"{name}\"?",
+            "deleteSuccess": "Audio deleted",
+            "enabledChanged": "Audio notification settings updated",
+            "audioSelected": "Audio selected",
+            "testPlaying": "Playing test audio",
+            "audioNotFound": "Selected audio not found"
+        }
+    },
+    "notification": {
+        "title": "Browser Notifications",
+        "settingLabel": "Browser Notifications",
+        "description": "Get notified when new sessions are created (only when in background)",
+        "enabled": "Notifications enabled ✅",
+        "disabled": "Notifications disabled",
+        "permissionRequired": "Notification permission required to enable this feature",
+        "permissionDenied": "Browser has blocked notifications, please allow in browser settings",
+        "permissionGranted": "Granted",
+        "permissionDeniedStatus": "Denied (please modify in browser settings)",
+        "permissionDefault": "Not set",
+        "notSupported": "Your browser does not support notifications",
+        "enableFailed": "Failed to enable notifications",
+        "test": "Send test notification",
+        "testTitle": "Test Notification",
+        "testDescription": "Send a test notification to confirm it's working",
+        "autoplayBlocked": "Browser blocked autoplay, please click the page to enable audio notifications",
+        "triggerTitle": "Notification Trigger Context",
+        "triggerDescription": "Choose when to receive notifications",
+        "triggerModeUpdated": "Notification trigger mode updated",
+        "trigger": {
+            "focusLost": "When window loses focus (switching to other apps)",
+            "tabSwitch": "When switching to other browser tabs",
+            "background": "When window is minimized or hidden",
+            "always": "Always notify (including foreground)"
+        },
+        "browser": {
+            "title": "MCP Feedback - New Session",
+            "ready": "Ready",
+            "unknownProject": "Unknown Project",
+            "testTitle": "Test Notification",
+            "testBody": "This is a test notification, it will close automatically in 5 seconds",
+            "notSupported": "Your browser does not support notifications",
+            "permissionRequired": "Please grant notification permission first",
+            "criticalTitle": "MCP Feedback - Warning"
+        }
+    },
+    "system": {
+        "connectionEstablished": "WebSocket connection established",
+        "connectionLost": "WebSocket connection lost",
+        "connectionReconnecting": "Reconnecting...",
+        "connectionReconnected": "Reconnected",
+        "connectionFailed": "Connection failed",
+        "websocketError": "WebSocket error",
+        "memoryPressure": "Memory pressure cleanup",
+        "shutdown": "System shutdown",
+        "processKilled": "Process killed",
+        "heartbeatStopped": "Heartbeat stopped",
+        "websocketReady": "WebSocket ready"
+    },
+    "session": {
+        "noActiveSession": "No active session",
+        "created": "New MCP session created, page will refresh automatically",
+        "updated": "Session updated",
+        "expired": "Session expired",
+        "timeout": "Session timed out",
+        "cleaned": "Session cleaned",
+        "feedbackSubmitted": "Feedback submitted successfully",
+        "userMessageRecorded": "User message recorded",
+        "historySaved": "Session history saved ({{count}} sessions)",
+        "historyLoaded": "Session history loaded"
+    },
+    "settingsAPI": {
+        "saved": "Settings saved",
+        "loaded": "Settings loaded",
+        "cleared": "Settings cleared",
+        "saveFailed": "Save failed",
+        "loadFailed": "Load failed",
+        "clearFailed": "Clear failed",
+        "setFailed": "Set failed",
+        "invalidValue": "Invalid setting value",
+        "logLevelUpdated": "Log level updated",
+        "invalidLogLevel": "Invalid log level, must be one of DEBUG, INFO, WARN, ERROR"
+    },
+    "file": {
+        "uploadSuccess": "File uploaded successfully",
+        "uploadFailed": "File upload failed",
+        "sizeTooLarge": "File size exceeds limit",
+        "typeNotSupported": "File type not supported",
+        "processing": "Processing file...",
+        "removed": "File removed"
+    },
+    "prompt": {
+        "saved": "Prompt saved",
+        "deleted": "Prompt deleted",
+        "applied": "Prompt applied: {{name}}",
+        "importSuccess": "Prompts imported successfully",
+        "importFailed": "Prompts import failed",
+        "exportSuccess": "Prompts exported successfully",
+        "validationFailed": "Prompt validation failed"
+    },
+    "error": {
+        "generic": "An error occurred: {{error}}",
+        "network": "Network error",
+        "server": "Server error",
+        "timeout": "Operation timed out",
+        "invalidInput": "Invalid input",
+        "operationFailed": "Operation failed",
+        "userMessageFailed": "Failed to add user message",
+        "getSessionsFailed": "Failed to get sessions",
+        "getLogLevelFailed": "Failed to get log level",
+        "command": "Command execution error",
+        "resourceCleanup": "Resource cleanup error",
+        "processing": "Processing error"
+    },
+    "commandStatus": {
+        "executing": "Executing command...",
+        "completed": "Command completed",
+        "failed": "Command failed",
+        "outputReceived": "Output received",
+        "invalid": "Invalid command",
+        "error": "Command execution error"
+    },
+    "utils": {
+        "copySuccess": "Copied to clipboard",
+        "copyError": "Copy failed"
+    },
+    "fileUpload": {
+        "fileSizeExceeded": "Image size exceeds limit ({limit}): {filename}",
+        "maxFilesExceeded": "Maximum {maxFiles} files can be uploaded",
+        "processingFailed": "File processing failed, please retry"
+    },
+    "aria": {
+        "toggleAutoSubmit": "Toggle auto submit",
+        "toggleNotification": "Toggle notification",
+        "toggleAudioNotification": "Toggle audio notification"
+    }
+}

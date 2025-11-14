@@ -1,0 +1,87 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Development tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv*/
+venv*/
+
+
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Others
+.cursor/rules/
+uv.lock
+.mcp_feedback_settings.json
+test_reports/
+
+# Temporary test files
+test_*.py
+
+# User configuration files
+ui_settings.json
+.config/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Rust/Tauri build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock
+src-tauri/WixTools/
+src-tauri/gen/
+
+
+
+
+# Tauri bundle outputs
+src-tauri/target/bundle/
+src-tauri/target/release/bundle/
+
+# Node.js (if using Tauri with frontend framework)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Temporary build files
+*.tmp
+*.temp

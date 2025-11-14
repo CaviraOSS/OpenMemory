@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN" id="html-root">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        :root {
+            /* 深色主題顏色變數 */
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #2d2d30;
+            --bg-tertiary: #252526;
+            --surface-color: #333333;
+            --text-primary: #cccccc;
+            --text-secondary: #9e9e9e;
+            --accent-color: #007acc;
+            --accent-hover: #005a9e;
+            --border-color: #464647;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+            --error-color: #f44336;
+            --info-color: #2196f3;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 等待會話時的樣式 */
+        .waiting-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+
+        .waiting-content {
+            max-width: 600px;
+            padding: 40px;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .waiting-title {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+
+        .waiting-description {
+            color: var(--text-secondary);
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+
+        .waiting-status {
+            padding: 20px;
+            background: rgba(0, 122, 204, 0.1);
+            border: 1px solid var(--accent-color);
+            border-radius: 8px;
+            color: var(--accent-color);
+        }
+
+        /* 連接狀態指示器 */
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .connection-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error-color);
+            transition: all 0.3s ease;
+        }
+
+        .connection-indicator.connected {
+            background: var(--success-color);
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+        }
+
+        .connection-indicator.connecting {
+            background: var(--warning-color);
+            animation: pulse 1s infinite;
+        }
+
+        .connection-indicator.error {
+            background: var(--error-color);
+        }
+
+        .connection-indicator.disconnected {
+            background: var(--text-secondary);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 主容器 - 有會話時顯示 */
+        .main-container {
+            display: none;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            flex-direction: column;
+        }
+
+        .main-container.active {
+            display: flex;
+        }
+
+        /* 回饋界面樣式 */
+        .feedback-container {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 15px 0;
+            margin-bottom: 20px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--accent-color);
+            margin: 0;
+        }
+
+        .project-info {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .ai-summary-section,
+        .feedback-section,
+        .command-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .ai-summary-section h2,
+        .feedback-section h3,
+        .command-section h3 {
+            color: var(--accent-color);
+            margin-bottom: 16px;
+            margin-top: 0;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .text-input,
+        .command-input-line {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            color: var(--text-primary);
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .text-input:focus,
+        .command-input-line:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .command-input-line {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        .command-output {
+            background: #0f0f0f;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--surface-color);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 連接狀態指示器 -->
+    <div class="connection-status">
+        <div class="connection-indicator" id="connectionIndicator"></div>
+        <span id="connectionText">連接中...</span>
+    </div>
+
+    <!-- 等待會話的頁面 -->
+    <div class="waiting-container" id="waitingContainer">
+        <div class="waiting-content">
+            <h1 class="waiting-title">MCP Feedback Enhanced</h1>
+            <p class="waiting-description">
+                Web UI 互動式回饋收集工具
+            </p>
+            <div class="waiting-status">
+                等待 MCP 服務調用以建立回饋會話...
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要回饋界面 -->
+    <div class="main-container" id="mainContainer">
+        <!-- 這裡將動態載入回饋界面內容 -->
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/static/js/i18n.js?v=2025010505"></script>
+    <!-- 載入所有模組 -->
+    <script src="/static/js/modules/utils.js?v=2025010505"></script>
+
+    <script src="/static/js/modules/websocket-manager.js?v=2025010505"></script>
+    <script src="/static/js/modules/image-handler.js?v=2025010505"></script>
+    <script src="/static/js/modules/settings-manager.js?v=2025010505"></script>
+    <script src="/static/js/modules/ui-manager.js?v=2025010505"></script>
+    <script src="/static/js/modules/auto-refresh-manager.js?v=2025010505"></script>
+    <!-- 主應用程式 -->
+    <script src="/static/js/app.js?v=2025010505"></script>
+</body>
+</html>

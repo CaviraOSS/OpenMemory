@@ -1,0 +1,103 @@
+# Pre-commit hooks configuration for mcp-feedback-enhanced
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # 通用檔案檢查
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # 移除行尾空白
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      # 確保檔案以換行符結尾
+      - id: end-of-file-fixer
+      # 檢查合併衝突標記
+      - id: check-merge-conflict
+      # 檢查 YAML 語法
+      - id: check-yaml
+        args: [--unsafe]  # 允許自定義 YAML 標籤
+      # 檢查 TOML 語法
+      - id: check-toml
+      # 檢查 JSON 語法
+      - id: check-json
+      # 檢查是否有大檔案（排除桌面應用二進制文件）
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+        exclude: ^src/mcp_feedback_enhanced/desktop_release/.*\.(exe|mcp-feedback-enhanced-desktop-.*)$
+      # 檢查檔案名稱
+      - id: check-case-conflict
+      # 檢查可執行檔案有 shebang
+      - id: check-executables-have-shebangs
+      # 修復混合行結尾
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  # Ruff - Python linting 和 formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.12
+    hooks:
+      # Ruff linter with auto-fix
+      - id: ruff
+        args: [--fix]
+        types_or: [python, pyi]
+      # Ruff formatter
+      - id: ruff-format
+        types_or: [python, pyi]
+
+  # mypy - 靜態類型檢查（暫時禁用，需要修復類型問題）
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.16.0
+  #   hooks:
+  #     - id: mypy
+  #       additional_dependencies:
+  #         - types-psutil
+  #         - types-aiofiles
+  #       args: [--config-file=pyproject.toml]
+  #       files: ^src/
+  #       exclude: ^tests/
+
+  # 檢查 Python 安全性問題（可選，較嚴格）
+  # - repo: https://github.com/PyCQA/bandit
+  #   rev: 1.7.10
+  #   hooks:
+  #     - id: bandit
+  #       args: ["-c", "pyproject.toml"]
+  #       additional_dependencies: ["bandit[toml]"]
+
+# 全域配置
+default_language_version:
+  python: python3.11
+
+# 排除的檔案和目錄
+exclude: |
+  (?x)^(
+    \.git/|
+    \.venv/|
+    venv/|
+    build/|
+    dist/|
+    node_modules/|
+    \.trunk/|
+    \.mypy_cache/|
+    \.ruff_cache/|
+    \.pytest_cache/|
+    __pycache__/|
+    .*\.egg-info/|
+    tests/fixtures/.*|
+    scripts/.*\.js|
+    src/mcp_feedback_enhanced/web/static/.*
+  )$
+
+# CI 配置
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

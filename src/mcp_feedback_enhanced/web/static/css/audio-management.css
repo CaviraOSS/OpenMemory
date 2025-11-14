@@ -1,0 +1,545 @@
+/**
+ * 音效管理功能樣式
+ * =================
+ * 
+ * 包含音效通知設定相關的所有 UI 樣式
+ * 參考 prompt-management.css 的設計風格
+ */
+
+/* ===== 音效管理區塊樣式 ===== */
+
+/* 音效描述文字 */
+
+.audio-management-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 20px;
+    line-height: 1.4;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* ===== 音效設定控制項樣式 ===== */
+
+.audio-settings-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.audio-setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audio-setting-label {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* ===== 開關控制項樣式 ===== */
+
+.audio-toggle {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+.audio-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ===== 音量控制項樣式 ===== */
+
+.audio-volume-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.audio-volume-slider {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.audio-volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.audio-volume-slider::-webkit-slider-thumb:hover {
+    background: var(--accent-hover);
+    transform: scale(1.1);
+}
+
+.audio-volume-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.audio-volume-slider::-moz-range-thumb:hover {
+    background: var(--accent-hover);
+    transform: scale(1.1);
+}
+
+.audio-volume-slider:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.audio-volume-value {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    min-width: 40px;
+    text-align: right;
+}
+
+/* ===== 音效選擇控制項樣式 ===== */
+
+.audio-select-control {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.audio-select {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.audio-select:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.audio-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.audio-test-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* ===== 檔案上傳控制項樣式 ===== */
+
+.audio-upload-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.audio-upload-btn {
+    align-self: flex-start;
+    padding: 8px 16px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.audio-upload-hint {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-style: italic;
+}
+
+/* ===== 自訂音效列表樣式 ===== */
+
+.audio-custom-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.audio-custom-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.audio-custom-item:hover {
+    border-color: var(--accent-color);
+    background: rgba(0, 122, 204, 0.05);
+}
+
+.audio-custom-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.audio-custom-name {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.audio-custom-meta {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.audio-custom-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.audio-play-btn,
+.audio-delete-btn {
+    padding: 6px 8px;
+    font-size: 12px;
+    min-width: auto;
+    border-radius: 4px;
+}
+
+/* 覆蓋 Bootstrap btn-danger 的預設樣式，使其符合深色主題 */
+.audio-delete-btn.btn-danger {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+}
+
+.audio-play-btn:hover {
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: white;
+}
+
+.audio-delete-btn:hover,
+.audio-delete-btn.btn-danger:hover {
+    background: var(--error-color);
+    border-color: var(--error-color);
+    color: white;
+}
+
+/* ===== 空狀態樣式 ===== */
+
+.audio-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+}
+
+.audio-empty-state div:first-child {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+/* ===== 響應式設計 ===== */
+
+@media (max-width: 768px) {
+    .audio-select-control {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .audio-test-btn {
+        align-self: stretch;
+    }
+    
+    .audio-volume-control {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .audio-volume-value {
+        text-align: center;
+    }
+    
+    .audio-custom-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .audio-custom-actions {
+        justify-content: center;
+    }
+}
+
+/* ===== 動畫效果 ===== */
+
+@keyframes audioFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.audio-custom-item {
+    animation: audioFadeIn 0.3s ease;
+}
+
+/* ===== 無障礙改進 ===== */
+
+.audio-toggle:focus,
+.audio-volume-slider:focus,
+.audio-select:focus,
+.audio-test-btn:focus,
+.audio-upload-btn:focus,
+.audio-play-btn:focus,
+.audio-delete-btn:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* ===== 禁用狀態樣式 ===== */
+
+.audio-setting-item.disabled {
+    opacity: 0.6;
+}
+
+.audio-setting-item.disabled .audio-setting-label {
+    color: var(--text-secondary);
+}
+
+/* ===== 載入狀態樣式 ===== */
+
+.audio-upload-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.audio-upload-btn.loading {
+    position: relative;
+}
+
+.audio-upload-btn.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--text-primary);
+    border-radius: 50%;
+    animation: audioSpin 1s linear infinite;
+}
+
+@keyframes audioSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ===== 成功/錯誤狀態樣式 ===== */
+
+.audio-setting-item.success {
+    border-left: 4px solid var(--success-color);
+    background: rgba(76, 175, 80, 0.05);
+}
+
+.audio-setting-item.error {
+    border-left: 4px solid var(--error-color);
+    background: rgba(244, 67, 54, 0.05);
+}
+
+/* ===== 音效名稱輸入模態框樣式 ===== */
+
+.audio-name-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: audioModalFadeIn 0.2s ease;
+}
+
+.audio-name-modal {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    animation: audioModalSlideIn 0.3s ease;
+}
+
+.audio-name-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.audio-name-modal-header h4 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.audio-name-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.audio-name-modal-close:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.audio-name-modal-body {
+    padding: 24px;
+}
+
+.audio-name-modal-body label {
+    display: block;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.audio-name-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.audio-name-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(0, 122, 204, 0.1);
+}
+
+.audio-name-hint {
+    color: var(--text-secondary);
+    font-size: 12px;
+    margin-top: 8px;
+    font-style: italic;
+}
+
+.audio-name-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px 24px;
+}
+
+.audio-name-modal-footer .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.audio-name-modal-footer .btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.audio-name-modal-footer .btn-secondary:hover {
+    background: var(--bg-tertiary);
+}
+
+.audio-name-modal-footer .btn-primary {
+    background: var(--accent-color);
+    color: white;
+}
+
+.audio-name-modal-footer .btn-primary:hover {
+    background: var(--accent-hover);
+}
+
+/* ===== 模態框動畫 ===== */
+
+@keyframes audioModalFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes audioModalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

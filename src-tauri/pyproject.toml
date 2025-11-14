@@ -1,0 +1,39 @@
+[project]
+name = "mcp-feedback-enhanced-desktop"
+version = "2.4.3"
+description = "Desktop application extension for MCP Feedback Enhanced"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp-feedback-enhanced>=2.4.3"
+]
+
+[project.entry-points.pytauri]
+ext_mod = "mcp_feedback_enhanced_desktop.ext_mod"
+
+[build-system]
+requires = [
+    "setuptools>=61",
+    "setuptools-rust>=1.11.1",
+    "maturin>=1.8.7"
+]
+build-backend = "setuptools.build_meta"
+
+# Maturin 配置
+[tool.maturin]
+# Python 源碼目錄
+python-source = "python"
+# 模組名稱
+module-name = "mcp_feedback_enhanced_desktop.ext_mod"
+# 必要的功能特性
+features = ["pyo3/extension-module", "tauri/custom-protocol"]
+# 使用 Git 作為 sdist 生成器
+sdist-generator = "git"
+# 包含前端資源
+include = [
+    { path = "../src/mcp_feedback_enhanced/web/static/**/*", format = "sdist" }
+]
+
+# 支援 Python 穩定 ABI
+[tool.maturin.abi3]
+enabled = true
+minimum = "3.11"

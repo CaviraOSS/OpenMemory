@@ -1,0 +1,60 @@
+[package]
+name = "mcp-feedback-enhanced-desktop"
+version = "2.4.3"
+edition = "2021"
+rust-version = "1.70"
+description = "Desktop application for MCP Feedback Enhanced using Tauri"
+authors = ["Minidoracat <minidora0702@gmail.com>"]
+license = "MIT"
+
+# 設置 crate 類型為 cdylib，用於 Python 擴展
+[lib]
+name = "mcp_feedback_enhanced_desktop_lib"
+crate-type = ["cdylib"]
+
+# 二進制目標
+[[bin]]
+name = "mcp-feedback-enhanced-desktop"
+path = "src/main.rs"
+
+[dependencies]
+# Tauri 核心依賴
+tauri = { version = "2.2", features = ["custom-protocol"] }
+tauri-plugin-shell = "2.2"
+
+# PyO3 用於 Python 綁定
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+# 序列化支援
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# 異步運行時
+tokio = { version = "1.0", features = ["full"] }
+
+# 日誌記錄
+log = "0.4"
+env_logger = "0.11"
+
+[build-dependencies]
+tauri-build = { version = "2.2", features = [] }
+
+# 開發配置文件
+[profile.dev]
+incremental = true
+debug = true
+
+# 發布配置文件
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+# 專用於打包的配置文件
+[profile.bundle-dev]
+inherits = "dev"
+
+[profile.bundle-release]
+inherits = "release"

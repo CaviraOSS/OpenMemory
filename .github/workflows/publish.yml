@@ -1,0 +1,551 @@
+name: Auto Release to PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type (ignored if custom_version is provided)'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+        - patch    # 2.0.0 -> 2.0.1 (bug fixes, security patches, documentation updates)
+        - minor    # 2.0.0 -> 2.1.0 (new features, enhancements, backward-compatible changes)
+        - major    # 2.0.0 -> 3.0.0 (breaking changes, architecture refactoring, API changes)
+      custom_version:
+        description: 'Custom version number (e.g., 2.5.0) - overrides version_type if provided'
+        required: false
+        type: string
+      include_desktop:
+        description: '是否包含桌面應用二進制文件'
+        required: true
+        default: true
+        type: boolean
+      desktop_build_run_id:
+        description: '桌面應用構建的 Run ID（可選，留空使用最新的成功構建）'
+        required: false
+        type: string
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        version: "latest"
+
+    - name: Set up Python
+      run: uv python install
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install dependencies
+      run: |
+        uv sync --dev
+
+    - name: Configure Git
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+
+    - name: Commit dependency changes if any
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          git add .
+          git commit -m "📦 Update dependencies" || true
+        fi
+
+    - name: Get current version
+      id: current_version
+      run: |
+        CURRENT_VERSION=$(grep '^version =' pyproject.toml | cut -d'"' -f2)
+        echo "current=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        echo "Current version: $CURRENT_VERSION"
+
+    - name: Determine new version
+      id: bump_version
+      run: |
+        CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+
+        if [ -n "$CUSTOM_VERSION" ]; then
+          echo "🎯 Using custom version: $CUSTOM_VERSION"
+
+          # Validate version format (basic semver check)
+          if [[ ! "$CUSTOM_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Custom version must be in format X.Y.Z (e.g., 2.5.0)"
+            exit 1
+          fi
+
+          # Update version in pyproject.toml
+          sed -i "s/^version = \".*\"/version = \"$CUSTOM_VERSION\"/" pyproject.toml
+
+          # Update version in .bumpversion.cfg
+          sed -i "s/^current_version = .*/current_version = $CUSTOM_VERSION/" .bumpversion.cfg
+
+          NEW_VERSION="$CUSTOM_VERSION"
+          echo "✅ Set custom version: $NEW_VERSION"
+        else
+          echo "🔄 Using automatic version bump: ${{ github.event.inputs.version_type }}"
+          uv run bump2version --allow-dirty ${{ github.event.inputs.version_type }}
+          NEW_VERSION=$(grep '^version =' pyproject.toml | cut -d'"' -f2)
+          echo "✅ Bumped version to: $NEW_VERSION"
+        fi
+
+        echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+        echo "New version: $NEW_VERSION"
+
+    - name: Update __init__.py version
+      run: |
+        NEW_VERSION="${{ steps.bump_version.outputs.new }}"
+        sed -i "s/__version__ = \".*\"/__version__ = \"$NEW_VERSION\"/" src/mcp_feedback_enhanced/__init__.py
+
+    - name: Extract Release Highlights
+      id: extract_highlights
+      run: |
+        NEW_VERSION="v${{ steps.bump_version.outputs.new }}"
+
+        # Extract highlights from English CHANGELOG
+        if [ -f "RELEASE_NOTES/CHANGELOG.en.md" ]; then
+          echo "🔍 Extracting highlights for $NEW_VERSION from CHANGELOG..."
+
+          # Step 1: Find the version section and extract everything until next version
+          sed -n "/## \[${NEW_VERSION}\]/,/## \[/p" RELEASE_NOTES/CHANGELOG.en.md | head -n -1 > version_section.txt
+
+          # Step 2: Try to extract highlights section
+          if grep -q "### 🌟 Highlights" version_section.txt; then
+            echo "📝 Found Highlights section"
+            sed -n '/### 🌟 Highlights/,/### /p' version_section.txt | head -n -1 | tail -n +2 | grep -E "^[^#]" | head -5 > highlights.txt
+          elif grep -q "### ✨ New Features" version_section.txt; then
+            echo "📝 Using New Features section as highlights"
+            sed -n '/### ✨ New Features/,/### /p' version_section.txt | head -n -1 | tail -n +2 | grep -E "^- " | head -4 > highlights.txt
+          else
+            echo "⚠️ No highlights or new features section found"
+            echo "" > highlights.txt
+          fi
+
+          # Clean up temporary file
+          rm -f version_section.txt
+
+          # Check if we got any content
+          if [ -s highlights.txt ]; then
+            echo "✅ Successfully extracted highlights for $NEW_VERSION"
+            echo "📄 Content preview:"
+            head -2 highlights.txt
+          else
+            echo "⚠️ No highlights extracted, using default content"
+            echo "- 🚀 New features and improvements" > highlights.txt
+            echo "- 🐛 Bug fixes and optimizations" >> highlights.txt
+          fi
+        else
+          echo "⚠️ CHANGELOG.en.md not found, using default highlights"
+          echo "- 🚀 New features and improvements" > highlights.txt
+          echo "- 🐛 Bug fixes and optimizations" >> highlights.txt
+        fi
+
+    - name: Generate Release Body
+      id: release_body
+      run: |
+        NEW_VERSION="v${{ steps.bump_version.outputs.new }}"
+
+        # Get release title from English CHANGELOG
+        if [ -f "RELEASE_NOTES/CHANGELOG.en.md" ]; then
+          RELEASE_TITLE=$(grep "## \[${NEW_VERSION}\]" RELEASE_NOTES/CHANGELOG.en.md | head -1 | sed 's/## \[.*\] - //')
+        fi
+        if [ -z "$RELEASE_TITLE" ]; then
+          RELEASE_TITLE="Latest Release"
+        fi
+
+        # Create release body header
+        echo "# Release ${NEW_VERSION} - ${RELEASE_TITLE}" > release_body.md
+        echo "" >> release_body.md
+        echo "## 🌟 Key Highlights" >> release_body.md
+
+        # Add highlights
+        if [ -s highlights.txt ]; then
+          cat highlights.txt >> release_body.md
+        else
+          echo "- 🚀 New features and improvements" >> release_body.md
+          echo "- 🐛 Bug fixes and optimizations" >> release_body.md
+        fi
+
+        # Add multi-language links section
+        echo "" >> release_body.md
+        echo "## 🌐 Detailed Release Notes" >> release_body.md
+        echo "" >> release_body.md
+        echo "### 🇺🇸 English" >> release_body.md
+        echo "📖 **[View Complete English Release Notes](https://github.com/Minidoracat/mcp-feedback-enhanced/blob/main/RELEASE_NOTES/CHANGELOG.en.md)**" >> release_body.md
+        echo "" >> release_body.md
+        echo "### 🇹🇼 繁體中文" >> release_body.md
+        echo "📖 **[查看完整繁體中文發布說明](https://github.com/Minidoracat/mcp-feedback-enhanced/blob/main/RELEASE_NOTES/CHANGELOG.zh-TW.md)**" >> release_body.md
+        echo "" >> release_body.md
+        echo "### 🇨🇳 简体中文" >> release_body.md
+        echo "📖 **[查看完整简体中文发布说明](https://github.com/Minidoracat/mcp-feedback-enhanced/blob/main/RELEASE_NOTES/CHANGELOG.zh-CN.md)**" >> release_body.md
+        echo "" >> release_body.md
+        echo "---" >> release_body.md
+        echo "" >> release_body.md
+        echo "## 📦 Quick Installation / 快速安裝" >> release_body.md
+        echo "" >> release_body.md
+        echo '```bash' >> release_body.md
+        echo "# Latest version / 最新版本" >> release_body.md
+        echo "uvx mcp-feedback-enhanced@latest" >> release_body.md
+        echo "" >> release_body.md
+        echo "# This specific version / 此特定版本" >> release_body.md
+        echo "uvx mcp-feedback-enhanced@${NEW_VERSION}" >> release_body.md
+        echo '```' >> release_body.md
+        echo "" >> release_body.md
+        echo "## 🔗 Links" >> release_body.md
+        echo "- **Documentation**: [README.md](https://github.com/Minidoracat/mcp-feedback-enhanced/blob/main/README.md)" >> release_body.md
+        echo "- **Full Changelog**: [CHANGELOG](https://github.com/Minidoracat/mcp-feedback-enhanced/blob/main/RELEASE_NOTES/)" >> release_body.md
+        echo "- **Issues**: [GitHub Issues](https://github.com/Minidoracat/mcp-feedback-enhanced/issues)" >> release_body.md
+        echo "" >> release_body.md
+        echo "---" >> release_body.md
+        echo "**Release automatically generated from CHANGELOG system** 🤖" >> release_body.md
+
+        echo "Release body generated successfully"
+
+    - name: Verify CHANGELOG Files
+      run: |
+        NEW_VERSION="v${{ steps.bump_version.outputs.new }}"
+
+        # Check if CHANGELOG files exist and contain the new version
+        echo "🔍 Verifying CHANGELOG files contain version ${NEW_VERSION}..."
+
+        MISSING_FILES=""
+
+        if [ -f "RELEASE_NOTES/CHANGELOG.en.md" ]; then
+          if ! grep -q "\[${NEW_VERSION}\]" "RELEASE_NOTES/CHANGELOG.en.md"; then
+            echo "⚠️ Warning: ${NEW_VERSION} not found in CHANGELOG.en.md"
+            MISSING_FILES="${MISSING_FILES} en"
+          else
+            echo "✅ Found ${NEW_VERSION} in CHANGELOG.en.md"
+          fi
+        else
+          echo "❌ CHANGELOG.en.md not found"
+          MISSING_FILES="${MISSING_FILES} en"
+        fi
+
+        if [ -f "RELEASE_NOTES/CHANGELOG.zh-TW.md" ]; then
+          if ! grep -q "\[${NEW_VERSION}\]" "RELEASE_NOTES/CHANGELOG.zh-TW.md"; then
+            echo "⚠️ Warning: ${NEW_VERSION} not found in CHANGELOG.zh-TW.md"
+            MISSING_FILES="${MISSING_FILES} zh-TW"
+          else
+            echo "✅ Found ${NEW_VERSION} in CHANGELOG.zh-TW.md"
+          fi
+        else
+          echo "❌ CHANGELOG.zh-TW.md not found"
+          MISSING_FILES="${MISSING_FILES} zh-TW"
+        fi
+
+        if [ -f "RELEASE_NOTES/CHANGELOG.zh-CN.md" ]; then
+          if ! grep -q "\[${NEW_VERSION}\]" "RELEASE_NOTES/CHANGELOG.zh-CN.md"; then
+            echo "⚠️ Warning: ${NEW_VERSION} not found in CHANGELOG.zh-CN.md"
+            MISSING_FILES="${MISSING_FILES} zh-CN"
+          else
+            echo "✅ Found ${NEW_VERSION} in CHANGELOG.zh-CN.md"
+          fi
+        else
+          echo "❌ CHANGELOG.zh-CN.md not found"
+          MISSING_FILES="${MISSING_FILES} zh-CN"
+        fi
+
+        if [ -n "$MISSING_FILES" ]; then
+          echo ""
+          echo "📝 Note: Please ensure CHANGELOG files are updated with version ${NEW_VERSION}"
+          echo "Missing or incomplete files:${MISSING_FILES}"
+          echo "The release will continue, but manual CHANGELOG updates may be needed."
+        else
+          echo "✅ All CHANGELOG files verified successfully"
+        fi
+
+    - name: Commit version bump
+      run: |
+        CUSTOM_VERSION="${{ github.event.inputs.custom_version }}"
+        VERSION_METHOD=""
+
+        if [ -n "$CUSTOM_VERSION" ]; then
+          VERSION_METHOD="Custom version specified: $CUSTOM_VERSION"
+        else
+          VERSION_METHOD="Auto-bumped (${{ github.event.inputs.version_type }})"
+        fi
+
+        git add .
+        git commit -m "🔖 Release v${{ steps.bump_version.outputs.new }}
+
+        - Updated version to ${{ steps.bump_version.outputs.new }}
+        - $VERSION_METHOD
+        - Auto-generated release from workflow"
+        git tag "v${{ steps.bump_version.outputs.new }}"
+
+    - name: Check desktop build availability
+      if: ${{ github.event.inputs.include_desktop == 'true' }}
+      id: check_desktop
+      run: |
+        echo "🔍 檢查桌面應用構建可用性..."
+
+        # 如果指定了 run_id，使用指定的構建
+        if [ -n "${{ github.event.inputs.desktop_build_run_id }}" ]; then
+          echo "🎯 使用指定的構建 Run ID: ${{ github.event.inputs.desktop_build_run_id }}"
+          echo "run_id=${{ github.event.inputs.desktop_build_run_id }}" >> $GITHUB_OUTPUT
+        else
+          echo "🔍 查找最新的成功桌面構建..."
+
+          # 使用 GitHub API 查找最新的成功構建
+          LATEST_RUN=$(curl -s \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/build-desktop.yml/runs?status=success&per_page=1" \
+            | jq -r '.workflow_runs[0].id // empty')
+
+          if [ -n "$LATEST_RUN" ] && [ "$LATEST_RUN" != "null" ]; then
+            echo "✅ 找到最新成功構建: $LATEST_RUN"
+            echo "run_id=$LATEST_RUN" >> $GITHUB_OUTPUT
+          else
+            echo "❌ 沒有找到成功的桌面構建"
+            echo "💡 請先運行 'Build Desktop Applications' 工作流程"
+            exit 1
+          fi
+        fi
+
+    - name: Check desktop applications in Git
+      if: ${{ github.event.inputs.include_desktop == 'true' }}
+      run: |
+        echo "🔍 檢查 Git 中的桌面應用程式二進制檔案..."
+
+        if [ -d "src/mcp_feedback_enhanced/desktop_release" ]; then
+          echo "📁 桌面應用目錄內容："
+          ls -la src/mcp_feedback_enhanced/desktop_release/
+
+          # 檢查是否有二進制文件
+          BINARY_COUNT=$(find src/mcp_feedback_enhanced/desktop_release -name "mcp-feedback-enhanced-desktop*" -type f | wc -l)
+          echo "📊 找到 $BINARY_COUNT 個桌面二進制文件"
+
+          if [ $BINARY_COUNT -eq 0 ]; then
+            echo "❌ 沒有找到桌面二進制文件"
+            echo "💡 請先運行 'Build Desktop Applications' 工作流程"
+            echo "   該工作流程會自動構建並提交桌面二進制文件到 Git"
+            exit 1
+          elif [ $BINARY_COUNT -lt 4 ]; then
+            echo "⚠️ 桌面二進制文件不完整 ($BINARY_COUNT/4)"
+            echo "💡 請重新運行 'Build Desktop Applications' 工作流程"
+            echo "   確保所有 4 個平台都構建成功"
+            exit 1
+          else
+            echo "✅ 桌面二進制文件完整 ($BINARY_COUNT/4)"
+          fi
+        else
+          echo "❌ 桌面應用目錄不存在"
+          echo "💡 請先運行 'Build Desktop Applications' 工作流程"
+          echo "   該工作流程會自動構建並提交桌面二進制文件到 Git"
+          exit 1
+        fi
+
+    - name: Validate desktop binaries
+      if: ${{ github.event.inputs.include_desktop == 'true' }}
+      run: |
+        echo "🔍 驗證桌面應用二進制文件..."
+
+        if [ ! -d "src/mcp_feedback_enhanced/desktop_release" ]; then
+          echo "❌ 桌面應用目錄不存在"
+          exit 1
+        fi
+
+        # 檢查各平台文件
+        PLATFORMS=(
+          "mcp-feedback-enhanced-desktop.exe:Windows"
+          "mcp-feedback-enhanced-desktop-macos-intel:macOS Intel"
+          "mcp-feedback-enhanced-desktop-macos-arm64:macOS ARM64"
+          "mcp-feedback-enhanced-desktop-linux:Linux"
+        )
+
+        VALID_COUNT=0
+        for platform_info in "${PLATFORMS[@]}"; do
+          IFS=':' read -r filename description <<< "$platform_info"
+          filepath="src/mcp_feedback_enhanced/desktop_release/$filename"
+
+          if [ -f "$filepath" ]; then
+            filesize=$(stat -f%z "$filepath" 2>/dev/null || stat -c%s "$filepath" 2>/dev/null || echo "0")
+            if [ "$filesize" -gt 1000000 ]; then  # 至少 1MB
+              echo "✅ $description: $filename (${filesize} bytes)"
+              VALID_COUNT=$((VALID_COUNT + 1))
+            else
+              echo "⚠️ $description: $filename 文件太小 (${filesize} bytes)"
+            fi
+          else
+            echo "❌ $description: $filename 不存在"
+          fi
+        done
+
+        echo ""
+        echo "📊 驗證結果: $VALID_COUNT/4 個平台有效"
+
+        if [ $VALID_COUNT -eq 0 ]; then
+          echo "❌ 沒有有效的桌面應用二進制文件"
+          echo "💡 建議："
+          echo "  1. 檢查 'Build Desktop Applications' 工作流程是否成功"
+          echo "  2. 確認指定的 Run ID 是否正確"
+          echo "  3. 或者設置 include_desktop 為 false"
+          exit 1
+        elif [ $VALID_COUNT -lt 4 ]; then
+          echo "❌ 不是所有平台都有效，無法保證完整的多平台支援"
+          echo "📋 要求：桌面應用必須支援所有 4 個平台"
+          echo "  - Windows x64"
+          echo "  - macOS Intel"
+          echo "  - macOS Apple Silicon"
+          echo "  - Linux x64"
+          echo ""
+          echo "🔧 解決方案："
+          echo "  1. 重新運行 'Build Desktop Applications' 工作流程"
+          echo "  2. 確保所有平台都構建成功且文件大小正常"
+          echo "  3. 或者設置 include_desktop 為 false（僅發佈 Web 版本）"
+          exit 1
+        else
+          echo "✅ 所有 4 個平台都驗證通過，可以發佈完整的多平台桌面應用"
+        fi
+
+    - name: Skip desktop applications
+      if: ${{ github.event.inputs.include_desktop != 'true' }}
+      run: |
+        echo "⏭️ 跳過桌面應用，僅發佈 Web 版本"
+        echo "💡 用戶將只能使用 Web 模式，無法使用桌面模式"
+
+    - name: Prepare package for build
+      run: |
+        echo "🔧 準備包構建..."
+
+        # 確保桌面應用目錄存在（即使是空的）
+        mkdir -p src/mcp_feedback_enhanced/desktop_release
+
+        # 如果沒有包含桌面應用，創建一個說明文件
+        if [ "${{ github.event.inputs.include_desktop }}" != "true" ] || [ ! -f "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop.exe" ]; then
+          echo "🔍 桌面應用未包含，創建說明文件..."
+          cat > src/mcp_feedback_enhanced/desktop_release/README.md << 'EOF'
+        # 桌面應用程式
+
+        此版本不包含桌面應用程式二進制檔案。
+
+        ## 使用方式
+
+        僅支援 Web 模式
+        uvx mcp-feedback-enhanced test --web
+
+        如需桌面應用支援，請使用包含桌面應用的版本。
+        EOF
+        else
+          echo "✅ 桌面應用已包含"
+        fi
+
+        # 確保 __init__.py 存在
+        if [ ! -f "src/mcp_feedback_enhanced/desktop_release/__init__.py" ]; then
+          echo '"""桌面應用程式二進制檔案"""' > src/mcp_feedback_enhanced/desktop_release/__init__.py
+        fi
+
+        echo "📁 桌面應用目錄內容："
+        ls -la src/mcp_feedback_enhanced/desktop_release/
+
+
+
+    - name: Build package
+      run: uv build
+
+    - name: Check package
+      run: uv run twine check dist/*
+
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
+
+
+
+    - name: Push changes and tags
+      run: |
+        git push origin main
+        git push origin "v${{ steps.bump_version.outputs.new }}"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: "v${{ steps.bump_version.outputs.new }}"
+        name: "Release v${{ steps.bump_version.outputs.new }}"
+        body_path: release_body.md
+        draft: false
+        prerelease: false
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Summary
+      run: |
+        echo "🎉 Release v${{ steps.bump_version.outputs.new }} completed successfully!"
+        echo ""
+        echo "📦 Published to PyPI: https://pypi.org/project/mcp-feedback-enhanced/"
+        echo "🚀 GitHub Release: https://github.com/Minidoracat/mcp-feedback-enhanced/releases/tag/v${{ steps.bump_version.outputs.new }}"
+        echo "📝 Release notes generated from CHANGELOG files"
+        echo ""
+
+        # 顯示桌面應用狀態
+        if [ "${{ github.event.inputs.include_desktop }}" = "true" ]; then
+          echo "🖥️ 桌面應用狀態："
+          if [ -d "src/mcp_feedback_enhanced/desktop_release" ] && [ -n "$(ls -A src/mcp_feedback_enhanced/desktop_release 2>/dev/null)" ]; then
+            echo "  ✅ 桌面應用已包含在發佈中"
+            echo "  📱 支援的平台："
+
+            # 檢查各平台並顯示文件大小
+            if [ -f "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop.exe" ]; then
+              size=$(stat -f%z "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop.exe" 2>/dev/null || stat -c%s "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop.exe" 2>/dev/null || echo "unknown")
+              echo "    - ✅ Windows x64 (${size} bytes)"
+            else
+              echo "    - ❌ Windows x64 (缺失)"
+            fi
+
+            if [ -f "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-intel" ]; then
+              size=$(stat -f%z "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-intel" 2>/dev/null || stat -c%s "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-intel" 2>/dev/null || echo "unknown")
+              echo "    - ✅ macOS Intel (${size} bytes)"
+            else
+              echo "    - ❌ macOS Intel (缺失)"
+            fi
+
+            if [ -f "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-arm64" ]; then
+              size=$(stat -f%z "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-arm64" 2>/dev/null || stat -c%s "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-macos-arm64" 2>/dev/null || echo "unknown")
+              echo "    - ✅ macOS Apple Silicon (${size} bytes)"
+            else
+              echo "    - ❌ macOS Apple Silicon (缺失)"
+            fi
+
+            if [ -f "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-linux" ]; then
+              size=$(stat -f%z "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-linux" 2>/dev/null || stat -c%s "src/mcp_feedback_enhanced/desktop_release/mcp-feedback-enhanced-desktop-linux" 2>/dev/null || echo "unknown")
+              echo "    - ✅ Linux x64 (${size} bytes)"
+            else
+              echo "    - ❌ Linux x64 (缺失)"
+            fi
+
+            echo "  🔗 構建來源: Run ID ${{ steps.check_desktop.outputs.run_id }}"
+          else
+            echo "  ⚠️ 桌面應用未包含（可能構建失敗）"
+          fi
+        else
+          echo "🖥️ 桌面應用狀態：⏭️ 已跳過（僅 Web 版本）"
+        fi
+
+        echo ""
+        echo "✅ Next steps:"
+        echo "  - Check the release on GitHub"
+        echo "  - Verify the package on PyPI"
+        echo "  - Test installation with: uvx mcp-feedback-enhanced@v${{ steps.bump_version.outputs.new }}"
+        if [ "${{ github.event.inputs.include_desktop }}" = "true" ]; then
+          echo "  - Test desktop mode with: uvx mcp-feedback-enhanced@v${{ steps.bump_version.outputs.new }} test --desktop"
+        fi
+        echo ""
+        echo "📋 Note: Make sure CHANGELOG files are updated for future releases"

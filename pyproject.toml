@@ -1,0 +1,315 @@
+[project]
+name = "mcp-feedback-enhanced"
+version = "2.6.0"
+description = "Enhanced MCP server for interactive user feedback and command execution in AI-assisted development, featuring dual interface support (Web UI and Desktop Application) with intelligent environment detection and cross-platform compatibility."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Minidoracat", email = "minidora0702@gmail.com" }
+]
+keywords = ["mcp", "ai", "feedback", "web-ui", "desktop-app", "interactive", "development", "cross-platform", "tauri", "dual-interface"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: User Interfaces",
+    "Topic :: Desktop Environment",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Operating System :: OS Independent",
+    "Environment :: Web Environment",
+    "Environment :: X11 Applications",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: MacOS X",
+]
+dependencies = [
+    "fastmcp>=2.0.0",
+    "psutil>=7.0.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+    "jinja2>=3.1.0",
+    "websockets>=13.0.0",
+    "aiohttp>=3.8.0",
+    "mcp>=1.9.3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Minidoracat/mcp-feedback-enhanced"
+Repository = "https://github.com/Minidoracat/mcp-feedback-enhanced"
+Issues = "https://github.com/Minidoracat/mcp-feedback-enhanced/issues"
+
+[project.scripts]
+mcp-feedback-enhanced = "mcp_feedback_enhanced.__main__:main"
+interactive-feedback-mcp = "mcp_feedback_enhanced.__main__:main"
+
+[build-system]
+requires = [
+    "hatchling",
+    "maturin>=1.8.7",
+    "setuptools-rust>=1.11.1"
+]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_feedback_enhanced"]
+
+# 桌面應用程式二進制檔案現在直接存儲在 Git 中
+# 由 build-desktop.yml 工作流程自動構建並提交
+
+[tool.uv]
+dev-dependencies = [
+    "bump2version>=1.0.1",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-timeout>=2.1.0",
+    "twine>=6.1.0",
+    "ruff>=0.11.0",
+    "mypy>=1.16.0",
+    "pre-commit>=4.0.0",
+    "maturin>=1.8.7",
+    "setuptools-rust>=1.11.1",
+    "pillow>=11.2.1",
+]
+
+# ===== Ruff 配置 =====
+[tool.ruff]
+# 目標 Python 版本
+target-version = "py311"
+
+# 程式碼行長度
+line-length = 88
+
+# 包含的檔案模式
+include = ["*.py", "*.pyi", "**/pyproject.toml"]
+
+# 排除的檔案和目錄
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+
+    "venv",
+    "*.egg-info",
+    ".trunk",
+]
+
+[tool.ruff.lint]
+# 啟用的規則集
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "C90",    # mccabe
+    "T20",    # flake8-print
+    "TID",    # flake8-tidy-imports
+    "ICN",    # flake8-import-conventions
+    "RET",    # flake8-return
+    "SIM",    # flake8-simplify
+    "S",      # bandit (安全檢查)
+    "A",      # flake8-builtins
+    "COM",    # flake8-commas
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific rules
+]
+
+# 忽略的規則 - 2024-12-19 更新：經過三階段程式碼品質改善
+ignore = [
+    # === 格式化和工具衝突 ===
+    "E501",   # 行長度由 formatter 處理
+    "COM812",  # 避免與 formatter 衝突
+    "COM819",  # 避免與 formatter 衝突
+
+    # === 測試和調試 ===
+    "S101",   # 允許使用 assert（測試中必要）
+    "T201",    # 允許 print 語句（調試和腳本中使用）
+
+    # === 安全相關（已針對性處理）===
+    "S603",   # 允許 subprocess 調用（已安全處理，僅限必要場景）
+    "S607",   # 允許部分路徑執行（已安全處理，僅限必要場景）
+    "S108",    # 允許臨時文件路徑（resource_manager 中安全使用）
+
+    # === 中文項目特殊需求 ===
+    "RUF001",  # 允許全角字符（中文項目必要）
+    "RUF002",  # 允許全角字符（中文項目必要）
+    "RUF003",  # 允許全角字符（中文項目必要）
+
+    # === 複雜度控制（合理範圍內）===
+    "PLR0913", # 允許多參數函數（API 設計需要）
+    "PLR0912", # 允許多分支（狀態機等複雜邏輯）
+    "PLR0911", # 允許多返回語句（早期返回模式）
+    "PLR0915", # 允許函數語句過多（複雜業務邏輯）
+    "PLR2004", # 允許魔術數字（配置值等）
+    "C901",    # 允許複雜函數（核心業務邏輯）
+
+    # === 待重構項目（下個版本處理）===
+    "E402",    # 模組級導入不在頂部（1個錯誤，需要重構導入順序）
+    "E722",    # 裸露 except（18個錯誤，需要指定異常類型）
+    "ARG001",  # 未使用函數參數（4個錯誤，需要重構接口）
+    "ARG002",  # 未使用方法參數（4個錯誤，需要重構接口）
+    "SIM105",  # try-except-pass（6個錯誤，可用 contextlib.suppress）
+    "RUF006",  # 未儲存 asyncio.create_task 返回值（3個錯誤）
+
+    # === 架構設計相關（長期保留）===
+    "TID252",  # 相對導入（模組架構設計）
+    "B007",    # 未使用循環變數（某些算法中正常）
+    "SIM102",  # 嵌套 if（可讀性優於簡潔性）
+    "SIM103",  # 複雜條件（業務邏輯清晰性）
+    "SIM108",  # if-else vs 三元運算子（可讀性選擇）
+    "SIM110",  # for 迴圈 vs any()（性能和可讀性平衡）
+    "SIM117",  # 嵌套 with（資源管理模式）
+    "RET504",  # 不必要賦值（調試和可讀性）
+    "RUF005",  # 列表連接（性能不敏感場景）
+    "RUF012",  # 可變類別屬性（設計模式需要）
+    "RUF013",  # 隱式 Optional（漸進式類型註解）
+    "S110",    # try-except-pass（錯誤恢復模式）
+    "E712",    # 布林比較（明確性優於簡潔性）
+    "PLW0603", # global 語句（單例模式等）
+    "A002",    # 遮蔽內建函數名稱（領域特定命名）
+]
+
+# 每個檔案的最大複雜度
+mccabe.max-complexity = 10
+
+[tool.ruff.lint.per-file-ignores]
+# 測試檔案的特殊規則
+"tests/**/*.py" = [
+    "S101",    # 測試中允許 assert
+    "ARG",     # 測試中允許未使用參數
+    "FBT",     # 測試中允許布林參數
+    "PLR2004", # 測試中允許魔術數字
+    "S311",    # 測試中允許偽隨機生成器
+]
+
+# __init__.py 檔案的特殊規則
+"__init__.py" = [
+    "F401",    # 允許未使用的導入
+]
+
+# 腳本檔案的特殊規則
+"scripts/**/*.py" = [
+    "T201",    # 腳本中允許 print
+    "S602",    # 腳本中允許 shell 調用（腳本環境相對安全）
+    "S603",    # 腳本中允許 subprocess 調用
+    "S607",    # 腳本中允許部分路徑執行
+]
+
+# Web 模組的特殊規則（需要更嚴格的安全檢查）
+"src/mcp_feedback_enhanced/web/**/*.py" = [
+    "S104",    # 允許綁定 127.0.0.1（本地開發安全）
+]
+
+[tool.ruff.format]
+# 使用雙引號
+quote-style = "double"
+
+# 縮排樣式
+indent-style = "space"
+
+# 跳過魔術逗號
+skip-magic-trailing-comma = false
+
+# 行結尾
+line-ending = "auto"
+
+[tool.ruff.lint.isort]
+# import 排序配置
+known-first-party = ["mcp_feedback_enhanced"]
+force-single-line = false
+lines-after-imports = 2
+
+# ===== mypy 配置 =====
+[tool.mypy]
+# Python 版本
+python_version = "3.11"
+
+# 基本設定 - 2024-12-19 更新：經過三階段改善，74% 錯誤已修復
+warn_return_any = true
+warn_unused_configs = true
+# 漸進式啟用：核心模組已達到類型安全標準，剩餘26個錯誤主要為第三方庫問題
+disallow_untyped_defs = false  # 目標：下個版本啟用
+disallow_incomplete_defs = false  # 目標：下個版本啟用
+check_untyped_defs = true
+disallow_untyped_decorators = false  # 漸進式啟用
+
+# 嚴格模式（漸進式啟用）
+strict_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+# 錯誤格式
+show_error_codes = true
+show_column_numbers = true
+pretty = true
+
+# 包含和排除 - 使用最佳實踐配置
+files = ["src", "tests"]
+exclude = [
+    "build/",
+    "dist/",
+    ".venv/",
+    "venv/",
+    ".trunk/",
+
+    ".mypy_cache/",
+]
+
+# 最佳實踐：明確指定包基礎路徑
+explicit_package_bases = true
+# 設置 mypy 路徑，確保正確的模組解析
+mypy_path = ["src"]
+# 忽略已安裝的包，只檢查源代碼
+no_site_packages = true
+
+# 第三方庫配置
+[[tool.mypy.overrides]]
+module = [
+    "fastmcp.*",
+    "mcp.*",
+    "psutil.*",
+    "uvicorn.*",
+    "websockets.*",
+    "aiohttp.*",
+    "fastapi.*",
+    "pydantic.*",
+    "pytest.*",
+]
+ignore_missing_imports = true
+
+# 測試檔案的寬鬆配置
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
