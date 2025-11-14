@@ -47,7 +47,7 @@ report.services.main_mcp.tools = [
             { name: "user_id", type: "string", required: false, description: "Isolate results to specific user identifier" }
         ],
         returns: "Memory search results with scores and content",
-        related_api: "POST /api/memory/query"
+        related_api: "POST /memory/query"
     },
     {
         name: "openmemory_store",
@@ -59,7 +59,7 @@ report.services.main_mcp.tools = [
             { name: "user_id", type: "string", required: false, description: "Associate memory with specific user identifier" }
         ],
         returns: "Stored memory ID and sector assignments",
-        related_api: "POST /api/memory/store"
+        related_api: "POST /memory/add"
     },
     {
         name: "openmemory_reinforce",
@@ -69,7 +69,7 @@ report.services.main_mcp.tools = [
             { name: "boost", type: "number", required: false, default: 0.1, description: "Salience boost amount (0.01-1)" }
         ],
         returns: "Confirmation of reinforcement",
-        related_api: "POST /api/memory/reinforce"
+        related_api: "POST /memory/reinforce"
     },
     {
         name: "openmemory_list",
@@ -80,7 +80,7 @@ report.services.main_mcp.tools = [
             { name: "user_id", type: "string", required: false, description: "Restrict results to specific user identifier" }
         ],
         returns: "List of memory summaries with metadata",
-        related_api: "GET /api/memories"
+        related_api: "GET /memory/all"
     },
     {
         name: "openmemory_get",
@@ -91,7 +91,7 @@ report.services.main_mcp.tools = [
             { name: "user_id", type: "string", required: false, description: "Validate ownership against specific user identifier" }
         ],
         returns: "Complete memory data including content and metadata",
-        related_api: "GET /api/memory/{id}"
+        related_api: "GET /memory/{id}"
     }
 ];
 
@@ -167,7 +167,7 @@ report.services.proxy_mcp.tools = [
             { name: "api_key", type: "string", required: false, description: "Agent's API key for authentication" }
         ],
         returns: "Namespace-scoped memory search results",
-        related_api: "POST /api/memory/query"
+        related_api: "POST /memory/query"
     },
     {
         name: "store_memory",
@@ -182,7 +182,7 @@ report.services.proxy_mcp.tools = [
             { name: "api_key", type: "string", required: false, description: "Agent's API key" }
         ],
         returns: "Storage confirmation with memory ID",
-        related_api: "POST /api/memory/store"
+        related_api: "POST /memory/add"
     },
     {
         name: "reinforce_memory",
@@ -193,7 +193,7 @@ report.services.proxy_mcp.tools = [
             { name: "api_key", type: "string", required: false, description: "Agent's API key" }
         ],
         returns: "Reinforcement confirmation",
-        related_api: "POST /api/memory/reinforce"
+        related_api: "POST /memory/reinforce"
     }
 ];
 
@@ -300,7 +300,7 @@ report.rest_apis = [
     },
     {
         method: "POST",
-        endpoint: "/api/memory/store",
+        endpoint: "/memory/add",
         description: "Store new memory",
         service: "Main Backend",
         port: 8080,
@@ -309,7 +309,7 @@ report.rest_apis = [
     },
     {
         method: "POST",
-        endpoint: "/api/memory/query",
+        endpoint: "/memory/query",
         description: "Query memories",
         service: "Main Backend",
         port: 8080,
@@ -318,7 +318,7 @@ report.rest_apis = [
     },
     {
         method: "GET",
-        endpoint: "/api/memory/{id}",
+        endpoint: "/memory/{id}",
         description: "Get specific memory",
         service: "Main Backend",
         port: 8080,
@@ -327,8 +327,8 @@ report.rest_apis = [
     },
     {
         method: "GET",
-        endpoint: "/api/memories",
-        description: "List recent memories",
+        endpoint: "/memory/all",
+        description: "List memories (supports optional user_id filter)",
         service: "Main Backend",
         port: 8080,
         authentication: "Optional (x-api-key header)",

@@ -94,8 +94,9 @@ The report generator creates two files in `.tmp/`:
 | `GET` | `/api/namespaces` | List namespaces |
 | `GET` | `/api/proxy-info` | Proxy service info |
 | `GET` | `/api/proxy-health` | Health check |
-| `POST` | `/api/memory/store` | Store memories |
-| `POST` | `/api/memory/query` | Query memories |
+| `POST` | `/memory/add` | Store memories |
+| `POST` | `/memory/query` | Query memories |
+| `GET` | `/memory/all` | List memories (optional `user_id` filter) |
 
 ## Usage Examples
 

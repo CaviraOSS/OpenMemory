@@ -1,13 +1,13 @@
 {
   "servers": {
-    "git": {
-      "command": "uvx",
-      "args": ["mcp-server-git"]
-    },
-    "fetch": {
-      "command": "uvx",
-      "args": ["mcp-server-fetch"]
-    },
+    // "git": {
+    //   "command": "uvx",
+    //   "args": ["mcp-server-git"]
+    // },
+    // "fetch": {
+    //   "command": "uvx",
+    //   "args": ["mcp-server-fetch"]
+    // },
     "sequential-thinking": {
       "command": "npx",
       "args": [
@@ -25,32 +25,6 @@
       ],
       "type": "stdio"
     },
-    // "terraform": {
-    //   "command": "terraform-mcp-server",
-    //   "type": "stdio"
-    // },
-    "terraform": {
-      "command": "docker",
-      "args": [
-        "run",
-        "-i",
-        "--rm",
-        "hashicorp/terraform-mcp-server"
-      ],
-      "type": "stdio"
-    },
-    // "cipher": {
-    //   "command": "npx",
-    //   "args": [
-    //     "@byterover/cipher",
-    //     "--mode",
-    //     "mcp",
-    //     "-a",
-    //     "cipher.yml"
-    //   ],
-    //   "envFile": "${workspaceFolder}/.env",
-    //   "type": "stdio"
-    // },
     "searxng": {
       "command": "npx",
       "args": [
@@ -65,14 +39,10 @@
       "url": "http://localhost:8080/mcp-proxy",
       "type": "http"
     },
-    "mcp-feedback-enhanced": {
-      "command": "uvx",
-      "args": ["mcp-feedback-enhanced@latest"]
-    },
-    "aws-knowledge": {
-			"url": "https://knowledge-mcp.global.api.aws",
-			"type": "http"
-		}
+    // "mcp-feedback-enhanced": {
+    //   "command": "uvx",
+    //   "args": ["mcp-feedback-enhanced@latest"]
+    // }
   },
   "inputs": []
 }

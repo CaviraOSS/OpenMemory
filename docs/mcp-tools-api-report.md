@@ -28,11 +28,11 @@ This report documents all Model Context Protocol (MCP) tools, resources, and RES
 
 | Tool Name | Description | Key Parameters | Returns | Related API |
 | --- | --- | --- | --- | --- |
-| `openmemory_query` | Run a semantic retrieval against OpenMemory | `query`, `k`, `sector`... | Memory search results with scores and content | `POST /api/memory/query` |
-| `openmemory_store` | Persist new content into OpenMemory | `content`, `tags`, `metadata`... | Stored memory ID and sector assignments | `POST /api/memory/store` |
-| `openmemory_reinforce` | Boost salience for an existing memory | `id`, `boost` | Confirmation of reinforcement | `POST /api/memory/reinforce` |
-| `openmemory_list` | List recent memories for quick inspection | `limit`, `sector`, `user_id` | List of memory summaries with metadata | `GET /api/memories` |
-| `openmemory_get` | Fetch a single memory by identifier | `id`, `include_vectors`, `user_id` | Complete memory data including content and metadata | `GET /api/memory/{id}` |
+| `openmemory_query` | Run a semantic retrieval against OpenMemory | `query`, `k`, `sector`... | Memory search results with scores and content | `POST /memory/query` |
+| `openmemory_store` | Persist new content into OpenMemory | `content`, `tags`, `metadata`... | Stored memory ID and sector assignments | `POST /memory/add` |
+| `openmemory_reinforce` | Boost salience for an existing memory | `id`, `boost` | Confirmation of reinforcement | `POST /memory/reinforce` |
+| `openmemory_list` | List recent memories for quick inspection | `limit`, `sector`, `user_id` | List of memory summaries with metadata | `GET /memory/all` |
+| `openmemory_get` | Fetch a single memory by identifier | `id`, `include_vectors`, `user_id` | Complete memory data including content and metadata | `GET /memory/{id}` |
 
 ## Proxy MCP Server - MCP Tools
 
@@ -43,9 +43,9 @@ This report documents all Model Context Protocol (MCP) tools, resources, and RES
 | `register_agent` | Register an agent for namespace access | `agent_id`, `namespace`, `permissions`... | Registration confirmation with API key | `POST /api/agents` |
 | `list_agents` | List all registered agents and their namespaces | `show_api_keys`, `agent_id` | List of registered agents with their configurations | `GET /api/agents` |
 | `get_agent` | Get detailed information about a specific agent | `agent_id`, `include_api_key`, `include_access_log` | Detailed agent information with optional access logs | `GET /api/agents/{id}` |
-| `query_memory` | Query memories from agent's authorized namespaces | `agent_id`, `query`, `namespace`... | Namespace-scoped memory search results | `POST /api/memory/query` |
-| `store_memory` | Store a memory in agent's namespace | `agent_id`, `content`, `namespace`... | Storage confirmation with memory ID | `POST /api/memory/store` |
-| `reinforce_memory` | Reinforce the salience of a specific memory | `agent_id`, `memory_id`, `api_key` | Reinforcement confirmation | `POST /api/memory/reinforce` |
+| `query_memory` | Query memories from agent's authorized namespaces | `agent_id`, `query`, `namespace`... | Namespace-scoped memory search results | `POST /memory/query` |
+| `store_memory` | Store a memory in agent's namespace | `agent_id`, `content`, `namespace`... | Storage confirmation with memory ID | `POST /memory/add` |
+| `reinforce_memory` | Reinforce the salience of a specific memory | `agent_id`, `memory_id`, `api_key` | Reinforcement confirmation | `POST /memory/reinforce` |
 
 ## MCP Resources
 
@@ -68,10 +68,10 @@ This report documents all Model Context Protocol (MCP) tools, resources, and RES
 | **GET** | `/api/proxy-info` | Proxy | 8080 / 8081 | ❌ | Service information and statistics |
 | **GET** | `/api/registration-template/{format}` | Proxy | 8080 / 8081 | ❌ | Get registration templates |
 | **GET** | `/api/proxy-health` | Proxy | 8080 / 8081 | ❌ | Proxy health check |
-| **POST** | `/api/memory/store` | Main Backend | 8080 | Optional (x-api-key header) | Store new memory |
-| **POST** | `/api/memory/query` | Main Backend | 8080 | Optional (x-api-key header) | Query memories |
-| **GET** | `/api/memory/{id}` | Main Backend | 8080 | Optional (x-api-key header) | Get specific memory |
-| **GET** | `/api/memories` | Main Backend | 8080 | Optional (x-api-key header) | List recent memories |
+| **POST** | `/memory/add` | Main Backend | 8080 | Optional (x-api-key header) | Store new memory |
+| **POST** | `/memory/query` | Main Backend | 8080 | Optional (x-api-key header) | Query memories |
+| **GET** | `/memory/{id}` | Main Backend | 8080 | Optional (x-api-key header) | Get specific memory |
+| **GET** | `/memory/all` | Main Backend | 8080 | Optional (x-api-key header) | List memories (supports optional `user_id` filter) |
 
 ## Detailed Tool Parameters
 
