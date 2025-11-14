@@ -615,6 +615,9 @@ def main():
     # 取得傳輸模式（從環境變數或使用預設值）
     transport = os.getenv("MCP_TRANSPORT", "stdio")
 
+    bind_host = os.getenv("MCP_BIND_HOST", "127.0.0.1")
+    bind_port = int(os.getenv("MCP_BIND_PORT", "9000"))
+
     # 檢查是否啟用桌面模式
     desktop_mode = os.getenv("MCP_DESKTOP_MODE", "").lower() in (
         "true",
@@ -647,11 +650,15 @@ def main():
         debug_log("調用 mcp.run()...")
 
     try:
-        # 使用正確的 FastMCP API，傳入傳輸協議
-        if transport and transport != "stdio":
-            mcp.run(transport=transport)
-        else:
+        # Run with appropriate transport
+        if transport == "stdio":
             mcp.run()
+        elif transport == "streamable-http":
+            mcp.run(transport="streamable-http", host=bind_host, port=bind_port)
+        elif transport == "sse":
+            mcp.run(transport="sse", host=bind_host, port=bind_port)
+        else:
+            raise ValueError(f"Unknown transport mode: {transport}")
     except KeyboardInterrupt:
         if debug_enabled:
             debug_log("收到中斷信號，正常退出")

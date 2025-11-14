@@ -53,18 +53,27 @@ services:
       start_period: 30s
 
   mcp-feedback-enhanced:
-    container_name: mcp-feedback-enhanced
     build:
-      context: ./services/mcp-feedback-enhanced
+      context: service/mcp-feedback-enhanced
       dockerfile: Dockerfile
+    container_name: mcp-feedback-enhanced-http
     ports:
-      - '8765:8765'
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      - "8765:8765" # Gui port mapping
+      - "8766:8766" # Gui port mapping
+      - "9000:9000" # Bind port mapping (mcp server)
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_WEB_HOST=0.0.0.0
+      - MCP_WEB_PORT=8765
+      - MCP_BIND_HOST=0.0.0.0
+      - MCP_BIND_PORT=9000
+      - MCP_DESKTOP_MODE=false
+      - MCP_DEBUG=false
+      - MCP_LANGUAGE=en
+    volumes:
+      - ./sessions:/app/sessions
+    restart: unless-stopped
+
 volumes:
   valkey-data2:
   searxng-data:

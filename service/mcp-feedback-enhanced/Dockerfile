@@ -61,7 +61,9 @@ ENV MCP_TRANSPORT=sse \
     MCP_WEB_HOST=0.0.0.0 \
     MCP_WEB_PORT=8765 \
     MCP_DESKTOP_MODE=false \
-    MCP_DEBUG=false
+    MCP_DEBUG=false \
+    MCP_BIND_HOST=0.0.0.0 \
+    MCP_BIND_PORT=9000
 
 # Expose the default web UI port
 EXPOSE 8765

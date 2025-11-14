@@ -55,10 +55,12 @@ services:
   mcp-feedback-enhanced:
     container_name: mcp-feedback-enhanced
     build:
-      context: ./services
-      dockerfile: Dockerfile.mfe
+      context: ./service/mcp-feedback-enhanced
+      dockerfile: Dockerfile
     ports:
       - '8765:8765'
+      - '8766:8766'
+      - '9000:9000'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
       interval: 30s

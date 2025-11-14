@@ -39,10 +39,10 @@
       "url": "http://localhost:8080/mcp-proxy",
       "type": "http"
     },
-    // "mcp-feedback-enhanced": {
-    //   "command": "uvx",
-    //   "args": ["mcp-feedback-enhanced@latest"]
-    // }
+    "mcp-feedback-enhanced": {
+      "url": "http://localhost:9000/mcp",
+      "type": "http",
+    }
   },
   "inputs": []
 }
