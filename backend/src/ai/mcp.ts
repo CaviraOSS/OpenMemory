@@ -81,7 +81,6 @@ export const create_mcp_srv = () => {
         {
             name: "openmemory-mcp",
             version: "2.1.0",
-            protocolVersion: "2025-06-18",
         },
         { capabilities: { tools: {}, resources: {}, logging: {} } },
     );
@@ -122,14 +121,14 @@ export const create_mcp_srv = () => {
             const flt =
                 sector || min_salience !== undefined || u
                     ? {
-                          ...(sector
-                              ? { sectors: [sector as sector_type] }
-                              : {}),
-                          ...(min_salience !== undefined
-                              ? { minSalience: min_salience }
-                              : {}),
-                          ...(u ? { user_id: u } : {}),
-                      }
+                        ...(sector
+                            ? { sectors: [sector as sector_type] }
+                            : {}),
+                        ...(min_salience !== undefined
+                            ? { minSalience: min_salience }
+                            : {}),
+                        ...(u ? { user_id: u } : {}),
+                    }
                     : undefined;
             const matches = await hsg_query(query, k ?? 8, flt);
             const summ = matches.length
