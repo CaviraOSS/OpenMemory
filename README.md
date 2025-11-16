@@ -27,6 +27,7 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
 - **Migration** - Easily migrate from Mem0, Zep and Supermemory.
+- **Vercel AI SDK** - We support vercel AI SDK via api.
 
 ### Uses
 
@@ -441,6 +442,52 @@ curl http://localhost:8080/users/user123/summary
 - **MCP support** - Built-in Model Context Protocol server
 - **Health checks** - `/health` and `/stats` endpoints
 
+### Vercel AI SDK (Optional)
+
+Use OpenMemory with the Vercel AI SDK without changing your SDK setup.
+
+- Env in your app:
+  - `OM_BASE_URL` → your OpenMemory URL
+  - `OM_API_KEY` → API key for your instance
+- Call before your completion request:
+
+```ts
+// Fetch compact context from OpenMemory
+const mem = await fetch(`${process.env.OM_BASE_URL}/query`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.OM_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ user_id, query, k: 8 }),
+}).then((r) => r.json());
+
+const messages = [
+  ...originalMessages,
+  mem?.result
+    ? {
+        role: 'system',
+        content: `Relevant memory (OpenMemory):\n${mem.result}`,
+      }
+    : undefined,
+].filter(Boolean);
+```
+
+- Optional store after the run:
+
+```ts
+await fetch(`${process.env.OM_BASE_URL}/memories`, {
+  method: 'POST',
+  headers: {
+    Authorization: `Bearer ${process.env.OM_API_KEY}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({ user_id, content: summary, tags: ['chat'] }),
+});
+```
+
+- Full guide with an AI SDK streaming route example: `temp/content/integration/vercel-ai.md`
+
 ### LangGraph Integration
 
 Enable with environment variables:
@@ -640,8 +687,8 @@ Tested with LongMemEval benchmark:
 
 ---
 
-
 ## 12. Telemetry
+
 OpenMemory sends a single anonymous ping on startup so we know which configurations are being used. Collected fields: hostname, operating system, chosen embedding provider (`OM_EMBEDDINGS`), metadata backend (`OM_METADATA_BACKEND`), package version, RAM/storage estimates, and CPU model. No memory contents or user data leave your server. Opt out anytime via `OM_TELEMETRY=false`.
 
 ## 13. Contributing
