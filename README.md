@@ -27,7 +27,9 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Local or cloud** - Run with your own embeddings or use OpenAI/Gemini
 - **Framework agnostic** - Works with any LLM or agent system
 - **Migration** - Easily migrate from Mem0, Zep and Supermemory.
-- **Vercel AI SDK** - We support vercel AI SDK via api.
+- **Vercel AI SDK** - We support Vercel AI SDK via api.
+- **Web Dashboard** - A self-hosted web dashboard is included, so managing memories becomes effortless.
+- **Chat with Memories** - In the self-hosted web dashboard, you can chat with your memories, ask them questions, etc.
 
 ### Uses
 
