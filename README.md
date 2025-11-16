@@ -829,6 +829,9 @@ Join our [Discord](https://discord.gg/P7HaRayqTh) to connect with other develope
 
 ## 16. Other Projects
 
+**OpenReason** - OpenReason is a reasoning engine that sits on top of any LLM provider.
+https://github.com/CaviraOSS/OpenReason
+
 **PageLM** - Transform study materials into quizzes, flashcards, notes, and podcasts.  
 https://github.com/CaviraOSS/PageLM
 
