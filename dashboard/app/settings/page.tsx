@@ -168,7 +168,7 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         label: 'Embedding Provider',
         description: 'AI provider for generating embeddings (used in SMART/DEEP tiers)',
         type: 'select',
-        options: ['openai', 'gemini', 'ollama', 'local', 'synthetic']
+        options: ['openai', 'gemini', 'aws', 'ollama', 'local', 'synthetic']
     },
     OM_VEC_DIM: {
         category: 'Embeddings',
@@ -231,6 +231,27 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         description: 'API key for Google Gemini embeddings',
         type: 'password',
         placeholder: 'AI...'
+    },
+    AWS_ACCESS_KEY_ID: {
+        category: 'API Keys',
+        label: 'AWS Access Key ID',
+        description: 'Access Key ID for aws',
+        type: 'text',
+        placeholder: 'AK...'
+    },
+    AWS_SECRET_ACCESS_KEY: {
+        category: 'API Keys',
+        label: 'AWS Secret Access Key',
+        description: 'Secret Access Key for aws',
+        type: 'password',
+        placeholder: 'AK...'
+    },
+    AWS_REGION: {
+        category: 'API Keys',
+        label: 'AWS Region',
+        description: 'Region aws (us-east-1 prefered)',
+        type: 'text',
+        placeholder: 'us-east-1'
     },
     OLLAMA_URL: {
         category: 'API Keys',
