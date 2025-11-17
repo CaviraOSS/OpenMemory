@@ -534,6 +534,10 @@ export const getEmbeddingInfo = () => {
         i.configured = !!env.gemini_key;
         i.batch_api = env.embed_mode === "simple";
         i.model = "embedding-001";
+    } else if (env.emb_kind === "aws") {
+        i.configured = !!env.AWS_REGION && !!env.AWS_ACCESS_KEY_ID && !!env.AWS_SECRET_ACCESS_KEY;
+        i.batch_api = env.embed_mode === "simple";
+        i.model = "amazon.titan-embed-text-v2:0";
     } else if (env.emb_kind === "ollama") {
         i.configured = true;
         i.url = env.ollama_url;
