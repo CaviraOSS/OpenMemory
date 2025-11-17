@@ -231,13 +231,14 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
     if (!env.AWS_SECRET_ACCESS_KEY) throw new Error("AWS_SECRET_ACCESS_KEY missing");
     const m = get_model(s, "aws");
     const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
+    const dim = [256, 512, 1024].find(x => x >= env.vec_dim) ?? 1024;
     const params = {
             modelId: m, 
             contentType: "application/json",
             accept: "*/*",
             body: JSON.stringify({
               inputText: t,
-              dimensions: env.vec_dim
+              dimensions: dim
             })
     }
     const command = new InvokeModelCommand(params);
@@ -247,7 +248,7 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
 
         const jsonString = new TextDecoder().decode(response.body);
         const parsedResponse = JSON.parse(jsonString);
-        return parsedResponse;
+        rreturn resize_vec(parsedResponse, env.vec_dim);
     } catch (error) {
         throw new Error(`AWS: ${error}`)
     }
