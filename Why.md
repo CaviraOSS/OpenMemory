@@ -109,17 +109,17 @@ No vector DB can do this natively.
 
 ## 6. Developer Value Proposition
 
-| Area               | Why OpenMemory Wins                                   |
-| ------------------ | ----------------------------------------------------- |
-| **Setup**          | Single binary or Docker; no external service required |
-| **Integrations**   | Works with any LLM (OpenAI, Gemini, Ollama, Claude)   |
-| **SDKs**           | TypeScript + Python included                          |
-| **Cost**           | 10× cheaper than hosted alternatives                  |
-| **Explainability** | Memory formation and recall fully transparent         |
-| **Performance**    | p95 retrieval under 130ms on 100k+ nodes              |
-| **Scalability**    | Horizontally shardable by sector                      |
-| **Extensibility**  | Add new embedding models with 1 config line           |
-| **Privacy**        | Zero vendor lock-in; full data control                |
+| Area               | Why OpenMemory Wins                                      |
+| ------------------ | ---------------------------------------------------------|
+| **Setup**          | Single binary or Docker; no external service required    |
+| **Integrations**   | Works with any LLM (OpenAI, Gemini, AWS, Ollama, Claude) |
+| **SDKs**           | TypeScript + Python included                             |
+| **Cost**           | 10× cheaper than hosted alternatives                     |
+| **Explainability** | Memory formation and recall fully transparent            |
+| **Performance**    | p95 retrieval under 130ms on 100k+ nodes                 |
+| **Scalability**    | Horizontally shardable by sector                         |
+| **Extensibility**  | Add new embedding models with 1 config line              |
+| **Privacy**        | Zero vendor lock-in; full data control                   |
 
 ---
 
