@@ -226,6 +226,9 @@ async function emb_ollama(t: string, s: string): Promise<number[]> {
     return resize_vec(((await r.json()) as any).embedding, env.vec_dim);
 }
 async function emb_aws(t: string, s: string): Promise<number[]> {
+    if (!env.AWS_REGION) throw new Error("AWS_REGION missing");
+    if (!env.AWS_ACCESS_KEY_ID) throw new Error("AWS_ACCESS_KEY_ID missing");
+    if (!env.AWS_SECRET_ACCESS_KEY) throw new Error("AWS_SECRET_ACCESS_KEY missing");
     const m = get_model(s, "aws");
     const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
     const params = {
