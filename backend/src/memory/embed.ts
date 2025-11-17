@@ -248,7 +248,7 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
 
         const jsonString = new TextDecoder().decode(response.body);
         const parsedResponse = JSON.parse(jsonString);
-        rreturn resize_vec(parsedResponse, env.vec_dim);
+        return resize_vec(parsedResponse, env.vec_dim);
     } catch (error) {
         throw new Error(`AWS: ${error}`)
     }
