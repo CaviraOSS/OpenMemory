@@ -44,6 +44,11 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OM_GEMINI_API_KEY=${OM_GEMINI_API_KEY:-}
 
+      # AWS Provider
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-}
+
       # Ollama Provider
       - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
       - OM_OLLAMA_URL=${OM_OLLAMA_URL:-http://localhost:11434}
