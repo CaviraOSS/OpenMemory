@@ -3,6 +3,7 @@ import { get_model } from "../core/models";
 import { sector_configs } from "./hsg";
 import { q } from "../core/db";
 import { canonical_tokens_from_text, add_synonym_tokens } from "../utils/text";
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
 
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
@@ -80,6 +81,8 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
             return (await emb_gemini({ [s]: t }))[s];
         case "ollama":
             return await emb_ollama(t, s);
+        case "aws":
+            return await emb_aws(t,s);
         case "local":
             return await emb_local(t, s);
         default:
@@ -221,6 +224,31 @@ async function emb_ollama(t: string, s: string): Promise<number[]> {
     });
     if (!r.ok) throw new Error(`Ollama: ${r.status}`);
     return resize_vec(((await r.json()) as any).embedding, env.vec_dim);
+}
+async function emb_aws(t: string, s: string): Promise<number[]> {
+    const m = get_model(s, "aws");
+    const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
+    const params = {
+            modelId: m, 
+            contentType: "application/json",
+            accept: "*/*",
+            body: JSON.stringify({
+              inputText: t,
+              dimensions: env.vec_dim
+            })
+    }
+    const command = new InvokeModelCommand(params);
+
+    try {
+        const response = await client.send(command);
+
+        const jsonString = new TextDecoder().decode(response.body);
+        const parsedResponse = JSON.parse(jsonString);
+        return parsedResponse;
+    } catch (error) {
+        throw new Error(`AWS: ${error}`)
+    }
+    
 }
 
 async function emb_local(t: string, s: string): Promise<number[]> {
