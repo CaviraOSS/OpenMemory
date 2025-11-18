@@ -146,8 +146,8 @@ Requirements:
 
 ```bash
 git clone https://github.com/caviraoss/openmemory.git
-cd openmemory/backend
 cp .env.example .env
+cd openmemory/backend
 npm install
 npm run dev
 ```
