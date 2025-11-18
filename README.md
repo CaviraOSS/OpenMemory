@@ -797,6 +797,13 @@ make test
 		</tr>
 		<tr>
             <td align="center">
+                <a href="https://github.com/EikoocS">
+                    <img src="https://avatars.githubusercontent.com/u/80829508?v=4" width="100;" alt="EikoocS"/>
+                    <br />
+                    <sub><b>EikoocS</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/josephgoksu">
                     <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
                     <br />
