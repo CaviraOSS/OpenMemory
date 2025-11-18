@@ -32,11 +32,11 @@ OpenMemory is a self-hosted AI memory engine implementing **Hierarchical Memory 
 │               │         │                  │        │                  │
 │ • Classify    │         │ • OpenAI         │        │ • PDF Parser     │
 │ • Encode      │         │ • Gemini         │        │ • DOCX Parser    │
-│ • Store       │         │ • Ollama         │        │ • URL Scraper    │
-│ • Query       │         │ • Local/Synth    │        │ • Text Chunking  │
-│ • Decay       │         │ • Batch API      │        │                  │
-│ • Reinforce   │         └──────────────────┘        └──────────────────┘
-└───────┬───────┘
+│ • Store       │         │ • AWS            │        │ • URL Scraper    │
+│ • Query       │         │ • Ollama         │        │ • Text Chunking  │
+│ • Decay       │         │ • Local/Synth    │        │                  │
+│ • Reinforce   │         | • Batch API      |        └──────────────────┘
+└───────┬───────┘         └──────────────────┘
         │
         ├────────────────┐
         │                │
@@ -209,6 +209,7 @@ Memory A ──0.85──> Memory B
 | ------------- | -------------------------------------------------- | ------------- | ---------------- |
 | **OpenAI**    | `text-embedding-3-small`, `text-embedding-3-large` | ✅            | ~$0.02/1M tokens |
 | **Gemini**    | `embedding-001`                                    | ✅            | ~$0.01/1M tokens |
+| **AWS**       | `amazon.titan-embed-text-v2:0`                     | ❌            | ~$0.02/1M tokens |
 | **Ollama**    | `nomic-embed-text`, `bge-small`, `bge-large`       | ❌            | Free (local)     |
 | **Local**     | Custom models                                      | ❌            | Free (local)     |
 | **Synthetic** | Hash-based                                         | ❌            | Free             |
@@ -522,7 +523,7 @@ OM_DB_PATH=./data/openmemory.sqlite
 OM_API_KEY=                      # Optional bearer token
 
 # Embeddings
-OM_EMBEDDINGS=openai             # openai|gemini|ollama|local|synthetic
+OM_EMBEDDINGS=openai             # openai|gemini|aws|ollama|local|synthetic
 OM_EMBED_MODE=simple             # simple|advanced
 OM_ADV_EMBED_PARALLEL=false      # Parallel in advanced mode
 OM_EMBED_DELAY_MS=200            # Delay between calls
@@ -534,6 +535,10 @@ OPENAI_API_KEY=sk-...
 # Gemini
 GEMINI_API_KEY=...
 
+# AWS
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION="us-east-1"
 # Ollama
 OLLAMA_URL=http://localhost:11434
 

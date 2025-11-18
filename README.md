@@ -108,7 +108,7 @@ This approach improves recall accuracy while reducing costs.
 ### Summary
 
 OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
-Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
+Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / AWS / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
 
 ---
 
@@ -142,7 +142,7 @@ Requirements:
 
 - Node.js 20 or higher
 - SQLite 3.40 or higher (included)
-- Optional: OpenAI/Gemini API key or Ollama
+- Optional: OpenAI/Gemini/AWS API key or Ollama
 
 ```bash
 git clone https://github.com/caviraoss/openmemory.git
@@ -230,7 +230,7 @@ OpenMemory uses Hierarchical Memory Decomposition (HMD):
 
 - Backend: TypeScript
 - Storage: SQLite or PostgreSQL
-- Embeddings: E5/BGE/OpenAI/Gemini/Ollama
+- Embeddings: E5/BGE/OpenAI/Gemini/AWS/Ollama
 - Scheduler: node-cron for decay and maintenance
 
 **Query flow:**
