@@ -716,6 +716,13 @@ make test
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/dontbanmeplz">
+                    <img src="https://avatars.githubusercontent.com/u/59851616?v=4" width="100;" alt="dontbanmeplz"/>
+                    <br />
+                    <sub><b>Chis</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/DKB0512">
                     <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
                     <br />
@@ -743,6 +750,8 @@ make test
                     <sub><b>DoKoB0512</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/amihos">
                     <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
@@ -750,8 +759,6 @@ make test
                     <sub><b>Hossein Amirkhalili</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/jasonkneen">
                     <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
@@ -787,6 +794,8 @@ make test
                     <sub><b>Dhravya Shah</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/josephgoksu">
                     <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
@@ -794,8 +803,6 @@ make test
                     <sub><b>Joseph Goksu</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/lwsinclair">
                     <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
