@@ -8,31 +8,31 @@
 episodic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   local: all-MiniLM-L6-v2
 
 semantic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   local: all-MiniLM-L6-v2
 
 procedural:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   local: all-MiniLM-L6-v2
 
 emotional:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   local: all-MiniLM-L6-v2
 
 reflective:
   ollama: nomic-embed-text
   openai: text-embedding-3-large
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   local: all-mpnet-base-v2
 # Available Ollama models (pull with: ollama pull <model>)
 # - nomic-embed-text (768d, recommended)
@@ -45,5 +45,6 @@ reflective:
 # - text-embedding-3-large (3072d)
 
 # Gemini models:
-# - models/embedding-001 (768d)
+# - models/text-embedding-004 (768d) - latest
+# - models/embedding-001 (768d) - deprecated
 

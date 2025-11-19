@@ -150,11 +150,11 @@ async function emb_gemini(
 ): Promise<Record<string, number[]>> {
     if (!env.gemini_key) throw new Error("Gemini key missing");
     const prom = gem_q.then(async () => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/embedding-001:batchEmbedContents?key=${env.gemini_key}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${env.gemini_key}`;
         for (let a = 0; a < 3; a++) {
             try {
                 const reqs = Object.entries(txts).map(([s, t]) => ({
-                    model: "models/embedding-001",
+                    model: "models/text-embedding-004",
                     content: { parts: [{ text: t }] },
                     taskType: task_map[s] || task_map.semantic,
                 }));
