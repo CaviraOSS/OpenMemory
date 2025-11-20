@@ -520,7 +520,9 @@ export async function expand_via_waypoints(
         const neighs = await q.get_neighbors.all(cur.id);
         for (const neigh of neighs) {
             if (vis.has(neigh.dst_id)) continue;
-            const exp_wt = cur.weight * neigh.weight * 0.8;
+            // Clamp neighbor weight to valid range - protect against corrupted data
+            const neigh_wt = Math.min(1.0, Math.max(0, neigh.weight || 0));
+            const exp_wt = cur.weight * neigh_wt * 0.8;
             if (exp_wt < 0.1) continue;
             const exp_item = {
                 id: neigh.dst_id,
@@ -772,7 +774,8 @@ export async function hsg_query(
                 }
             }
             const em = exp.find((e: { id: string }) => e.id === mid);
-            const ww = em?.weight || 0;
+            // Clamp waypoint weight to valid range [0, 1] - protect against corrupted data
+            const ww = Math.min(1.0, Math.max(0, em?.weight || 0));
             const ds = (Date.now() - m.last_seen_at) / 86400000;
             const sal = calc_decay(m.primary_sector, m.salience, ds);
             const mtk = canonical_token_set(m.content);
