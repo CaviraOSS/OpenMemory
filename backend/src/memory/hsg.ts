@@ -107,10 +107,11 @@ export const sector_configs: Record<string, sector_cfg> = {
 };
 export const sectors = Object.keys(sector_configs);
 export const scoring_weights = {
-    similarity: 0.6,
-    overlap: 0.2,
+    similarity: 0.40,
+    overlap: 0.20,
     waypoint: 0.15,
-    recency: 0.05,
+    recency: 0.15,
+    tag_match: 0.10,
 };
 export const hybrid_params = {
     tau: 3,
@@ -130,6 +131,58 @@ export const reinforcement = {
     max_waypoint_weight: 1.0,
     prune_threshold: 0.05,
 };
+
+// Sector relationship matrix for cross-sector retrieval
+// Higher values = stronger relationship = less penalty
+export const sector_relationships: Record<string, Record<string, number>> = {
+    semantic: { procedural: 0.8, episodic: 0.6, reflective: 0.7, emotional: 0.4 },
+    procedural: { semantic: 0.8, episodic: 0.6, reflective: 0.6, emotional: 0.3 },
+    episodic: { reflective: 0.8, semantic: 0.6, procedural: 0.6, emotional: 0.7 },
+    reflective: { episodic: 0.8, semantic: 0.7, procedural: 0.6, emotional: 0.6 },
+    emotional: { episodic: 0.7, reflective: 0.6, semantic: 0.4, procedural: 0.3 },
+};
+
+// Detect temporal markers in query for full-sector search
+function has_temporal_markers(text: string): boolean {
+    const temporal_patterns = [
+        /\b(today|yesterday|tomorrow|this\s+week|last\s+week|this\s+morning)\b/i,
+        /\b\d{4}-\d{2}-\d{2}\b/,  // ISO date format like 2025-11-20
+        /\b20\d{2}[/-]?(0[1-9]|1[0-2])[/-]?(0[1-9]|[12]\d|3[01])\b/, // Date patterns
+        /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}/i,
+        /\bwhat\s+(did|have)\s+(i|we)\s+(do|done)\b/i,  // "what did I do" patterns
+    ];
+    return temporal_patterns.some(p => p.test(text));
+}
+
+// Calculate tag match score between query tokens and memory tags
+async function compute_tag_match_score(memory_id: string, query_tokens: Set<string>): Promise<number> {
+    const mem = await q.get_mem.get(memory_id);
+    if (!mem?.tags) return 0;
+
+    try {
+        const tags = JSON.parse(mem.tags);
+        if (!Array.isArray(tags)) return 0;
+
+        let matches = 0;
+        for (const tag of tags) {
+            const tag_lower = String(tag).toLowerCase();
+            // Check exact match
+            if (query_tokens.has(tag_lower)) {
+                matches += 2;  // Exact match bonus
+            } else {
+                // Check partial match
+                for (const token of query_tokens) {
+                    if (tag_lower.includes(token) || token.includes(tag_lower)) {
+                        matches += 1;
+                    }
+                }
+            }
+        }
+        return Math.min(1.0, matches / Math.max(1, tags.length * 2));
+    } catch {
+        return 0;
+    }
+}
 
 const compress_vec_for_storage = (
     vec: number[],
@@ -340,6 +393,7 @@ export function compute_hybrid_score(
     wp_wt: number,
     rec_sc: number,
     keyword_score: number = 0,
+    tag_match: number = 0,
 ): number {
     const s_p = boosted_sim(sim);
     const raw =
@@ -347,6 +401,7 @@ export function compute_hybrid_score(
         scoring_weights.overlap * tok_ov +
         scoring_weights.waypoint * wp_wt +
         scoring_weights.recency * rec_sc +
+        scoring_weights.tag_match * tag_match +
         keyword_score;
     return sigmoid(raw);
 }
@@ -520,7 +575,9 @@ export async function expand_via_waypoints(
         const neighs = await q.get_neighbors.all(cur.id);
         for (const neigh of neighs) {
             if (vis.has(neigh.dst_id)) continue;
-            const exp_wt = cur.weight * neigh.weight * 0.8;
+            // Clamp neighbor weight to valid range - protect against corrupted data
+            const neigh_wt = Math.min(1.0, Math.max(0, neigh.weight || 0));
+            const exp_wt = cur.weight * neigh_wt * 0.8;
             if (exp_wt < 0.1) continue;
             const exp_item = {
                 id: neigh.dst_id,
@@ -683,11 +740,20 @@ export async function hsg_query(
         const cached = cache.get(h);
         if (cached && Date.now() - cached.t < TTL) return cached.r;
         const qc = classify_content(qt);
-        const cs = [qc.primary, ...qc.additional];
+        const is_temporal = has_temporal_markers(qt);
         const qtk = canonical_token_set(qt);
-        const ss = f?.sectors?.length
-            ? cs.filter((s) => f.sectors!.includes(s))
-            : cs;
+        // Store primary sectors for scoring purposes
+        const primary_sectors = [qc.primary, ...qc.additional];
+        // Determine which sectors to search
+        let ss: string[];
+        if (f?.sectors?.length) {
+            // User explicitly requested specific sectors
+            ss = f.sectors;
+        } else {
+            // IMPORTANT: Search ALL sectors to enable cross-sector retrieval
+            // The sector relationship penalty will down-weight less relevant sectors
+            ss = [...sectors];
+        }
         if (!ss.length) ss.push("semantic");
         const qe: Record<string, number[]> = {};
         for (const s of ss) qe[s] = await embedForSector(qt, s);
@@ -771,24 +837,40 @@ export async function hsg_query(
                     bsec = sec;
                 }
             }
+
+            // Apply sector relationship penalty for cross-sector results
+            const mem_sector = m.primary_sector;
+            const query_sector = qc.primary;
+            let sector_penalty = 1.0;
+            if (mem_sector !== query_sector && !primary_sectors.includes(mem_sector)) {
+                // Apply penalty based on sector relationship strength
+                sector_penalty = sector_relationships[query_sector]?.[mem_sector] || 0.3;
+            }
+            const adjusted_sim = bs * sector_penalty;
+
             const em = exp.find((e: { id: string }) => e.id === mid);
-            const ww = em?.weight || 0;
+            // Clamp waypoint weight to valid range [0, 1] - protect against corrupted data
+            const ww = Math.min(1.0, Math.max(0, em?.weight || 0));
             const ds = (Date.now() - m.last_seen_at) / 86400000;
             const sal = calc_decay(m.primary_sector, m.salience, ds);
             const mtk = canonical_token_set(m.content);
             const tok_ov = compute_token_overlap(qtk, mtk);
             const rec_sc = calc_recency_score(m.last_seen_at);
 
+            // Calculate tag match score
+            const tag_match = await compute_tag_match_score(mid, qtk);
+
             const keyword_boost =
                 tier === "hybrid"
                     ? (keyword_scores.get(mid) || 0) * env.keyword_boost
                     : 0;
             const fs = compute_hybrid_score(
-                bs,
+                adjusted_sim,
                 tok_ov,
                 ww,
                 rec_sc,
                 keyword_boost,
+                tag_match,
             );
             const msec = await q.get_vecs_by_id.all(mid);
             const sl = msec.map((v) => v.sector);
