@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { API_BASE_URL, getHeaders } from "@/lib/api"
+import { MemoryAIEngine, type MemoryReference as AIMemoryRef } from "@/lib/memory-ai-engine"
 
 interface ChatMessage {
     role: "user" | "assistant"
@@ -15,6 +16,7 @@ interface MemoryReference {
     content: string
     salience: number
     title: string
+    last_seen_at?: number
 }
 
 export default function ChatPage() {
@@ -47,13 +49,15 @@ export default function ChatPage() {
             }
 
             const data = await response.json()
-            return data.matches.map((match: any) => ({
+            const raw: MemoryReference[] = data.matches.map((match: any) => ({
                 id: match.id,
                 sector: match.primary_sector || "semantic",
                 content: match.content,
-                salience: match.salience || match.score,
-                title: match.content.substring(0, 50) + (match.content.length > 50 ? "..." : "")
+                salience: match.salience || match.score || 0,
+                title: match.content.substring(0, 50) + (match.content.length > 50 ? "..." : ""),
+                last_seen_at: match.last_seen_at
             }))
+            return raw
         } catch (error) {
             console.error("Error querying memories:", error)
             return []
@@ -61,117 +65,17 @@ export default function ChatPage() {
     }
 
     const generateResponse = async (userQuery: string, relevantMemories: MemoryReference[]): Promise<string> => {
-        if (relevantMemories.length === 0) {
-            return "I don't have any memories that directly relate to your question. Try asking about topics you've previously stored in your memory system, or add more memories to help me answer better."
-        }
+        const aiMemories: AIMemoryRef[] = relevantMemories.map(m => ({
+            id: m.id,
+            sector: m.sector,
+            content: m.content,
+            salience: m.salience,
+            title: m.title,
+            last_seen_at: m.last_seen_at,
+            score: (m as any).score
+        }))
 
-        const queryLower = userQuery.toLowerCase()
-        const isQuestion = queryLower.includes('?') ||
-            queryLower.startsWith('what') ||
-            queryLower.startsWith('how') ||
-            queryLower.startsWith('why') ||
-            queryLower.startsWith('when') ||
-            queryLower.startsWith('where') ||
-            queryLower.startsWith('who') ||
-            queryLower.startsWith('can') ||
-            queryLower.startsWith('is') ||
-            queryLower.startsWith('do') ||
-            queryLower.startsWith('does')
-
-        const sectorGroups: Record<string, MemoryReference[]> = {}
-        relevantMemories.forEach(mem => {
-            if (!sectorGroups[mem.sector]) {
-                sectorGroups[mem.sector] = []
-            }
-            sectorGroups[mem.sector].push(mem)
-        })
-
-        const hasSemantic = sectorGroups['semantic']?.length > 0
-        const hasEpisodic = sectorGroups['episodic']?.length > 0
-        const hasProcedural = sectorGroups['procedural']?.length > 0
-        const hasEmotional = sectorGroups['emotional']?.length > 0
-        const hasReflective = sectorGroups['reflective']?.length > 0
-
-        let response = ""
-
-        if (isQuestion) {
-            if (hasSemantic) {
-                response += "Based on what I know:\n\n"
-                const topSemantic = sectorGroups['semantic'].slice(0, 3)
-                topSemantic.forEach((mem, idx) => {
-                    response += `${mem.content}`
-                    if (idx < topSemantic.length - 1) response += "\n\n"
-                })
-            } else if (hasEpisodic) {
-                response += "From your past experiences:\n\n"
-                const topEpisodic = sectorGroups['episodic'].slice(0, 2)
-                topEpisodic.forEach((mem, idx) => {
-                    response += `${mem.content}`
-                    if (idx < topEpisodic.length - 1) response += "\n\n"
-                })
-            } else if (hasProcedural) {
-                response += "Here's what I remember about the process:\n\n"
-                const topProcedural = sectorGroups['procedural'].slice(0, 2)
-                topProcedural.forEach((mem, idx) => {
-                    response += `${mem.content}`
-                    if (idx < topProcedural.length - 1) response += "\n\n"
-                })
-            }
-
-            if (hasEpisodic && hasSemantic) {
-                response += "\n\n**Related experience:**\n"
-                response += sectorGroups['episodic'][0].content
-            }
-
-            if (hasProcedural && (hasSemantic || hasEpisodic)) {
-                response += "\n\n**How to apply this:**\n"
-                response += sectorGroups['procedural'][0].content
-            }
-
-            if (hasEmotional) {
-                response += "\n\n**Emotional context:**\n"
-                response += sectorGroups['emotional'][0].content
-            }
-
-            if (hasReflective) {
-                response += "\n\n**Insight:**\n"
-                response += sectorGroups['reflective'][0].content
-            }
-        } else {
-            const allMemories = relevantMemories.slice(0, 5)
-
-            if (hasSemantic && hasEpisodic) {
-                response += `${sectorGroups['semantic'][0].content}\n\n`
-                response += `This connects to when ${sectorGroups['episodic'][0].content.toLowerCase()}`
-            } else if (hasSemantic) {
-                response += sectorGroups['semantic'].slice(0, 2).map(m => m.content).join('\n\n')
-            } else if (hasEpisodic) {
-                response += "Based on your experiences:\n\n"
-                response += sectorGroups['episodic'].slice(0, 3).map(m => m.content).join('\n\n')
-            } else {
-                response += allMemories.map(m => m.content).join('\n\n')
-            }
-
-            if (hasProcedural && response.length < 500) {
-                response += "\n\n**Steps involved:**\n"
-                response += sectorGroups['procedural'][0].content
-            }
-
-            if (hasReflective && response.length < 600) {
-                response += "\n\n**Reflection:**\n"
-                response += sectorGroups['reflective'][0].content
-            }
-        }
-
-        const avgSalience = relevantMemories.reduce((sum, m) => sum + m.salience, 0) / relevantMemories.length
-        const confidence = avgSalience > 0.7 ? "high" : avgSalience > 0.4 ? "moderate" : "low"
-
-        const memoryCount = relevantMemories.length
-        const sectorCount = Object.keys(sectorGroups).length
-
-        response += `\n\n---\n*Retrieved ${memoryCount} ${memoryCount === 1 ? 'memory' : 'memories'} from ${sectorCount} ${sectorCount === 1 ? 'sector' : 'sectors'} • Confidence: ${confidence}*`
-
-        return response
+        return await MemoryAIEngine.generateResponse(userQuery, aiMemories)
     }
 
     const sendMessage = async () => {
@@ -190,11 +94,8 @@ export default function ChatPage() {
         setBusy(true)
 
         try {
-            // Query memories from backend
             const relevantMemories = await queryMemories(currentInput)
             setMemories(relevantMemories)
-
-            // Generate response based on memories
             const responseContent = await generateResponse(currentInput, relevantMemories)
 
             const assistantMessage: ChatMessage = {
@@ -219,7 +120,6 @@ export default function ChatPage() {
 
     const addMemoryToBag = async (memory: MemoryReference) => {
         try {
-            // Reinforce the memory by increasing its salience
             await fetch(`${API_BASE_URL}/memory/reinforce`, {
                 method: "POST",
                 headers: getHeaders(),

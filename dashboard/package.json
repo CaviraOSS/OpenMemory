@@ -10,6 +10,8 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "ai": "^5.0.0",
+    "@ai-sdk/openai": "^1.0.0",
     "@heroicons/react": "2.2.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "1.2.2",
