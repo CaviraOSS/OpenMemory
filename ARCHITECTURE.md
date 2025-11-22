@@ -327,12 +327,23 @@ try {
 
 #### 5.1 Supported Formats
 
-| Format   | Parser               | Features                  |
-| -------- | -------------------- | ------------------------- |
-| **PDF**  | `pdf-parse`          | Text extraction, metadata |
-| **DOCX** | `mammoth`            | Convert to markdown       |
-| **TXT**  | Native               | Direct read               |
-| **URL**  | `fetch` + `turndown` | HTML → Markdown           |
+| Format    | Parser                     | Features                                    |
+| --------- | -------------------------- | ------------------------------------------- |
+| **PDF**   | `pdf-parse`                | Text extraction, metadata                   |
+| **DOCX**  | `mammoth`                  | Convert to markdown                         |
+| **TXT**   | Native                     | Direct read                                 |
+| **MD**    | Native                     | Markdown passthrough                        |
+| **HTML**  | `turndown`                 | HTML → Markdown                             |
+| **URL**   | `fetch` + `turndown`       | HTML → Markdown                             |
+| **Audio** | OpenAI Whisper API         | Transcription (mp3, wav, m4a, webm, ogg)    |
+| **Video** | `fluent-ffmpeg` + Whisper  | Audio extraction → Transcription (mp4, etc) |
+
+**Audio/Video Notes:**
+- **File size limit**: 25MB (Whisper API limit)
+- **Cost**: ~$0.006 per minute of audio
+- **Supported audio formats**: mp3, mp4, mpeg, mpga, m4a, wav, webm, ogg
+- **Supported video formats**: mp4, webm, avi, mov (extracts audio track)
+- **Requirements**: `OPENAI_API_KEY` for transcription, FFmpeg installed for video processing
 
 #### 5.2 Processing Flow
 

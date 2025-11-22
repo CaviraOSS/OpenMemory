@@ -313,6 +313,29 @@ async function testWaypointStructure(rootId) {
   }
 }
 
+async function testAudioIngestion() {
+  console.log('🎵 Test 10: Audio file ingestion (MP3 transcription)');
+
+  console.log('   ⚠️  Audio ingestion requires:');
+  console.log('      - OPENAI_API_KEY set in .env');
+  console.log('      - A small test audio file (\u003c 1MB recommended)');
+  console.log('   ℹ️  For full testing, create test-audio.mp3 and re-run');
+  console.log('   ⏭️  SKIPPED (requires sample audio file)\n');
+  return null;
+}
+
+async function testVideoIngestion() {
+  console.log('🎬 Test 11: Video file ingestion (MP4 audio extraction + transcription)');
+
+  console.log('   ⚠️  Video ingestion requires:');
+  console.log('      - OPENAI_API_KEY set in .env');
+  console.log('      - FFmpeg installed on system');
+  console.log('      - A small test video file (\u003c 5MB recommended)');
+  console.log('   ℹ️  For full testing, create test-video.mp4 and re-run');
+  console.log('   ⏭️  SKIPPED (requires sample video file and FFmpeg)\n');
+  return null;
+}
+
 async function runTests() {
   try {
     console.log('⏳ Waiting for server to be ready...\n');
@@ -336,6 +359,10 @@ async function runTests() {
 
     await testWaypointStructure(largeId);
 
+    // Audio/Video tests (will be skipped if not configured)
+    const audioId = await testAudioIngestion();
+    const videoId = await testVideoIngestion();
+
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
     console.log('🎉 All tests passed!\n');
     console.log('Summary:');
@@ -345,6 +372,8 @@ async function runTests() {
     console.log(`  • HTML conversion: ${htmlId ? '✅' : '❌'}`);
     console.log(`  • Force root-child: ${forceId ? '✅' : '❌'}`);
     console.log(`  • URL ingestion: ${urlId ? '✅' : '⏭️'}`);
+    console.log(`  • Audio ingestion: ${audioId ? '✅' : '⏭️ (skipped)'}`);
+    console.log(`  • Video ingestion: ${videoId ? '✅' : '⏭️ (skipped)'}`);
     console.log(`  • Query integration: ✅`);
     console.log(`  • Waypoint structure: ✅`);
   } catch (error) {

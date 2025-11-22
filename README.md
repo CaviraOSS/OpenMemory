@@ -28,6 +28,7 @@ Unlike traditional vector databases, OpenMemory uses a cognitive architecture. I
 - **Framework agnostic** - Works with any LLM or agent system
 - **Migration** - Easily migrate from Mem0, Zep and Supermemory.
 - **Vercel AI SDK** - We support Vercel AI SDK via api.
+- **Ingestion** - We support ingestion of docx, pdf, txt, audio, video, url.
 - **Web Dashboard** - A self-hosted web dashboard is included, so managing memories becomes effortless.
 - **Chat with Memories** - In the self-hosted web dashboard, you can chat with your memories, ask them questions, etc.
 
@@ -84,7 +85,7 @@ This approach improves recall accuracy while reducing costs.
 | **Explainable Recall Paths**             | ✅ Waypoint graph trace ✓                                   | ❌                                 | ⚠️ Graph labels only            | ❌ None                       | ❌ None                    | ❌ None                     | ❌ None                                       |
 | **Cost / 1M tokens (hosted embeddings)** | ~$0.35 (synthetic + Gemini hybrid ✓)                        | ~$2.2                              | ~$2.5+                          | ~$1.2                         | ~$3.0                      | User-managed                | User-managed                                  |
 | **Local Embeddings Support**             | ✅ (Ollama / E5 / BGE / synthetic fallback ✓)               | ⚠️ Partial                         | ✅ Self-hosted tier ✓           | ✅ Supported ✓                | ❌ None                    | ⚠️ Optional                 | ✅ Chroma / Weaviate ✓                        |
-| **Ingestion Formats**                    | ✅ PDF / DOCX / TXT / Audio / Web ✓                         | ✅ API ✓                           | ✅ API ✓                        | ✅ SDK ✓                      | ❌ None                    | ⚠️ Manual ✓                 | ⚠️ SDK specific ✓                             |
+| **Ingestion Formats**                    | ✅ PDF / DOCX / TXT / MD / HTML / Audio / Video ✓                         | ✅ API ✓                           | ✅ API ✓                        | ✅ SDK ✓                      | ❌ None                    | ⚠️ Manual ✓                 | ⚠️ SDK specific ✓                             |
 | **Scalability Model**                    | Sector-sharded (semantic / episodic / etc.) ✓               | PG + FAISS cloud ✓                 | PG shards (cloud) ✓             | Single node                   | Vendor scale               | In-process                  | Horizontal ✓                                  |
 | **Deployment**                           | Local / Docker / Cloud ✓                                    | Local + Cloud ✓                    | Docker / Cloud ✓                | Node / Python ✓               | Cloud only ❌              | Python / JS SDK ✓           | Docker / Cloud ✓                              |
 | **Data Ownership**                       | 100 % yours ✓                                               | Vendor / self-host split ✓         | Partial ✓                       | 100 % yours ✓                 | Vendor ❌                  | Yours ✓                     | Yours ✓                                       |
@@ -431,6 +432,26 @@ curl -X POST http://localhost:8080/memory/add \
 curl -X POST http://localhost:8080/memory/query \
   -H "Content-Type: application/json" \
   -d '{"query": "preferences", "k": 5, "filters": {"user_id": "user123"}}'
+
+# Ingest audio file (MP3/WAV/M4A/etc.)
+curl -X POST http://localhost:8080/memory/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OM_API_KEY}" \
+  -d '{
+    "content_type": "mp3",
+    "data": "'$(base64 -w 0 audio.mp3)'",
+    "metadata": {"source": "voice_memo", "user_id": "user123"}
+  }'
+
+# Ingest video file (MP4/WEBM/AVI/etc.)
+curl -X POST http://localhost:8080/memory/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${OM_API_KEY}" \
+  -d '{
+    "content_type": "mp4",
+    "data": "'$(base64 -w 0 video.mp4)'",
+    "metadata": {"source": "recording", "user_id": "user123"}
+  }'
 
 # Get user summary
 curl http://localhost:8080/users/user123/summary

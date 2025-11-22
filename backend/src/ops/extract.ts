@@ -1,6 +1,11 @@
 import { exec } from "child_process";
 import { promisify } from "util";
 import mammoth from "mammoth";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import ffmpeg from "fluent-ffmpeg";
+import OpenAI from "openai";
 const TurndownService = require("turndown");
 
 const execAsync = promisify(exec);
@@ -102,11 +107,206 @@ export async function extractURL(url: string): Promise<ExtractionResult> {
     };
 }
 
+export async function extractAudio(
+    buffer: Buffer,
+    mimeType: string,
+): Promise<ExtractionResult> {
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OM_OPENAI_API_KEY;
+    if (!apiKey) {
+        throw new Error(
+            "OpenAI API key required for audio transcription. Set OPENAI_API_KEY in .env",
+        );
+    }
+
+    // Check file size (Whisper API limit is 25MB)
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    if (buffer.length > maxSize) {
+        throw new Error(
+            `Audio file too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB. Maximum size is 25MB.`,
+        );
+    }
+
+    // Create temporary file for Whisper API
+    const tempDir = os.tmpdir();
+    const ext = getAudioExtension(mimeType);
+    const tempFilePath = path.join(tempDir, `audio-${Date.now()}${ext}`);
+
+    try {
+        // Write buffer to temp file
+        fs.writeFileSync(tempFilePath, buffer);
+
+        // Initialize OpenAI client
+        const openai = new OpenAI({ apiKey });
+
+        // Transcribe audio using Whisper
+        const transcription = await openai.audio.transcriptions.create({
+            file: fs.createReadStream(tempFilePath),
+            model: "whisper-1",
+            response_format: "verbose_json",
+        });
+
+        const text = transcription.text;
+
+        return {
+            text,
+            metadata: {
+                content_type: "audio",
+                char_count: text.length,
+                estimated_tokens: estimateTokens(text),
+                extraction_method: "whisper",
+                audio_format: ext.replace(".", ""),
+                file_size_bytes: buffer.length,
+                file_size_mb: (buffer.length / 1024 / 1024).toFixed(2),
+                duration_seconds: (transcription as any).duration || null,
+                language: (transcription as any).language || null,
+            },
+        };
+    } catch (error: any) {
+        console.error("[EXTRACT] Audio transcription failed:", error);
+        throw new Error(`Audio transcription failed: ${error.message}`);
+    } finally {
+        // Clean up temp file
+        try {
+            if (fs.existsSync(tempFilePath)) {
+                fs.unlinkSync(tempFilePath);
+            }
+        } catch (e) {
+            console.warn("[EXTRACT] Failed to clean up temp file:", e);
+        }
+    }
+}
+
+export async function extractVideo(
+    buffer: Buffer,
+): Promise<ExtractionResult> {
+    // Create temporary files for video and audio
+    const tempDir = os.tmpdir();
+    const videoPath = path.join(
+        tempDir,
+        `video-${Date.now()}.mp4`,
+    );
+    const audioPath = path.join(
+        tempDir,
+        `audio-${Date.now()}.mp3`,
+    );
+
+    try {
+        // Write video buffer to temp file
+        fs.writeFileSync(videoPath, buffer);
+
+        // Extract audio using ffmpeg
+        await new Promise<void>((resolve, reject) => {
+            ffmpeg(videoPath)
+                .output(audioPath)
+                .noVideo()
+                .audioCodec("libmp3lame")
+                .on("end", () => resolve())
+                .on("error", (err: Error) => reject(err))
+                .run();
+        });
+
+        // Read extracted audio
+        const audioBuffer = fs.readFileSync(audioPath);
+
+        // Transcribe extracted audio
+        const result = await extractAudio(audioBuffer, "audio/mpeg");
+
+        // Update metadata to reflect video source
+        result.metadata.content_type = "video";
+        result.metadata.extraction_method = "ffmpeg+whisper";
+        result.metadata.video_file_size_bytes = buffer.length;
+        result.metadata.video_file_size_mb = (
+            buffer.length /
+            1024 /
+            1024
+        ).toFixed(2);
+
+        return result;
+    } catch (error: any) {
+        if (error.message?.includes("ffmpeg")) {
+            throw new Error(
+                "FFmpeg not found. Please install FFmpeg to process video files. Visit: https://ffmpeg.org/download.html",
+            );
+        }
+        console.error("[EXTRACT] Video processing failed:", error);
+        throw new Error(`Video processing failed: ${error.message}`);
+    } finally {
+        // Clean up temp files
+        try {
+            if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+            if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
+        } catch (e) {
+            console.warn("[EXTRACT] Failed to clean up temp files:", e);
+        }
+    }
+}
+
+function getAudioExtension(mimeType: string): string {
+    const mimeMap: Record<string, string> = {
+        "audio/mpeg": ".mp3",
+        "audio/mp3": ".mp3",
+        "audio/wav": ".wav",
+        "audio/wave": ".wav",
+        "audio/x-wav": ".wav",
+        "audio/mp4": ".m4a",
+        "audio/m4a": ".m4a",
+        "audio/x-m4a": ".m4a",
+        "audio/webm": ".webm",
+        "audio/ogg": ".ogg",
+    };
+    return mimeMap[mimeType.toLowerCase()] || ".mp3";
+}
+
 export async function extractText(
     contentType: string,
     data: string | Buffer,
 ): Promise<ExtractionResult> {
-    switch (contentType.toLowerCase()) {
+    const type = contentType.toLowerCase();
+
+    // Audio formats
+    if (
+        type === "mp3" ||
+        type === "audio" ||
+        type === "audio/mpeg" ||
+        type === "audio/mp3" ||
+        type === "audio/wav" ||
+        type === "audio/wave" ||
+        type === "audio/x-wav" ||
+        type === "wav" ||
+        type === "m4a" ||
+        type === "audio/mp4" ||
+        type === "audio/m4a" ||
+        type === "audio/x-m4a" ||
+        type === "webm" ||
+        type === "audio/webm" ||
+        type === "ogg" ||
+        type === "audio/ogg"
+    ) {
+        const buffer = Buffer.isBuffer(data)
+            ? data
+            : Buffer.from(data as string, "base64");
+        return extractAudio(buffer, type.startsWith("audio/") ? type : `audio/${type}`);
+    }
+
+    // Video formats
+    if (
+        type === "mp4" ||
+        type === "video" ||
+        type === "video/mp4" ||
+        type === "video/webm" ||
+        type === "video/mpeg" ||
+        type === "avi" ||
+        type === "video/avi" ||
+        type === "mov" ||
+        type === "video/quicktime"
+    ) {
+        const buffer = Buffer.isBuffer(data)
+            ? data
+            : Buffer.from(data as string, "base64");
+        return extractVideo(buffer);
+    }
+
+    switch (type) {
         case "pdf":
             return extractPDF(
                 Buffer.isBuffer(data)
