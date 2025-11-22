@@ -744,19 +744,19 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/DoKoB0512">
-                    <img src="https://avatars.githubusercontent.com/u/123281216?v=4" width="100;" alt="DoKoB0512"/>
+                <a href="https://github.com/amihos">
+                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
                     <br />
-                    <sub><b>DoKoB0512</b></sub>
+                    <sub><b>Hossein Amirkhalili</b></sub>
                 </a>
             </td>
 		</tr>
 		<tr>
             <td align="center">
-                <a href="https://github.com/amihos">
-                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
+                <a href="https://github.com/DoKoB0512">
+                    <img src="https://avatars.githubusercontent.com/u/123281216?v=4" width="100;" alt="DoKoB0512"/>
                     <br />
-                    <sub><b>Hossein Amirkhalili</b></sub>
+                    <sub><b>DoKoB0512</b></sub>
                 </a>
             </td>
             <td align="center">
