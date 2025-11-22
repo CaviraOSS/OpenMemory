@@ -781,10 +781,10 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/pc-quiknode">
-                    <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
+                <a href="https://github.com/jasonkneen">
+                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
                     <br />
-                    <sub><b>Peter Chung</b></sub>
+                    <sub><b>Jason Kneen</b></sub>
                 </a>
             </td>
             <td align="center">
@@ -795,10 +795,10 @@ make test
                 </a>
             </td>
             <td align="center">
-                <a href="https://github.com/jasonkneen">
-                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
+                <a href="https://github.com/pc-quiknode">
+                    <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
                     <br />
-                    <sub><b>Jason Kneen</b></sub>
+                    <sub><b>Peter Chung</b></sub>
                 </a>
             </td>
             <td align="center">
