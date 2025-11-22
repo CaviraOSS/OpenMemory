@@ -8,35 +8,35 @@
 episodic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
 
 semantic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
 
 procedural:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
 
 emotional:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
 
 reflective:
   ollama: nomic-embed-text
   openai: text-embedding-3-large
-  gemini: models/embedding-001
+  gemini: models/text-embedding-004
   aws: amazon.titan-embed-text-v2:0
   local: all-mpnet-base-v2
 # Available Ollama models (pull with: ollama pull <model>)
@@ -50,7 +50,8 @@ reflective:
 # - text-embedding-3-large (3072d)
 
 # Gemini models:
-# - models/embedding-001 (768d)
+# - models/text-embedding-004 (768d) - latest
+# - models/embedding-001 (768d) - deprecated
 
 #AWS models:
 # - amazon.titan-embed-text-v2:0 (1024d, 512d, 256)

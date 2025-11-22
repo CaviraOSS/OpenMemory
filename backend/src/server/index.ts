@@ -28,6 +28,16 @@ console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
 console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
 console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
+// Warn about configuration mismatch that causes embedding incompatibility
+if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
+    console.warn(
+        `[CONFIG] ⚠️  WARNING: Embedding configuration mismatch detected!\n` +
+        `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
+        `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
+        `         This causes semantic search to fail. Set OM_TIER=deep to fix.`
+    );
+}
+
 app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
