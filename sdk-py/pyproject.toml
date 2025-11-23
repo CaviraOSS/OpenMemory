@@ -1,78 +1,34 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmemory-py"
-version = "0.3.0"
-authors = [
-    {name = "OpenMemory Project", email = "bob@holacorp.net"},
-]
-description = "Brain-inspired memory system client for Python applications"
+version = "1.0.0"
+description = "OpenMemory Python SDK provides a local-first long-term memory engine for AI agents and LLM applications. Features include semantic search, multi-sector memory, temporal fact storage, automatic decay, and explainable recall paths. Works fully offline or with the OpenMemory backend."
 readme = "README.md"
-license = {text = "Apache-2.0"}
-requires-python = ">=3.8"
+keywords = "ai llm memory long-term-memory agent agents semantic-memory episodic-memory vector-search persistent-memory llm-memory cognitive-memory temporal-graph mcp claude openai python sdk"
+authors = [{ name = "OpenMemory Team" }]
+license = { text = "Apache-2.0" }
 classifiers = [
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-keywords = [
-    "memory",
-    "ai", 
-    "vector-search",
-    "brain-inspired",
-    "embeddings",
-    "semantic-search",
-    "artificial-intelligence",
-    "machine-learning",
-    "nlp"
-]
+requires-python = ">=3.8"
 dependencies = [
-    # Zero dependencies - uses only Python standard library
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=6.0",
-    "black>=21.0",
-    "build>=0.7.0",
+    "requests>=2.31.0",
+    "numpy>=1.24.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0",
+    "tiktoken>=0.5.0",
+    "google-generativeai>=0.3.0",
+    "boto3>=1.34.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/caviraoss/openmemory"
-Documentation = "https://github.com/caviraoss/openmemory/tree/main/sdk-py"
-Repository = "https://github.com/caviraoss/openmemory.git"
-"Bug Reports" = "https://github.com/caviraoss/openmemory/issues"
+"Homepage" = "https://github.com/cavira/OpenMemory"
+"Bug Tracker" = "https://github.com/cavira/OpenMemory/issues"
 
 [tool.setuptools.packages.find]
-include = ["openmemory*"]
-
-[tool.setuptools.package-data]
-openmemory = ["py.typed"]
-
-[tool.black]
-line-length = 88
-target-version = ['py38']
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "--cov=openmemory --cov-report=term-missing"
+where = ["src"]

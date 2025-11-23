@@ -1,89 +1,88 @@
-const { OpenMemory, SECTORS } = require('@openmemory/sdk-js')
-
-const client = new OpenMemory({
-    baseUrl: 'http://localhost:8080'
-})
+import { OpenMemory } from 'openmemory-sdk';
 
 async function sectorExample() {
-    console.log('🧠 OpenMemory JavaScript SDK - Brain Sectors Example')
-    console.log('===================================================')
+    console.log('🧠 OpenMemory JavaScript SDK - Brain Sectors');
+    console.log('==========================================');
     
-    try {
-        // Get sector information
-        console.log('1. Getting sector information...')
-        const sectors = await client.getSectors()
-        console.log('✅ Available sectors:', Object.keys(sectors.sectors))
-        console.log('✅ Sector configurations:', sectors.configs)
-        
-        // Add memories for each sector
-        console.log('\n2. Adding memories to different sectors...')
-        const testMemories = [
-            {
-                content: "I went to the coffee shop this morning at 9 AM",
-                expectedSector: "episodic"
-            },
-            {
-                content: "Machine learning is a subset of artificial intelligence",
-                expectedSector: "semantic"
-            },
-            {
-                content: "First, open the terminal. Then, run npm install.",
-                expectedSector: "procedural"
-            },
-            {
-                content: "I feel so excited and happy about this new opportunity!",
-                expectedSector: "emotional"
-            },
-            {
-                content: "I wonder what the purpose of all this learning really is",
-                expectedSector: "reflective"
-            }
-        ]
-        
-        const addedMemories = []
-        for (const test of testMemories) {
-            const memory = await client.add(test.content)
-            addedMemories.push(memory)
-            
-            const match = memory.primary_sector === test.expectedSector ? '✅' : '❓'
-            console.log(`${match} "${test.content}"`)
-            console.log(`   Expected: ${test.expectedSector}, Got: ${memory.primary_sector}`)
-            console.log(`   All sectors: [${memory.sectors.join(', ')}]`)
+    const mem = new OpenMemory({
+        path: './data/sectors-demo.sqlite',
+        tier: 'smart',
+        embeddings: {
+            provider: 'synthetic'
         }
-        
-        // Query specific sectors
-        console.log('\n3. Querying specific sectors...')
-        
-        const episodicResults = await client.querySector("morning coffee", "episodic")
-        console.log(`✅ Episodic memories (${episodicResults.matches.length}):`)
-        episodicResults.matches.forEach(m => {
-            console.log(`   - ${m.content.substring(0, 60)}...`)
-        })
-        
-        const emotionalResults = await client.querySector("excited happy", "emotional")
-        console.log(`✅ Emotional memories (${emotionalResults.matches.length}):`)
-        emotionalResults.matches.forEach(m => {
-            console.log(`   - ${m.content.substring(0, 60)}...`)
-        })
-        
-        // Cross-sector query
-        console.log('\n4. Cross-sector query...')
-        const crossResults = await client.query("learning and feeling excited", { k: 10 })
-        console.log(`✅ Cross-sector results (${crossResults.matches.length}):`)
-        crossResults.matches.forEach((match, i) => {
-            console.log(`   ${i+1}. [${match.primary_sector}] ${match.content.substring(0, 50)}...`)
-            console.log(`      Score: ${match.score.toFixed(3)}, Path: [${match.path.join(' → ')}]`)
-        })
-        
-        // Get memories by sector
-        console.log('\n5. Getting memories by sector...')
-        const emotionalMemories = await client.getBySector("emotional", 10)
-        console.log(`✅ All emotional memories: ${emotionalMemories.items.length}`)
-        
-    } catch (error) {
-        console.error('❌ Error:', error.message)
-        console.log('Make sure the OpenMemory server is running on port 8080')
+    });
+    
+    console.log('✅ OpenMemory initialized\n');
+    
+    // Demonstrate each sector
+    console.log('📝 Adding memories to different sectors...\n');
+    
+    // 1. Episodic (Events & Experiences)
+    console.log('1️⃣  EPISODIC SECTOR (Events & Experiences)');
+    await mem.add("Last Tuesday I attended a conference on AI safety in San Francisco", {
+        tags: ["event", "conference", "ai"],
+        metadata: { date: "2024-01-15", location: "San Francisco" }
+    });
+    await mem.add("I remember the first time I wrote a recursive function - it was confusing but exciting");
+    console.log('   ✅ Time-bound experiences stored\n');
+    
+    // 2. Semantic (Facts & Knowledge)
+    console.log('2️⃣  SEMANTIC SECTOR (Facts & Knowledge)');
+    await mem.add("Python is an interpreted, high-level programming language known for readability", {
+        tags: ["programming", "python", "facts"]
+    });
+    await mem.add("The mitochondria is the powerhouse of the cell", {
+        tags: ["biology", "facts"]
+    });
+    console.log('   ✅ Timeless facts stored\n');
+    
+    // 3. Procedural (Skills & How-to)
+    console.log('3️⃣  PROCEDURAL SECTOR (Skills & How-to)');
+    await mem.add("To deploy to production: 1) Run tests, 2) Build Docker image, 3) Push to registry, 4) Update k8s manifests", {
+        tags: ["devops", "procedure"]
+    });
+    await mem.add("When debugging, always check: logs, network tab, console errors, and stack traces", {
+        tags: ["debugging", "procedure"]
+    });
+    console.log('   ✅ Procedures stored\n');
+    
+    // 4. Emotional (Feelings & Sentiment)
+    console.log('4️⃣  EMOTIONAL SECTOR (Feelings & Sentiment)');
+    await mem.add("I'm extremely proud of finishing that complex algorithm! 🎉", {
+        tags: ["emotion", "achievement"]
+    });
+    await mem.add("Feeling a bit anxious about the upcoming presentation tomorrow", {
+        tags: ["emotion", "anxiety"]
+    });
+    console.log('   ✅ Emotional states stored\n');
+    
+    // 5. Reflective (Meta-cognition & Insights)
+    console.log('5️⃣  REFLECTIVE SECTOR (Meta-cognition & Insights)');
+    await mem.add("I notice I learn best when I can practice concepts immediately after learning them", {
+        tags: ["reflection", "learning"]
+    });
+    await mem.add("Looking back, I realize my coding style has evolved to prioritize readability over cleverness", {
+        tags: ["reflection", "growth"]
+    });
+    console.log('   ✅ Reflections stored\n');
+    
+    // Query across sectors
+    console.log('🔍 Querying across sectors...');
+    const results = await mem.query("learning and programming");
+    console.log(`\n✅ Found ${results.length} memories across sectors:`);
+    results.forEach((r, i) => {
+        console.log(`   ${i+1}. ${r.content.substring(0, 70)}...`);
+    });
+    
+    // Get memories by sector
+    console.log('\n📊 Memories per sector:');
+    const sectors = ['episodic', 'semantic', 'procedural', 'emotional', 'reflective'];
+    for (const sector of sectors) {
+        const sectorMems = await mem.getBySector(sector);
+        console.log(`   ${sector.padEnd(12)}: ${sectorMems.length} memories`);
     }
+    
+    console.log('\n✨ Sector demonstration complete!');
 }
 
-sectorExample()
+sectorExample().catch(console.error);

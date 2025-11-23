@@ -2,130 +2,104 @@
 
 import sys
 import os
-import json
-import time
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py', 'src'))
 
 from openmemory import OpenMemory
 
-def advanced_features_example():
-    print('🚀 OpenMemory Python SDK - Advanced Features Example')
-    print('=====================================================')
+def advanced_example():
+    print('🧠 OpenMemory Python SDK - Advanced Features')
+    print('============================================')
     
-    # Initialize client
-    client = OpenMemory(
-        base_url='http://localhost:8080',
-        auth_key='your_auth_key'  # Optional authentication
+    # Initialize with advanced configuration
+    mem = OpenMemory(
+        path='./data/advanced-demo.sqlite',
+        tier='smart',  # 'fast' | 'smart' | 'deep' | 'hybrid'
+        embeddings={
+            'provider': 'synthetic',
+            'mode': 'advanced',
+            'dimensions': 768
+        },
+        decay={
+            'intervalMinutes': 5,
+            'reinforceOnQuery': True,
+            'coldThreshold': 0.1
+        },
+        compression={
+            'enabled': True,
+            'algorithm': 'semantic',
+            'minLength': 100
+        },
+        reflection={
+            'enabled': True,
+            'intervalMinutes': 10,
+            'minMemories': 5
+        }
     )
     
-    try:
-        # 1. Batch operations
-        print('1. Batch memory operations...')
-        batch_memories = [
-            "Python is a powerful programming language",
-            "I learned about neural networks today",
-            "The meeting went really well this afternoon",
-            "Remember to buy groceries: milk, bread, eggs",
-            "I feel accomplished after finishing the project"
-        ]
-        
-        print(f'Adding {len(batch_memories)} memories...')
-        start_time = time.time()
-        added = []
-        for content in batch_memories:
-            memory = client.add(content)
-            added.append(memory)
-        
-        batch_time = time.time() - start_time
-        print(f'✅ Added {len(added)} memories in {batch_time:.2f}s')
-        
-        # 2. Memory decay and reinforcement
-        print('\n2. Memory decay and reinforcement...')
-        first_memory = added[0]
-        print(f'Original salience: {first_memory.get("salience", 1.0):.3f}')
-        
-        # Simulate time passing
-        time.sleep(1)
-        
-        # Retrieve the memory again to see salience changes
-        query_results = client.query(first_memory['content'][:20], k=1)
-        if query_results['matches']:
-            retrieved = query_results['matches'][0]
-            print(f'After retrieval: {retrieved.get("salience", 1.0):.3f}')
-        
-        # 3. Waypoint graph traversal
-        print('\n3. Waypoint graph traversal...')
-        graph_query = client.query("programming", k=5, use_graph=True)
-        print(f'Found {len(graph_query["matches"])} memories with graph traversal')
-        
-        for i, match in enumerate(graph_query['matches'][:3]):
-            content_preview = match['content'][:50] + "..." if len(match['content']) > 50 else match['content']
-            print(f'   {i+1}. {content_preview}')
-            print(f'      Sector: {match["primary_sector"]}, Score: {match["score"]:.3f}')
-            if 'path' in match and match['path']:
-                path_preview = ' → '.join(match['path'][:3])
-                print(f'      Path: {path_preview}{"..." if len(match["path"]) > 3 else ""}')
-        
-        # 4. Multi-sector queries
-        print('\n4. Multi-sector targeted queries...')
-        sectors_to_test = ['episodic', 'semantic', 'procedural']
-        
-        for sector in sectors_to_test:
-            sector_results = client.query_sector("learning", sector, k=2)
-            print(f'   {sector}: {len(sector_results["matches"])} matches')
-            for match in sector_results['matches']:
-                content_preview = match['content'][:40] + "..." if len(match['content']) > 40 else match['content']
-                print(f'     - {content_preview}')
-        
-        # 5. Memory filtering and pagination
-        print('\n5. Memory filtering and pagination...')
-        
-        # Get memories from last 24 hours
-        recent_memories = client.list_memories(limit=10, offset=0)
-        print(f'Recent memories: {len(recent_memories["items"])}')
-        
-        # Get emotional memories specifically
-        emotional_memories = client.get_by_sector('emotional', limit=5)
-        print(f'Emotional memories: {len(emotional_memories["items"])}')
-        
-        # 6. Health check and system status
-        print('\n6. System health and statistics...')
-        health = client.health_check()
-        print(f'System status: {health.get("status", "unknown")}')
-        print(f'Total memories: {health.get("memory_count", 0)}')
-        print(f'Database size: {health.get("db_size_mb", 0):.2f} MB')
-        
-        # Sector statistics
-        sectors_info = client.get_sectors()
-        if 'stats' in sectors_info:
-            print('Sector distribution:')
-            for stat in sectors_info['stats']:
-                percentage = (stat['count'] / health.get('memory_count', 1)) * 100
-                print(f'   {stat["sector"]}: {stat["count"]} ({percentage:.1f}%)')
-        
-        # 7. Memory deletion (careful!)
-        print('\n7. Memory management...')
-        test_memory = client.add("This is a test memory that will be deleted")
-        print(f'Added test memory: {test_memory["id"]}')
-        
-        delete_result = client.delete_memory(test_memory['id'])
-        print(f'Deletion successful: {delete_result}')
-        
-        # 8. Embedding provider information
-        print('\n8. Embedding provider information...')
-        try:
-            # This might not be exposed in the API, but we can infer from behavior
-            embedding_test = client.add("Testing embedding provider", metadata={'test': True})
-            print(f'Embedding dimensions: {len(embedding_test.get("embedding", []))}')
-            print('✅ Embedding provider is working correctly')
-        except Exception as e:
-            print(f'❓ Embedding test: {str(e)}')
-        
-        print('\n🎉 Advanced features demonstration complete!')
-        
-    except Exception as error:
-        print('❌ Error:', str(error))
-        print('Make sure the OpenMemory server is running on port 8080')
+    print('✅ OpenMemory initialized with advanced features')
+    
+    # Multi-sector memories
+    print('\n1. Adding multi-sector memories...')
+    
+    mem.add("Yesterday I learned how to implement binary search trees while feeling slightly frustrated",
+            tags=["learning", "coding", "emotion"],
+            metadata={"difficulty": "medium", "mood": "frustrated"})
+    
+    mem.add("The capital of France is Paris, located on the Seine river",
+            tags=["geography", "facts"],
+            metadata={"type": "factual"})
+    
+    mem.add("To make coffee: 1) Heat water to 200°F, 2) Add 2 tbsp grounds, 3) Pour slowly",
+            tags=["coffee", "procedure"],
+            metadata={"category": "cooking"})
+    
+    mem.add("I'm thinking about why certain algorithms are more efficient than others",
+            tags=["reflection", "metacognition"],
+            metadata={"type": "reflective"})
+    
+    print('✅ Added 4 memories across different sectors')
+    
+    # Cross-sector query
+    print('\n2. Cross-sector query...')
+    results = mem.query("learning and emotions", limit=3)
+    print(f"✅ Found {len(results)} cross-sector matches")
+    for i, r in enumerate(results):
+        print(f"   {i+1}. {r['content'][:60]}...")
+    
+    # Sector-specific query
+    print('\n3. Sector-specific queries...')
+    procedural = mem.getBySector('procedural', limit=5)
+    print(f"✅ Procedural memories: {len(procedural)}")
+    
+    semantic = mem.getBySector('semantic', limit=5)
+    print(f"✅ Semantic memories: {len(semantic)}")
+    
+    # Memory with custom decay
+    print('\n4. Adding memory with custom decay...')
+    mem.add("This is a short-lived thought",
+            decayLambda=0.5,  # Fast decay
+            metadata={"temporary": True})
+    print('✅ Memory added with fast decay')
+    
+    # Bulk operations
+    print('\n5. Bulk adding memories...')
+    memories = [
+        "Machine learning is transforming healthcare",
+        "I enjoy hiking in the mountains on weekends",
+        "Quantum computing uses qubits instead of classical bits"
+    ]
+    
+    for content in memories:
+        mem.add(content)
+    print(f"✅ Added {len(memories)} memories in bulk")
+    
+    # Get statistics
+    print('\n6. Memory statistics...')
+    all_mems = mem.getAll()
+    print(f"✅ Total memories: {len(all_mems)}")
+    
+    print('\n✨ Advanced features demonstrated!')
+    mem.close()
 
 if __name__ == '__main__':
-    advanced_features_example()
+    advanced_example()

@@ -1,40 +1,58 @@
 {
     "name": "openmemory-js",
-    "version": "0.3.0",
-    "description": "JavaScript SDK for OpenMemory - Long term AI memory system",
+    "version": "1.0.0",
+    "description": "Local-first long-term memory engine for AI apps and agents. Provides semantic search, multi-sector memory, temporal facts, decay, and full explainability. Works standalone or with the OpenMemory backend.",
     "main": "dist/index.js",
-    "module": "dist/index.esm.js",
     "types": "dist/index.d.ts",
+    "files": [
+        "dist"
+    ],
     "scripts": {
-        "build": "rollup -c",
-        "dev": "rollup -c -w",
-        "test": "jest",
+        "build": "tsc",
         "prepublishOnly": "npm run build"
     },
     "keywords": [
-        "memory",
         "ai",
+        "llm",
+        "memory",
+        "long-term-memory",
+        "persistent-memory",
+        "agent",
+        "agents",
+        "semantic-memory",
+        "episodic-memory",
         "vector-search",
-        "brain-inspired",
-        "embeddings",
-        "semantic-search"
+        "llm-memory",
+        "cognitive-memory",
+        "temporal-graph",
+        "mcp",
+        "claude",
+        "openai",
+        "nodejs",
+        "js",
+        "typescript"
     ],
-    "author": "nullure",
-    "license": "Apache-2.0",
-    "devDependencies": {
-        "@rollup/plugin-typescript": "^11.1.5",
-        "@types/jest": "^29.5.8",
-        "jest": "^29.7.0",
-        "rollup": "^4.52.5",
-        "tslib": "^2.6.2",
-        "typescript": "^5.3.2"
+    "dependencies": {
+        "sqlite3": "^5.1.7",
+        "pdf-parse": "^1.1.1",
+        "mammoth": "^1.6.0",
+        "dotenv": "^16.3.1",
+        "fluent-ffmpeg": "^2.1.2",
+        "openai": "^4.20.0",
+        "node-fetch": "^2.7.0",
+        "turndown": "^7.1.2",
+        "@google/generative-ai": "^0.1.0",
+        "groq-sdk": "^0.3.0",
+        "@aws-sdk/client-bedrock-runtime": "^3.450.0"
     },
-    "files": [
-        "dist/"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/caviraoss/openmemory.git",
-        "directory": "sdk-js"
-    }
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "@types/pdf-parse": "^1.1.5",
+        "@types/fluent-ffmpeg": "^2.1.24",
+        "@types/turndown": "^5.0.4",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.3.0"
+    },
+    "author": "nullure",
+    "license": "Apache-2.0"
 }

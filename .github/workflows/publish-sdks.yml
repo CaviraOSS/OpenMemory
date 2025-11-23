@@ -45,7 +45,7 @@ jobs:
           cd sdk-js
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Publishing @openmemory/sdk@$VERSION"
+          echo "Publishing openmemory-js@$VERSION"
 
       - name: install deps
         run: cd sdk-js && npm ci
@@ -60,7 +60,7 @@ jobs:
 
       - name: notify
         run: |
-          echo "✅ Published @openmemory/sdk@${{ steps.version.outputs.version }}"
+          echo "✅ Published openmemory-js@${{ steps.version.outputs.version }}"
 
   publish-py:
     needs: detect-changes

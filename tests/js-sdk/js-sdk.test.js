@@ -1,110 +1,9 @@
-const { spawn } = require('child_process');
-const path = require('path');
+import { OpenMemory } from 'openmemory-sdk';
+import { promises as fs } from 'fs';
+import path from 'path';
 
-const API_BASE_URL = 'http://localhost:8080';
-let serverProcess = null;
-let client = null;
+const TEST_DB_PATH = './data/test-sdk.sqlite';
 let testResults = { passed: 0, failed: 0, total: 0, failures: [] };
-
-let OpenMemory;
-try {
-  OpenMemory = require('../../sdk-js/dist/index.js');
-} catch (error) {
-  console.log('Warning: SDK not found, using mock implementation for basic testing');
-
-  OpenMemory = class {
-    constructor(options = {}) {
-      this.baseUrl = options.baseUrl || 'http://localhost:8080';
-      this.authKey = options.authKey;
-    }
-    
-    async healthCheck() {
-      return { status: 'healthy' };
-    }
-    
-    async add(content, metadata = {}) {
-      return {
-        id: 'test-id-' + Date.now(),
-        content,
-        metadata,
-        primary_sector: 'semantic',
-        sectors: ['semantic'],
-        salience: 1.0
-      };
-    }
-    
-    async getMemory(id) {
-      return {
-        id,
-        content: 'Test memory content',
-        primary_sector: 'semantic',
-        sectors: ['semantic']
-      };
-    }
-    
-    async query(query, options = {}) {
-      return {
-        matches: [
-          {
-            id: 'test-match-1',
-            content: 'Test match content',
-            score: 0.95,
-            primary_sector: 'semantic',
-            path: ['node1', 'node2']
-          }
-        ]
-      };
-    }
-    
-    async listMemories(options = {}) {
-      return {
-        items: [
-          { id: 'test-1', content: 'Test memory 1' },
-          { id: 'test-2', content: 'Test memory 2' }
-        ],
-        total: 2
-      };
-    }
-    
-    async update(id, options) {
-      return { id, updated: true };
-    }
-    
-    async deleteMemory(id) {
-      return { success: true };
-    }
-    
-    async getSectors() {
-      return {
-        sectors: ['episodic', 'semantic', 'procedural', 'emotional', 'reflective'],
-        stats: [
-          { sector: 'semantic', count: 5 }
-        ]
-      };
-    }
-    
-    async querySector(query, sector, options = {}) {
-      return {
-        matches: [
-          {
-            id: 'sector-match-1',
-            content: 'Sector-specific match',
-            score: 0.9,
-            sectors: [sector]
-          }
-        ]
-      };
-    }
-    
-    async getBySector(sector, options = {}) {
-      return {
-        items: [
-          { id: 'sector-item-1', content: 'Sector item', sectors: [sector] }
-        ]
-      };
-    }
-  };
-}
 
 function assert(condition, message) {
   testResults.total++;
@@ -118,241 +17,224 @@ function assert(condition, message) {
   }
 }
 
-function assertEqual(actual, expected, message) {
-  assert(actual === expected, message || `Expected ${expected}, got ${actual}`);
-}
-
-function assertTrue(condition, message) {
-  assert(condition === true, message || 'Expected true');
-}
-
-function assertProperty(object, property, message) {
-  assert(object && object.hasOwnProperty(property), message || `Expected object to have property ${property}`);
-}
-
-function assertArray(value, message) {
-  assert(Array.isArray(value), message || 'Expected array');
-}
-
-async function testSDKInitialization() {
-  console.log('📋 Testing SDK Initialization...');
-  
+async function cleanupTestDB() {
   try {
-    const defaultClient = new OpenMemory();
-    assertTrue(defaultClient !== null, 'Should initialize with default configuration');
-    
-    const customClient = new OpenMemory({
-      baseUrl: 'http://localhost:8080',
-      authKey: 'test-key'
-    });
-    assertTrue(customClient !== null, 'Should initialize with custom configuration');
+    await fs.unlink(TEST_DB_PATH);
   } catch (error) {
-    assert(false, `SDK initialization failed: ${error.message}`);
+    // File doesn't exist, that's fine
   }
 }
 
-async function testHealthCheck() {
-  console.log('\n🏥 Testing Health Check...');
+async function testSDKInitialization() {
+  console.log('📋 Testing SDK Initialization...\n');
   
+  // Test 1: Should fail without required config
   try {
-    const health = await client.healthCheck();
-    assertProperty(health, 'status', 'Health response should have status property');
-    assertEqual(health.status, 'healthy', 'Health status should be healthy');
+    new OpenMemory();
+    assert(false, 'Should throw error without required config');
   } catch (error) {
-    assert(false, `Health check failed: ${error.message}`);
+    assert(true, 'Correctly throws error without required config');
+  }
+  
+  // Test 2: Should fail without path
+  try {
+    new OpenMemory({ tier: 'fast', embeddings: { provider: 'synthetic' } });
+    assert(false, 'Should throw error without path');
+  } catch (error) {
+    assert(error.message.includes('requires "path"'), 'Error message mentions missing path');
+  }
+  
+  // Test 3: Should fail without tier
+  try {
+    new OpenMemory({ path: TEST_DB_PATH, embeddings: { provider: 'synthetic' } });
+    assert(false, 'Should throw error without tier');
+  } catch (error) {
+    assert(error.message.includes('requires "tier"'), 'Error message mentions missing tier');
+  }
+  
+  // Test 4: Should fail without embeddings
+  try {
+    new OpenMemory({ path: TEST_DB_PATH, tier: 'fast' });
+    assert(false, 'Should throw error without embeddings');
+  } catch (error) {
+    assert(error.message.includes('embeddings'), 'Error message mentions missing embeddings');
+  }
+  
+  // Test 5: Should initialize with proper config
+  try {
+    const mem = new OpenMemory({
+      path: TEST_DB_PATH,
+      tier: 'fast',
+      embeddings: { provider: 'synthetic' }
+    });
+    assert(mem !== null, 'Successfully initializes with proper config');
+  } catch (error) {
+    assert(false, `Initialization failed: ${error.message}`);
   }
 }
 
 async function testMemoryOperations() {
-  console.log('\n🧠 Testing Memory Operations...');
+  console.log('\n🧠 Testing Memory Operations...\n');
   
-  let testMemoryId;
-
+  const mem = new OpenMemory({
+    path: TEST_DB_PATH,
+    tier: 'fast',
+    embeddings: { provider: 'synthetic' }
+  });
+  
+  // Test add
+  let mem1, mem2;
   try {
-    const content = 'This is a test memory from JavaScript SDK';
-    const memory = await client.add(content);
-    
-    assertProperty(memory, 'id', 'Added memory should have ID');
-    assertEqual(memory.content, content, 'Added memory should have correct content');
-    assertProperty(memory, 'primary_sector', 'Added memory should have primary sector');
-    assertProperty(memory, 'sectors', 'Added memory should have sectors array');
-    assertArray(memory.sectors, 'Sectors should be an array');
-    
-    testMemoryId = memory.id;
+    mem1 = await mem.add("Test memory 1");
+    assert(mem1.id !== undefined, 'Add returns memory with ID');
+    assert(mem1.content === "Test memory 1", 'Add preserves content');
   } catch (error) {
-    assert(false, `Add memory failed: ${error.message}`);
+    assert(false, `Add failed: ${error.message}`);
   }
-
+  
+  // Test add with metadata
   try {
-    const content = 'Memory with metadata test';
-    const metadata = { source: 'test', importance: 'high' };
-    const memory = await client.add(content, metadata);
-    
-    assertEqual(memory.content, content, 'Memory with metadata should have correct content');
-    assertProperty(memory, 'metadata', 'Memory should have metadata property');
+    mem2 = await mem.add("Test memory 2", { 
+      tags: ["test", "sdk"], 
+      metadata: { source: "test" } 
+    });
+    assert(mem2.id !== undefined, 'Add with metadata returns ID');
   } catch (error) {
-    assert(false, `Add memory with metadata failed: ${error.message}`);
+    assert(false, `Add with metadata failed: ${error.message}`);
   }
-
-  if (testMemoryId) {
+  
+  // Test query
+  try {
+    const results = await mem.query("test memory");
+    assert(Array.isArray(results), 'Query returns array');
+    assert(results.length > 0, 'Query finds results');
+    assert(results[0].content !== undefined, 'Query results have content');
+  } catch (error) {
+    assert(false, `Query failed: ${error.message}`);
+  }
+  
+  // Test getAll
+  try {
+    const all = await mem.getAll();
+    assert(Array.isArray(all), 'GetAll returns array');
+    assert(all.length >= 2, 'GetAll returns all memories');
+  } catch (error) {
+    assert(false, `GetAll failed: ${error.message}`);
+  }
+  
+  // Test delete
+  if (mem1) {
     try {
-      const memory = await client.getMemory(testMemoryId);
-      assertEqual(memory.id, testMemoryId, 'Retrieved memory should have correct ID');
-      assertProperty(memory, 'content', 'Retrieved memory should have content');
+      await mem.delete(mem1.id);
+      const afterDelete = await mem.getAll();
+      assert(!afterDelete.find(m => m.id === mem1.id), 'Delete removes memory');
     } catch (error) {
-      assert(false, `Get memory failed: ${error.message}`);
-    }
-
-    // Test memory update
-    try {
-      console.log('   Testing memory update...');
-      const updatedMemory = await client.update(testMemoryId, {
-        content: 'This is an UPDATED test memory from JavaScript SDK',
-        tags: ['test', 'updated', 'js-sdk'],
-        metadata: { updated: true, source: 'js-sdk-test' }
-      });
-      
-      assertProperty(updatedMemory, 'id', 'Updated memory should have ID');
-      assertProperty(updatedMemory, 'updated', 'Updated memory should have updated flag');
-      assertTrue(updatedMemory.updated, 'Updated flag should be true');
-    } catch (error) {
-      assert(false, `Update memory failed: ${error.message}`);
-    }
-  }
-
-  try {
-    const results = await client.query('JavaScript SDK test', { k: 5 });
-    assertProperty(results, 'matches', 'Query response should have matches');
-    assertArray(results.matches, 'Matches should be an array');
-    assertTrue(results.matches.length > 0, 'Should find at least one match');
-    
-    if (results.matches.length > 0) {
-      const firstMatch = results.matches[0];
-      assertProperty(firstMatch, 'id', 'Match should have ID');
-      assertProperty(firstMatch, 'content', 'Match should have content');
-      assertProperty(firstMatch, 'score', 'Match should have score');
-    }
-  } catch (error) {
-    assert(false, `Query memories failed: ${error.message}`);
-  }
-
-  try {
-    const memories = await client.listMemories({ limit: 10, offset: 0 });
-    assertProperty(memories, 'items', 'List response should have items');
-    assertArray(memories.items, 'Items should be an array');
-    assertProperty(memories, 'total', 'List response should have total');
-  } catch (error) {
-    assert(false, `List memories failed: ${error.message}`);
-  }
-
-  if (testMemoryId) {
-    try {
-      const result = await client.deleteMemory(testMemoryId);
-      assertProperty(result, 'success', 'Delete response should have success property');
-      assertTrue(result.success, 'Delete should be successful');
-    } catch (error) {
-      assert(false, `Delete memory failed: ${error.message}`);
+      assert(false, `Delete failed: ${error.message}`);
     }
   }
 }
 
 async function testSectorOperations() {
-  console.log('\n🏗️ Testing Sector Operations...');
-
-  try {
-    const sectors = await client.getSectors();
-    assertProperty(sectors, 'sectors', 'Sectors response should have sectors');
-    assertArray(sectors.sectors, 'Sectors should be an array');
-    
-    const expectedSectors = ['episodic', 'semantic', 'procedural', 'emotional', 'reflective'];
-    expectedSectors.forEach(sector => {
-      assertTrue(sectors.sectors.includes(sector), `Should include ${sector} sector`);
-    });
-  } catch (error) {
-    assert(false, `Get sectors failed: ${error.message}`);
-  }
-
-  try {
-    const results = await client.querySector('programming', 'semantic', { k: 3 });
-    assertProperty(results, 'matches', 'Sector query should have matches');
-    assertArray(results.matches, 'Sector matches should be an array');
-  } catch (error) {
-    assert(false, `Sector query failed: ${error.message}`);
-  }
-
-  try {
-    const memories = await client.getBySector('emotional', { limit: 5 });
-    assertProperty(memories, 'items', 'Sector memories should have items');
-    assertArray(memories.items, 'Sector items should be an array');
-  } catch (error) {
-    assert(false, `Get by sector failed: ${error.message}`);
-  }
-}
-
-async function testErrorHandling() {
-  console.log('\n⚠️ Testing Error Handling...');
-
-  try {
-
-    const offlineClient = new OpenMemory({ baseUrl: 'http://localhost:9999' });
-
+  console.log('\n🏗️ Testing Sector Operations...\n');
+  
+  const mem = new OpenMemory({
+    path: TEST_DB_PATH,
+    tier: 'smart',
+    embeddings: { provider: 'synthetic' }
+  });
+  
+  // Add memories that should go to different sectors
+  const memories = [
+    { content: "I went to Paris yesterday", sector: "episodic" },
+    { content: "Python is a programming language", sector: "semantic" },
+    { content: "To make coffee: add water, heat, brew", sector: "procedural" },
+    { content: "I feel really happy today!", sector: "emotional" },
+    { content: "I think I'm learning faster now", sector: "reflective" }
+  ];
+  
+  for (const m of memories) {
     try {
-      await offlineClient.healthCheck();
-      assertTrue(true, 'Offline client test completed (mock or real)');
+      await mem.add(m.content);
     } catch (error) {
-      assertTrue(true, 'Expected error for offline client (real SDK)');
+      assert(false, `Add ${m.sector} memory failed: ${error.message}`);
     }
-  } catch (error) {
-    assert(false, `Error handling test failed: ${error.message}`);
+  }
+  
+  // Test getBySector
+  const sectors = ['episodic', 'semantic', 'procedural', 'emotional', 'reflective'];
+  for (const sector of sectors) {
+    try {
+      const sectorMems = await mem.getBySector(sector);
+      assert(Array.isArray(sectorMems), `getBySector(${sector}) returns array`);
+    } catch (error) {
+      assert(false, `getBySector(${sector}) failed: ${error.message}`);
+    }
   }
 }
 
-async function runJSSDKTests() {
-  console.log('🧪 OpenMemory JavaScript SDK Tests');
-  console.log('===================================');
-
+async function testAdvancedFeatures() {
+  console.log('\n⚡ Testing Advanced Features...\n');
+  
+  // Test with decay configuration
   try {
-    client = new OpenMemory({
-      baseUrl: API_BASE_URL,
-      authKey: process.env.AUTH_KEY
+    const mem = new OpenMemory({
+      path: './data/test-advanced.sqlite',
+      tier: 'smart',
+      embeddings: { provider: 'synthetic' },
+      decay: {
+        intervalMinutes: 5,
+        reinforceOnQuery: true
+      },
+      compression: {
+        enabled: true,
+        algorithm: 'semantic'
+      }
     });
-    console.log('✅ SDK client initialized\n');
+    assert(mem !== null, 'Initializes with advanced config');
+    
+    await mem.add("Test with advanced features", { decayLambda: 0.1 });
+    assert(true, 'Add with custom decay works');
+    
+    await fs.unlink('./data/test-advanced.sqlite');
   } catch (error) {
-    console.error('❌ Failed to initialize SDK client:', error.message);
-    process.exit(1);
+    assert(false, `Advanced features failed: ${error.message}`);
   }
+}
 
+async function runTests() {
+  console.log('🧪 OpenMemory JavaScript SDK Tests');
+  console.log('===================================\n');
+  
+  await cleanupTestDB();
+  
   try {
     await testSDKInitialization();
-    await testHealthCheck();
     await testMemoryOperations();
     await testSectorOperations();
-    await testErrorHandling();
+    await testAdvancedFeatures();
   } catch (error) {
     console.error('❌ Test execution failed:', error.message);
   }
-
+  
+  await cleanupTestDB();
+  
   console.log('\n📊 Test Results');
   console.log('===============');
   console.log(`✅ Passed: ${testResults.passed}`);
   console.log(`❌ Failed: ${testResults.failed}`);
   console.log(`📝 Total:  ${testResults.total}`);
-
+  
   if (testResults.failures.length > 0) {
     console.log('\n💥 Failures:');
     testResults.failures.forEach(failure => console.log(`   - ${failure}`));
   }
-
+  
   const success = testResults.failed === 0;
   console.log(`\n${success ? '🎉 All tests passed!' : '💔 Some tests failed'}`);
   process.exit(success ? 0 : 1);
 }
 
-if (require.main === module) {
-  runJSSDKTests().catch(error => {
-    console.error('❌ Test runner failed:', error);
-    process.exit(1);
-  });
-}
-
-module.exports = { runJSSDKTests };
+runTests().catch(error => {
+  console.error('❌ Test runner failed:', error);
+  process.exit(1);
+});

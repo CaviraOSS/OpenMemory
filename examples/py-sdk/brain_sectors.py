@@ -2,98 +2,81 @@
 
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'sdk-py', 'src'))
 
-from openmemory import OpenMemory, SECTORS
+from openmemory import OpenMemory
 
-def brain_sectors_example():
-    print('🧠 OpenMemory Python SDK - Brain Sectors Example')
-    print('=================================================')
+def sector_example():
+    print('🧠 OpenMemory Python SDK - Brain Sectors')
+    print('=========================================')
     
-    # Initialize client
-    client = OpenMemory(base_url='http://localhost:8080')
+    mem = OpenMemory(
+        path='./data/sectors-demo.sqlite',
+        tier='smart',
+        embeddings={'provider': 'synthetic'}
+    )
     
-    try:
-        # Get sector information
-        print('1. Getting sector information...')
-        sectors = client.get_sectors()
-        print('✅ Available sectors:', sectors['sectors'])
-        print('✅ Sector configurations:', list(sectors.get('configs', {}).keys()))
-        
-        # Add memories for each sector
-        print('\n2. Adding memories to different sectors...')
-        test_memories = [
-            {
-                'content': "I went to the coffee shop this morning at 9 AM",
-                'expected_sector': "episodic"
-            },
-            {
-                'content': "Machine learning is a subset of artificial intelligence",
-                'expected_sector': "semantic"
-            },
-            {
-                'content': "First, open the terminal. Then, run pip install.",
-                'expected_sector': "procedural"
-            },
-            {
-                'content': "I feel so excited and happy about this new opportunity!",
-                'expected_sector': "emotional"
-            },
-            {
-                'content': "I wonder what the purpose of all this learning really is",
-                'expected_sector': "reflective"
-            }
-        ]
-        
-        added_memories = []
-        for test in test_memories:
-            memory = client.add(test['content'])
-            added_memories.append(memory)
-            
-            match = '✅' if memory['primary_sector'] == test['expected_sector'] else '❓'
-            print(f"{match} \"{test['content']}\"")
-            print(f"   Expected: {test['expected_sector']}, Got: {memory['primary_sector']}")
-            print(f"   All sectors: [{', '.join(memory['sectors'])}]")
-        
-        # Query specific sectors
-        print('\n3. Querying specific sectors...')
-        
-        episodic_results = client.query_sector("morning coffee", "episodic")
-        print(f"✅ Episodic memories ({len(episodic_results['matches'])}):")
-        for match in episodic_results['matches']:
-            content_preview = match['content'][:60] + "..." if len(match['content']) > 60 else match['content']
-            print(f"   - {content_preview}")
-        
-        emotional_results = client.query_sector("excited happy", "emotional")
-        print(f"✅ Emotional memories ({len(emotional_results['matches'])}):")
-        for match in emotional_results['matches']:
-            content_preview = match['content'][:60] + "..." if len(match['content']) > 60 else match['content']
-            print(f"   - {content_preview}")
-        
-        # Cross-sector query
-        print('\n4. Cross-sector query...')
-        cross_results = client.query("learning and feeling excited", k=10)
-        print(f"✅ Cross-sector results ({len(cross_results['matches'])}):")
-        for i, match in enumerate(cross_results['matches']):
-            content_preview = match['content'][:50] + "..." if len(match['content']) > 50 else match['content']
-            print(f"   {i+1}. [{match['primary_sector']}] {content_preview}")
-            path_str = ' → '.join(match['path'])
-            print(f"      Score: {match['score']:.3f}, Path: [{path_str}]")
-        
-        # Get memories by sector
-        print('\n5. Getting memories by sector...')
-        emotional_memories = client.get_by_sector("emotional", limit=10)
-        print(f"✅ All emotional memories: {len(emotional_memories['items'])}")
-        
-        # Sector statistics
-        print('\n6. Sector statistics...')
-        if 'stats' in sectors:
-            for stat in sectors['stats']:
-                print(f"   {stat['sector']}: {stat['count']} memories, avg salience: {stat.get('avg_salience', 0):.3f}")
-        
-    except Exception as error:
-        print('❌ Error:', str(error))
-        print('Make sure the OpenMemory server is running on port 8080')
+    print('✅ OpenMemory initialized\n')
+    
+    # Demonstrate each sector
+    print('📝 Adding memories to different sectors...\n')
+    
+    # 1. Episodic (Events & Experiences)
+    print('1️⃣  EPISODIC SECTOR (Events & Experiences)')
+    mem.add("Last Tuesday I attended a conference on AI safety in San Francisco",
+            tags=["event", "conference", "ai"],
+            metadata={"date": "2024-01-15", "location": "San Francisco"})
+    mem.add("I remember the first time I wrote a recursive function - it was confusing but exciting")
+    print('   ✅ Time-bound experiences stored\n')
+    
+    # 2. Semantic (Facts & Knowledge)
+    print('2️⃣  SEMANTIC SECTOR (Facts & Knowledge)')
+    mem.add("Python is an interpreted, high-level programming language known for readability",
+            tags=["programming", "python", "facts"])
+    mem.add("The mitochondria is the powerhouse of the cell",
+            tags=["biology", "facts"])
+    print('   ✅ Timeless facts stored\n')
+    
+    # 3. Procedural (Skills & How-to)
+    print('3️⃣  PROCEDURAL SECTOR (Skills & How-to)')
+    mem.add("To deploy to production: 1) Run tests, 2) Build Docker image, 3) Push to registry, 4) Update k8s manifests",
+            tags=["devops", "procedure"])
+    mem.add("When debugging, always check: logs, network tab, console errors, and stack traces",
+            tags=["debugging", "procedure"])
+    print('   ✅ Procedures stored\n')
+    
+    # 4. Emotional (Feelings & Sentiment)
+    print('4️⃣  EMOTIONAL SECTOR (Feelings & Sentiment)')
+    mem.add("I'm extremely proud of finishing that complex algorithm! 🎉",
+            tags=["emotion", "achievement"])
+    mem.add("Feeling a bit anxious about the upcoming presentation tomorrow",
+            tags=["emotion", "anxiety"])
+    print('   ✅ Emotional states stored\n')
+    
+    # 5. Reflective (Meta-cognition & Insights)
+    print('5️⃣  REFLECTIVE SECTOR (Meta-cognition & Insights)')
+    mem.add("I notice I learn best when I can practice concepts immediately after learning them",
+            tags=["reflection", "learning"])
+    mem.add("Looking back, I realize my coding style has evolved to prioritize readability over cleverness",
+            tags=["reflection", "growth"])
+    print('   ✅ Reflections stored\n')
+    
+    # Query across sectors
+    print('🔍 Querying across sectors...')
+    results = mem.query("learning and programming")
+    print(f"\n✅ Found {len(results)} memories across sectors:")
+    for i, r in enumerate(results):
+        print(f"   {i+1}. {r['content'][:70]}...")
+    
+    # Get memories by sector
+    print('\n📊 Memories per sector:')
+    sectors = ['episodic', 'semantic', 'procedural', 'emotional', 'reflective']
+    for sector in sectors:
+        sector_mems = mem.getBySector(sector)
+        print(f"   {sector.ljust(12)}: {len(sector_mems)} memories")
+    
+    print('\n✨ Sector demonstration complete!')
+    mem.close()
 
 if __name__ == '__main__':
-    brain_sectors_example()
+    sector_example()

@@ -1,266 +1,287 @@
-# OpenMemory SDK (JavaScript/TypeScript)
+<img width="1577" height="781" alt="OpenMemory Banner" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
 
-Official JavaScript/TypeScript client for OpenMemory — an open-source, self-hosted memory engine for LLMs and AI agents.
+# OpenMemory JavaScript SDK
 
-## Features
+[VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord](https://discord.gg/P7HaRayqTh)
 
-- Simple client for the OpenMemory REST API
-- Supports both **Simple (1-call)** and **Advanced (5-calls)** embedding modes
-- Auto-retry with exponential backoff and optional batching
-- First-class TypeScript types
-- ESM and CommonJS builds
-- Node.js and edge/runtime friendly (native `fetch`)
+Local-first long-term memory engine for AI apps and agents. **Self-hosted. Explainable. Scalable.**
 
-## Installation
+![Demo](../.github/openmemory.gif)
 
-```bash
-npm install openmemory-js
-# or
-yarn add openmemory-js
-# or
-pnpm add openmemory-js
-```
+---
 
 ## Quick Start
 
-```ts
+```bash
+npm install openmemory-js
+```
+
+```javascript
 import { OpenMemory } from 'openmemory-js';
 
-const om = new OpenMemory({
-  baseUrl: process.env.OM_BASE_URL ?? 'http://localhost:8080',
-  apiKey: process.env.OM_API_KEY ?? '',
+const mem = new OpenMemory({
+  path: './data/memory.sqlite',
+  tier: 'fast',
+  embeddings: {
+    provider: 'synthetic'  // or 'openai', 'gemini', 'ollama'
+  }
 });
 
-// Add a memory
-const added = await om.memory.add({
-  content: 'User prefers dark mode and drinks black coffee.',
-  tags: ['preferences', 'coffee', 'theme'],
-});
-
-// Query memory
-const result = await om.memory.query({
-  query: 'What theme does the user like?',
-  topK: 5,
-});
-
-console.log(
-  result.items.map((i) => ({ id: i.id, score: i.score, sector: i.sector })),
-);
+await mem.add("I'm building a Next.js app with OpenMemory");
+const results = await mem.query("What am I building?");
+console.log(results);
 ```
+
+**That's it.** You're now running a fully local cognitive memory engine 🎉
+
+---
+
+## Features
+
+✅ **Local-first** - Runs entirely on your machine, zero external dependencies  
+✅ **Multi-sector memory** - Episodic, Semantic, Procedural, Emotional, Reflective  
+✅ **Temporal knowledge graph** - Time-aware facts with validity periods  
+✅ **Memory decay** - Adaptive forgetting with sector-specific rates  
+✅ **Waypoint graph** - Associative recall paths for better retrieval  
+✅ **Explainable traces** - See exactly why memories were recalled  
+✅ **Zero config** - Works out of the box with sensible defaults  
+
+---
 
 ## Configuration
 
-You can configure the SDK via constructor options or environment variables.
+### Required Configuration
 
-```ts
-const om = new OpenMemory({
-  baseUrl: 'http://localhost:8080',
-  apiKey: 'YOUR_KEY',
-  timeoutMs: 15000,
-  headers: { 'x-tenant': 'demo' },
+All three parameters are **required** for local mode:
+
+```javascript
+const mem = new OpenMemory({
+  path: './data/memory.sqlite',      // Where to store the database
+  tier: 'fast',                       // Performance tier
+  embeddings: {
+    provider: 'synthetic'             // Embedding provider
+  }
 });
 ```
 
-Environment variables (optional):
+### Embedding Providers
 
-```
-OM_BASE_URL=http://localhost:8080
-OM_API_KEY=your_key
-```
-
-## Embedding Modes
-
-OpenMemory supports two embedding modes. The SDK is agnostic; the mode is configured on the server side.
-
-- **Simple mode**: one unified embedding call for all sectors (fast, single API call)
-- **Advanced mode**: five sector-specific embedding calls (precise, five API calls)
-
-Set on the server (backend `.env`):
-
-```
-OM_EMBED_MODE=simple   # or "advanced"
+#### Synthetic (Testing/Development)
+```javascript
+embeddings: {
+  provider: 'synthetic'
+}
 ```
 
-## API
-
-### `new OpenMemory(options)`
-
-Options:
-
-- `baseUrl` (string) – server URL (required)
-- `apiKey` (string) – bearer token (optional, recommended)
-- `timeoutMs` (number) – request timeout in ms (default 15000)
-- `headers` (Record<string,string>) – extra headers for all requests
-
-### `om.memory.add(input)`
-
-Create a memory item.
-
-```ts
-type AddMemoryInput = {
-  content: string;
-  tags?: string[];
-  metadata?: Record<string, unknown>;
-  sector?: 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'; // optional hint
-};
-
-type AddMemoryResponse = {
-  id: string;
-  sectors: Array<{
-    name: string;
-    vectorDim: number;
-    score?: number;
-  }>;
-  createdAt: string;
-};
+#### OpenAI (Recommended for Production)
+```javascript
+embeddings: {
+  provider: 'openai',
+  apiKey: process.env.OPENAI_API_KEY,
+  model: 'text-embedding-3-small'  // optional
+}
 ```
 
-Example:
+#### Gemini
+```javascript
+embeddings: {
+  provider: 'gemini',
+  apiKey: process.env.GEMINI_API_KEY
+}
+```
 
-```ts
-await om.memory.add({
-  content: 'Met Alice yesterday at 5PM, she prefers tea.',
-  tags: ['contact', 'preference'],
+#### Ollama (Fully Local)
+```javascript
+embeddings: {
+  provider: 'ollama',
+  model: 'llama3',
+  ollama: {
+    url: 'http://localhost:11434'  // optional
+  }
+}
+```
+
+#### AWS Bedrock
+```javascript
+embeddings: {
+  provider: 'aws',
+  aws: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    region: 'us-east-1'
+  }
+}
+```
+
+### Performance Tiers
+
+- `fast` - Optimized for speed, lower precision
+- `smart` - Balanced performance and accuracy
+- `deep` - Maximum accuracy, slower
+- `hybrid` - Adaptive based on query complexity
+
+### Advanced Configuration
+
+```javascript
+const mem = new OpenMemory({
+  path: './data/memory.sqlite',
+  tier: 'smart',
+  embeddings: {
+    provider: 'openai',
+    apiKey: process.env.OPENAI_API_KEY
+  },
+  decay: {
+    intervalMinutes: 60,
+    reinforceOnQuery: true,
+    coldThreshold: 0.1
+  },
+  compression: {
+    enabled: true,
+    algorithm: 'semantic',
+    minLength: 100
+  },
+  reflection: {
+    enabled: true,
+    intervalMinutes: 10,
+    minMemories: 5
+  }
 });
 ```
 
-### `om.memory.query(input)`
+---
 
-Semantic retrieval with sector-aware scoring.
+## API Reference
 
-```ts
-type QueryMemoryInput = {
-  query: string;
-  topK?: number; // default 5
-  minScore?: number; // default set by server
-  sectors?: string[]; // optional filter
-  includeVectors?: boolean; // false by default
-};
+### `add(content, options?)`
 
-type QueryMemoryResponse = {
-  items: Array<{
-    id: string;
-    content: string;
-    sector: string;
-    score: number;
-    waypointId?: string;
-    createdAt: string;
-    metadata?: Record<string, unknown>;
-    vectorDim?: number;
-    vector?: number[]; // when includeVectors=true
-  }>;
-};
+Store a new memory.
+
+```javascript
+const result = await mem.add("User prefers dark mode", {
+  tags: ["preference", "ui"],
+  metadata: { category: "settings" },
+  decayLambda: 0.01  // Custom decay rate
+});
 ```
 
-### `om.memory.all(params)`
+### `query(query, options?)`
 
-List all stored memories (paginated).
+Search for relevant memories.
 
-```ts
-const page = await om.memory.all({ cursor: undefined, limit: 100 });
+```javascript
+const results = await mem.query("user preferences", {
+  limit: 10,
+  minScore: 0.7
+});
 ```
 
-### `om.memory.get(id)`
+### `getAll(options?)`
 
-Get a single memory by id.
+Retrieve all memories.
 
-### `om.memory.delete(id)`
-
-Delete a memory.
-
-### `om.health.get()`
-
-Health check endpoint.
-
-## Waypoints
-
-Waypoints link sector fragments back to a root memory for explainable retrieval.
-
-- The server creates **one waypoint per memory** and connects derived nodes
-- Returned on query as `waypointId` when applicable
-
-## Batching & Retries
-
-The SDK provides safe defaults:
-
-- Retries on `429/5xx` with exponential backoff
-- Optional client-side batching helper for ingestion spikes
-
-Example batch ingestion helper:
-
-```ts
-import { batch } from 'openmemory-js/utils';
-
-const inputs = [{ content: 'A' }, { content: 'B' }, { content: 'C' }];
-
-for await (const res of batch(inputs, async (x) => om.memory.add(x), {
-  size: 5,
-  delayMs: 200,
-})) {
-  console.log(res.id);
-}
+```javascript
+const all = await mem.getAll({
+  limit: 100,
+  offset: 0
+});
 ```
 
-## TypeScript Types
+### `getBySector(sector, options?)`
 
-All methods are typed. You can import the public types:
+Get memories from a specific cognitive sector.
 
-```ts
-import type { AddMemoryInput, QueryMemoryInput } from 'openmemory-js';
+```javascript
+const episodic = await mem.getBySector('episodic', { limit: 20 });
+const semantic = await mem.getBySector('semantic');
 ```
 
-## Node.js Compatibility
+Available sectors: `episodic`, `semantic`, `procedural`, `emotional`, `reflective`
 
-- Node 18+ (native `fetch`)
-- ESM by default; CJS build available
+### `delete(id)`
 
-CJS usage:
+Remove a memory by ID.
 
-```js
-const { OpenMemory } = require('openmemory-js/cjs');
+```javascript
+await mem.delete(memoryId);
 ```
 
-## Error Handling
+---
 
-Errors throw an `OpenMemoryError` containing:
+## Cognitive Sectors
 
-```ts
-type OpenMemoryError = Error & {
-  status?: number;
-  body?: unknown;
-  requestId?: string;
-};
+OpenMemory automatically classifies content into 5 cognitive sectors:
+
+| Sector | Description | Examples | Decay Rate |
+|--------|-------------|----------|------------|
+| **Episodic** | Time-bound events & experiences | "Yesterday I attended a conference" | Medium |
+| **Semantic** | Timeless facts & knowledge | "Paris is the capital of France" | Very Low |
+| **Procedural** | Skills, procedures, how-tos | "To deploy: build, test, push" | Low |
+| **Emotional** | Feelings, sentiment, mood | "I'm excited about this project!" | High |
+| **Reflective** | Meta-cognition, insights | "I learn best through practice" | Very Low |
+
+---
+
+## Examples
+
+Check out the `examples/js-sdk/` directory for comprehensive examples:
+
+- **basic-usage.js** - CRUD operations
+- **advanced-features.js** - Decay, compression, reflection
+- **brain-sectors.js** - Multi-sector demonstration
+
+---
+
+## Remote Mode
+
+For production deployments with a centralized OpenMemory server:
+
+```javascript
+const mem = new OpenMemory({
+  mode: 'remote',
+  url: 'https://your-backend.com',
+  apiKey: 'your-api-key'
+});
 ```
 
-Example:
+---
 
-```ts
-try {
-  await om.memory.add({ content: '' });
-} catch (e) {
-  if (e.status === 400) console.error('Invalid input');
-}
+## Performance
+
+- **115ms** average recall @ 100k memories
+- **338 QPS** throughput with 8 workers
+- **95%** recall accuracy @ k=5
+- **7.9ms/item** scoring at 10k+ scale
+
+---
+
+## TypeScript Support
+
+Full TypeScript declarations included:
+
+```typescript
+import { OpenMemory, OpenMemoryOptions } from 'openmemory-js';
+
+const mem: OpenMemory = new OpenMemory({
+  path: './data/memory.sqlite',
+  tier: 'fast',
+  embeddings: {
+    provider: 'openai',
+    apiKey: process.env.OPENAI_API_KEY
+  }
+});
 ```
 
-## Example: Agent Hook
-
-```ts
-async function recall(query: string) {
-  const res = await om.memory.query({ query, topK: 7 });
-  return res.items.map((i) => `• [${i.sector}] ${i.content}`).join('\n');
-}
-```
-
-## Development
-
-```bash
-# build
-pnpm build
-
-# test
-pnpm test
-```
+---
 
 ## License
 
-MIT
+Apache 2.0
+
+---
+
+## Links
+
+- [Main Repository](https://github.com/caviraOSS/openmemory)
+- [Documentation](https://github.com/caviraOSS/openmemory/blob/main/README.md)
+- [Examples](../examples/js-sdk)
+- [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)

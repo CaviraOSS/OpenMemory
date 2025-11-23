@@ -1,213 +1,291 @@
-# OpenMemory SDK (Python)
+<img width="1577" height="781" alt="OpenMemory Banner" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
 
-Official Python client for **OpenMemory** — an open-source, self-hosted long-term memory engine for LLMs and AI agents.
+# OpenMemory Python SDK
 
----
+[VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord](https://discord.gg/P7HaRayqTh)
 
-## 🚀 Features
+Local-first long-term memory engine for AI apps and agents. **Self-hosted. Explainable. Scalable.**
 
-- Simple, async-friendly Python client for OpenMemory API
-- Supports both **Simple (1-call)** and **Advanced (5-calls)** embedding modes
-- Auto retry with exponential backoff
-- Optional batching and streaming
-- Typed models via Pydantic
-- Works in **FastAPI**, **LangChain**, and **any async agent runtime**
+![Demo](../.github/openmemory.gif)
 
 ---
 
-## 📦 Installation
+## Quick Start
 
 ```bash
 pip install openmemory-py
 ```
 
----
-
-## 🧠 Quick Start
-
-```python
-from openmemory-py import OpenMemory
-
-om = OpenMemory(
-    base_url="http://localhost:8080",
-    api_key="your_api_key_here"
-)
-
-# Add a memory
-added = om.memory.add({
-    "content": "User loves espresso and works best at night.",
-    "tags": ["preferences", "coffee", "schedule"]
-})
-
-# Query memory
-result = om.memory.query({
-    "query": "What time does the user work?",
-    "top_k": 5
-})
-
-for item in result["items"]:
-    print(item["content"], "→", item["score"])
-```
-
----
-
-## ⚙️ Configuration
-
-### Constructor Parameters
-
-```python
-OpenMemory(
-    base_url: str,
-    api_key: str | None = None,
-    timeout: int = 15_000,
-    headers: dict | None = None
-)
-```
-
-### Environment Variables
-
-```
-OM_BASE_URL=http://localhost:8080
-OM_API_KEY=your_key
-```
-
----
-
-## 🧩 Embedding Modes
-
-OpenMemory supports two backend embedding configurations:
-
-| Mode         | Description                                                                           | API Calls | Speed     | Precision    |
-| ------------ | ------------------------------------------------------------------------------------- | --------- | --------- | ------------ |
-| **simple**   | Unified embedding for all sectors                                                     | 1         | ⚡ Fast   | ⭐ Good      |
-| **advanced** | Independent sector embeddings (episodic, semantic, procedural, emotional, reflective) | 5         | 🐢 Slower | 🌟 Excellent |
-
-Set this in the backend `.env`:
-
-```
-OM_EMBED_MODE=simple    # or "advanced"
-```
-
-Your SDK automatically adapts to the backend configuration.
-
----
-
-## 🧰 API Overview
-
-### `om.memory.add(input: dict)`
-
-Adds a new memory.
-
-```python
-response = om.memory.add({
-    "content": "Met Alex, a software developer who codes in Rust.",
-    "tags": ["meeting", "developer", "Rust"]
-})
-```
-
-### `om.memory.query(params: dict)`
-
-Queries memory semantically.
-
-```python
-result = om.memory.query({
-    "query": "Who codes in Rust?",
-    "top_k": 3
-})
-```
-
-### `om.memory.get(id: str)`
-
-Get memory by ID.
-
-```python
-item = om.memory.get("mem_123")
-```
-
-### `om.memory.delete(id: str)`
-
-Delete a memory.
-
-```python
-om.memory.delete("mem_123")
-```
-
-### `om.memory.all(cursor: str | None = None, limit: int = 100)`
-
-Paginate all memories.
-
----
-
-## 🔁 Batching Example
-
-```python
-from openmemory.utils import batch
-
-items = [
-    {"content": "First memory"},
-    {"content": "Second memory"},
-    {"content": "Third memory"},
-]
-
-async for res in batch(items, om.memory.add, size=5, delay_ms=200):
-    print(res["id"])
-```
-
----
-
-## 🧠 Example: LangChain Integration
-
 ```python
 from openmemory import OpenMemory
-from langchain.embeddings import OpenAIEmbeddings
 
-om = OpenMemory(base_url="http://localhost:8080")
+mem = OpenMemory(
+    path='./data/memory.sqlite',
+    tier='fast',
+    embeddings={
+        'provider': 'synthetic'  # or 'openai', 'gemini', 'ollama'
+    }
+)
 
-def memory_search(query: str):
-    res = om.memory.query({"query": query, "top_k": 5})
-    return [i["content"] for i in res["items"]]
-
-print(memory_search("user habits"))
+mem.add("I'm building a Django app with OpenMemory")
+results = mem.query("What am I building?")
+print(results)
 ```
+
+**That's it.** You're now running a fully local cognitive memory engine 🎉
 
 ---
 
-## 🧾 Error Handling
+## Features
 
-All errors raise `OpenMemoryError` with status and details.
+✅ **Local-first** - Runs entirely on your machine, zero external dependencies  
+✅ **Multi-sector memory** - Episodic, Semantic, Procedural, Emotional, Reflective  
+✅ **Temporal knowledge graph** - Time-aware facts with validity periods  
+✅ **Memory decay** - Adaptive forgetting with sector-specific rates  
+✅ **Waypoint graph** - Associative recall paths for better retrieval  
+✅ **Explainable traces** - See exactly why memories were recalled  
+✅ **Zero config** - Works out of the box with sensible defaults  
+
+---
+
+## Configuration
+
+### Required Configuration
+
+All three parameters are **required** for local mode:
 
 ```python
-from openmemory.errors import OpenMemoryError
+mem = OpenMemory(
+    path='./data/memory.sqlite',      # Where to store the database
+    tier='fast',                       # Performance tier
+    embeddings={
+        'provider': 'synthetic'         # Embedding provider
+    }
+)
+```
 
-try:
-    om.memory.add({"content": ""})
-except OpenMemoryError as e:
-    print("Status:", e.status)
-    print("Body:", e.body)
+### Embedding Providers
+
+#### Synthetic (Testing/Development)
+```python
+embeddings={'provider': 'synthetic'}
+```
+
+#### OpenAI (Recommended for Production)
+```python
+import os
+
+embeddings={
+    'provider': 'openai',
+    'apiKey': os.getenv('OPENAI_API_KEY'),
+    'model': 'text-embedding-3-small'  # optional
+}
+```
+
+#### Gemini
+```python
+embeddings={
+    'provider': 'gemini',
+    'apiKey': os.getenv('GEMINI_API_KEY')
+}
+```
+
+#### Ollama (Fully Local)
+```python
+embeddings={
+    'provider': 'ollama',
+    'model': 'llama3',
+    'ollama': {
+        'url': 'http://localhost:11434'  # optional
+    }
+}
+```
+
+#### AWS Bedrock
+```python
+embeddings={
+    'provider': 'aws',
+    'aws': {
+        'accessKeyId': os.getenv('AWS_ACCESS_KEY_ID'),
+        'secretAccessKey': os.getenv('AWS_SECRET_ACCESS_KEY'),
+        'region': 'us-east-1'
+    }
+}
+```
+
+### Performance Tiers
+
+- `fast` - Optimized for speed, lower precision
+- `smart` - Balanced performance and accuracy
+- `deep` - Maximum accuracy, slower
+- `hybrid` - Adaptive based on query complexity
+
+### Advanced Configuration
+
+```python
+mem = OpenMemory(
+    path='./data/memory.sqlite',
+    tier='smart',
+    embeddings={
+        'provider': 'openai',
+        'apiKey': os.getenv('OPENAI_API_KEY')
+    },
+    decay={
+        'intervalMinutes': 60,
+        'reinforceOnQuery': True,
+        'coldThreshold': 0.1
+    },
+    compression={
+        'enabled': True,
+        'algorithm': 'semantic',
+        'minLength': 100
+    },
+    reflection={
+        'enabled': True,
+        'intervalMinutes': 10,
+        'minMemories': 5
+    }
+)
 ```
 
 ---
 
-## ⚙️ Development
+## API Reference
 
-```bash
-# Build
-poetry build
+### `add(content, **options)`
 
-# Test
-pytest
+Store a new memory.
+
+```python
+result = mem.add(
+    "User prefers dark mode",
+    tags=["preference", "ui"],
+    metadata={"category": "settings"},
+    decayLambda=0.01  # Custom decay rate
+)
+```
+
+### `query(query, **options)`
+
+Search for relevant memories.
+
+```python
+results = mem.query("user preferences", limit=10, minScore=0.7)
+```
+
+### `getAll(**options)`
+
+Retrieve all memories.
+
+```python
+all_memories = mem.getAll(limit=100, offset=0)
+```
+
+### `getBySector(sector, **options)`
+
+Get memories from a specific cognitive sector.
+
+```python
+episodic = mem.getBySector('episodic', limit=20)
+semantic = mem.getBySector('semantic')
+```
+
+Available sectors: `episodic`, `semantic`, `procedural`, `emotional`, `reflective`
+
+### `delete(id)`
+
+Remove a memory by ID.
+
+```python
+mem.delete(memory_id)
+```
+
+### `close()`
+
+Close the database connection (important for cleanup).
+
+```python
+mem.close()
 ```
 
 ---
 
-## 🪶 License
+## Cognitive Sectors
+
+OpenMemory automatically classifies content into 5 cognitive sectors:
+
+| Sector | Description | Examples | Decay Rate |
+|--------|-------------|----------|------------|
+| **Episodic** | Time-bound events & experiences | "Yesterday I attended a conference" | Medium |
+| **Semantic** | Timeless facts & knowledge | "Paris is the capital of France" | Very Low |
+| **Procedural** | Skills, procedures, how-tos | "To deploy: build, test, push" | Low |
+| **Emotional** | Feelings, sentiment, mood | "I'm excited about this project!" | High |
+| **Reflective** | Meta-cognition, insights | "I learn best through practice" | Very Low |
+
+---
+
+## Examples
+
+Check out the `examples/py-sdk/` directory for comprehensive examples:
+
+- **basic_usage.py** - CRUD operations
+- **advanced_features.py** - Decay, compression, reflection
+- **brain_sectors.py** - Multi-sector demonstration
+- **performance_benchmark.py** - Performance testing
+
+---
+
+## Remote Mode
+
+For production deployments with a centralized OpenMemory server:
+
+```python
+mem = OpenMemory(
+    mode='remote',
+    url='https://your-backend.com',
+    apiKey='your-api-key'
+)
+```
+
+---
+
+## Performance
+
+- **115ms** average recall @ 100k memories
+- **338 QPS** throughput with 8 workers
+- **95%** recall accuracy @ k=5
+- **7.9ms/item** scoring at 10k+ scale
+
+---
+
+## Type Hints
+
+Full type hint support included:
+
+```python
+from typing import List, Dict, Any
+from openmemory import OpenMemory
+
+mem: OpenMemory = OpenMemory(
+    path='./data/memory.sqlite',
+    tier='fast',
+    embeddings={'provider': 'synthetic'}
+)
+
+results: List[Dict[str, Any]] = mem.query("test")
+```
+
+---
+
+## License
 
 Apache 2.0
 
 ---
 
-## 🌍 Links
+## Links
 
-- **Docs:** https://openmemory.cavira.app
-- **GitHub:** https://github.com/caviraoss/openmemory
-- **SDK (JS):** https://github.com/caviraoss/openmemory-sdk-js
+- [Main Repository](https://github.com/caviraOSS/openmemory)
+- [Documentation](https://github.com/caviraOSS/openmemory/blob/main/README.md)
+- [Examples](../examples/py-sdk)
+- [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)

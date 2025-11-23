@@ -19,3 +19,5 @@ temp
 exports
 *.egg-info
 *.vsix
+__pycache__
+test

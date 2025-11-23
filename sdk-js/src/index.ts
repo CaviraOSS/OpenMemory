@@ -1,373 +1,300 @@
-﻿export interface Memory {
-    id: string
-    content: string
-    primary_sector: SectorType
-    sectors: SectorType[]
-    tags?: string
-    metadata?: Record<string, unknown>
-    created_at: number
-    updated_at: number
-    last_seen_at: number
-    salience: number
-    decay_lambda: number
-    version: number
+﻿import { randomUUID } from 'crypto';
+import { hsg_query, classify_content, sector_configs, create_cross_sector_waypoints, calc_mean_vec, create_single_waypoint } from './memory/hsg';
+import { embedMultiSector, vectorToBuffer } from './memory/embed';
+import { q } from './core/db';
+import { chunk_text } from './utils/chunking';
+import { configure } from './core/cfg';
+import { init_db } from './core/db';
+
+export interface OpenMemoryOptions {
+    mode?: 'local' | 'remote';
+    path?: string;
+    url?: string;
+    apiKey?: string;
+    embeddings?: {
+        provider: 'openai' | 'gemini' | 'ollama' | 'aws' | 'local' | 'synthetic';
+        apiKey?: string;
+        model?: string;
+        mode?: 'simple' | 'advanced';
+        dimensions?: number;
+        aws?: {
+            accessKeyId?: string;
+            secretAccessKey?: string;
+            region?: string;
+        };
+        ollama?: {
+            url?: string;
+        };
+        localPath?: string;
+    };
+    tier?: 'fast' | 'smart' | 'deep' | 'hybrid';
+    compression?: {
+        enabled: boolean;
+        algorithm?: 'semantic' | 'syntactic' | 'aggressive' | 'auto';
+        minLength?: number;
+    };
+    decay?: {
+        intervalMinutes?: number;
+        threads?: number;
+        coldThreshold?: number;
+        reinforceOnQuery?: boolean;
+    };
+    reflection?: {
+        enabled: boolean;
+        intervalMinutes?: number;
+        minMemories?: number;
+    };
+    vectorStore?: {
+        backend: 'sqlite' | 'pgvector' | 'weaviate';
+    };
+    langGraph?: {
+        namespace?: string;
+        maxContext?: number;
+        reflective?: boolean;
+    };
+    telemetry?: boolean;
 }
-export interface QueryMatch extends Memory {
-    score: number
-    path: string[]
-}
-export interface AddMemoryRequest {
-    content: string
-    tags?: string[]
-    metadata?: Record<string, unknown>
-    user_id?: string
-}
-export interface AddMemoryResponse {
-    id: string
-    primary_sector: SectorType
-    sectors: SectorType[]
-}
-export interface QueryRequest {
-    query: string
-    k?: number
-    filters?: {
-        tags?: string[]
-        min_score?: number
-        sector?: SectorType
-        sectors?: SectorType[]
-        min_salience?: number
-        user_id?: string
-    }
-}
-export type SectorType = 'episodic' | 'semantic' | 'procedural' | 'emotional' | 'reflective'
-export interface SectorInfo {
-    name: SectorType
-    description: string
-    model: string
-    decay_lambda: number
-    table_suffix: string
-}
-export interface SectorStats {
-    sector: SectorType
-    count: number
-    avg_salience: number
-}
-export interface ApiResponse<T = unknown> {
-    [key: string]: T
-}
-export interface QueryResponse {
-    query: string
-    matches: QueryMatch[]
-}
-export interface AddResponse {
-    id: string
-    primary_sector: SectorType
-    sectors: SectorType[]
-}
-export interface SectorsResponse {
-    sectors: Record<SectorType, SectorInfo>
-    stats: SectorStats[]
-}
-export const SECTORS: Record<SectorType, SectorInfo> = {
-    episodic: {
-        name: 'episodic',
-        description: 'Event memories - temporal data',
-        model: 'E5-large',
-        decay_lambda: 0.015,
-        table_suffix: '_episodic'
-    },
-    semantic: {
-        name: 'semantic',
-        description: 'Facts & preferences - factual data',
-        model: 'OpenAI Ada',
-        decay_lambda: 0.005,
-        table_suffix: '_semantic'
-    },
-    procedural: {
-        name: 'procedural',
-        description: 'Habits, triggers - action patterns',
-        model: 'BGE-small',
-        decay_lambda: 0.008,
-        table_suffix: '_procedural'
-    },
-    emotional: {
-        name: 'emotional',
-        description: 'Sentiment states - tone analysis',
-        model: 'Sentiment-BERT',
-        decay_lambda: 0.02,
-        table_suffix: '_emotional'
-    },
-    reflective: {
-        name: 'reflective',
-        description: 'Meta memory & logs - audit trail',
-        model: 'Local summarizer',
-        decay_lambda: 0.001,
-        table_suffix: '_reflective'
-    }
-}
+
 export class OpenMemory {
-    private baseUrl: string
-    private apiKey: string
-    private timeout: number
-    constructor(options: {
-        apiKey?: string
-        baseUrl?: string
-        timeout?: number
-    } = {}) {
-        this.baseUrl = options.baseUrl?.replace(/\/$/, '') || 'http://localhost:8080'
-        this.apiKey = options.apiKey || ''
-        this.timeout = options.timeout || 60000
-    }
-    private async request<T>(
-        method: string,
-        path: string,
-        body?: unknown
-    ): Promise<T> {
-        const url = `${this.baseUrl}${path}`
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json'
+    private mode: 'local' | 'remote';
+    private url?: string;
+    private apiKey?: string;
+
+    constructor(options: OpenMemoryOptions = {}) {
+        this.mode = options.mode || 'local';
+        this.url = options.url;
+        this.apiKey = options.apiKey;
+
+        if (this.mode === 'remote') {
+            if (!this.url) throw new Error('Remote mode requires url parameter');
+        } else {
+            // Local mode configuration
+            if (!options.path) {
+                throw new Error('Local mode requires "path" configuration (e.g., "./data/memory.sqlite").');
+            }
+            if (!options.tier) {
+                throw new Error('Local mode requires "tier" configuration (e.g., "fast", "smart", "deep", "hybrid").');
+            }
+            if (!options.embeddings) {
+                throw new Error('Local mode requires embeddings configuration. Please specify a provider (e.g., openai, ollama, synthetic).');
+            }
+
+            const { provider, apiKey, aws } = options.embeddings;
+            if (['openai', 'gemini'].includes(provider) && !apiKey) {
+                throw new Error(`API key is required for ${provider} embeddings.`);
+            }
+            if (provider === 'aws' && (!aws || !aws.accessKeyId || !aws.secretAccessKey)) {
+                throw new Error('AWS credentials (accessKeyId, secretAccessKey) are required for AWS embeddings.');
+            }
+
+            const configUpdate: any = {};
+
+            configUpdate.db_path = options.path;
+            configUpdate.tier = options.tier;
+
+            configUpdate.emb_kind = options.embeddings.provider;
+            if (options.embeddings.mode) configUpdate.embed_mode = options.embeddings.mode;
+            if (options.embeddings.dimensions) configUpdate.vec_dim = options.embeddings.dimensions;
+
+            if (options.embeddings.apiKey) {
+                if (options.embeddings.provider === 'openai') configUpdate.openai_key = options.embeddings.apiKey;
+                if (options.embeddings.provider === 'gemini') configUpdate.gemini_key = options.embeddings.apiKey;
+            }
+            if (options.embeddings.model) {
+                if (options.embeddings.provider === 'openai') configUpdate.openai_model = options.embeddings.model;
+            }
+            if (options.embeddings.aws) {
+                configUpdate.AWS_ACCESS_KEY_ID = options.embeddings.aws.accessKeyId;
+                configUpdate.AWS_SECRET_ACCESS_KEY = options.embeddings.aws.secretAccessKey;
+                configUpdate.AWS_REGION = options.embeddings.aws.region;
+            }
+            if (options.embeddings.ollama?.url) {
+                configUpdate.ollama_url = options.embeddings.ollama.url;
+            }
+            if (options.embeddings.localPath) {
+                configUpdate.local_model_path = options.embeddings.localPath;
+            }
+
+            if (options.compression) {
+                configUpdate.compression_enabled = options.compression.enabled;
+                if (options.compression.algorithm) configUpdate.compression_algorithm = options.compression.algorithm;
+                if (options.compression.minLength) configUpdate.compression_min_length = options.compression.minLength;
+            }
+
+            if (options.decay) {
+                if (options.decay.intervalMinutes) configUpdate.decay_interval_minutes = options.decay.intervalMinutes;
+                if (options.decay.threads) configUpdate.decay_threads = options.decay.threads;
+                if (options.decay.coldThreshold) configUpdate.decay_cold_threshold = options.decay.coldThreshold;
+                if (options.decay.reinforceOnQuery !== undefined) configUpdate.decay_reinforce_on_query = options.decay.reinforceOnQuery;
+            }
+
+            if (options.reflection) {
+                configUpdate.auto_reflect = options.reflection.enabled;
+                if (options.reflection.intervalMinutes) configUpdate.reflect_interval = options.reflection.intervalMinutes;
+                if (options.reflection.minMemories) configUpdate.reflect_min = options.reflection.minMemories;
+            }
+
+            if (options.vectorStore) {
+                configUpdate.vector_backend = options.vectorStore.backend;
+            }
+
+            if (options.langGraph) {
+                if (options.langGraph.namespace) configUpdate.lg_namespace = options.langGraph.namespace;
+                if (options.langGraph.maxContext) configUpdate.lg_max_context = options.langGraph.maxContext;
+                if (options.langGraph.reflective !== undefined) configUpdate.lg_reflective = options.langGraph.reflective;
+            }
+
+            configure(configUpdate);
+            init_db(options.path);
         }
-        if (this.apiKey) {
-            headers['Authorization'] = `Bearer ${this.apiKey}`
+    }
+
+    async add(content: string, options: {
+        tags?: string[];
+        metadata?: Record<string, any>;
+        userId?: string;
+        salience?: number;
+        decayLambda?: number;
+    } = {}): Promise<{ id: string; primarySector: string; sectors: string[] }> {
+        if (this.mode === 'remote') {
+            return this._remoteAdd(content, options);
         }
-        const config: RequestInit = {
-            method,
-            headers,
-            signal: AbortSignal.timeout(this.timeout)
+
+        const id = randomUUID();
+        const now = Date.now();
+
+        const classification = classify_content(content, options.metadata);
+        const primary_sector = classification.primary;
+        const sectors = [primary_sector, ...classification.additional];
+
+        const chunks = content.length > 3000 ? chunk_text(content) : undefined;
+        const embeddings = await embedMultiSector(id, content, sectors, chunks);
+        const mean_vec = calc_mean_vec(embeddings, sectors);
+        const mean_buf = vectorToBuffer(mean_vec);
+
+        const tags_json = options.tags ? JSON.stringify(options.tags) : null;
+        const meta_json = options.metadata ? JSON.stringify(options.metadata) : null;
+        const salience = options.salience ?? 0.5;
+        const decay_lambda = options.decayLambda ?? sector_configs[primary_sector].decay_lambda;
+
+        await q.ins_mem.run(
+            id, options.userId || null, 0, content, null, primary_sector,
+            tags_json, meta_json, now, now, now, salience, decay_lambda, 1,
+            mean_vec.length, mean_buf, null, 0
+        );
+
+        for (const emb of embeddings) {
+            const vec_buf = vectorToBuffer(emb.vector);
+            await q.ins_vec.run(id, emb.sector, options.userId || null, vec_buf, emb.dim);
         }
-        if (body) {
-            config.body = JSON.stringify(body)
+
+        if (classification.additional.length > 0) {
+            await create_cross_sector_waypoints(id, primary_sector, classification.additional, options.userId);
         }
-        const response = await fetch(url, config)
-        if (!response.ok) {
-            throw new Error(`OpenMemory API error: ${response.status} ${response.statusText}`)
+
+        await create_single_waypoint(id, mean_vec, now, options.userId);
+
+        return { id, primarySector: primary_sector, sectors };
+    }
+
+    async query(query: string, options: {
+        k?: number;
+        filters?: {
+            sectors?: string[];
+            minSalience?: number;
+            user_id?: string;
+        };
+    } = {}): Promise<any[]> {
+        if (this.mode === 'remote') {
+            return this._remoteQuery(query, options);
         }
-        return response.json()
+
+        return await hsg_query(query, options.k || 10, options.filters);
     }
-    async health(): Promise<{ ok: boolean }> {
-        return this.request('GET', '/health')
-    }
-    async getSectors(): Promise<SectorsResponse> {
-        return this.request('GET', '/sectors')
-    }
-    async add(content: string, options: Omit<AddMemoryRequest, 'content'> = {}): Promise<AddResponse> {
-        const request: AddMemoryRequest = {
-            content,
-            ...options
+
+    async delete(id: string): Promise<void> {
+        if (this.mode === 'remote') {
+            return this._remoteDelete(id);
         }
-        return this.request('POST', '/memory/add', request)
+
+        await q.del_mem.run(id);
+        await q.del_vec.run(id);
+        await q.del_waypoints.run(id, id);
     }
-    async query(query: string, options: Omit<QueryRequest, 'query'> = {}): Promise<QueryResponse> {
-        const request: QueryRequest = {
-            query,
-            ...options
-        }
-        return this.request('POST', '/memory/query', request)
-    }
-    async querySector(query: string, sector: SectorType, k = 8): Promise<QueryResponse> {
-        return this.query(query, {
-            k,
-            filters: { sector }
-        })
-    }
-    async reinforce(id: string, boost = 0.2): Promise<{ ok: boolean }> {
-        return this.request('POST', '/memory/reinforce', { id, boost })
-    }
+
     async getAll(options: {
-        limit?: number
-        offset?: number
-        sector?: SectorType
-    } = {}): Promise<{ items: Memory[] }> {
-        const params = new URLSearchParams()
-        if (options.limit) params.set('l', options.limit.toString())
-        if (options.offset) params.set('u', options.offset.toString())
-        if (options.sector) params.set('sector', options.sector)
-        const query = params.toString() ? `?${params}` : ''
-        return this.request('GET', `/memory/all${query}`)
-    }
-    async getBySector(sector: SectorType, limit = 100, offset = 0): Promise<{ items: Memory[] }> {
-        return this.getAll({ sector, limit, offset })
-    }
-    async getUserMemories(userId: string, options: {
-        limit?: number
-        offset?: number
-    } = {}): Promise<{ user_id: string, items: Memory[] }> {
-        const params = new URLSearchParams()
-        if (options.limit) params.set('l', options.limit.toString())
-        if (options.offset) params.set('u', options.offset.toString())
-        const query = params.toString() ? `?${params}` : ''
-        return this.request('GET', `/users/${userId}/memories${query}`)
-    }
-    async getUserSummary(userId: string): Promise<{
-        user_id: string
-        summary: string
-        reflection_count: number
-        updated_at: number
-    }> {
-        return this.request('GET', `/users/${userId}/summary`)
-    }
-    async regenerateUserSummary(userId: string): Promise<{
-        ok: boolean
-        user_id: string
-        summary: string
-        reflection_count: number
-    }> {
-        return this.request('POST', `/users/${userId}/summary/regenerate`)
-    }
-    async delete(id: string): Promise<{ ok: boolean }> {
-        return this.request('DELETE', `/memory/${id}`)
-    }
-    async update(id: string, options: {
-        content?: string
-        tags?: string[]
-        metadata?: Record<string, unknown>
-    }): Promise<{ id: string, updated: boolean }> {
-        return this.request('PATCH', `/memory/${id}`, options)
-    }
-    async getStats(): Promise<SectorsResponse> {
-        return this.getSectors()
-    }
-    // IDE Routes
-    async ideStoreEvent(event: {
-        event_type: string
-        file_path?: string
-        content?: string
-        session_id?: string
-        metadata?: Record<string, unknown>
-    }): Promise<{
-        success: boolean
-        memory_id: string
-        primary_sector: SectorType
-        sectors: SectorType[]
-    }> {
-        return this.request('POST', '/api/ide/events', event)
-    }
-    async ideQueryContext(query: string, options: {
-        k?: number
-        limit?: number
-        session_id?: string
-        file_path?: string
-    } = {}): Promise<{
-        success: boolean
-        memories: Array<{
-            memory_id: string
-            content: string
-            primary_sector: SectorType
-            sectors: SectorType[]
-            score: number
-            salience: number
-            last_seen_at: number
-            path: string[]
-        }>
-        total: number
-        query: string
-    }> {
-        return this.request('POST', '/api/ide/context', { query, ...options })
-    }
-    async ideStartSession(session: {
-        user_id?: string
-        project_name?: string
-        ide_name?: string
-    } = {}): Promise<{
-        success: boolean
-        session_id: string
-        memory_id: string
-        started_at: number
-        user_id: string
-        project_name: string
-        ide_name: string
-    }> {
-        return this.request('POST', '/api/ide/session/start', session)
-    }
-    async ideEndSession(sessionId: string): Promise<{
-        success: boolean
-        session_id: string
-        ended_at: number
-        summary_memory_id: string
-        statistics: {
-            total_events: number
-            sectors: Record<string, number>
-            unique_files: number
-            files: string[]
+        limit?: number;
+        offset?: number;
+        sector?: string;
+    } = {}): Promise<any[]> {
+        if (this.mode === 'remote') {
+            return this._remoteGetAll(options);
         }
-    }> {
-        return this.request('POST', '/api/ide/session/end', { session_id: sessionId })
+
+        const limit = options.limit || 100;
+        const offset = options.offset || 0;
+
+        if (options.sector) {
+            return await q.all_mem_by_sector.all(options.sector, limit, offset);
+        }
+        return await q.all_mem.all(limit, offset);
     }
-    async ideGetPatterns(sessionId: string): Promise<{
-        success: boolean
-        session_id: string
-        pattern_count: number
-        patterns: Array<{
-            pattern_id: string
-            description: string
-            salience: number
-            detected_at: number
-            last_reinforced: number
-        }>
-    }> {
-        return this.request('GET', `/api/ide/patterns/${sessionId}`)
+
+    private async _remoteAdd(content: string, options: any): Promise<any> {
+        const res = await fetch(`${this.url}/api/memory`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey && { 'x-api-key': this.apiKey })
+            },
+            body: JSON.stringify({ content, ...options })
+        });
+
+        if (!res.ok) throw new Error(`Remote add failed: ${res.status}`);
+        return await res.json();
     }
-    // Compression Routes
-    async compress(text: string, algorithm?: 'semantic' | 'syntactic' | 'aggressive'): Promise<{
-        ok: boolean
-        comp: string
-        m: Record<string, unknown>
-        hash: string
-    }> {
-        return this.request('POST', '/api/compression/compress', { text, algorithm })
+
+    private async _remoteQuery(query: string, options: any): Promise<any[]> {
+        const res = await fetch(`${this.url}/api/query`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey && { 'x-api-key': this.apiKey })
+            },
+            body: JSON.stringify({ query, ...options })
+        });
+
+        if (!res.ok) throw new Error(`Remote query failed: ${res.status}`);
+        return await res.json() as any[];
     }
-    async compressBatch(texts: string[], algorithm: 'semantic' | 'syntactic' | 'aggressive' = 'semantic'): Promise<{
-        ok: boolean
-        results: Array<{ comp: string; m: Record<string, unknown>; hash: string }>
-        total: number
-    }> {
-        return this.request('POST', '/api/compression/batch', { texts, algorithm })
+
+    private async _remoteDelete(id: string): Promise<void> {
+        const res = await fetch(`${this.url}/api/memory/${id}`, {
+            method: 'DELETE',
+            headers: {
+                ...(this.apiKey && { 'x-api-key': this.apiKey })
+            },
+        });
+
+        if (!res.ok) throw new Error(`Remote delete failed: ${res.status}`);
     }
-    async analyzeCompression(text: string): Promise<{
-        ok: boolean
-        analysis: Record<string, unknown>
-        rec: { algo: string; save: string; lat: string }
-    }> {
-        return this.request('POST', '/api/compression/analyze', { text })
-    }
-    async getCompressionStats(): Promise<{
-        ok: boolean
-        stats: Record<string, unknown>
-    }> {
-        return this.request('GET', '/api/compression/stats')
-    }
-    // LangGraph Memory Routes
-    async lgmStore(data: {
-        node_id: string
-        namespace?: string
-        content: string
-        metadata?: Record<string, unknown>
-    }): Promise<Record<string, unknown>> {
-        return this.request('POST', '/lgm/store', data)
-    }
-    async lgmRetrieve(data: {
-        node_id: string
-        namespace?: string
-        query: string
-        k?: number
-    }): Promise<Record<string, unknown>> {
-        return this.request('POST', '/lgm/retrieve', data)
-    }
-    async lgmGetContext(data: {
-        node_id: string
-        namespace?: string
-    }): Promise<Record<string, unknown>> {
-        return this.request('POST', '/lgm/context', data)
-    }
-    async lgmCreateReflection(data: {
-        node_id: string
-        namespace?: string
-        content: string
-    }): Promise<Record<string, unknown>> {
-        return this.request('POST', '/lgm/reflection', data)
-    }
-    async lgmGetConfig(): Promise<Record<string, unknown>> {
-        return this.request('GET', '/lgm/config')
+
+    private async _remoteGetAll(options: any): Promise<any[]> {
+        const params = new URLSearchParams();
+        if (options.limit) params.set('limit', options.limit.toString());
+        if (options.offset) params.set('offset', options.offset.toString());
+        if (options.sector) params.set('sector', options.sector);
+
+        const res = await fetch(`${this.url}/api/memories?${params}`, {
+            headers: {
+                ...(this.apiKey && { 'x-api-key': this.apiKey })
+            }
+        });
+
+        if (!res.ok) throw new Error(`Remote getAll failed: ${res.status}`);
+        return await res.json() as any[];
     }
 }
-export default OpenMemory
+
+export { sector_configs, classify_content };
+export default OpenMemory;

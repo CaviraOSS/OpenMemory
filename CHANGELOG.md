@@ -1,6 +1,61 @@
 # Changelog
 
+## 1.2.1 - 2025-11-23
+
+### Added
+
+- **Python SDK (`sdk-py/`)**: SDK Overhaul, it can now perform as a standalone version of OpenMemory
+  - Full feature parity with Backend
+  - Local-first architecture with SQLite backend
+  - Multi-sector memory (episodic, semantic, procedural, emotional, reflective)
+  - All embedding providers: synthetic, OpenAI, Gemini, Ollama, AWS
+  - Advanced features: decay, compression, reflection
+  - Comprehensive test suite (`sdk-py/tests/test_sdk_py.py`)
+
+- **JavaScript SDK Enhancements (`sdk-js/`)**: SDK Overhaul, it can now perform as a standalone version of OpenMemory
+  - Full feature parity with Backend
+  - Local-first architecture with SQLite backend
+  - Multi-sector memory (episodic, semantic, procedural, emotional, reflective)
+  - All embedding providers: synthetic, OpenAI, Gemini, Ollama, AWS
+  - Advanced features: decay, compression, reflection
+
+- **Examples**: Complete rewrite of both JS and Python examples
+  - `examples/js-sdk/basic-usage.js` - CRUD operations
+  - `examples/js-sdk/advanced-features.js` - Decay, compression, reflection
+  - `examples/js-sdk/brain-sectors.js` - Multi-sector demonstration
+  - `examples/py-sdk/basic_usage.py` - Python CRUD operations
+  - `examples/py-sdk/advanced_features.py` - Advanced configuration
+  - `examples/py-sdk/brain_sectors.py` - Sector demonstration
+  - `examples/py-sdk/performance_benchmark.py` - Performance testing
+
+- **Tests**: Comprehensive test suites for both SDKs
+  - `tests/js-sdk/js-sdk.test.js` - Full SDK validation
+  - `tests/py-sdk/test-sdk.py` - Python SDK validation
+  - Tests cover: initialization, CRUD, sectors, advanced features
+
+- **Architecture Documentation**
+  - Mermaid diagram in main README showing complete data flow
+  - Covers all 5 cognitive sectors
+  - Shows embedding engine, storage layer, recall engine
+  - Includes temporal knowledge graph integration
+  - Node.js script to regenerate diagrams
+
+#### Changed
+
+- **README Updates**:
+  - Added banner image and demo GIF to main README
+  - Added dashboard screenshot
+  - Comprehensive comparison table with competitors
+  - Detailed architecture overview with visual diagram
+  - SDK READMEs now include banner and GIF
+
+- **Package Metadata**:
+  - Added comprehensive keywords for npm and PyPI
+  - Improved descriptions highlighting local-first architecture
+  - Apache 2.0 license
+
 ## 1.2
+
 
 ### Added
 
