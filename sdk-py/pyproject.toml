@@ -7,7 +7,26 @@ name = "openmemory-py"
 version = "1.0.0"
 description = "OpenMemory Python SDK provides a local-first long-term memory engine for AI agents and LLM applications. Features include semantic search, multi-sector memory, temporal fact storage, automatic decay, and explainable recall paths. Works fully offline or with the OpenMemory backend."
 readme = "README.md"
-keywords = "ai llm memory long-term-memory agent agents semantic-memory episodic-memory vector-search persistent-memory llm-memory cognitive-memory temporal-graph mcp claude openai python sdk"
+keywords = [
+    "ai",
+    "llm",
+    "memory",
+    "long-term-memory",
+    "agent",
+    "agents",
+    "semantic-memory",
+    "episodic-memory",
+    "vector-search",
+    "persistent-memory",
+    "llm-memory",
+    "cognitive-memory",
+    "temporal-graph",
+    "mcp",
+    "claude",
+    "openai",
+    "python",
+    "sdk"
+]
 authors = [{ name = "OpenMemory Team" }]
 license = { text = "Apache-2.0" }
 classifiers = [

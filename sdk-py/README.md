@@ -6,7 +6,7 @@
 
 Local-first long-term memory engine for AI apps and agents. **Self-hosted. Explainable. Scalable.**
 
-![Demo](../.github/openmemory.gif)
+![Demo](https://github.com/CaviraOSS/OpenMemory/blob/main/.github/openmemory.gif?raw=true)
 
 ---
 
