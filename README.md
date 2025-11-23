@@ -5,7 +5,7 @@
 [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
 
 Long‑term memory for AI systems. **Self‑hosted. Local‑first. Explainable. Scalable.**
-A full cognitive memory engine — not a vector database.
+A full cognitive memory engine — not a vector database. Add Memory to AI/Agents in one line.
 
 ![demo](./.github/openmemory.gif)
 
@@ -281,13 +281,13 @@ OpenMemory supports **all three usage modes**:
 Install:
 
 ```
-npm install @openmemory/sdk
+npm install openmemory-js
 ```
 
 Use:
 
 ```
-import { OpenMemory } from "@openmemory/sdk"
+import { OpenMemory } from "openmemory-js"
 const mem = new OpenMemory()
 ```
 
@@ -349,11 +349,11 @@ Backend runs on port 8080.
 ## 5.1 Local via SDK
 
 ```
-npm install @openmemory/sdk
+npm install openmemory-js
 ```
 
 ```
-import { OpenMemory } from "@openmemory/sdk"
+import { OpenMemory } from "openmemory-js"
 const mem = new OpenMemory()
 ```
 
