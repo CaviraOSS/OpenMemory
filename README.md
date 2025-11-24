@@ -1,3 +1,6 @@
+<meta name="description" content="Give your AI agents long-term memory in one line. Semantic, episodic, temporal memory with standalone JS/Python SDKs.">
+<meta name="keywords" content="ai memory, long-term memory, llm, agents, python memory, javascript memory, standalone ai memory, mcp memory, semantic memory, temporal memory, openmemory, openmemory-js, openmemory-py, python, javascript">
+
 <img width="1577" height="781" alt="image" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
 
 # OpenMemory
@@ -10,6 +13,18 @@ A full cognitive memory engine — not a vector database. Add Memory to AI/Agent
 ![demo](./.github/openmemory.gif)
 
 ---
+---
+
+# ⚡ Standalone Mode (New!)
+
+**OpenMemory now works without a backend server.**
+Run the full cognitive engine directly inside your Node.js or Python application.
+
+*   **Zero Config**: `npm install` and go.
+*   **Local Storage**: Data lives in a local SQLite file.
+*   **Privacy**: No data leaves your machine.
+
+[**👉 Read the Standalone Guide**](https://openmemory.cavira.app/docs/sdks/python)
 
 # 1. Introduction
 
