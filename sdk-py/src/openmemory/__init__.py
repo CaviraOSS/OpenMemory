@@ -153,38 +153,38 @@ class OpenMemory:
             "content": content,
             "tags": tags,
             "metadata": metadata,
-            "userId": userId,
+            "user_id": userId,
             "salience": salience,
-            "decayLambda": decayLambda
+            "decay_lambda": decayLambda
         }
         headers = {"Content-Type": "application/json"}
-        if self.api_key: headers["x-api-key"] = self.api_key
+        if self.api_key: headers["Authorization"] = f"Bearer {self.api_key}"
         
-        res = requests.post(f"{self.url}/api/memory", json=payload, headers=headers)
+        res = requests.post(f"{self.url}/memory/add", json=payload, headers=headers)
         res.raise_for_status()
         return res.json()
 
     def _remote_query(self, query, k, filters):
         payload = {"query": query, "k": k, "filters": filters}
         headers = {"Content-Type": "application/json"}
-        if self.api_key: headers["x-api-key"] = self.api_key
+        if self.api_key: headers["Authorization"] = f"Bearer {self.api_key}"
         
-        res = requests.post(f"{self.url}/api/query", json=payload, headers=headers)
+        res = requests.post(f"{self.url}/memory/query", json=payload, headers=headers)
         res.raise_for_status()
         return res.json()
 
     def _remote_delete(self, id):
         headers = {}
-        if self.api_key: headers["x-api-key"] = self.api_key
-        res = requests.delete(f"{self.url}/api/memory/{id}", headers=headers)
+        if self.api_key: headers["Authorization"] = f"Bearer {self.api_key}"
+        res = requests.delete(f"{self.url}/memory/{id}", headers=headers)
         res.raise_for_status()
 
     def _remote_get_all(self, limit, offset, sector):
         params = {"limit": limit, "offset": offset}
         if sector: params["sector"] = sector
         headers = {}
-        if self.api_key: headers["x-api-key"] = self.api_key
+        if self.api_key: headers["Authorization"] = f"Bearer {self.api_key}"
         
-        res = requests.get(f"{self.url}/api/memories", params=params, headers=headers)
+        res = requests.get(f"{self.url}/memory/all", params=params, headers=headers)
         res.raise_for_status()
         return res.json()

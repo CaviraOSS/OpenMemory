@@ -241,11 +241,11 @@ export class OpenMemory {
     }
 
     private async _remoteAdd(content: string, options: any): Promise<any> {
-        const res = await fetch(`${this.url}/api/memory`, {
+        const res = await fetch(`${this.url}/memory/add`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(this.apiKey && { 'x-api-key': this.apiKey })
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             },
             body: JSON.stringify({ content, ...options })
         });
@@ -255,11 +255,11 @@ export class OpenMemory {
     }
 
     private async _remoteQuery(query: string, options: any): Promise<any[]> {
-        const res = await fetch(`${this.url}/api/query`, {
+        const res = await fetch(`${this.url}/memory/query`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                ...(this.apiKey && { 'x-api-key': this.apiKey })
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             },
             body: JSON.stringify({ query, ...options })
         });
@@ -269,10 +269,10 @@ export class OpenMemory {
     }
 
     private async _remoteDelete(id: string): Promise<void> {
-        const res = await fetch(`${this.url}/api/memory/${id}`, {
+        const res = await fetch(`${this.url}/memory/${id}`, {
             method: 'DELETE',
             headers: {
-                ...(this.apiKey && { 'x-api-key': this.apiKey })
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             },
         });
 
@@ -285,9 +285,9 @@ export class OpenMemory {
         if (options.offset) params.set('offset', options.offset.toString());
         if (options.sector) params.set('sector', options.sector);
 
-        const res = await fetch(`${this.url}/api/memories?${params}`, {
+        const res = await fetch(`${this.url}/memory/all?${params}`, {
             headers: {
-                ...(this.apiKey && { 'x-api-key': this.apiKey })
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             }
         });
 

@@ -9,8 +9,45 @@
 
 Long‑term memory for AI systems. **Self‑hosted. Local‑first. Explainable. Scalable.**
 A full cognitive memory engine — not a vector database. Add Memory to AI/Agents in one line.
-
 ![demo](./.github/openmemory.gif)
+
+## Why OpenMemory?
+
+**Traditional Vector DBs** require extensive setup, cloud dependencies, and vendor lock-in:
+```python
+# The old way: Pinecone + LangChain (12+ lines)
+import os
+import time
+from langchain.chains import ConversationChain
+from langchain.memory import VectorStoreRetrieverMemory
+from langchain_community.vectorstores import Pinecone
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+os.environ["PINECONE_API_KEY"] = "sk-..."
+os.environ["OPENAI_API_KEY"] = "sk-..."
+time.sleep(3)  # Wait for cloud initialization
+
+embeddings = OpenAIEmbeddings()
+pinecone = Pinecone.from_existing_index(embeddings, index_name="my-memory")
+retriever = pinecone.as_retriever(search_kwargs=dict(k=2))
+memory = VectorStoreRetrieverMemory(retriever=retriever)
+conversation = ConversationChain(llm=ChatOpenAI(), memory=memory)
+
+# Usage (requires explicit chain call)
+conversation.predict(input="I'm allergic to peanuts")
+```
+
+**OpenMemory** needs just 3 lines:
+```python
+# The new way: OpenMemory (3 lines)
+from openmemory import OpenMemory
+
+om = OpenMemory(mode="local", path="./memory.db", tier="deep", embeddings={"provider": "ollama"})
+om.add("User allergic to peanuts", userId="user123")
+results = om.query("allergies", filters={"user_id": "user123"})
+# Returns: [{"content": "User allergic to peanuts", "score": 0.89, ...}]
+```
+✅ Zero cloud setup • ✅ Local SQLite • ✅ Works offline • ✅ No vendor lock-in
 
 ---
 ---

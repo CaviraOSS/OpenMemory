@@ -67,8 +67,8 @@ if (is_pg) {
         process.env.OM_PG_SSL === "require"
             ? { rejectUnauthorized: false }
             : process.env.OM_PG_SSL === "disable"
-              ? false
-              : undefined;
+                ? false
+                : undefined;
     const db_name = process.env.OM_PG_DB || "openmemory";
     const pool = (db: string) =>
         new Pool({
@@ -153,7 +153,7 @@ if (is_pg) {
             `create table if not exists ${v}(id uuid,sector text,user_id text,v bytea,dim integer not null,primary key(id,sector))`,
         );
         await pg.query(
-            `create table if not exists ${w}(src_id text,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint,primary key(src_id,user_id))`,
+            `create table if not exists ${w}(src_id text primary key,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint)`,
         );
         await pg.query(
             `create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`,
@@ -338,7 +338,7 @@ if (is_pg) {
         ins_waypoint: {
             run: (...p) =>
                 run_async(
-                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id,user_id) do update set dst_id=excluded.dst_id,weight=excluded.weight,updated_at=excluded.updated_at`,
+                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id) do update set dst_id=excluded.dst_id,user_id=excluded.user_id,weight=excluded.weight,updated_at=excluded.updated_at`,
                     p,
                 ),
         },
