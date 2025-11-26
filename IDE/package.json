@@ -2,7 +2,7 @@
     "name": "openmemory-vscode",
     "displayName": "OpenMemory for VS Code",
     "description": "Cognitive memory system that remembers your coding context across sessions",
-    "version": "1.0.3",
+    "version": "1.0.5",
     "publisher": "Nullure",
     "icon": "icon.png",
     "engines": {
@@ -11,6 +11,15 @@
     "categories": [
         "Machine Learning",
         "Other"
+    ],
+    "keywords": [
+        "AI",
+        "Memory",
+        "Context",
+        "Copilot",
+        "Cursor",
+        "Claude",
+        "LLM"
     ],
     "activationEvents": [
         "onStartupFinished"
@@ -25,6 +34,18 @@
             {
                 "command": "openmemory.queryContext",
                 "title": "OpenMemory: Query Context"
+            },
+            {
+                "command": "openmemory.addToMemory",
+                "title": "OpenMemory: Add Selection to Memory"
+            },
+            {
+                "command": "openmemory.quickNote",
+                "title": "OpenMemory: Quick Note"
+            },
+            {
+                "command": "openmemory.dashboard",
+                "title": "OpenMemory: Dashboard"
             }
         ],
         "configuration": {
@@ -54,6 +75,16 @@
                     "type": "string",
                     "default": "",
                     "description": "Path to MCP server executable (leave empty to use built-in backend MCP)"
+                },
+                "openmemory.userId": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Custom User ID for OpenMemory (leave empty to auto-generate)"
+                },
+                "openmemory.projectName": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Custom Project Name (leave empty to use workspace name)"
                 }
             }
         }

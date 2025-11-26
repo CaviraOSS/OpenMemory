@@ -9,6 +9,7 @@
 
 Long‑term memory for AI systems. **Self‑hosted. Local‑first. Explainable. Scalable.**
 A full cognitive memory engine — not a vector database. Add Memory to AI/Agents in one line.
+
 ![demo](./.github/openmemory.gif)
 
 ## Why OpenMemory?

@@ -91,7 +91,7 @@ const addmem = async (txt, opts) => {
   console.log('[ok] memory added');
   console.log(`id: ${r.id}`);
   console.log(`sector: ${r.primary_sector}`);
-  console.log(`salience: ${r.salience.toFixed(3)}`);
+  console.log(`salience: ${r.salience?.toFixed(3) || 'n/a'}`);
 };
 
 const querymem = async (txt, opts) => {

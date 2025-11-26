@@ -7,6 +7,7 @@ Give your AI tools instant access to your entire coding history. OpenMemory reme
 - Works with GitHub Copilot, Cursor, Claude, Windsurf, Codex, and any MCP-compatible AI
 - Auto-configures all AI tools on first run with zero manual setup
 - Tracks every file edit, save, and open automatically
+- **NEW**: Manually add code selections to memory with a single click
 - Compresses memories to reduce tokens by 30-70%
 - Query responses under 80ms with smart caching
 - Real-time token savings and compression metrics
@@ -29,10 +30,14 @@ Backend server required.
 - `openmemory.apiKey`: API key for auth (optional)
 - `openmemory.useMCP`: Use MCP protocol mode (default: `false`) - connects to backend MCP server with tools: `openmemory_query`, `openmemory_store`, `openmemory_list`, `openmemory_get`, `openmemory_reinforce`
 - `openmemory.mcpServerPath`: Path to backend MCP server (default: `backend/dist/ai/mcp.js`)
+- `openmemory.userId`: Custom User ID (optional, defaults to auto-generated)
+- `openmemory.projectName`: Custom Project Name (optional, defaults to workspace name)
 
 ## Commands
 
 - `OpenMemory: Query Context` - Search your coding memory
+- `OpenMemory: Add Selection to Memory` - Save selected code to memory
+- `OpenMemory: Quick Note` - Add a manual note to memory
 - `OpenMemory: View Patterns` - View detected patterns
 - `OpenMemory: Toggle Tracking` - Pause or resume tracking
 - `OpenMemory: Setup` - Configure backend and settings

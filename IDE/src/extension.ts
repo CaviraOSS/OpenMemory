@@ -5,6 +5,7 @@ import { writeClaudeConfig } from './writers/claude';
 import { writeWindsurfConfig } from './writers/windsurf';
 import { writeCopilotConfig } from './writers/copilot';
 import { writeCodexConfig } from './writers/codex';
+import { DashboardPanel } from './panels/DashboardPanel';
 
 let session_id: string | null = null;
 let backend_url = 'http://localhost:8080';
@@ -15,6 +16,7 @@ let auto_linked = false;
 let use_mcp = false;
 let mcp_server_path = '';
 let is_enabled = true;
+let user_id = '';
 
 export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('openmemory');
@@ -23,6 +25,7 @@ export function activate(context: vscode.ExtensionContext) {
     api_key = config.get('apiKey') || undefined;
     use_mcp = config.get('useMCP') || false;
     mcp_server_path = config.get('mcpServerPath') || '';
+    user_id = getUserId(context, config);
 
     status_bar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     status_bar.command = 'openmemory.statusBarClick';
@@ -48,19 +51,67 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const status_click = vscode.commands.registerCommand('openmemory.statusBarClick', () => show_menu());
+
     const query_cmd = vscode.commands.registerCommand('openmemory.queryContext', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor');
             return;
         }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "OpenMemory: Querying Context...",
+            cancellable: false
+        }, async () => {
+            try {
+                const query = editor.document.getText(editor.selection) || editor.document.getText();
+                const memories = await query_context(query, editor.document.uri.fsPath);
+                const doc = await vscode.workspace.openTextDocument({ content: format_memories(memories), language: 'markdown' });
+                await vscode.window.showTextDocument(doc);
+            } catch (error) {
+                vscode.window.showErrorMessage(`Query failed: ${error}`);
+            }
+        });
+    });
+
+    const add_cmd = vscode.commands.registerCommand('openmemory.addToMemory', async () => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor) {
+            vscode.window.showErrorMessage('No active editor');
+            return;
+        }
+        const selection = editor.document.getText(editor.selection);
+        if (!selection) {
+            vscode.window.showErrorMessage('No text selected');
+            return;
+        }
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "OpenMemory: Saving Selection...",
+            cancellable: false
+        }, async () => {
+            try {
+                await add_memory(selection, editor.document.uri.fsPath);
+                vscode.window.showInformationMessage('Selection added to OpenMemory');
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to add memory: ${error}`);
+            }
+        });
+    });
+
+    const note_cmd = vscode.commands.registerCommand('openmemory.quickNote', async () => {
+        const input = await vscode.window.showInputBox({ prompt: 'Enter a quick note to remember', placeHolder: 'e.g. Refactored the auth logic to use JWT' });
+        if (!input) return;
+
         try {
-            const query = editor.document.getText(editor.selection) || editor.document.getText();
-            const memories = await query_context(query, editor.document.uri.fsPath);
-            const doc = await vscode.workspace.openTextDocument({ content: format_memories(memories), language: 'markdown' });
-            await vscode.window.showTextDocument(doc);
+            const editor = vscode.window.activeTextEditor;
+            const file = editor ? editor.document.uri.fsPath : 'manual-note';
+            await add_memory(input, file);
+            vscode.window.showInformationMessage('Note added to OpenMemory');
         } catch (error) {
-            vscode.window.showErrorMessage(`Query failed: ${error}`);
+            vscode.window.showErrorMessage(`Failed to add note: ${error}`);
         }
     });
 
@@ -85,6 +136,10 @@ export function activate(context: vscode.ExtensionContext) {
     });
 
     const setup_cmd = vscode.commands.registerCommand('openmemory.setup', () => show_quick_setup());
+
+    const dashboard_cmd = vscode.commands.registerCommand('openmemory.dashboard', () => {
+        DashboardPanel.createOrShow(context.extensionUri);
+    });
 
     const change_listener = vscode.workspace.onDidChangeTextDocument((e) => {
         if (is_enabled && is_tracking && e.document.uri.scheme === 'file') {
@@ -114,7 +169,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
     });
 
-    context.subscriptions.push(status_click, query_cmd, patterns_cmd, toggle_cmd, setup_cmd, change_listener, save_listener, open_listener, close_listener);
+    context.subscriptions.push(status_click, query_cmd, add_cmd, note_cmd, patterns_cmd, dashboard_cmd, toggle_cmd, setup_cmd, change_listener, save_listener, open_listener, close_listener);
 }
 
 export function deactivate() {
@@ -174,13 +229,17 @@ async function show_menu() {
 
     const items = [];
     items.push(is_tracking ? { label: '$(debug-pause) Pause Tracking', action: 'pause' } : { label: '$(play) Resume Tracking', action: 'resume' });
-    items.push({ label: '$(search) Query Context', action: 'query' }, { label: '$(graph) View Patterns', action: 'patterns' }, { label: use_mcp ? '$(link) Switch to Direct HTTP' : '$(server-process) Switch to MCP Mode', action: 'toggle_mcp' }, { label: '$(circle-slash) Disable Extension', action: 'disable' }, { label: '$(gear) Setup', action: 'setup' }, { label: '$(refresh) Reconnect', action: 'reconnect' });
+    items.push({ label: '$(dashboard) Open Dashboard', action: 'dashboard' });
+    items.push({ label: '$(search) Query Context', action: 'query' }, { label: '$(add) Add Selection', action: 'add' }, { label: '$(pencil) Quick Note', action: 'note' }, { label: '$(graph) View Patterns', action: 'patterns' }, { label: use_mcp ? '$(link) Switch to Direct HTTP' : '$(server-process) Switch to MCP Mode', action: 'toggle_mcp' }, { label: '$(circle-slash) Disable Extension', action: 'disable' }, { label: '$(gear) Setup', action: 'setup' }, { label: '$(refresh) Reconnect', action: 'reconnect' });
     const choice = await vscode.window.showQuickPick(items, { placeHolder: 'OpenMemory Actions' });
     if (!choice) return;
     switch (choice.action) {
+        case 'dashboard': vscode.commands.executeCommand('openmemory.dashboard'); break;
         case 'pause': is_tracking = false; update_status_bar('paused'); break;
         case 'resume': is_tracking = true; update_status_bar('active'); break;
         case 'query': vscode.commands.executeCommand('openmemory.queryContext'); break;
+        case 'add': vscode.commands.executeCommand('openmemory.addToMemory'); break;
+        case 'note': vscode.commands.executeCommand('openmemory.quickNote'); break;
         case 'patterns': vscode.commands.executeCommand('openmemory.viewPatterns'); break;
         case 'toggle_mcp':
             use_mcp = !use_mcp;
@@ -290,6 +349,26 @@ async function show_quick_setup() {
     }
 }
 
+function getUserId(context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+    // 1. Check if user has configured a custom userId
+    const configuredUserId = config.get<string>('userId');
+    if (configuredUserId) return configuredUserId;
+
+    // 2. Check if we have a persistent userId in global state
+    let persistedUserId = context.globalState.get<string>('openmemory.userId');
+    if (persistedUserId) return persistedUserId;
+
+    // 3. Generate a new unique userId based on machine ID
+    const machineId = vscode.env.machineId; // Unique per machine
+    const userName = process.env.USERNAME || process.env.USER || 'user';
+    persistedUserId = `${userName}-${machineId.substring(0, 8)}`;
+
+    // 4. Persist it for future sessions
+    context.globalState.update('openmemory.userId', persistedUserId);
+
+    return persistedUserId;
+}
+
 async function check_connection(): Promise<boolean> {
     try {
         const response = await fetch(`${backend_url}/health`, { method: 'GET', headers: get_headers() });
@@ -307,8 +386,10 @@ function get_headers(): Record<string, string> {
 
 async function start_session() {
     try {
-        const project = vscode.workspace.workspaceFolders?.[0]?.name || 'unknown';
-        const response = await fetch(`${backend_url}/api/ide/session/start`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ user_id: 'vscode-user', project_name: project, ide_name: 'vscode' }) });
+        const config = vscode.workspace.getConfiguration('openmemory');
+        const configuredProject = config.get<string>('projectName');
+        const project = configuredProject || vscode.workspace.workspaceFolders?.[0]?.name || 'unknown';
+        const response = await fetch(`${backend_url}/api/ide/session/start`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ user_id: user_id, project_name: project, ide_name: 'vscode' }) });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();
         session_id = data.session_id;
@@ -340,6 +421,21 @@ async function query_context(query: string, file: string) {
     const response = await fetch(`${backend_url}/api/ide/context`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ query, session_id, file_path: file, limit: 10 }) });
     const data = await response.json();
     return data.memories || [];
+}
+
+async function add_memory(content: string, file: string) {
+    const response = await fetch(`${backend_url}/memory/add`, {
+        method: 'POST',
+        headers: get_headers(),
+        body: JSON.stringify({
+            content,
+            user_id: user_id,
+            tags: ['manual', 'ide-selection'],
+            metadata: { source: 'vscode', file }
+        })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return await response.json();
 }
 
 async function get_patterns(sid: string) {
