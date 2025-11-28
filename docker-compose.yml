@@ -29,6 +29,7 @@ services:
 
       # Embeddings Configuration
       - OM_EMBEDDINGS=${OM_EMBEDDINGS:-synthetic}
+      - OM_EMBEDDING_FALLBACK=${OM_EMBEDDING_FALLBACK:-synthetic}
       - OM_EMBED_MODE=${OM_EMBED_MODE:-simple}
       - OM_ADV_EMBED_PARALLEL=${OM_ADV_EMBED_PARALLEL:-false}
       - OM_EMBED_DELAY_MS=${OM_EMBED_DELAY_MS:-200}
