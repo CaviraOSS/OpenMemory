@@ -64,7 +64,7 @@ const mkRoot = async (
             1.0,
             0.1,
             1,
-            user_id || null,
+            user_id || "anonymous",
             null,
         );
         await transaction.commit();
