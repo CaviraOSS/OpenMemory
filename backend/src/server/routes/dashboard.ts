@@ -5,6 +5,15 @@ import * as path from "path";
 
 const is_pg = env.metadata_backend === "postgres";
 
+const get_mem_table = () => {
+    if (is_pg) {
+        const sc = process.env.OM_PG_SCHEMA || "public";
+        const tbl = process.env.OM_PG_TABLE || "openmemory_memories";
+        return `"${sc}"."${tbl}"`;
+    }
+    return "memories";
+};
+
 let reqz = {
     win_start: Date.now(),
     win_cnt: 0,
@@ -84,31 +93,32 @@ const get_db_sz = async (): Promise<number> => {
 export function dash(app: any) {
     app.get("/dashboard/stats", async (_req: any, res: any) => {
         try {
+            const mem_table = get_mem_table();
             const totmem = await all_async(
-                "SELECT COUNT(*) as count FROM memories",
+                `SELECT COUNT(*) as count FROM ${mem_table}`,
             );
             const sectcnt = await all_async(`
                 SELECT primary_sector, COUNT(*) as count
-                FROM memories
+                FROM ${mem_table}
                 GROUP BY primary_sector
             `);
             const dayago = Date.now() - 24 * 60 * 60 * 1000;
             const recmem = await all_async(
                 is_pg
-                    ? "SELECT COUNT(*) as count FROM memories WHERE created_at > $1"
-                    : "SELECT COUNT(*) as count FROM memories WHERE created_at > ?",
+                    ? `SELECT COUNT(*) as count FROM ${mem_table} WHERE created_at > $1`
+                    : `SELECT COUNT(*) as count FROM ${mem_table} WHERE created_at > ?`,
                 [dayago],
             );
             const avgsal = await all_async(
-                "SELECT AVG(salience) as avg FROM memories",
+                `SELECT AVG(salience) as avg FROM ${mem_table}`,
             );
             const decst = await all_async(`
-                SELECT 
+                SELECT
                     COUNT(*) as total,
                     AVG(decay_lambda) as avg_lambda,
                     MIN(salience) as min_salience,
                     MAX(salience) as max_salience
-                FROM memories
+                FROM ${mem_table}
             `);
             const upt = process.uptime();
 
@@ -237,13 +247,14 @@ export function dash(app: any) {
 
     app.get("/dashboard/activity", async (req: any, res: any) => {
         try {
+            const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "50");
             const recmem = await all_async(
                 is_pg
                     ? `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
-                       FROM memories ORDER BY updated_at DESC LIMIT $1`
+                       FROM ${mem_table} ORDER BY updated_at DESC LIMIT $1`
                     : `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
-                       FROM memories ORDER BY updated_at DESC LIMIT ?`,
+                       FROM ${mem_table} ORDER BY updated_at DESC LIMIT ?`,
                 [lim],
             );
             res.json({
@@ -263,14 +274,15 @@ export function dash(app: any) {
 
     app.get("/dashboard/sectors/timeline", async (req: any, res: any) => {
         try {
+            const mem_table = get_mem_table();
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
             const tl = await all_async(
                 is_pg
                     ? `SELECT primary_sector, to_char(to_timestamp(created_at/1000), 'HH24:00') as hour, COUNT(*) as count
-                       FROM memories WHERE created_at > $1 GROUP BY primary_sector, hour ORDER BY hour`
+                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, hour ORDER BY hour`
                     : `SELECT primary_sector, strftime('%H:00', datetime(created_at/1000, 'unixepoch')) as hour, COUNT(*) as count
-                       FROM memories WHERE created_at > ? GROUP BY primary_sector, hour ORDER BY hour`,
+                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, hour ORDER BY hour`,
                 [strt],
             );
             res.json({ timeline: tl });
@@ -281,13 +293,14 @@ export function dash(app: any) {
 
     app.get("/dashboard/top-memories", async (req: any, res: any) => {
         try {
+            const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "10");
             const topm = await all_async(
                 is_pg
                     ? `SELECT id, content, primary_sector, salience, last_seen_at
-                       FROM memories ORDER BY salience DESC LIMIT $1`
+                       FROM ${mem_table} ORDER BY salience DESC LIMIT $1`
                     : `SELECT id, content, primary_sector, salience, last_seen_at
-                       FROM memories ORDER BY salience DESC LIMIT ?`,
+                       FROM ${mem_table} ORDER BY salience DESC LIMIT ?`,
                 [lim],
             );
             res.json({

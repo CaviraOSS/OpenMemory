@@ -59,7 +59,7 @@ examples:
 
 const hdrs = {
   'content-type': 'application/json',
-  ...(key && { authorization: `bearer ${key}` }),
+  ...(key && { authorization: `Bearer ${key}` }),
 };
 
 const req = async (pth, opts = {}) => {
@@ -120,14 +120,15 @@ const listmem = async (opts) => {
   const off = 0;
   let r;
   if (opts.usr) {
-    r = await req(`/memory/user/${opts.usr}?limit=${lim}&offset=${off}`);
+    r = await req(`/users/${opts.usr}/memories?l=${lim}&u=${off}`);
   } else {
     r = await req(`/memory/all?limit=${lim}&offset=${off}`);
   }
-  console.log(`[memories] showing ${r.memories.length}\n`);
-  r.memories.forEach((m, i) => {
+  const items = r.items || r.memories || [];
+  console.log(`[memories] showing ${items.length}\n`);
+  items.forEach((m, i) => {
     console.log(`${i + 1}. [${m.primary_sector}] ${m.content}`);
-    console.log(`   id: ${m.id} | user: ${m.user_id || 'system'}`);
+    console.log(`   id: ${m.id} | user: ${opts.usr || 'system'}`);
     console.log(`   sal: ${m.salience.toFixed(3)}`);
     if (m.tags) console.log(`   tags: ${m.tags}`);
     console.log();
@@ -140,15 +141,21 @@ const delmem = async (id) => {
 };
 
 const getstats = async () => {
-  const r = await req('/stats');
+  const r = await req('/dashboard/stats');
   console.log('[stats]\n');
-  console.log(`total memories: ${r.total_memories}`);
-  console.log(`total users: ${r.total_users}`);
-  console.log(`avg salience: ${r.avg_salience?.toFixed(3) || 'n/a'}`);
+  console.log(`total memories: ${r.totalMemories || 0}`);
+  console.log(`recent memories (24h): ${r.recentMemories || 0}`);
+  console.log(`avg salience: ${r.avgSalience || 'n/a'}`);
   console.log(`\nmemories by sector:`);
-  Object.entries(r.memories_by_sector || {}).forEach(([sec, cnt]) => {
+  Object.entries(r.sectorCounts || {}).forEach(([sec, cnt]) => {
     console.log(`  ${sec}: ${cnt}`);
   });
+  if (r.decayStats) {
+    console.log(`\ndecay stats:`);
+    console.log(`  avg lambda: ${r.decayStats.avgLambda}`);
+    console.log(`  min salience: ${r.decayStats.minSalience}`);
+    console.log(`  max salience: ${r.decayStats.maxSalience}`);
+  }
 };
 
 const listusers = async () => {
