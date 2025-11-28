@@ -64,6 +64,7 @@ export type lgm_store_req = {
     namespace?: string;
     graph_id?: string;
     reflective?: boolean;
+    user_id?: string;
 };
 
 export type lgm_retrieve_req = {
