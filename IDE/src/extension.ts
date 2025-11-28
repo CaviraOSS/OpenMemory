@@ -31,9 +31,13 @@ export function activate(context: vscode.ExtensionContext) {
     status_bar.command = 'openmemory.statusBarClick';
     context.subscriptions.push(status_bar);
 
+    // Register all commands first (before any early returns)
+    const status_click = vscode.commands.registerCommand('openmemory.statusBarClick', () => show_menu());
+
     if (!is_enabled) {
         update_status_bar('disabled');
         status_bar.show();
+        context.subscriptions.push(status_click);
         return;
     }
 
@@ -49,8 +53,6 @@ export function activate(context: vscode.ExtensionContext) {
             show_quick_setup();
         }
     });
-
-    const status_click = vscode.commands.registerCommand('openmemory.statusBarClick', () => show_menu());
 
     const query_cmd = vscode.commands.registerCommand('openmemory.queryContext', async () => {
         const editor = vscode.window.activeTextEditor;
@@ -195,14 +197,15 @@ async function auto_link_all() {
 }
 
 function update_status_bar(state: 'active' | 'paused' | 'connecting' | 'disconnected' | 'disabled') {
-    const icons = { active: '$(pulse) OpenMemory', paused: '$(debug-pause) OpenMemory', connecting: '$(sync~spin) OpenMemory', disconnected: '$(error) OpenMemory', disabled: '$(circle-slash) OpenMemory' };
+    const build = 'B';
+    const icons = { active: `$(pulse) OpenMemory [${build}]`, paused: `$(debug-pause) OpenMemory [${build}]`, connecting: `$(sync~spin) OpenMemory [${build}]`, disconnected: `$(error) OpenMemory [${build}]`, disabled: `$(circle-slash) OpenMemory [${build}]` };
     const mode = use_mcp ? 'MCP' : 'HTTP';
     const tooltips = {
-        active: `OpenMemory: Tracking active (${mode}) • Click for options`,
-        paused: `OpenMemory: Tracking paused (${mode}) • Click to resume`,
-        connecting: `OpenMemory: Connecting (${mode})...`,
-        disconnected: `OpenMemory: Disconnected (${mode}) • Click to setup`,
-        disabled: 'OpenMemory: Disabled • Click to enable'
+        active: `OpenMemory [${build}]: Tracking active (${mode}) • Click for options`,
+        paused: `OpenMemory [${build}]: Tracking paused (${mode}) • Click to resume`,
+        connecting: `OpenMemory [${build}]: Connecting (${mode})...`,
+        disconnected: `OpenMemory [${build}]: Disconnected (${mode}) • Click to setup`,
+        disabled: `OpenMemory [${build}]: Disabled • Click to enable`
     };
     status_bar.text = icons[state];
     status_bar.tooltip = tooltips[state];
@@ -405,7 +408,7 @@ async function start_session() {
 async function end_session() {
     if (!session_id) return;
     try {
-        await fetch(`${backend_url}/api/ide/session/end`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ session_id }) });
+        await fetch(`${backend_url}/api/ide/session/end`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ session_id, user_id }) });
         session_id = null;
     } catch { }
 }
@@ -413,7 +416,7 @@ async function end_session() {
 async function send_event(event_data: { event_type: string; file_path: string; language: string; content?: string; metadata?: any; }) {
     if (!session_id || !is_tracking) return;
     try {
-        await fetch(`${backend_url}/api/ide/events`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ session_id, event_type: event_data.event_type, file_path: event_data.file_path, language: event_data.language, content: event_data.content, metadata: event_data.metadata, timestamp: new Date().toISOString() }) });
+        await fetch(`${backend_url}/api/ide/events`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ session_id, user_id, event_type: event_data.event_type, file_path: event_data.file_path, language: event_data.language, content: event_data.content, metadata: event_data.metadata, timestamp: new Date().toISOString() }) });
     } catch { }
 }
 
