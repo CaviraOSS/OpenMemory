@@ -10,6 +10,7 @@ export function ide(app: any) {
             const content = req.body.content || "";
             const session_id = req.body.session_id || "default";
             const metadata = req.body.metadata || {};
+            const user_id = req.body.user_id || "anonymous";
 
             if (!event_type)
                 return res.status(400).json({ err: "event_type_required" });
@@ -30,6 +31,7 @@ export function ide(app: any) {
                 memory_content,
                 undefined,
                 full_metadata,
+                user_id,
             );
 
             res.json({
@@ -120,7 +122,7 @@ export function ide(app: any) {
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(content, undefined, metadata);
+            const result = await add_hsg_memory(content, undefined, metadata, user_id);
 
             res.json({
                 success: true,
@@ -140,6 +142,7 @@ export function ide(app: any) {
     app.post("/api/ide/session/end", async (req: any, res: any) => {
         try {
             const session_id = req.body.session_id;
+            const user_id = req.body.user_id || "anonymous";
 
             if (!session_id)
                 return res.status(400).json({ err: "session_id_required" });
@@ -187,7 +190,7 @@ export function ide(app: any) {
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(summary, undefined, metadata);
+            const result = await add_hsg_memory(summary, undefined, metadata, user_id);
 
             res.json({
                 success: true,

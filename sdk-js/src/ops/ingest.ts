@@ -108,7 +108,7 @@ const link = async (
     const ts = now();
     await transaction.begin();
     try {
-        await q.ins_waypoint.run(rid, cid, user_id || null, 1.0, ts, ts);
+        await q.ins_waypoint.run(rid, cid, user_id || "anonymous", 1.0, ts, ts);
         await transaction.commit();
         console.log(
             `[INGEST] Linked: ${rid.slice(0, 8)} -> ${cid.slice(0, 8)} (section ${idx})`,

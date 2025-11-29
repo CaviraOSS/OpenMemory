@@ -2,7 +2,7 @@
     "name": "openmemory-vscode",
     "displayName": "OpenMemory for VS Code",
     "description": "Cognitive memory system that remembers your coding context across sessions",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "publisher": "Nullure",
     "icon": "icon.png",
     "engines": {
@@ -32,6 +32,10 @@
     "contributes": {
         "commands": [
             {
+                "command": "openmemory.statusBarClick",
+                "title": "OpenMemory: Status Bar Menu"
+            },
+            {
                 "command": "openmemory.queryContext",
                 "title": "OpenMemory: Query Context"
             },
@@ -42,6 +46,18 @@
             {
                 "command": "openmemory.quickNote",
                 "title": "OpenMemory: Quick Note"
+            },
+            {
+                "command": "openmemory.viewPatterns",
+                "title": "OpenMemory: View Patterns"
+            },
+            {
+                "command": "openmemory.toggleTracking",
+                "title": "OpenMemory: Toggle Tracking"
+            },
+            {
+                "command": "openmemory.setup",
+                "title": "OpenMemory: Setup"
             },
             {
                 "command": "openmemory.dashboard",

@@ -425,7 +425,7 @@ export async function create_cross_sector_waypoints(
         await q.ins_waypoint.run(
             prim_id,
             `${prim_id}:${sec}`,
-            user_id || null,
+            user_id || "anonymous",
             wt,
             now,
             now,
@@ -433,7 +433,7 @@ export async function create_cross_sector_waypoints(
         await q.ins_waypoint.run(
             `${prim_id}:${sec}`,
             prim_id,
-            user_id || null,
+            user_id || "anonymous",
             wt,
             now,
             now,
@@ -490,13 +490,13 @@ export async function create_single_waypoint(
         await q.ins_waypoint.run(
             new_id,
             best.id,
-            user_id || null,
+            user_id || "anonymous",
             best.similarity,
             ts,
             ts,
         );
     } else {
-        await q.ins_waypoint.run(new_id, new_id, user_id || null, 1.0, ts, ts);
+        await q.ins_waypoint.run(new_id, new_id, user_id || "anonymous", 1.0, ts, ts);
     }
 }
 export async function create_inter_mem_waypoints(
@@ -517,7 +517,7 @@ export async function create_inter_mem_waypoints(
             await q.ins_waypoint.run(
                 new_id,
                 vr.id,
-                user_id || null,
+                user_id || "anonymous",
                 wt,
                 ts,
                 ts,
@@ -525,7 +525,7 @@ export async function create_inter_mem_waypoints(
             await q.ins_waypoint.run(
                 vr.id,
                 new_id,
-                user_id || null,
+                user_id || "anonymous",
                 wt,
                 ts,
                 ts,
@@ -550,7 +550,7 @@ export async function create_contextual_waypoints(
             await q.ins_waypoint.run(
                 mem_id,
                 rel_id,
-                user_id || null,
+                user_id || "anonymous",
                 base_wt,
                 now,
                 now,
@@ -1047,7 +1047,7 @@ export async function add_hsg_memory(
         );
         await q.ins_mem.run(
             id,
-            user_id || null,
+            user_id || "anonymous",
             cur_seg,
             stored_content,
             simhash,
@@ -1076,7 +1076,7 @@ export async function add_hsg_memory(
             await q.ins_vec.run(
                 id,
                 result.sector,
-                user_id || null,
+                user_id || "anonymous",
                 vec_buf,
                 result.dim,
             );
@@ -1148,7 +1148,7 @@ export async function update_memory(
                 await q.ins_vec.run(
                     id,
                     result.sector,
-                    mem.user_id || null,
+                    mem.user_id || "anonymous",
                     vec_buf,
                     result.dim,
                 );
