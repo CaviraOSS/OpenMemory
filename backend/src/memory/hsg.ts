@@ -336,8 +336,18 @@ export function extract_essence(
         .map((s) => s.trim())
         .filter((s) => s.length > 10);
     if (sents.length === 0) return raw.slice(0, max_len);
-    const score_sent = (s: string): number => {
+    const score_sent = (s: string, idx: number): number => {
         let sc = 0;
+        // First sentence bonus - titles/headers are essential for retrieval
+        if (idx === 0) sc += 10;
+        // Second sentence often contains key context
+        if (idx === 1) sc += 5;
+        // Header/section markers (markdown or label-style)
+        if (/^#+\s/.test(s) || /^[A-Z][A-Z\s]+:/.test(s)) sc += 8;
+        // Colon-prefixed labels like "PROBLEM:", "SOLUTION:", "CONTEXT:"
+        if (/^[A-Z][a-z]+:/i.test(s)) sc += 6;
+        // Date patterns (ISO format)
+        if (/\d{4}-\d{2}-\d{2}/.test(s)) sc += 7;
         if (
             /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d+/i.test(
                 s,
@@ -347,7 +357,7 @@ export function extract_essence(
         if (/\$\d+|\d+\s*(miles|dollars|years|months|km)/.test(s)) sc += 4;
         if (/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+/.test(s)) sc += 3;
         if (
-            /\b(bought|purchased|serviced|visited|went|got|received|paid|earned|learned|discovered|found|saw|met|completed|finished)\b/i.test(
+            /\b(bought|purchased|serviced|visited|went|got|received|paid|earned|learned|discovered|found|saw|met|completed|finished|fixed|implemented|created|updated|added|removed|resolved)\b/i.test(
                 s,
             )
         )
@@ -357,21 +367,42 @@ export function extract_essence(
         if (/\b(I|my|me)\b/.test(s)) sc += 1;
         return sc;
     };
-    const scored = sents.map((s) => ({ text: s, score: score_sent(s) }));
+    const scored = sents.map((s, idx) => ({ text: s, score: score_sent(s, idx), idx }));
     scored.sort((a, b) => b.score - a.score);
+    // Build result, ensuring first sentence is always included if space permits
     let comp = "";
-    for (const item of scored) {
-        const cand = comp ? `${comp}. ${item.text}` : item.text;
-        if (cand.length <= max_len) {
-            comp = cand;
-        } else if (comp.length < max_len * 0.7) {
-            const rem = max_len - comp.length - 2;
-            if (rem > 20) {
-                comp += ". " + item.text.slice(0, rem);
+    const firstSent = sents[0];
+    if (firstSent && firstSent.length <= max_len * 0.5) {
+        comp = firstSent;
+        const remaining = scored.filter((item) => item.idx !== 0);
+        for (const item of remaining) {
+            const cand = comp ? `${comp}. ${item.text}` : item.text;
+            if (cand.length <= max_len) {
+                comp = cand;
+            } else if (comp.length < max_len * 0.7) {
+                const rem = max_len - comp.length - 2;
+                if (rem > 20) {
+                    comp += ". " + item.text.slice(0, rem);
+                }
+                break;
+            } else {
+                break;
             }
-            break;
-        } else {
-            break;
+        }
+    } else {
+        for (const item of scored) {
+            const cand = comp ? `${comp}. ${item.text}` : item.text;
+            if (cand.length <= max_len) {
+                comp = cand;
+            } else if (comp.length < max_len * 0.7) {
+                const rem = max_len - comp.length - 2;
+                if (rem > 20) {
+                    comp += ". " + item.text.slice(0, rem);
+                }
+                break;
+            } else {
+                break;
+            }
         }
     }
     return comp || raw.slice(0, max_len);
