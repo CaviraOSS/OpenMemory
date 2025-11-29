@@ -1,4 +1,4 @@
-import { q } from "../../core/db";
+import { q, vector_store } from "../../core/db";
 import { p } from "../../utils";
 import {
     update_user_summary,
@@ -98,7 +98,7 @@ export const usr = (app: any) => {
 
             for (const m of mems) {
                 await q.del_mem.run(m.id);
-                await q.del_vec.run(m.id);
+                await vector_store.deleteVectors(m.id);
                 await q.del_waypoints.run(m.id, m.id);
                 deleted++;
             }
