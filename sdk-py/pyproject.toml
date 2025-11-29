@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openmemory-py"
-version = "1.0.1"
+version = "1.0.2"
 description = "OpenMemory Python SDK provides a local-first long-term memory engine for AI agents and LLM applications. Features include semantic search, multi-sector memory, temporal fact storage, automatic decay, and explainable recall paths. Works fully offline or with the OpenMemory backend."
 readme = "README.md"
 keywords = [
