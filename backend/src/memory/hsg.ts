@@ -107,11 +107,11 @@ export const sector_configs: Record<string, sector_cfg> = {
 };
 export const sectors = Object.keys(sector_configs);
 export const scoring_weights = {
-    similarity: 0.40,
+    similarity: 0.35,
     overlap: 0.20,
     waypoint: 0.15,
-    recency: 0.15,
-    tag_match: 0.10,
+    recency: 0.10,
+    tag_match: 0.20,
 };
 export const hybrid_params = {
     tau: 3,
