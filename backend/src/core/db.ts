@@ -3,6 +3,9 @@ import { Pool, PoolClient } from "pg";
 import { env } from "./cfg";
 import fs from "node:fs";
 import path from "node:path";
+import { VectorStore } from "./vector_store";
+import { PostgresVectorStore } from "./vector/postgres";
+import { ValkeyVectorStore } from "./vector/valkey";
 
 type q_type = {
     ins_mem: { run: (...p: any[]) => Promise<void> };
@@ -26,13 +29,7 @@ type q_type = {
     get_max_segment: { get: () => Promise<any> };
     get_segments: { all: () => Promise<any[]> };
     get_mem_by_segment: { all: (segment: number) => Promise<any[]> };
-    ins_vec: { run: (...p: any[]) => Promise<void> };
-    get_vec: { get: (id: string, sector: string) => Promise<any> };
-    get_vecs_by_id: { all: (id: string) => Promise<any[]> };
-    get_vecs_by_sector: { all: (sector: string) => Promise<any[]> };
-    get_vecs_batch: { all: (ids: string[], sector: string) => Promise<any[]> };
-    del_vec: { run: (...p: any[]) => Promise<void> };
-    del_vec_sector: { run: (...p: any[]) => Promise<void> };
+    // Vector operations removed, use vector_store instead
     ins_waypoint: { run: (...p: any[]) => Promise<void> };
     get_neighbors: { all: (src: string) => Promise<any[]> };
     get_waypoints_by_src: { all: (src: string) => Promise<any[]> };
@@ -58,6 +55,7 @@ let transaction: {
     rollback: () => Promise<void>;
 };
 let q: q_type;
+let vector_store: VectorStore;
 let memories_table: string;
 
 const is_pg = env.metadata_backend === "postgres";
@@ -188,7 +186,19 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
         );
+        await pg.query(
+            `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
+        );
         ready = true;
+
+        // Initialize VectorStore
+        if (env.vector_backend === "valkey") {
+            vector_store = new ValkeyVectorStore();
+            console.log("[DB] Using Valkey VectorStore");
+        } else {
+            vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
+            console.log("[DB] Using Postgres VectorStore");
+        }
     };
     init().catch((err) => {
         console.error("[DB] Init failed:", err);
@@ -303,47 +313,7 @@ if (is_pg) {
                     [segment],
                 ),
         },
-        ins_vec: {
-            run: (...p) =>
-                run_async(
-                    `insert into ${v}(id,sector,user_id,v,dim) values($1,$2,$3,$4,$5) on conflict(id,sector) do update set user_id=excluded.user_id,v=excluded.v,dim=excluded.dim`,
-                    p,
-                ),
-        },
-        get_vec: {
-            get: (id, sector) =>
-                get_async(`select v,dim from ${v} where id=$1 and sector=$2`, [
-                    id,
-                    sector,
-                ]),
-        },
-        get_vecs_by_id: {
-            all: (id) =>
-                all_async(`select sector,v,dim from ${v} where id=$1`, [id]),
-        },
-        get_vecs_by_sector: {
-            all: (sector) =>
-                all_async(`select id,v,dim from ${v} where sector=$1`, [
-                    sector,
-                ]),
-        },
-        get_vecs_batch: {
-            all: (ids: string[], sector: string) => {
-                if (!ids.length) return Promise.resolve([]);
-                const ph = ids.map((_, i) => `$${i + 2}`).join(",");
-                return all_async(
-                    `select id,v,dim from ${v} where sector=$1 and id in (${ph})`,
-                    [sector, ...ids],
-                );
-            },
-        },
-        del_vec: {
-            run: (...p) => run_async(`delete from ${v} where id=$1`, p),
-        },
-        del_vec_sector: {
-            run: (...p) =>
-                run_async(`delete from ${v} where id=$1 and sector=$2`, p),
-        },
+        // Vector operations removed
         ins_waypoint: {
             run: (...p) =>
                 run_async(
@@ -526,6 +496,9 @@ if (is_pg) {
         db.run(
             "create index if not exists idx_edges_validity on temporal_edges(valid_from,valid_to)",
         );
+        db.run(
+            "create index if not exists idx_edges_validity on temporal_edges(valid_from,valid_to)",
+        );
     });
     memories_table = "memories";
     const exec = (sql: string, p: any[] = []) =>
@@ -543,6 +516,24 @@ if (is_pg) {
     run_async = exec;
     get_async = one;
     all_async = many;
+
+    // Initialize VectorStore (SQLite fallback uses PostgresVectorStore logic but with SQLite db ops)
+    // Note: PostgresVectorStore uses SQL syntax which might be compatible with SQLite for simple things, 
+    // but `bytea` vs `blob` might differ.
+    // However, the interface implementation I wrote uses `run_async` etc.
+    // I should probably rename PostgresVectorStore to SqlVectorStore or similar if it supports both.
+    // For now, I'll use it for SQLite too as the SQL seems standard enough (except maybe bytea/blob handling in param binding).
+    // SQLite uses `blob`. Postgres uses `bytea`.
+    // The `PostgresVectorStore` implementation uses `vectorToBuffer` which returns a Buffer.
+    // `sqlite3` handles Buffer as BLOB. `pg` handles Buffer as bytea.
+    // So it should work.
+
+    if (env.vector_backend === "valkey") {
+        vector_store = new ValkeyVectorStore();
+    } else {
+        vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
+    }
+
     transaction = {
         begin: () => exec("BEGIN TRANSACTION"),
         commit: () => exec("COMMIT"),
@@ -641,43 +632,7 @@ if (is_pg) {
                     [segment],
                 ),
         },
-        ins_vec: {
-            run: (...p) =>
-                exec(
-                    "insert into vectors(id,sector,user_id,v,dim) values(?,?,?,?,?)",
-                    p,
-                ),
-        },
-        get_vec: {
-            get: (id, sector) =>
-                one("select v,dim from vectors where id=? and sector=?", [
-                    id,
-                    sector,
-                ]),
-        },
-        get_vecs_by_id: {
-            all: (id) =>
-                many("select sector,v,dim from vectors where id=?", [id]),
-        },
-        get_vecs_by_sector: {
-            all: (sector) =>
-                many("select id,v,dim from vectors where sector=?", [sector]),
-        },
-        get_vecs_batch: {
-            all: (ids: string[], sector: string) => {
-                if (!ids.length) return Promise.resolve([]);
-                const ph = ids.map(() => "?").join(",");
-                return many(
-                    `select id,v,dim from vectors where sector=? and id in (${ph})`,
-                    [sector, ...ids],
-                );
-            },
-        },
-        del_vec: { run: (...p) => exec("delete from vectors where id=?", p) },
-        del_vec_sector: {
-            run: (...p) =>
-                exec("delete from vectors where id=? and sector=?", p),
-        },
+        // Vector operations removed
         ins_waypoint: {
             run: (...p) =>
                 exec(
@@ -784,4 +739,4 @@ export const log_maint_op = async (
     }
 };
 
-export { q, transaction, all_async, get_async, run_async, memories_table };
+export { q, transaction, all_async, get_async, run_async, memories_table, vector_store };

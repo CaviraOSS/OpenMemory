@@ -69,7 +69,10 @@ export const env = {
         process.env.OM_METADATA_BACKEND,
         "sqlite",
     ).toLowerCase(),
-    vector_backend: str(process.env.OM_VECTOR_BACKEND, "sqlite").toLowerCase(),
+    vector_backend: str(process.env.OM_VECTOR_BACKEND, "postgres").toLowerCase(),
+    valkey_host: str(process.env.OM_VALKEY_HOST, "localhost"),
+    valkey_port: num(process.env.OM_VALKEY_PORT, 6379),
+    valkey_password: process.env.OM_VALKEY_PASSWORD,
     ide_mode: bool(process.env.OM_IDE_MODE),
     ide_allowed_origins: str(
         process.env.OM_IDE_ALLOWED_ORIGINS,
