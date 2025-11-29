@@ -135,6 +135,66 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
     return gen_syn_emb(t, s);
 }
 
+
+// Batch embedding with fallback chain support (for simple mode)
+async function emb_batch_with_fallback(
+    txts: Record<string, string>,
+): Promise<Record<string, number[]>> {
+    const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
+
+    for (let i = 0; i < providers.length; i++) {
+        const provider = providers[i];
+        try {
+            let result: Record<string, number[]>;
+            switch (provider) {
+                case "gemini":
+                    result = await emb_gemini(txts);
+                    break;
+                case "openai":
+                    result = await emb_batch_openai(txts);
+                    break;
+                default:
+                    // For providers without batch support, embed each sector individually
+                    result = {};
+                    for (const [s, t] of Object.entries(txts)) {
+                        result[s] = await embed_with_provider(provider, t, s);
+                    }
+            }
+            if (i > 0) {
+                console.log(
+                    `[EMBED] Fallback to ${provider} succeeded for batch`,
+                );
+            }
+            return result;
+        } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            const nextProvider = providers[i + 1];
+
+            if (nextProvider) {
+                console.warn(
+                    `[EMBED] ${provider} batch failed: ${errMsg}, trying ${nextProvider}`,
+                );
+            } else {
+                console.error(
+                    `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}. Using synthetic.`,
+                );
+                // Fall back to synthetic for all sectors
+                const result: Record<string, number[]> = {};
+                for (const [s, t] of Object.entries(txts)) {
+                    result[s] = gen_syn_emb(t, s);
+                }
+                return result;
+            }
+        }
+    }
+    // Fallback if providers array is empty
+    const result: Record<string, number[]> = {};
+    for (const [s, t] of Object.entries(txts)) {
+        result[s] = gen_syn_emb(t, s);
+    }
+    return result;
+}
+
 async function emb_openai(t: string, s: string): Promise<number[]> {
     if (!env.openai_key) throw new Error("OpenAI key missing");
     const m = get_model(s, "openai");
@@ -454,10 +514,8 @@ export async function embedMultiSector(
                 );
                 const tb: Record<string, string> = {};
                 secs.forEach((s) => (tb[s] = txt));
-                const b =
-                    env.emb_kind === "gemini"
-                        ? await emb_gemini(tb)
-                        : await emb_batch_openai(tb);
+                // Use batch embedding with fallback support
+                const b = await emb_batch_with_fallback(tb);
                 Object.entries(b).forEach(([s, v]) =>
                     r.push({ sector: s, vector: v, dim: v.length }),
                 );
