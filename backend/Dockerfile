@@ -21,7 +21,7 @@ COPY package*.json ./
 # Install all dependencies (including devDependencies) using Bun
 # --frozen-lockfile ensures reproducible builds
 # --concurrent-scripts and --network-concurrency optimize install speed
-RUN bun install --concurrent-scripts=10 --network-concurrency=96
+RUN bun install --frozen-lockfile
 
 # Copy source code and build the application
 COPY src/ ./src/

@@ -54,6 +54,7 @@ class OpenMemory:
             
             if embeddings.get("model"):
                 if provider == "openai": config_update["openai_model"] = embeddings["model"]
+                if provider == "ollama": config_update["ollama_model"] = embeddings["model"]
 
             if aws_config:
                 config_update["AWS_ACCESS_KEY_ID"] = aws_config.get("accessKeyId")
