@@ -1,6 +1,6 @@
 import { env } from "../core/cfg";
 import { add_hsg_memory, hsg_query } from "../memory/hsg";
-import { q } from "../core/db";
+import { q, vector_store } from "../core/db";
 import { now, j } from "../utils";
 import type {
     lgm_store_req,
@@ -114,7 +114,7 @@ const hydrate_mem_row = async (
     path?: string[],
 ): Promise<hydrated_mem> => {
     const tags = safe_parse<string[]>(row.tags, []);
-    const vecs = await q.get_vecs_by_id.all(row.id);
+    const vecs = await vector_store.getVectorsById(row.id);
     const secs = vecs.map((v) => v.sector);
     const mem: hydrated_mem = {
         id: row.id,

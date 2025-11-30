@@ -1,4 +1,4 @@
-import { all_async, run_async, q } from "../core/db";
+import { all_async, run_async, q, vector_store } from "../core/db";
 import { now } from "../utils";
 import { env } from "../core/cfg";
 
@@ -286,7 +286,7 @@ export const apply_decay = async () => {
 
                     if (f < 0.7) {
                         const sector = m.primary_sector || "semantic";
-                        const vec_row = await q.get_vec.get(m.id, sector);
+                        const vec_row = await vector_store.getVector(m.id, sector);
 
                         if (vec_row && vec_row.vector) {
                             const vec =
@@ -385,7 +385,7 @@ export const on_query_hit = async (
     let updated = false;
 
     if (cfg.regeneration_enabled && reembed) {
-        const vec_row = await q.get_vec.get(mem_id, sector);
+        const vec_row = await vector_store.getVector(mem_id, sector);
         if (vec_row && vec_row.vector) {
             const vec =
                 typeof vec_row.vector === "string"
