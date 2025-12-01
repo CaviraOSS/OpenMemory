@@ -78,7 +78,7 @@ services:
       - OM_PG_TABLE=${OM_PG_TABLE:-openmemory_memories}
       - OM_PG_SSL=${OM_PG_SSL:-disable}
 
-      # Vector Backend (SQLite/Weaviate)
+      # Vector Backend (follows OM_METADATA_BACKEND unless set to 'valkey')
       - OM_VECTOR_BACKEND=${OM_VECTOR_BACKEND:-sqlite}
       - OM_VECTOR_TABLE=${OM_VECTOR_TABLE:-openmemory_vectors}
       - OM_WEAVIATE_URL=${OM_WEAVIATE_URL:-}
@@ -128,22 +128,26 @@ services:
       retries: 3
       start_period: 30s
 
-  valkey:
-    image: valkey/valkey:8.0
-    ports:
-      - '6379:6379'
-    volumes:
-      - valkey_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'valkey-cli', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+  # Optional: Valkey for high-performance vector storage
+  # Uncomment to use Valkey instead of SQLite/PostgreSQL for vectors
+  # Don't forget to set OM_VECTOR_BACKEND=valkey in your .env
+  # valkey:
+  #   image: valkey/valkey:8.0
+  #   ports:
+  #     - '6379:6379'
+  #   volumes:
+  #     - valkey_data:/data
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ['CMD', 'valkey-cli', 'ping']
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
 
 volumes:
   openmemory_data:
     driver: local
-  valkey_data:
-    driver: local
+  # Uncomment if using Valkey
+  # valkey_data:
+  #   driver: local
