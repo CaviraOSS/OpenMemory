@@ -733,7 +733,8 @@ setInterval(async () => {
                 1,
                 cur_wt + hybrid_params.eta * (1 - cur_wt) * temp_fact,
             );
-            await q.ins_waypoint.run(a, b, new_wt, wp?.created_at || now, now);
+            const user_id = wp?.user_id || memA?.user_id || memB?.user_id || "anonymous";
+            await q.ins_waypoint.run(a, b, user_id, new_wt, wp?.created_at || now, now);
         } catch (e) { }
     }
 }, 1000);

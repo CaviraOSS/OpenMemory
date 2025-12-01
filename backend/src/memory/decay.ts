@@ -1,4 +1,4 @@
-import { all_async, run_async, q, vector_store } from "../core/db";
+import { all_async, run_async, q, vector_store, memories_table } from "../core/db";
 import { now } from "../utils";
 import { env } from "../core/cfg";
 
@@ -348,7 +348,7 @@ export const apply_decay = async () => {
 
                     if (changed) {
                         await run_async(
-                            "update memories set salience=?,updated_at=? where id=?",
+                            `update ${memories_table} set salience=?,updated_at=? where id=?`,
                             [new_sal, now(), m.id],
                         );
                         tot_chg++;
@@ -408,7 +408,7 @@ export const on_query_hit = async (
     if (cfg.reinforce_on_query) {
         const new_sal = clamp_f((m.salience || 0.5) + 0.5, 0, 1);
         await run_async(
-            "update memories set salience=?,last_seen_at=? where id=?",
+            `update ${memories_table} set salience=?,last_seen_at=? where id=?`,
             [new_sal, now(), mem_id],
         );
         updated = true;
