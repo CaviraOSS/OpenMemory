@@ -645,6 +645,7 @@ export async function prune_weak_waypoints(): Promise<number> {
 }
 import {
     embedForSector,
+    embedQueryForAllSectors,
     embedMultiSector,
     cosineSimilarity,
     bufferToVector,
@@ -778,8 +779,8 @@ export async function hsg_query(
             ss = [...sectors];
         }
         if (!ss.length) ss.push("semantic");
-        const qe: Record<string, number[]> = {};
-        for (const s of ss) qe[s] = await embedForSector(qt, s);
+        // Batch embed all sectors in one API call for faster queries
+        const qe = await embedQueryForAllSectors(qt, ss);
         const w: multi_vec_fusion_weights = {
             semantic_dimension_weight: qc.primary === "semantic" ? 1.2 : 0.8,
             emotional_dimension_weight: qc.primary === "emotional" ? 1.5 : 0.6,
