@@ -10,6 +10,19 @@ import {
 
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
+
+// Fetch with timeout to prevent hanging requests and enable fallback chain
+const EMBED_TIMEOUT_MS = Number(process.env.OM_EMBED_TIMEOUT_MS) || 30000;
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 export interface EmbeddingResult {
     sector: string;
     vector: number[];
@@ -198,7 +211,7 @@ async function emb_batch_with_fallback(
 async function emb_openai(t: string, s: string): Promise<number[]> {
     if (!env.openai_key) throw new Error("OpenAI key missing");
     const m = get_model(s, "openai");
-    const r = await fetch(
+    const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
             method: "POST",
@@ -223,7 +236,7 @@ async function emb_batch_openai(
     if (!env.openai_key) throw new Error("OpenAI key missing");
     const secs = Object.keys(txts),
         m = get_model("semantic", "openai");
-    const r = await fetch(
+    const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
             method: "POST",
@@ -266,7 +279,7 @@ async function emb_gemini(
                     content: { parts: [{ text: t }] },
                     taskType: task_map[s] || task_map.semantic,
                 }));
-                const r = await fetch(url, {
+                const r = await fetchWithTimeout(url, {
                     method: "POST",
                     headers: { "content-type": "application/json" },
                     body: JSON.stringify({ requests: reqs }),
@@ -315,7 +328,7 @@ async function emb_gemini(
 
 async function emb_ollama(t: string, s: string): Promise<number[]> {
     const m = get_model(s, "ollama");
-    const r = await fetch(`${env.ollama_url}/api/embeddings`, {
+    const r = await fetchWithTimeout(`${env.ollama_url}/api/embeddings`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: m, prompt: t }),
