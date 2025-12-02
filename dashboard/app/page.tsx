@@ -117,14 +117,17 @@ export default function Dashboard() {
                     grouped[key][item.primary_sector] = item.count
                 })
 
-                const chartData = Object.values(grouped).map((item: any) => ({
-                    hour: item.hour,
-                    semantic: item.semantic || 0,
-                    episodic: item.episodic || 0,
-                    procedural: item.procedural || 0,
-                    emotional: item.emotional || 0,
-                    reflective: item.reflective || 0,
-                }))
+                // Explicitly sort by sort_key for proper chronological ordering
+                const chartData = Object.values(grouped)
+                    .sort((a: any, b: any) => (a.sort_key || a.hour).localeCompare(b.sort_key || b.hour))
+                    .map((item: any) => ({
+                        hour: item.hour,
+                        semantic: item.semantic || 0,
+                        episodic: item.episodic || 0,
+                        procedural: item.procedural || 0,
+                        emotional: item.emotional || 0,
+                        reflective: item.reflective || 0,
+                    }))
 
                 setQpsData(chartData)
             }

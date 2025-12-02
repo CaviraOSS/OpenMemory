@@ -296,12 +296,14 @@ export function dash(app: any) {
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
                     : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
-                sortFormat = displayFormat;
+                sortFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-MM-DD')"
+                    : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "day";
             } else {
-                // For longer periods, group by week
+                // For longer periods, group by week (ISO week format for consistency)
                 displayFormat = is_pg
-                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-WW')"
+                    ? "to_char(to_timestamp(created_at/1000), 'IYYY-\"W\"IW')"
                     : "strftime('%Y-W%W', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 sortFormat = displayFormat;
                 timeKey = "week";
@@ -309,14 +311,14 @@ export function dash(app: any) {
 
             const tl = await all_async(
                 is_pg
-                    ? `SELECT primary_sector, ${displayFormat} as period, ${sortFormat} as sort_key, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, sort_key ORDER BY sort_key`
-                    : `SELECT primary_sector, ${displayFormat} as period, ${sortFormat} as sort_key, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, sort_key ORDER BY sort_key`,
+                    ? `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
+                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`
+                    : `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
+                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`,
                 [strt],
             );
             res.json({
-                timeline: tl.map((row: any) => ({ ...row, hour: row.period })),
+                timeline: tl.map((row: any) => ({ ...row, hour: row.label })),
                 grouping: timeKey,
             });
         } catch (e: any) {
