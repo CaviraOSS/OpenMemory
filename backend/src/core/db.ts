@@ -420,6 +420,8 @@ if (is_pg) {
     const dir = path.dirname(db_path);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);
+    // SQLite vector table name from env (default: "vectors" for backward compatibility)
+    const sqlite_vector_table = process.env.OM_VECTOR_TABLE || "vectors";
     db.serialize(() => {
         db.run("PRAGMA journal_mode=WAL");
         db.run("PRAGMA synchronous=NORMAL");
@@ -434,7 +436,7 @@ if (is_pg) {
             `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
         );
         db.run(
-            `create table if not exists vectors(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
+            `create table if not exists ${sqlite_vector_table}(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
         );
         db.run(
             `create table if not exists waypoints(src_id text,dst_id text not null,user_id text,weight real not null,created_at integer,updated_at integer,primary key(src_id,user_id))`,
@@ -470,7 +472,7 @@ if (is_pg) {
             "create index if not exists idx_memories_user on memories(user_id)",
         );
         db.run(
-            "create index if not exists idx_vectors_user on vectors(user_id)",
+            `create index if not exists idx_vectors_user on ${sqlite_vector_table}(user_id)`,
         );
         db.run(
             "create index if not exists idx_waypoints_src on waypoints(src_id)",
@@ -540,9 +542,8 @@ if (is_pg) {
         vector_store = new ValkeyVectorStore();
         console.log("[DB] Using Valkey VectorStore");
     } else {
-        const vt = process.env.OM_VECTOR_TABLE || "vectors";
-        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, vt);
-        console.log(`[DB] Using SQLite VectorStore with table: ${vt}`);
+        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
+        console.log(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
     }
 
     transaction = {
