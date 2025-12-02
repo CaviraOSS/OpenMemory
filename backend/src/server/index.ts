@@ -23,10 +23,10 @@ const ASC = `   ____                   __  __
 
 const app = server({ max_payload_size: env.max_payload_size });
 
-console.log(ASC);
-console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
-console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
-console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
+console.error(ASC);
+console.error(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
+console.error(`[CONFIG] Cache Segments: ${env.cache_segments}`);
+console.error(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
 // Warn about configuration mismatch that causes embedding incompatibility
 if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
@@ -67,19 +67,19 @@ routes(app);
 
 mcp(app);
 if (env.mode === "langgraph") {
-    console.log("[MODE] LangGraph integration enabled");
+    console.error("[MODE] LangGraph integration enabled");
 }
 
 const decayIntervalMs = env.decay_interval_minutes * 60 * 1000;
-console.log(
+console.error(
     `[DECAY] Interval: ${env.decay_interval_minutes} minutes (${decayIntervalMs / 1000}s)`,
 );
 
 setInterval(async () => {
-    console.log("[DECAY] Running HSG decay process...");
+    console.error("[DECAY] Running HSG decay process...");
     try {
         const result = await run_decay_process();
-        console.log(
+        console.error(
             `[DECAY] Completed: ${result.decayed}/${result.processed} memories updated`,
         );
     } catch (error) {
@@ -88,10 +88,10 @@ setInterval(async () => {
 }, decayIntervalMs);
 setInterval(
     async () => {
-        console.log("[PRUNE] Pruning weak waypoints...");
+        console.error("[PRUNE] Pruning weak waypoints...");
         try {
             const pruned = await prune_weak_waypoints();
-            console.log(`[PRUNE] Completed: ${pruned} waypoints removed`);
+            console.error(`[PRUNE] Completed: ${pruned} waypoints removed`);
         } catch (error) {
             console.error("[PRUNE] Failed:", error);
         }
@@ -100,7 +100,7 @@ setInterval(
 );
 run_decay_process()
     .then((result: any) => {
-        console.log(
+        console.error(
             `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
         );
     })
@@ -109,9 +109,9 @@ run_decay_process()
 start_reflection();
 start_user_summary_reflection();
 
-console.log(`[SERVER] Starting on port ${env.port}`);
+console.error(`[SERVER] Starting on port ${env.port}`);
 app.listen(env.port, () => {
-    console.log(`[SERVER] Running on http://localhost:${env.port}`);
+    console.error(`[SERVER] Running on http://localhost:${env.port}`);
     sendTelemetry().catch(() => {
         // ignore telemetry failures
     });

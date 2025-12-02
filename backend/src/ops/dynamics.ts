@@ -166,7 +166,7 @@ export async function applyDualPhaseDecayToAllMemories(): Promise<void> {
         );
     });
     await Promise.all(ops);
-    console.log(`[DECAY] Applied to ${mems.length} memories`);
+    console.error(`[DECAY] Applied to ${mems.length} memories`);
 }
 
 export async function buildAssociativeWaypointGraphFromMemories(): Promise<

@@ -123,7 +123,7 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
         try {
             const result = await embed_with_provider(provider, t, s);
             if (i > 0) {
-                console.log(
+                console.error(
                     `[EMBED] Fallback to ${provider} succeeded for sector: ${s}`,
                 );
             }
@@ -174,7 +174,7 @@ async function emb_batch_with_fallback(
                     }
             }
             if (i > 0) {
-                console.log(
+                console.error(
                     `[EMBED] Fallback to ${provider} succeeded for batch`,
                 );
             }
@@ -522,7 +522,7 @@ export async function embedMultiSector(
                 simp &&
                 (env.emb_kind === "gemini" || env.emb_kind === "openai")
             ) {
-                console.log(
+                console.error(
                     `[EMBED] Simple mode (1 batch for ${secs.length} sectors)`,
                 );
                 const tb: Record<string, string> = {};
@@ -533,7 +533,7 @@ export async function embedMultiSector(
                     r.push({ sector: s, vector: v, dim: v.length }),
                 );
             } else {
-                console.log(`[EMBED] Advanced mode (${secs.length} calls)`);
+                console.error(`[EMBED] Advanced mode (${secs.length} calls)`);
                 const par = env.adv_embed_parallel && env.emb_kind !== "gemini";
                 if (par) {
                     const p = secs.map(async (s) => {
