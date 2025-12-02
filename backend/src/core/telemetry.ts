@@ -38,7 +38,7 @@ export const sendTelemetry = async () => {
         if (!res.ok) {
             console.warn(``)
         } else {
-            console.log(`[telemetry] sent`)
+            console.error(`[telemetry] sent`)
         }
     } catch {
         // silently ignore telemetry errors

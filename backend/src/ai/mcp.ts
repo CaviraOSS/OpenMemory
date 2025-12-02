@@ -419,7 +419,7 @@ export const mcp = (app: any) => {
     const srv_ready = srv
         .connect(trans)
         .then(() => {
-            console.log("[MCP] Server started and transport connected");
+            console.error("[MCP] Server started and transport connected");
         })
         .catch((error) => {
             console.error("[MCP] Failed to initialize transport:", error);
@@ -434,7 +434,7 @@ export const mcp = (app: any) => {
                 send_err(res, -32600, "Request body must be a JSON object");
                 return;
             }
-            console.log("[MCP] Incoming request:", JSON.stringify(pay));
+            console.error("[MCP] Incoming request:", JSON.stringify(pay));
             set_hdrs(res);
             await trans.handleRequest(req, res, pay);
         } catch (error) {

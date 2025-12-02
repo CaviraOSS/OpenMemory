@@ -15,7 +15,7 @@ export const load_models = (): model_cfg => {
     try {
         const yml = readFileSync(p, "utf-8");
         cfg = parse_yaml(yml);
-        console.log(
+        console.error(
             `[MODELS] Loaded models.yml (${Object.keys(cfg).length} sectors)`,
         );
         return cfg;

@@ -110,7 +110,7 @@ const link = async (
     try {
         await q.ins_waypoint.run(rid, cid, user_id || "anonymous", 1.0, ts, ts);
         await transaction.commit();
-        console.log(
+        console.error(
             `[INGEST] Linked: ${rid.slice(0, 8)} -> ${cid.slice(0, 8)} (section ${idx})`,
         );
     } catch (e) {
@@ -155,15 +155,15 @@ export async function ingestDocument(
     }
 
     const secs = split(text, sz);
-    console.log(`[INGEST] Document: ${exMeta.estimated_tokens} tokens`);
-    console.log(`[INGEST] Splitting into ${secs.length} sections`);
+    console.error(`[INGEST] Document: ${exMeta.estimated_tokens} tokens`);
+    console.error(`[INGEST] Splitting into ${secs.length} sections`);
 
     let rid: string;
     const cids: string[] = [];
 
     try {
         rid = await mkRoot(text, ex, meta, user_id);
-        console.log(`[INGEST] Root memory created: ${rid}`);
+        console.error(`[INGEST] Root memory created: ${rid}`);
         for (let i = 0; i < secs.length; i++) {
             try {
                 const cid = await mkChild(
@@ -176,7 +176,7 @@ export async function ingestDocument(
                 );
                 cids.push(cid);
                 await link(rid, cid, i, user_id);
-                console.log(
+                console.error(
                     `[INGEST] Section ${i + 1}/${secs.length} processed: ${cid}`,
                 );
             } catch (e) {
@@ -187,7 +187,7 @@ export async function ingestDocument(
                 throw e;
             }
         }
-        console.log(
+        console.error(
             `[INGEST] Completed: ${cids.length} sections linked to ${rid}`,
         );
         return {
@@ -237,15 +237,15 @@ export async function ingestURL(
     }
 
     const secs = split(ex.text, sz);
-    console.log(`[INGEST] URL: ${ex.metadata.estimated_tokens} tokens`);
-    console.log(`[INGEST] Splitting into ${secs.length} sections`);
+    console.error(`[INGEST] URL: ${ex.metadata.estimated_tokens} tokens`);
+    console.error(`[INGEST] Splitting into ${secs.length} sections`);
 
     let rid: string;
     const cids: string[] = [];
 
     try {
         rid = await mkRoot(ex.text, ex, { ...meta, source_url: url }, user_id);
-        console.log(`[INGEST] Root memory for URL: ${rid}`);
+        console.error(`[INGEST] Root memory for URL: ${rid}`);
         for (let i = 0; i < secs.length; i++) {
             try {
                 const cid = await mkChild(
@@ -258,7 +258,7 @@ export async function ingestURL(
                 );
                 cids.push(cid);
                 await link(rid, cid, i, user_id);
-                console.log(
+                console.error(
                     `[INGEST] URL section ${i + 1}/${secs.length} processed: ${cid}`,
                 );
             } catch (e) {
@@ -269,7 +269,7 @@ export async function ingestURL(
                 throw e;
             }
         }
-        console.log(
+        console.error(
             `[INGEST] URL completed: ${cids.length} sections linked to ${rid}`,
         );
         return {

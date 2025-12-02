@@ -118,7 +118,7 @@ export function authenticate_api_request(req: any, res: any, next: any) {
 export function log_authenticated_request(req: any, res: any, next: any) {
     const key = extract_api_key(req);
     if (key)
-        console.log(
+        console.error(
             `[AUTH] ${req.method} ${req.path} [${crypto.createHash("sha256").update(key).digest("hex").slice(0, 8)}...]`,
         );
     next();

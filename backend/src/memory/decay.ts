@@ -218,12 +218,12 @@ const top_keywords = (t: string, k = 5): string[] => {
 
 export const apply_decay = async () => {
     if (active_q > 0) {
-        console.log(`[decay] skipped - ${active_q} active queries`);
+        console.error(`[decay] skipped - ${active_q} active queries`);
         return;
     }
     const now_ts = Date.now();
     if (now_ts - last_decay < cooldown) {
-        console.log(
+        console.error(
             `[decay] skipped - cooldown active (${((cooldown - (now_ts - last_decay)) / 1000).toFixed(0)}s remaining)`,
         );
         return;
