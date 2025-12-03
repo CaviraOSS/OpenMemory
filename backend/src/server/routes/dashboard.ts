@@ -301,12 +301,14 @@ export function dash(app: any) {
                     : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "day";
             } else {
-                // For longer periods, group by week (ISO week format for consistency)
+                // For longer periods (30 days), group by day showing month-day
                 displayFormat = is_pg
-                    ? "to_char(to_timestamp(created_at/1000), 'IYYY-\"W\"IW')"
-                    : "strftime('%Y-W%W', datetime(created_at/1000, 'unixepoch', 'localtime'))";
-                sortFormat = displayFormat;
-                timeKey = "week";
+                    ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
+                    : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                sortFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-MM-DD')"
+                    : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                timeKey = "day";
             }
 
             const tl = await all_async(

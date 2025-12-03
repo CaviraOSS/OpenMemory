@@ -38,6 +38,9 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Install timezone data for proper TZ support
+RUN apk add --no-cache tzdata
+
 # Create a dedicated non-root user for security
 RUN addgroup -g 1001 -S appgroup \
  && adduser -u 1001 -S appuser -G appgroup
