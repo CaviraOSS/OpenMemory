@@ -213,7 +213,7 @@ export function mem(app: any) {
     app.delete("/memory/:id", async (req: any, res: any) => {
         try {
             const id = req.params.id;
-            const user_id = req.query.user_id || req.body.user_id;
+            const user_id = req.query.user_id || req.body?.user_id;
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
