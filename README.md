@@ -78,89 +78,14 @@ It gives AI systems:
 * time‑aware fact tracking
 * explainability through waypoint traces
 * complete data ownership
+* MCP integration
+* and much more
 
-OpenMemory acts as the **Memory OS** for your AI agents, copilots, and applications.
-
----
-
-# 2. Features (Full List)
-
-This section shows every major capability grouped clearly.
-
-## 2.1 Memory Model
-
-* **Multi‑sector memory** (semantic, episodic, procedural, emotional, reflective)
-* **Hierarchical Memory Decomposition (HMD)**
-* **Multiple embeddings per memory**
-* **Automatic decay per sector**
-* **Coactivation reinforcement**
-* **Salience + recency weighting**
-* **Waypoint graph linking**
-* **Explainable recall paths**
-
-## 2.2 Cognitive Operations
-
-* **Pattern clustering** (detect similar memories)
-* **Memory consolidation** (merge duplicates)
-* **Context summaries**
-* **User summaries**
-* **Sector‑aware retrieval**
-* **Cross‑sector associative recall**
-* **Adaptive decay cycles**
-
-## 2.3 Temporal Knowledge Graph
-
-* **Time‑bound facts** with `valid_from` and `valid_to`
-* **Automatic fact evolution**
-* **Point‑in‑time queries**
-* **Timeline reconstruction**
-* **Historical comparison**
-* **Confidence decay**
-* **Temporal search**
-* **Volatile fact detection**
-
-## 2.4 Infrastructure & Scalability
-
-* **SQLite or Postgres** backend
-* **Sector‑sharded storage** for speed
-* **7.9ms/item scoring** at 10k+ scale
-* **338 QPS throughput** with 8 workers
-* **Multitenant user isolation**
-* **Local‑first SDKs** (Node + Python)
-* **Remote mode** for multi‑service deployments
-* **Docker support**
-* **Self‑hosted dashboard**
-
-## 2.5 Agent & LLM Integration
-
-* **MCP server** (Claude Desktop, Claude Code, Cursor, Windsurf)
-* **LangGraph mode** with `/lgm/*` endpoints
-* **Vercel AI SDK integration**
-* **Any LLM provider** (OpenAI, Gemini, Groq, Claude, Ollama…)
-* **Embeddings**: E5, BGE, OpenAI, Gemini, AWS, Ollama, custom
-
-## 2.6 Developer Experience
-
-* **Standalone SDKs** (no backend required)
-* **CLI tool** (`opm`)
-* **Ingestion engine** for docx/pdf/txt/html/audio/video/url
-* **VS Code extension** (automatic coding‑activity memory)
-* **Auto‑summaries for LLM context compression**
-* **Fast local setup** via Docker or SDK
-* **Migrations** from Mem0, Zep, Supermemory
-
-## 2.7 Security & Privacy
-
-* **Self‑hosted only** (no vendor lock‑in)
-* **API key gating**
-* **Optional AES‑GCM encryption**
-* **PII scrubbing hooks**
-* **Per‑user isolation**
-* **Zero memory leakage to cloud providers**
+OpenMemory acts as the **Memory OS** for your AI agents, copilots, and applications. **On top of this, you can easily migrate from Mem0, Zep, Supermemory to OpenMemory in just one command.**
 
 ---
 
-# 3. Competitor Comparison
+# Competitor Comparison
 
 | **Feature / Metric**                     | **OpenMemory (Our Tests – Nov 2025)**                       | **Zep (Their Benchmarks)**         | **Supermemory (Their Docs)**    | **Mem0 (Their Tests)**        | **OpenAI Memory**          | **LangChain Memory**        | **Vector DBs (Chroma / Weaviate / Pinecone)** |
 | ---------------------------------------- | ----------------------------------------------------------- | ---------------------------------- | ------------------------------- | ----------------------------- | -------------------------- | --------------------------- | --------------------------------------------- |
@@ -186,29 +111,315 @@ This section shows every major capability grouped clearly.
 | **Data Ownership**                       | 100 % yours ✓                                               | Vendor / self-host split ✓         | Partial ✓                       | 100 % yours ✓                 | Vendor ❌                  | Yours ✓                     | Yours ✓                                       |
 | **Use-case Fit**                         | Long-term AI agents, copilots, journaling ✓                 | Enterprise RAG assistants ✓        | Cognitive agents / journaling ✓ | Basic agent memory ✓          | ChatGPT personalization ❌ | Context memory ✓            | Generic vector store ✓                        |
 
-### ✅ **OpenMemory Test Highlights (Nov 2025, LongMemEval)**
+# Migration
 
-| **Test Type**              | **Result Summary**                         |
-| -------------------------- | ------------------------------------------ |
-| Recall@5                   | 100.0% (avg 6.7ms)                         |
-| Throughput (8 workers)     | 338.4 QPS (avg 22ms, P95 203ms)            |
-| Decay Stability (5 min)    | Δ +30% → +56% (convergent)                 |
-| Cross-sector Recall        | Passed (semantic ↔ emotional, 5/5 matches) |
-| Scalability Test           | 7.9 ms/item (stable beyond 10k entries)    |
-| Consistency (2863 samples) | Stable (no variance drift)                 |
-| Decay Model                | Adaptive exponential decay per sector      |
-| Memory Reinforcement       | Coactivation-weighted salience updates     |
-| Embedding Mode             | Synthetic + Gemini hybrid                  |
-| User Link                  | ✅ `user_id` association confirmed         |
+OpenMemory includes a robust migration tool to import billions of memories from other systems.
 
-### Summary
+### Supported Providers
 
-OpenMemory delivers **2–3× faster contextual recall**, **6–10× lower cost**, and **full transparency** compared to hosted "memory APIs" like Zep or Supermemory.  
-Its **multi-sector cognitive model** allows explainable recall paths, hybrid embeddings (OpenAI / Gemini / AWS / Ollama / local), and real-time decay, making it ideal for developers seeking open, private, and interpretable long-term memory for LLMs.
+* **Mem0** — user-based export
+* **Zep** — sessions/messages API
+* **Supermemory** — document export
+
+### Example
+
+```
+cd migrate
+node index.js --from zep --api-key ZEP_KEY --verify
+```
 
 ---
 
-# 4. Architecture Overview
+# Installation & Setup (Three Ways)
+
+OpenMemory supports **all three usage modes**:
+
+* **Node.js SDK (local-first)**
+* **Python SDK (local-first)**
+* **Backend Server (web + API)**
+
+---
+
+## JavaScript SDK (Local-First)
+
+Install:
+
+```
+npm install openmemory-js
+```
+
+Use:
+
+```
+import { OpenMemory } from "openmemory-js"
+const mem = new OpenMemory()
+```
+
+* Runs fully locally
+* Zero configuration
+* Fastest integration path
+
+---
+
+## Python SDK (Local-First)
+
+Install:
+
+```
+pip install openmemory-py
+```
+
+Use:
+
+```
+from openmemory import Memory
+mem = Memory()
+```
+
+* Same cognitive engine as JS
+* Ideal for LangGraph, notebooks, research
+
+---
+
+## Backend Server (Web + API)
+
+Use this mode for:
+
+* Multi-user apps
+* Dashboards
+* Cloud agents
+* Centralized org-wide memory
+
+Setup:
+
+```
+git clone https://github.com/caviraoss/openmemory.git
+cp .env.example .env
+cd backend
+npm install
+npm run dev
+```
+
+Or:
+
+```
+docker compose up --build -d
+```
+
+Backend runs on port 8080.
+
+---
+
+## Local via SDK
+
+```
+npm install openmemory-js
+```
+
+```
+import { OpenMemory } from "openmemory-js"
+const mem = new OpenMemory()
+```
+
+## Docker
+
+```
+docker compose up --build -d
+```
+
+## Source Setup
+
+```
+git clone https://github.com/caviraoss/openmemory.git
+cp .env.example .env
+cd backend
+npm install
+npm run dev
+```
+
+---
+
+# Dashboard
+
+![demo](./.github/dashboard.png)
+
+* Browse memories per sector
+* See decay curves
+* Explore graph links
+* Visualize timelines
+* Chat with memory
+
+```
+cd dashboard
+npm install
+npm run dev
+```
+
+---
+
+# VS Code Extension
+
+The official **OpenMemory VS Code extension** gives AI assistants access to your coding history, project evolution, and file context.
+
+**Marketplace Link:** [https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)
+
+### What it does
+
+* Tracks file edits, opens, saves, and navigation
+* Compresses context intelligently (30–70% token savings)
+* Supplies high‑signal memory summaries to any MCP-compatible AI
+* Works without configuration — install and it runs
+* Extremely low latency (~80ms average)
+
+---
+
+# MCP Integration
+
+OpenMemory ships with a **native MCP (Model Context Protocol) server**, making it instantly usable with Claude Desktop, Claude Code, Cursor, Windsurf, and any other MCP client.
+
+### What MCP Enables
+
+* Use OpenMemory as a tool inside your AI IDE
+* Query memories directly from the AI
+* Store new memories as you work
+* Reinforce or inspect nodes without leaving the editor
+* Provide full cognitive continuity to assistants
+
+### Tools Provided
+
+* `openmemory_query`
+* `openmemory_store`
+* `openmemory_list`
+* `openmemory_get`
+* `openmemory_reinforce`
+
+These tools expose the cognitive engine’s recall, storage, listing, salience boosting, and sectorization.
+
+### Example Setup
+
+**Claude Desktop / Claude Code:**
+
+```
+claude mcp add --transport http openmemory http://localhost:8080/mcp
+```
+
+**Cursor / Windsurf:**
+Add to `.mcp.json`:
+
+```
+{
+  "mcpServers": {
+    "openmemory": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+---
+
+# Temporal Knowledge Graph
+
+Most memory systems ignore time completely. OpenMemory treats **time as a first-class dimension**, letting your agent reason about changing facts.
+
+### Core Concepts
+
+* **valid_from / valid_to** — define truth ranges
+* **auto-evolution** — new facts close old ones
+* **confidence decay** — older facts lose weight
+* **point‑in‑time queries** — ask "what was true on X date?"
+* **timeline view** — reconstruct an entity’s full history
+* **comparison mode** — detect changes between two dates
+
+### Why it matters
+
+Agents using static vector memory confuse old and new facts. Temporal memory allows accurate long-term reasoning, journaling, agent planning, and research workflows.
+
+### Example: Fact lifecycle
+
+```
+POST /api/temporal/fact
+{
+  "subject": "CompanyX",
+  "predicate": "has_CEO",
+  "object": "Alice",
+  "valid_from": "2021-01-01"
+}
+```
+
+Later:
+
+```
+POST /api/temporal/fact
+{
+  "subject": "CompanyX",
+  "predicate": "has_CEO",
+  "object": "Bob",
+  "valid_from": "2024-04-10"
+}
+```
+
+OpenMemory automatically updates timeline and closes Alice’s term.
+
+### Advanced Operations
+
+* Search for periods with rapid fact changes
+* Build agent memories tied to specific events
+* Create time-based embeddings for episodic recall
+
+---
+
+# CLI Tool
+
+The `opm` CLI gives direct shell access to the cognitive engine.
+
+### Installation
+
+```
+cd backend
+npm link
+```
+
+### Commands
+
+* **Add memory**
+
+```
+opm add "user prefers dark mode" --user u1 --tags prefs
+```
+
+* **Query memory**
+
+```
+opm query "preferences" --user u1 --limit 5
+```
+
+* **List user memories**
+
+```
+opm list --user u1
+```
+
+* **Reinforce memory**
+
+```
+opm reinforce <id>
+```
+
+* **Inspect system stats**
+
+```
+opm stats
+```
+
+### Why it matters
+
+Great for scripting, automation, server monitoring, and integrating OpenMemory into non-LLM pipelines.
+
+---
+
+# Architecture Overview
 
 OpenMemory uses **Hierarchical Memory Decomposition**.
 
@@ -319,343 +530,7 @@ graph TB
 
 ---
 
-# 5. Installation & Setup (Three Ways)
-
-OpenMemory supports **all three usage modes**:
-
-* **Node.js SDK (local-first)**
-* **Python SDK (local-first)**
-* **Backend Server (web + API)**
-
----
-
-## 5.1 JavaScript SDK (Local-First)
-
-Install:
-
-```
-npm install openmemory-js
-```
-
-Use:
-
-```
-import { OpenMemory } from "openmemory-js"
-const mem = new OpenMemory()
-```
-
-* Runs fully locally
-* Zero configuration
-* Fastest integration path
-
----
-
-## 5.2 Python SDK (Local-First)
-
-Install:
-
-```
-pip install openmemory-py
-```
-
-Use:
-
-```
-from openmemory import Memory
-mem = Memory()
-```
-
-* Same cognitive engine as JS
-* Ideal for LangGraph, notebooks, research
-
----
-
-## 5.3 Backend Server (Web + API)
-
-Use this mode for:
-
-* Multi-user apps
-* Dashboards
-* Cloud agents
-* Centralized org-wide memory
-
-Setup:
-
-```
-git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
-cd backend
-npm install
-npm run dev
-```
-
-Or:
-
-```
-docker compose up --build -d
-```
-
-Backend runs on port 8080.
-
---- & Setup
-
-## 5.1 Local via SDK
-
-```
-npm install openmemory-js
-```
-
-```
-import { OpenMemory } from "openmemory-js"
-const mem = new OpenMemory()
-```
-
-## 5.2 Docker
-
-```
-docker compose up --build -d
-```
-
-## 5.3 Source Setup
-
-```
-git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
-cd backend
-npm install
-npm run dev
-```
-
----
-
-# 6. Dashboard
-
-![demo](./.github/dashboard.png)
-
-* Browse memories per sector
-* See decay curves
-* Explore graph links
-* Visualize timelines
-* Chat with memory
-
-```
-cd dashboard
-npm install
-npm run dev
-```
-
----
-
-# 7. VS Code Extension
-
-The official **OpenMemory VS Code extension** gives AI assistants access to your coding history, project evolution, and file context.
-
-**Marketplace Link:** [https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)
-
-### What it does
-
-* Tracks file edits, opens, saves, and navigation
-* Compresses context intelligently (30–70% token savings)
-* Supplies high‑signal memory summaries to any MCP-compatible AI
-* Works without configuration — install and it runs
-* Extremely low latency (~80ms average)
-
-### Why it matters
-
-Most AI agents lack long-term knowledge of your codebase. The extension solves this by keeping a local timeline of your work, letting coding AIs make decisions with continuity.
-
----
-
-# 8. MCP Integration
-
-OpenMemory ships with a **native MCP (Model Context Protocol) server**, making it instantly usable with Claude Desktop, Claude Code, Cursor, Windsurf, and any other MCP client.
-
-### What MCP Enables
-
-* Use OpenMemory as a tool inside your AI IDE
-* Query memories directly from the AI
-* Store new memories as you work
-* Reinforce or inspect nodes without leaving the editor
-* Provide full cognitive continuity to assistants
-
-### Tools Provided
-
-* `openmemory_query`
-* `openmemory_store`
-* `openmemory_list`
-* `openmemory_get`
-* `openmemory_reinforce`
-
-These tools expose the cognitive engine’s recall, storage, listing, salience boosting, and sectorization.
-
-### Example Setup
-
-**Claude Desktop / Claude Code:**
-
-```
-claude mcp add --transport http openmemory http://localhost:8080/mcp
-```
-
-**Cursor / Windsurf:**
-Add to `.mcp.json`:
-
-```
-{
-  "mcpServers": {
-    "openmemory": {
-      "type": "http",
-      "url": "http://localhost:8080/mcp"
-    }
-  }
-}
-```
-
-### Deep Benefits
-
-* Local-first memory = no privacy concerns
-* IDE agents gain persistent memory about your projects
-* Explainable recall aids debugging & refactoring
-* Works offline
-
----
-
-# 9. Temporal Knowledge Graph (Deep Dive)
-
-Most memory systems ignore time completely. OpenMemory treats **time as a first-class dimension**, letting your agent reason about changing facts.
-
-### Core Concepts
-
-* **valid_from / valid_to** — define truth ranges
-* **auto-evolution** — new facts close old ones
-* **confidence decay** — older facts lose weight
-* **point‑in‑time queries** — ask "what was true on X date?"
-* **timeline view** — reconstruct an entity’s full history
-* **comparison mode** — detect changes between two dates
-
-### Why it matters
-
-Agents using static vector memory confuse old and new facts. Temporal memory allows accurate long-term reasoning, journaling, agent planning, and research workflows.
-
-### Example: Fact lifecycle
-
-```
-POST /api/temporal/fact
-{
-  "subject": "CompanyX",
-  "predicate": "has_CEO",
-  "object": "Alice",
-  "valid_from": "2021-01-01"
-}
-```
-
-Later:
-
-```
-POST /api/temporal/fact
-{
-  "subject": "CompanyX",
-  "predicate": "has_CEO",
-  "object": "Bob",
-  "valid_from": "2024-04-10"
-}
-```
-
-OpenMemory automatically updates timeline and closes Alice’s term.
-
-### Advanced Operations
-
-* Search for periods with rapid fact changes
-* Build agent memories tied to specific events
-* Create time-based embeddings for episodic recall
-
----
-
-# 10. Migration (Deep)
-
-OpenMemory includes a robust migration tool to import billions of memories from other systems.
-
-### Supported Providers
-
-* **Mem0** — user-based export
-* **Zep** — sessions/messages API
-* **Supermemory** — document export
-
-### Capabilities
-
-* Automatic rate limiting per provider
-* Resume mode — continue broken exports
-* Verification mode — confirm memory integrity
-* JSONL output for portability
-* Preserves:
-
-  * user_id
-  * timestamps
-  * sector information (best-effort mapping)
-  * metadata
-
-### Example
-
-```
-cd migrate
-node index.js --from zep --api-key ZEP_KEY --verify
-```
-
-### Why it matters
-
-Switching memory engines is painful. OpenMemory makes it safe and practical to move from cloud systems to a **fully local, private, and explainable** alternative.
-
----
-
-# 11. CLI Tool (Deep)
-
-The `opm` CLI gives direct shell access to the cognitive engine.
-
-### Installation
-
-```
-cd backend
-npm link
-```
-
-### Commands
-
-* **Add memory**
-
-```
-opm add "user prefers dark mode" --user u1 --tags prefs
-```
-
-* **Query memory**
-
-```
-opm query "preferences" --user u1 --limit 5
-```
-
-* **List user memories**
-
-```
-opm list --user u1
-```
-
-* **Reinforce memory**
-
-```
-opm reinforce <id>
-```
-
-* **Inspect system stats**
-
-```
-opm stats
-```
-
-### Why it matters
-
-Great for scripting, automation, server monitoring, and integrating OpenMemory into non-LLM pipelines.
-
----
-
-# 12. Performance Benchmarks
+# Performance Benchmarks
 
 * 115ms avg recall @100k
 * 338 QPS throughput
@@ -667,7 +542,7 @@ Expanded tables preserved.
 
 ---
 
-# 13. Security
+# Security
 
 * AES‑GCM encryption
 * API keys
@@ -676,7 +551,7 @@ Expanded tables preserved.
 
 ---
 
-# 14. Roadmap
+# Roadmap
 
 * learned sector classifier
 * federated memory clusters
@@ -685,12 +560,7 @@ Expanded tables preserved.
 
 ---
 
-# 15. Community
+# Contributors
 
-Discord
-
----
-
-# 16. License
-
-Apache 2.0
+<!-- readme: collaborators,contributors -start -->
+<!-- readme: collaborators,contributors -end -->

@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.2.2 - 2025-12-06
+
+### Fixed
+
+- **MCP Server Path Resolution**: Fixed ENOENT error in stdio mode (Claude Desktop)
+  - Enforced absolute path resolution for SQLite database
+  - Ensures correct data directory creation regardless of working directory
+  - Critical fix for local desktop client integration
+
+- **VectorStore Refactor**: Fixed build regressions in backend
+  - Migrated deprecated `q` vector operations to `VectorStore` interface
+  - Fixed `users.ts`, `memory.ts`, `graph.ts`, `mcp.ts`, and `decay.ts`
+  - Removed partial SQL updates in favor of unified vector store methods
+
+### Added
+
+- **Valkey VectorStore Enhancements**: Improved compatibility and performance
+  - Refined vector storage implementation for Valkey backend
+  - Optimized vector retrieval and storage operations
+
+### Changed
+
+- **IDE Extension**:
+  - Updates to Dashboard UI (`DashboardPanel.ts`) and extension activation logic (`extension.ts`)
+  - Configuration and dependency updates
+
+- **Python SDK**:
+  - Refinements to embedding logic (`embed.py`)
+  - Project configuration updates in `pyproject.toml`
+
+- **Backend Maintenance**:
+  - Dockerfile updates for improved containerization
+  - Updates to CLI tool (`bin/opm.js`)
+
 ## 1.2.1 - 2025-11-23
 
 ### Added

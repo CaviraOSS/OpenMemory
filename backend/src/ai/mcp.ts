@@ -10,7 +10,7 @@ import {
     reinforce_memory,
     sector_configs,
 } from "../memory/hsg";
-import { q, all_async, memories_table } from "../core/db";
+import { q, all_async, memories_table, vector_store } from "../core/db";
 import { getEmbeddingInfo } from "../memory/embed";
 import { j, p } from "../utils";
 import type { sector_type, mem_row, rpc_err_code } from "../core/types";
@@ -319,7 +319,9 @@ export const create_mcp_srv = () => {
                         },
                     ],
                 };
-            const vecs = include_vectors ? await q.get_vecs_by_id.all(id) : [];
+            const vecs = include_vectors
+                ? await vector_store.getVectorsById(id)
+                : [];
             const pay = {
                 id: mem.id,
                 content: mem.content,

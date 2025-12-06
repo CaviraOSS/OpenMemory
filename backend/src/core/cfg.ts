@@ -22,7 +22,10 @@ const tier_max_active = { fast: 32, smart: 64, deep: 128, hybrid: 64 };
 
 export const env = {
     port: num(process.env.OM_PORT, 8080),
-    db_path: str(process.env.OM_DB_PATH, "./data/openmemory.sqlite"),
+    db_path: str(
+        process.env.OM_DB_PATH,
+        path.resolve(__dirname, "../../data/openmemory.sqlite"),
+    ),
     api_key: process.env.OM_API_KEY,
     rate_limit_enabled: bool(process.env.OM_RATE_LIMIT_ENABLED),
     rate_limit_window_ms: num(process.env.OM_RATE_LIMIT_WINDOW_MS, 60000),

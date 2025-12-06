@@ -408,7 +408,9 @@ if (is_pg) {
         },
     };
 } else {
-    const db_path = env.db_path || "./data/openmemory.sqlite";
+    const db_path =
+        env.db_path ||
+        path.resolve(__dirname, "../../data/openmemory.sqlite");
     const dir = path.dirname(db_path);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);

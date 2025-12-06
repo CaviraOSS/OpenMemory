@@ -1,4 +1,4 @@
-import { q } from "../../core/db";
+import { q, vector_store } from "../../core/db";
 import { now, rid, j, p } from "../../utils";
 import {
     add_hsg_memory,
@@ -188,7 +188,7 @@ export function mem(app: any) {
                 return res.status(403).json({ err: "forbidden" });
             }
 
-            const v = await q.get_vecs_by_id.all(id);
+            const v = await vector_store.getVectorsById(id);
             const sec = v.map((x: any) => x.sector);
             res.json({
                 id: m.id,
@@ -223,7 +223,7 @@ export function mem(app: any) {
             }
 
             await q.del_mem.run(id);
-            await q.del_vec.run(id);
+            await vector_store.deleteVectors(id);
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
         } catch (e: any) {

@@ -1,4 +1,4 @@
-import { all_async, run_async, q } from "../core/db";
+import { all_async, run_async, q, vector_store } from "../core/db";
 import { now } from "../utils";
 import { env } from "../core/cfg";
 
@@ -264,12 +264,12 @@ export const apply_decay = async () => {
                         tier === "hot"
                             ? cfg.lambda_hot
                             : tier === "warm"
-                              ? cfg.lambda_warm
-                              : cfg.lambda_cold;
+                                ? cfg.lambda_warm
+                                : cfg.lambda_cold;
                     const dt = Math.max(
                         0,
                         (now_ts - (m.last_seen_at || m.updated_at)) /
-                            cfg.time_unit_ms,
+                        cfg.time_unit_ms,
                     );
                     const act = Math.max(0, m.coactivations || 0);
                     const sal = clamp_f(
@@ -286,7 +286,7 @@ export const apply_decay = async () => {
 
                     if (f < 0.7) {
                         const sector = m.primary_sector || "semantic";
-                        const vec_row = await q.get_vec.get(m.id, sector);
+                        const vec_row = await vector_store.getVector(m.id, sector);
 
                         if (vec_row && vec_row.vector) {
                             const vec =
@@ -311,9 +311,11 @@ export const apply_decay = async () => {
                                 );
 
                                 if (new_vec.length < before_len) {
-                                    await run_async(
-                                        "update vectors set vector=? where id=? and sector=?",
-                                        [JSON.stringify(new_vec), m.id, sector],
+                                    await vector_store.storeVector(
+                                        m.id,
+                                        sector,
+                                        new_vec,
+                                        new_vec.length,
                                     );
                                     compressed = true;
                                     tot_comp++;
@@ -333,9 +335,11 @@ export const apply_decay = async () => {
                     if (f < Math.max(0.3, cfg.cold_threshold)) {
                         const sector = m.primary_sector || "semantic";
                         const fp = fingerprint_mem(m);
-                        await run_async(
-                            "update vectors set vector=? where id=? and sector=?",
-                            [JSON.stringify(fp.vector), m.id, sector],
+                        await vector_store.storeVector(
+                            m.id,
+                            sector,
+                            fp.vector,
+                            fp.vector.length,
                         );
                         await run_async(
                             "update memories set summary=? where id=?",
@@ -385,7 +389,7 @@ export const on_query_hit = async (
     let updated = false;
 
     if (cfg.regeneration_enabled && reembed) {
-        const vec_row = await q.get_vec.get(mem_id, sector);
+        const vec_row = await vector_store.getVector(mem_id, sector);
         if (vec_row && vec_row.vector) {
             const vec =
                 typeof vec_row.vector === "string"
@@ -395,12 +399,14 @@ export const on_query_hit = async (
                 try {
                     const base = m.summary || m.content || "";
                     const new_vec = await reembed(base);
-                    await run_async(
-                        "update vectors set vector=? where id=? and sector=?",
-                        [JSON.stringify(new_vec), mem_id, sector],
+                    await vector_store.storeVector(
+                        mem_id,
+                        sector,
+                        new_vec,
+                        new_vec.length,
                     );
                     updated = true;
-                } catch (e) {}
+                } catch (e) { }
             }
         }
     }
