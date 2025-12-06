@@ -241,13 +241,22 @@ export class OpenMemory {
     }
 
     private async _remoteAdd(content: string, options: any): Promise<any> {
+        const { userId, decayLambda, ...rest } = options ?? {};
+
+        const payload = {
+            content,
+            ...rest,
+            user_id: userId,
+            decay_lambda: decayLambda,
+        };
+
         const res = await fetch(`${this.url}/memory/add`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             },
-            body: JSON.stringify({ content, ...options })
+            body: JSON.stringify(payload)
         });
 
         if (!res.ok) throw new Error(`Remote add failed: ${res.status}`);

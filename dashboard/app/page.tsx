@@ -31,6 +31,7 @@ export default function Dashboard() {
     const [maintenanceStats, setMaintenanceStats] = useState<any>({})
     const [systemHealth, setSystemHealth] = useState<any>({})
     const [backendHealth, setBackendHealth] = useState<any>({})
+    const [queryLoadPeriod, setQueryLoadPeriod] = useState("24")
 
     useEffect(() => {
         fetchDashboardData()
@@ -41,7 +42,7 @@ export default function Dashboard() {
             clearInterval(dataInterval)
             clearInterval(healthInterval)
         }
-    }, [])
+    }, [queryLoadPeriod])
 
     const fetchDashboardData = async () => {
         try {
@@ -100,7 +101,7 @@ export default function Dashboard() {
             }
 
             // Fetch sector timeline
-            const timelineRes = await fetch(`${API_BASE_URL}/dashboard/sectors/timeline?hours=24`, {
+            const timelineRes = await fetch(`${API_BASE_URL}/dashboard/sectors/timeline?hours=${queryLoadPeriod}`, {
                 headers: getHeaders()
             })
             if (timelineRes.ok) {
@@ -108,20 +109,25 @@ export default function Dashboard() {
                 const grouped: Record<string, any> = {}
 
                 timeline.timeline?.forEach((item: any) => {
-                    if (!grouped[item.hour]) {
-                        grouped[item.hour] = { hour: item.hour }
+                    // Use sort_key for grouping to distinguish same hours on different days
+                    const key = item.sort_key || item.hour
+                    if (!grouped[key]) {
+                        grouped[key] = { hour: item.hour, sort_key: key }
                     }
-                    grouped[item.hour][item.primary_sector] = item.count
+                    grouped[key][item.primary_sector] = item.count
                 })
 
-                const chartData = Object.values(grouped).map((item: any) => ({
-                    hour: item.hour,
-                    semantic: item.semantic || 0,
-                    episodic: item.episodic || 0,
-                    procedural: item.procedural || 0,
-                    emotional: item.emotional || 0,
-                    reflective: item.reflective || 0,
-                }))
+                // Explicitly sort by sort_key for proper chronological ordering
+                const chartData = Object.values(grouped)
+                    .sort((a: any, b: any) => (a.sort_key || a.hour).localeCompare(b.sort_key || b.hour))
+                    .map((item: any) => ({
+                        hour: item.hour,
+                        semantic: item.semantic || 0,
+                        episodic: item.episodic || 0,
+                        procedural: item.procedural || 0,
+                        emotional: item.emotional || 0,
+                        reflective: item.reflective || 0,
+                    }))
 
                 setQpsData(chartData)
             }
@@ -272,10 +278,14 @@ export default function Dashboard() {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-semibold text-[#f4f4f5]">Memory Query Load</h2>
                             <div className="flex gap-2">
-                                <select className="rounded-xl p-2 pl-4 border border-stone-800 bg-stone-950 hover:bg-stone-900/50 hover:text-stone-300 text-sm font-medium text-stone-400 outline-none cursor-pointer transition-colors">
-                                    <option className="bg-stone-950">24 hours</option>
-                                    <option className="bg-stone-950">7 days</option>
-                                    <option className="bg-stone-950">30 days</option>
+                                <select 
+                                    value={queryLoadPeriod}
+                                    onChange={(e) => setQueryLoadPeriod(e.target.value)}
+                                    className="rounded-xl p-2 pl-4 border border-stone-800 bg-stone-950 hover:bg-stone-900/50 hover:text-stone-300 text-sm font-medium text-stone-400 outline-none cursor-pointer transition-colors"
+                                >
+                                    <option value="24" className="bg-stone-950">24 hours</option>
+                                    <option value="168" className="bg-stone-950">7 days</option>
+                                    <option value="720" className="bg-stone-950">30 days</option>
                                 </select>
                             </div>
                         </div>

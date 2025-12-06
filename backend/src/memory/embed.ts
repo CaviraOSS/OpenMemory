@@ -3,10 +3,26 @@ import { get_model } from "../core/models";
 import { sector_configs } from "./hsg";
 import { q } from "../core/db";
 import { canonical_tokens_from_text, add_synonym_tokens } from "../utils/text";
-import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import {
+    BedrockRuntimeClient,
+    InvokeModelCommand,
+} from "@aws-sdk/client-bedrock-runtime";
 
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
+
+// Fetch with timeout to prevent hanging requests and enable fallback chain
+const EMBED_TIMEOUT_MS = Number(process.env.OM_EMBED_TIMEOUT_MS) || 30000;
+async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
 export interface EmbeddingResult {
     sector: string;
     vector: number[];
@@ -73,8 +89,46 @@ export async function embedForSector(t: string, s: string): Promise<number[]> {
     return await get_sem_emb(t, s);
 }
 
-async function get_sem_emb(t: string, s: string): Promise<number[]> {
-    switch (env.emb_kind) {
+/**
+ * Batch embed query text for ALL sectors in one API call.
+ * This significantly improves query performance by reducing 5 sequential
+ * API calls to a single batched call (~4.5x faster for deep tier).
+ */
+export async function embedQueryForAllSectors(
+    query: string,
+    sectors: string[],
+): Promise<Record<string, number[]>> {
+    // For hybrid/fast tiers, use synthetic embeddings (already fast)
+    if (tier === "hybrid" || tier === "fast") {
+        const result: Record<string, number[]> = {};
+        for (const s of sectors) result[s] = gen_syn_emb(query, s);
+        return result;
+    }
+
+    // For deep/smart tiers with Gemini, batch all sectors in ONE API call
+    if (env.emb_kind === "gemini" && env.gemini_key) {
+        try {
+            const txts: Record<string, string> = {};
+            for (const s of sectors) txts[s] = query;
+            return await emb_gemini(txts);
+        } catch (e) {
+            console.warn(`[EMBED] Gemini batch failed, falling back to sequential: ${e}`);
+        }
+    }
+
+    // Fallback: sequential embedding for each sector
+    const result: Record<string, number[]> = {};
+    for (const s of sectors) result[s] = await embedForSector(query, s);
+    return result;
+}
+
+// Embed with a specific provider (throws on failure)
+async function embed_with_provider(
+    provider: string,
+    t: string,
+    s: string,
+): Promise<number[]> {
+    switch (provider) {
         case "openai":
             return await emb_openai(t, s);
         case "gemini":
@@ -82,18 +136,115 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
         case "ollama":
             return await emb_ollama(t, s);
         case "aws":
-            return await emb_aws(t,s);
+            return await emb_aws(t, s);
         case "local":
             return await emb_local(t, s);
-        default:
+        case "synthetic":
             return gen_syn_emb(t, s);
+        default:
+            throw new Error(`Unknown embedding provider: ${provider}`);
     }
+}
+
+// Get semantic embedding with configurable fallback chain
+async function get_sem_emb(t: string, s: string): Promise<number[]> {
+    // Deduplicate providers to avoid wasteful retries (e.g., gemini,gemini,synthetic)
+    const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
+
+    for (let i = 0; i < providers.length; i++) {
+        const provider = providers[i];
+        try {
+            const result = await embed_with_provider(provider, t, s);
+            if (i > 0) {
+                console.log(
+                    `[EMBED] Fallback to ${provider} succeeded for sector: ${s}`,
+                );
+            }
+            return result;
+        } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            const nextProvider = providers[i + 1];
+
+            if (nextProvider) {
+                console.warn(
+                    `[EMBED] ${provider} failed: ${errMsg}, trying ${nextProvider}`,
+                );
+            } else {
+                console.error(
+                    `[EMBED] All providers failed. Last error (${provider}): ${errMsg}. Using synthetic.`,
+                );
+                return gen_syn_emb(t, s);
+            }
+        }
+    }
+    // Fallback if providers array is empty (shouldn't happen with defaults)
+    return gen_syn_emb(t, s);
+}
+
+
+// Batch embedding with fallback chain support (for simple mode)
+async function emb_batch_with_fallback(
+    txts: Record<string, string>,
+): Promise<Record<string, number[]>> {
+    const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
+
+    for (let i = 0; i < providers.length; i++) {
+        const provider = providers[i];
+        try {
+            let result: Record<string, number[]>;
+            switch (provider) {
+                case "gemini":
+                    result = await emb_gemini(txts);
+                    break;
+                case "openai":
+                    result = await emb_batch_openai(txts);
+                    break;
+                default:
+                    // For providers without batch support, embed each sector individually
+                    result = {};
+                    for (const [s, t] of Object.entries(txts)) {
+                        result[s] = await embed_with_provider(provider, t, s);
+                    }
+            }
+            if (i > 0) {
+                console.log(
+                    `[EMBED] Fallback to ${provider} succeeded for batch`,
+                );
+            }
+            return result;
+        } catch (e) {
+            const errMsg = e instanceof Error ? e.message : String(e);
+            const nextProvider = providers[i + 1];
+
+            if (nextProvider) {
+                console.warn(
+                    `[EMBED] ${provider} batch failed: ${errMsg}, trying ${nextProvider}`,
+                );
+            } else {
+                console.error(
+                    `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}. Using synthetic.`,
+                );
+                // Fall back to synthetic for all sectors
+                const result: Record<string, number[]> = {};
+                for (const [s, t] of Object.entries(txts)) {
+                    result[s] = gen_syn_emb(t, s);
+                }
+                return result;
+            }
+        }
+    }
+    // Fallback if providers array is empty
+    const result: Record<string, number[]> = {};
+    for (const [s, t] of Object.entries(txts)) {
+        result[s] = gen_syn_emb(t, s);
+    }
+    return result;
 }
 
 async function emb_openai(t: string, s: string): Promise<number[]> {
     if (!env.openai_key) throw new Error("OpenAI key missing");
     const m = get_model(s, "openai");
-    const r = await fetch(
+    const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
             method: "POST",
@@ -118,7 +269,7 @@ async function emb_batch_openai(
     if (!env.openai_key) throw new Error("OpenAI key missing");
     const secs = Object.keys(txts),
         m = get_model("semantic", "openai");
-    const r = await fetch(
+    const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
             method: "POST",
@@ -161,7 +312,7 @@ async function emb_gemini(
                     content: { parts: [{ text: t }] },
                     taskType: task_map[s] || task_map.semantic,
                 }));
-                const r = await fetch(url, {
+                const r = await fetchWithTimeout(url, {
                     method: "POST",
                     headers: { "content-type": "application/json" },
                     body: JSON.stringify({ requests: reqs }),
@@ -192,24 +343,17 @@ async function emb_gemini(
                 await new Promise((x) => setTimeout(x, 1500));
                 return out;
             } catch (e) {
+                const errMsg = e instanceof Error ? e.message : String(e);
                 if (a === 2) {
-                    console.error(
-                        `[EMBED] Gemini failed after 3 attempts, using synthetic`,
+                    throw new Error(
+                        `Gemini failed after 3 attempts: ${errMsg}`,
                     );
-                    const fb: Record<string, number[]> = {};
-                    for (const s of Object.keys(txts))
-                        fb[s] = gen_syn_emb(txts[s], s);
-                    return fb;
                 }
-                console.warn(
-                    `[EMBED] Gemini error (${a + 1}/3): ${e instanceof Error ? e.message : String(e)}`,
-                );
+                console.warn(`[EMBED] Gemini error (${a + 1}/3): ${errMsg}`);
                 await new Promise((x) => setTimeout(x, 1000 * Math.pow(2, a)));
             }
         }
-        const fb: Record<string, number[]> = {};
-        for (const s of Object.keys(txts)) fb[s] = gen_syn_emb(txts[s], s);
-        return fb;
+        throw new Error("Gemini: exhausted retries");
     });
     gem_q = prom.catch(() => {});
     return prom;
@@ -217,7 +361,7 @@ async function emb_gemini(
 
 async function emb_ollama(t: string, s: string): Promise<number[]> {
     const m = get_model(s, "ollama");
-    const r = await fetch(`${env.ollama_url}/api/embeddings`, {
+    const r = await fetchWithTimeout(`${env.ollama_url}/api/embeddings`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ model: m, prompt: t }),
@@ -228,19 +372,20 @@ async function emb_ollama(t: string, s: string): Promise<number[]> {
 async function emb_aws(t: string, s: string): Promise<number[]> {
     if (!env.AWS_REGION) throw new Error("AWS_REGION missing");
     if (!env.AWS_ACCESS_KEY_ID) throw new Error("AWS_ACCESS_KEY_ID missing");
-    if (!env.AWS_SECRET_ACCESS_KEY) throw new Error("AWS_SECRET_ACCESS_KEY missing");
+    if (!env.AWS_SECRET_ACCESS_KEY)
+        throw new Error("AWS_SECRET_ACCESS_KEY missing");
     const m = get_model(s, "aws");
     const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
-    const dim = [256, 512, 1024].find(x => x >= env.vec_dim) ?? 1024;
+    const dim = [256, 512, 1024].find((x) => x >= env.vec_dim) ?? 1024;
     const params = {
-            modelId: m, 
-            contentType: "application/json",
-            accept: "*/*",
-            body: JSON.stringify({
-              inputText: t,
-              dimensions: dim
-            })
-    }
+        modelId: m,
+        contentType: "application/json",
+        accept: "*/*",
+        body: JSON.stringify({
+            inputText: t,
+            dimensions: dim,
+        }),
+    };
     const command = new InvokeModelCommand(params);
 
     try {
@@ -250,9 +395,8 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
         const parsedResponse = JSON.parse(jsonString);
         return resize_vec(parsedResponse, env.vec_dim);
     } catch (error) {
-        throw new Error(`AWS: ${error}`)
+        throw new Error(`AWS: ${error}`);
     }
-    
 }
 
 async function emb_local(t: string, s: string): Promise<number[]> {
@@ -416,10 +560,8 @@ export async function embedMultiSector(
                 );
                 const tb: Record<string, string> = {};
                 secs.forEach((s) => (tb[s] = txt));
-                const b =
-                    env.emb_kind === "gemini"
-                        ? await emb_gemini(tb)
-                        : await emb_batch_openai(tb);
+                // Use batch embedding with fallback support
+                const b = await emb_batch_with_fallback(tb);
                 Object.entries(b).forEach(([s, v]) =>
                     r.push({ sector: s, vector: v, dim: v.length }),
                 );
@@ -511,6 +653,7 @@ export const getEmbeddingProvider = () => env.emb_kind;
 export const getEmbeddingInfo = () => {
     const i: Record<string, any> = {
         provider: env.emb_kind,
+        fallback_chain: env.embedding_fallback,
         dimensions: env.vec_dim,
         mode: env.embed_mode,
         batch_support:
@@ -536,7 +679,10 @@ export const getEmbeddingInfo = () => {
         i.batch_api = env.embed_mode === "simple";
         i.model = "embedding-001";
     } else if (env.emb_kind === "aws") {
-        i.configured = !!env.AWS_REGION && !!env.AWS_ACCESS_KEY_ID && !!env.AWS_SECRET_ACCESS_KEY;
+        i.configured =
+            !!env.AWS_REGION &&
+            !!env.AWS_ACCESS_KEY_ID &&
+            !!env.AWS_SECRET_ACCESS_KEY;
         i.batch_api = env.embed_mode === "simple";
         i.model = "amazon.titan-embed-text-v2:0";
     } else if (env.emb_kind === "ollama") {

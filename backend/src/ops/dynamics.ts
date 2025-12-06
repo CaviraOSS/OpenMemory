@@ -1,4 +1,4 @@
-import { all_async, run_async, get_async, q } from "../core/db";
+import { all_async, run_async, get_async, q, memories_table } from "../core/db";
 import { now } from "../utils";
 import { cosineSimilarity } from "../memory/embed";
 
@@ -161,7 +161,7 @@ export async function applyDualPhaseDecayToAllMemories(): Promise<void> {
         const rt = await calculateDualPhaseDecayMemoryRetention(td);
         const nsal = m.salience * rt;
         await run_async(
-            "update memories set salience=?,updated_at=? where id=?",
+            `update ${memories_table} set salience=?,updated_at=? where id=?`,
             [Math.max(0, nsal), ts, m.id],
         );
     });

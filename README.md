@@ -1,4 +1,4 @@
-<meta name="description" content="Give your AI agents long-term memory in one line. Semantic, episodic, temporal memory with standalone JS/Python SDKs.">
+<meta name="description" content="OpenMemory gives AI agents real long-term memory. Not vector search. Not RAG. Actual memory.">
 <meta name="keywords" content="ai memory, long-term memory, llm, agents, python memory, javascript memory, standalone ai memory, mcp memory, semantic memory, temporal memory, openmemory, openmemory-js, openmemory-py, python, javascript">
 
 <img width="1577" height="781" alt="image" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
@@ -11,6 +11,10 @@ Long‑term memory for AI systems. **Self‑hosted. Local‑first. Explainable. 
 A full cognitive memory engine — not a vector database. Add Memory to AI/Agents in one line.
 
 ![demo](./.github/openmemory.gif)
+
+## **🔥 Spread the Word!**
+
+<p align="center"><a href="https://twitter.com/intent/tweet?text=OpenMemory%20%E2%80%93%20open-source%20long-term%20memory%20for%20AI%20agents%20and%20MCP.%20Not%20vector%20search.%20Not%20RAG.%20Actual%20memory.&url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&hashtags=ai,agents,opensource,mcp,llm"><img src="https://img.shields.io/badge/Share%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white"></a>&nbsp;<a href="https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%93%20long-term%20memory%20for%20AI%20agents%20and%20MCP&summary=OpenMemory%20is%20a%20self-hosted%20multi-sector%20memory%20system%20with%20temporal%20reasoning%20and%20MCP%20integration."><img src="https://img.shields.io/badge/Share%20on%20LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>&nbsp;<a href="https://reddit.com/submit?url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%94%20Self-hosted%20long-term%20memory%20for%20AI%20agents"><img src="https://img.shields.io/badge/Share%20on%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white"></a>&nbsp;<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&t=Show%20HN%3A%20OpenMemory%20%E2%80%93%20Long-term%20memory%20for%20AI%20agents%20%28MCP%20%2F%20VSCode%20%2F%20Temporal%20KG%29"><img src="https://img.shields.io/badge/Hacker%20News-FF6600?style=for-the-badge&logo=y-combinator&logoColor=white"></a>&nbsp;<a href="https://dev.to/new/share?url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%93%20long-term%20memory%20for%20AI%20agents&prefill=OpenMemory%20gives%20AI%20agents%20real%20long-term%20memory%20with%20multi-sector%20recall%2C%20temporal%20reasoning%2C%20graph%20links%2C%20decay%2C%20and%20MCP.%20Try%20it%3A%20https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory"><img src="https://img.shields.io/badge/Share%20on%20DEV.to-000000?style=for-the-badge&logo=dev.to&logoColor=white"></a></p>
 
 ## Why OpenMemory?
 
@@ -562,5 +566,15 @@ Expanded tables preserved.
 
 # Contributors
 
+<<<<<<< HEAD
 <!-- readme: collaborators,contributors -start -->
 <!-- readme: collaborators,contributors -end -->
+=======
+Discord
+
+---
+
+# 16. License
+
+Apache 2.0
+>>>>>>> 35e13e0534700202ef8d983e366a20227d80a0a6

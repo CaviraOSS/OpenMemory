@@ -60,6 +60,13 @@ let memories_table: string;
 
 const is_pg = env.metadata_backend === "postgres";
 
+// Convert SQLite-style ? placeholders to PostgreSQL $1, $2, $3 placeholders
+function convertPlaceholders(sql: string): string {
+    if (!is_pg) return sql;
+    let index = 1;
+    return sql.replace(/\?/g, () => `$${index++}`);
+}
+
 if (is_pg) {
     const ssl =
         process.env.OM_PG_SSL === "require"
@@ -88,7 +95,7 @@ if (is_pg) {
     const f = `"${sc}"."openmemory_memories_fts"`;
     const exec = async (sql: string, p: any[] = []) => {
         const c = cli || pg;
-        return (await c.query(sql, p)).rows;
+        return (await c.query(convertPlaceholders(sql), p)).rows;
     };
     run_async = async (sql, p = []) => {
         await exec(sql, p);
@@ -151,7 +158,7 @@ if (is_pg) {
             `create table if not exists ${v}(id uuid,sector text,user_id text,v bytea,dim integer not null,primary key(id,sector))`,
         );
         await pg.query(
-            `create table if not exists ${w}(src_id text primary key,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint)`,
+            `create table if not exists ${w}(src_id text,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint,primary key(src_id,user_id))`,
         );
         await pg.query(
             `create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`,
@@ -196,8 +203,9 @@ if (is_pg) {
             vector_store = new ValkeyVectorStore();
             console.log("[DB] Using Valkey VectorStore");
         } else {
-            vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
-            console.log("[DB] Using Postgres VectorStore");
+            const vt = process.env.OM_VECTOR_TABLE || "openmemory_vectors";
+            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v.replace(/"/g, ""));
+            console.log(`[DB] Using Postgres VectorStore with table: ${v}`);
         }
     };
     init().catch((err) => {
@@ -317,7 +325,7 @@ if (is_pg) {
         ins_waypoint: {
             run: (...p) =>
                 run_async(
-                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id) do update set dst_id=excluded.dst_id,user_id=excluded.user_id,weight=excluded.weight,updated_at=excluded.updated_at`,
+                    `insert into ${w}(src_id,dst_id,user_id,weight,created_at,updated_at) values($1,$2,$3,$4,$5,$6) on conflict(src_id,user_id) do update set dst_id=excluded.dst_id,weight=excluded.weight,updated_at=excluded.updated_at`,
                     p,
                 ),
         },
@@ -414,6 +422,8 @@ if (is_pg) {
     const dir = path.dirname(db_path);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);
+    // SQLite vector table name from env (default: "vectors" for backward compatibility)
+    const sqlite_vector_table = process.env.OM_VECTOR_TABLE || "vectors";
     db.serialize(() => {
         db.run("PRAGMA journal_mode=WAL");
         db.run("PRAGMA synchronous=NORMAL");
@@ -428,7 +438,7 @@ if (is_pg) {
             `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
         );
         db.run(
-            `create table if not exists vectors(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
+            `create table if not exists ${sqlite_vector_table}(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
         );
         db.run(
             `create table if not exists waypoints(src_id text,dst_id text not null,user_id text,weight real not null,created_at integer,updated_at integer,primary key(src_id,user_id))`,
@@ -464,7 +474,7 @@ if (is_pg) {
             "create index if not exists idx_memories_user on memories(user_id)",
         );
         db.run(
-            "create index if not exists idx_vectors_user on vectors(user_id)",
+            `create index if not exists idx_vectors_user on ${sqlite_vector_table}(user_id)`,
         );
         db.run(
             "create index if not exists idx_waypoints_src on waypoints(src_id)",
@@ -532,8 +542,10 @@ if (is_pg) {
 
     if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
+        console.log("[DB] Using Valkey VectorStore");
     } else {
-        vector_store = new PostgresVectorStore({ run_async, get_async, all_async });
+        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
+        console.log(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
     }
 
     transaction = {

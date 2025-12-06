@@ -277,15 +277,52 @@ export function dash(app: any) {
             const mem_table = get_mem_table();
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
+
+            // Use different grouping based on time range
+            let displayFormat: string;
+            let sortFormat: string;
+            let timeKey: string;
+            if (hrs <= 24) {
+                // For 24 hours or less, group by date+hour for sorting, display only hour
+                displayFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'HH24:00')"
+                    : "strftime('%H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                sortFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-MM-DD HH24:00')"
+                    : "strftime('%Y-%m-%d %H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                timeKey = "hour";
+            } else if (hrs <= 168) {
+                // For up to 7 days, group by day
+                displayFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
+                    : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                sortFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-MM-DD')"
+                    : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                timeKey = "day";
+            } else {
+                // For longer periods (30 days), group by day showing month-day
+                displayFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
+                    : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                sortFormat = is_pg
+                    ? "to_char(to_timestamp(created_at/1000), 'YYYY-MM-DD')"
+                    : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
+                timeKey = "day";
+            }
+
             const tl = await all_async(
                 is_pg
-                    ? `SELECT primary_sector, to_char(to_timestamp(created_at/1000), 'HH24:00') as hour, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, hour ORDER BY hour`
-                    : `SELECT primary_sector, strftime('%H:00', datetime(created_at/1000, 'unixepoch')) as hour, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, hour ORDER BY hour`,
+                    ? `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
+                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`
+                    : `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
+                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`,
                 [strt],
             );
-            res.json({ timeline: tl });
+            res.json({
+                timeline: tl.map((row: any) => ({ ...row, hour: row.label })),
+                grouping: timeKey,
+            });
         } catch (e: any) {
             res.status(500).json({ err: "internal", message: e.message });
         }

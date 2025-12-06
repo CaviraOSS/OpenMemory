@@ -8,25 +8,29 @@ export interface DbOps {
 }
 
 export class PostgresVectorStore implements VectorStore {
-    constructor(private db: DbOps) { }
+    private table: string;
+
+    constructor(private db: DbOps, tableName: string = "vectors") {
+        this.table = tableName;
+    }
 
     async storeVector(id: string, sector: string, vector: number[], dim: number, user_id?: string): Promise<void> {
         const v = vectorToBuffer(vector);
-        const sql = `insert into vectors(id,sector,user_id,v,dim) values($1,$2,$3,$4,$5) on conflict(id,sector) do update set user_id=excluded.user_id,v=excluded.v,dim=excluded.dim`;
+        const sql = `insert into ${this.table}(id,sector,user_id,v,dim) values($1,$2,$3,$4,$5) on conflict(id,sector) do update set user_id=excluded.user_id,v=excluded.v,dim=excluded.dim`;
         await this.db.run_async(sql, [id, sector, user_id || "anonymous", v, dim]);
     }
 
     async deleteVector(id: string, sector: string): Promise<void> {
-        await this.db.run_async(`delete from vectors where id=$1 and sector=$2`, [id, sector]);
+        await this.db.run_async(`delete from ${this.table} where id=$1 and sector=$2`, [id, sector]);
     }
 
     async deleteVectors(id: string): Promise<void> {
-        await this.db.run_async(`delete from vectors where id=$1`, [id]);
+        await this.db.run_async(`delete from ${this.table} where id=$1`, [id]);
     }
 
     async searchSimilar(sector: string, queryVec: number[], topK: number): Promise<Array<{ id: string; score: number }>> {
         // Postgres implementation (in-memory cosine sim for now, as per original)
-        const rows = await this.db.all_async(`select id,v,dim from vectors where sector=$1`, [sector]);
+        const rows = await this.db.all_async(`select id,v,dim from ${this.table} where sector=$1`, [sector]);
         const sims: Array<{ id: string; score: number }> = [];
         for (const row of rows) {
             const vec = bufferToVector(row.v);
@@ -38,18 +42,18 @@ export class PostgresVectorStore implements VectorStore {
     }
 
     async getVector(id: string, sector: string): Promise<{ vector: number[]; dim: number } | null> {
-        const row = await this.db.get_async(`select v,dim from vectors where id=$1 and sector=$2`, [id, sector]);
+        const row = await this.db.get_async(`select v,dim from ${this.table} where id=$1 and sector=$2`, [id, sector]);
         if (!row) return null;
         return { vector: bufferToVector(row.v), dim: row.dim };
     }
 
     async getVectorsById(id: string): Promise<Array<{ sector: string; vector: number[]; dim: number }>> {
-        const rows = await this.db.all_async(`select sector,v,dim from vectors where id=$1`, [id]);
+        const rows = await this.db.all_async(`select sector,v,dim from ${this.table} where id=$1`, [id]);
         return rows.map(row => ({ sector: row.sector, vector: bufferToVector(row.v), dim: row.dim }));
     }
 
     async getVectorsBySector(sector: string): Promise<Array<{ id: string; vector: number[]; dim: number }>> {
-        const rows = await this.db.all_async(`select id,v,dim from vectors where sector=$1`, [sector]);
+        const rows = await this.db.all_async(`select id,v,dim from ${this.table} where sector=$1`, [sector]);
         return rows.map(row => ({ id: row.id, vector: bufferToVector(row.v), dim: row.dim }));
     }
 }

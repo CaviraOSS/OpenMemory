@@ -1,6 +1,6 @@
 {
     "name": "openmemory-js",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Local-first long-term memory engine for AI apps and agents. Provides semantic search, multi-sector memory, temporal facts, decay, and full explainability. Works standalone or with the OpenMemory backend.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",

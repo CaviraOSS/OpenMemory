@@ -327,7 +327,7 @@ class TextProcessor {
      * Calculate cosine similarity between two vectors
      */
     static cosineSimilarity(a: number[], b: number[]): number {
-        if (a.length !== b.length) return 0
+        if (!a || !b || a.length !== b.length) return 0
         let dot = 0, magA = 0, magB = 0
         for (let i = 0; i < a.length; i++) {
             dot += a[i] * b[i]
@@ -893,7 +893,7 @@ class MemoryClusterer {
                 if (assigned.has(j)) continue
 
                 const avgDist = vectors
-                    .map((v, k) => assigned.has(k) ? 0 : TextProcessor.cosineSimilarity(vectors[j], v))
+                    .map((v, k) => assigned.has(k) || !vectors[j] || !v ? 0 : TextProcessor.cosineSimilarity(vectors[j], v))
                     .reduce((a, b) => a + b, 0) / Math.max(1, memories.length - assigned.size)
 
                 if (avgDist > maxAvgDist) {
@@ -909,7 +909,7 @@ class MemoryClusterer {
 
             const similarities = vectors.map((v, idx) => ({
                 idx,
-                sim: TextProcessor.cosineSimilarity(vectors[seedIdx], v)
+                sim: !vectors[seedIdx] || !v ? 0 : TextProcessor.cosineSimilarity(vectors[seedIdx], v)
             }))
                 .filter(s => !assigned.has(s.idx))
                 .sort((a, b) => b.sim - a.sim)

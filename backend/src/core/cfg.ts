@@ -38,6 +38,10 @@ export const env = {
         | "auto",
     compression_min_length: num(process.env.OM_COMPRESSION_MIN_LENGTH, 100),
     emb_kind: str(process.env.OM_EMBEDDINGS, "synthetic"),
+    embedding_fallback: str(process.env.OM_EMBEDDING_FALLBACK, "synthetic")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     embed_mode: str(process.env.OM_EMBED_MODE, "simple"),
     adv_embed_parallel: bool(process.env.OM_ADV_EMBED_PARALLEL),
     embed_delay_ms: num(process.env.OM_EMBED_DELAY_MS, 200),
