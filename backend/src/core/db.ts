@@ -141,7 +141,7 @@ if (is_pg) {
                 const admin = pool("postgres");
                 try {
                     await admin.query(`CREATE DATABASE ${db_name}`);
-                    console.log(`[DB] Created ${db_name}`);
+                    console.error(`[DB] Created ${db_name}`);
                 } catch (e: any) {
                     if (e.code !== "42P04") throw e;
                 } finally {

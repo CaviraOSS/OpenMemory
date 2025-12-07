@@ -23,10 +23,10 @@ const ASC = `   ____                   __  __
 
 const app = server({ max_payload_size: env.max_payload_size });
 
-console.log(ASC);
-console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
-console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
-console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
+console.error(ASC);
+console.error(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
+console.error(`[CONFIG] Cache Segments: ${env.cache_segments}`);
+console.error(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
 // Warn about configuration mismatch that causes embedding incompatibility
 if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {

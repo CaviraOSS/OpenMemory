@@ -58,7 +58,7 @@ async function run_migrations() {
 
     for (const [table_name, schema] of Object.entries(SCHEMA_DEFINITIONS)) {
         if (!existing_tables.has(table_name)) {
-            console.log(`[MIGRATE] Creating table: ${table_name}`);
+            console.error(`[MIGRATE] Creating table: ${table_name}`);
             const statements = schema.split(";").filter((s) => s.trim());
             for (const stmt of statements) {
                 if (stmt.trim()) {
@@ -73,19 +73,19 @@ async function run_migrations() {
         const match = index_sql.match(/create index if not exists (\w+)/);
         const index_name = match ? match[1] : null;
         if (index_name && !existing_indexes.has(index_name)) {
-            console.log(`[MIGRATE] Creating index: ${index_name}`);
+            console.error(`[MIGRATE] Creating index: ${index_name}`);
             await run_async(index_sql);
             created_indexes++;
         }
     }
 
-    console.log(
+    console.error(
         `[MIGRATE] Migration complete: ${created_tables} tables, ${created_indexes} indexes created`,
     );
 
     const final_tables = await get_existing_tables();
-    console.log(`[MIGRATE] Total tables: ${final_tables.size}`);
-    console.log(`[MIGRATE] Tables: ${Array.from(final_tables).join(", ")}`);
+    console.error(`[MIGRATE] Total tables: ${final_tables.size}`);
+    console.error(`[MIGRATE] Tables: ${Array.from(final_tables).join(", ")}`);
 }
 
 run_migrations().catch((err) => {

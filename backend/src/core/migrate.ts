@@ -4,7 +4,7 @@ import { Pool } from "pg";
 
 const is_pg = env.metadata_backend === "postgres";
 
-const log = (msg: string) => console.log(`[MIGRATE] ${msg}`);
+const log = (msg: string) => console.error(`[MIGRATE] ${msg}`);
 
 interface Migration {
     version: string;

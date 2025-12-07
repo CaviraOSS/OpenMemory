@@ -131,7 +131,7 @@ export const run_reflection = async () => {
             freq: c.n,
             at: new Date().toISOString(),
         };
-        console.log(
+        console.error(
             `[REFLECT] Creating reflection: ${c.n} memories, salience=${s.toFixed(3)}, sector=${c.mem[0].primary_sector}`,
         );
         await add_hsg_memory(txt, j(["reflect:auto"]), meta);
@@ -140,7 +140,7 @@ export const run_reflection = async () => {
         n++;
     }
     if (n > 0) await log_maint_op("reflect", n);
-    console.log(`[REFLECT] Job complete: created ${n} reflections`);
+    console.error(`[REFLECT] Job complete: created ${n} reflections`);
     return { created: n, clusters: cls.length };
 };
 
@@ -153,7 +153,7 @@ export const start_reflection = () => {
         () => run_reflection().catch((e) => console.error("[REFLECT]", e)),
         int,
     );
-    console.log(`[REFLECT] Started: every ${env.reflect_interval || 10}m`);
+    console.error(`[REFLECT] Started: every ${env.reflect_interval || 10}m`);
 };
 
 export const stop_reflection = () => {

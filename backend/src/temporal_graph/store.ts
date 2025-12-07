@@ -87,13 +87,13 @@ export const insert_edge = async (
         VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
     `, [id, source_id, target_id, relation_type, valid_from_ts, weight, metadata ? JSON.stringify(metadata) : null])
 
-    console.log(`[TEMPORAL] Created edge: ${source_id} --[${relation_type}]--> ${target_id}`)
+    console.error(`[TEMPORAL] Created edge: ${source_id} --[${relation_type}]--> ${target_id}`)
     return id
 }
 
 export const invalidate_edge = async (id: string, valid_to: Date = new Date()): Promise<void> => {
     await run_async(`UPDATE temporal_edges SET valid_to = ? WHERE id = ?`, [valid_to.getTime(), id])
-    console.log(`[TEMPORAL] Invalidated edge ${id}`)
+    console.error(`[TEMPORAL] Invalidated edge ${id}`)
 }
 
 export const batch_insert_facts = async (facts: Array<{
@@ -120,7 +120,7 @@ export const batch_insert_facts = async (facts: Array<{
             ids.push(id)
         }
         await run_async('COMMIT')
-        console.log(`[TEMPORAL] Batch inserted ${ids.length} facts`)
+        console.error(`[TEMPORAL] Batch inserted ${ids.length} facts`)
     } catch (error) {
         await run_async('ROLLBACK')
         throw error
@@ -141,7 +141,7 @@ export const apply_confidence_decay = async (decay_rate: number = 0.01): Promise
 
     const result = await get_async(`SELECT changes() as changes`) as any
     const changes = result?.changes || 0
-    console.log(`[TEMPORAL] Applied confidence decay to ${changes} facts`)
+    console.error(`[TEMPORAL] Applied confidence decay to ${changes} facts`)
     return changes
 }
 
