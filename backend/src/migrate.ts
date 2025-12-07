@@ -48,7 +48,7 @@ async function get_existing_indexes(): Promise<Set<string>> {
 }
 
 async function run_migrations() {
-    console.log("[MIGRATE] Starting automatic migration...");
+    console.error("[MIGRATE] Starting automatic migration...");
 
     const existing_tables = await get_existing_tables();
     const existing_indexes = await get_existing_indexes();

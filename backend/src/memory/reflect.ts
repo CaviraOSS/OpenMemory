@@ -108,18 +108,18 @@ const boost = async (ids: string[]) => {
 };
 
 export const run_reflection = async () => {
-    console.log("[REFLECT] Starting reflection job...");
+    console.error("[REFLECT] Starting reflection job...");
     const min = env.reflect_min || 20;
     const mems = await q.all_mem.all(100, 0);
-    console.log(
+    console.error(
         `[REFLECT] Fetched ${mems.length} memories (min required: ${min})`,
     );
     if (mems.length < min) {
-        console.log("[REFLECT] Not enough memories, skipping");
+        console.error("[REFLECT] Not enough memories, skipping");
         return { created: 0, reason: "low" };
     }
     const cls = cluster(mems);
-    console.log(`[REFLECT] Clustered into ${cls.length} groups`);
+    console.error(`[REFLECT] Clustered into ${cls.length} groups`);
     let n = 0;
     for (const c of cls) {
         const txt = summ(c);
