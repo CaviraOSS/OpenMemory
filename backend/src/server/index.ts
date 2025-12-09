@@ -21,6 +21,10 @@ const ASC = `   ____                   __  __
         | |                                                 __/ |
         |_|                                                |___/ `;
 
+// Database initialization delay in milliseconds
+// Allows time for SQLite connection to be fully established before running decay
+const DB_INIT_DELAY_MS = parseInt(process.env.OM_DB_INIT_DELAY_MS || '3000', 10);
+
 const app = server({ max_payload_size: env.max_payload_size });
 
 console.log(ASC);
@@ -98,13 +102,22 @@ setInterval(
     },
     7 * 24 * 60 * 60 * 1000,
 );
-run_decay_process()
-    .then((result: any) => {
+// Wait for database initialization before running decay
+// This prevents race conditions where decay runs before SQLite is fully ready
+setTimeout(async () => {
+    try {
+        console.log('[INIT] Starting delayed decay process to ensure database is ready...');
+        const result = await run_decay_process();
         console.log(
             `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
         );
-    })
-    .catch(console.error);
+        if (result.processed === 0) {
+            console.warn('[INIT] ⚠️  WARNING: No memories were processed! Database may not be initialized.');
+        }
+    } catch (error) {
+        console.error("[INIT] Initial decay failed:", error);
+    }
+}, DB_INIT_DELAY_MS);
 
 start_reflection();
 start_user_summary_reflection();
