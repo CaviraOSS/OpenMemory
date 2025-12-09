@@ -993,7 +993,17 @@ export async function run_decay_process(): Promise<{
     processed: number;
     decayed: number;
 }> {
+    console.log('[DECAY] Querying memories from database...');
     const mems = await q.all_mem.all(10000, 0);
+    console.log(`[DECAY] Retrieved ${mems.length} memories from database`);
+    
+    if (mems.length === 0) {
+        console.error('[DECAY] ⚠️  WARNING: No memories retrieved! Possible causes:');
+        console.error('[DECAY]    - Database not initialized');
+        console.error('[DECAY]    - Wrong database path');
+        console.error('[DECAY]    - Database file is empty');
+    }
+    
     let p = 0,
         d = 0;
     for (const m of mems) {
@@ -1006,6 +1016,8 @@ export async function run_decay_process(): Promise<{
         p++;
     }
     if (d > 0) await log_maint_op("decay", d);
+    
+    console.log(`[DECAY] Completed: Processed ${p} memories, updated ${d}`);
     return { processed: p, decayed: d };
 }
 export async function add_hsg_memory(

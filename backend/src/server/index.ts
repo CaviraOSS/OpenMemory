@@ -98,13 +98,22 @@ setInterval(
     },
     7 * 24 * 60 * 60 * 1000,
 );
-run_decay_process()
-    .then((result: any) => {
+// Wait for database initialization before running decay
+// This prevents race conditions where decay runs before SQLite is fully ready
+setTimeout(async () => {
+    try {
+        console.log('[INIT] Starting delayed decay process to ensure database is ready...');
+        const result = await run_decay_process();
         console.log(
             `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
         );
-    })
-    .catch(console.error);
+        if (result.processed === 0) {
+            console.warn('[INIT] ⚠️  WARNING: No memories were processed! Database may not be initialized.');
+        }
+    } catch (error) {
+        console.error("[INIT] Initial decay failed:", error);
+    }
+}, 3000); // 3 second delay to ensure database connection is established
 
 start_reflection();
 start_user_summary_reflection();
