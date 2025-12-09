@@ -998,10 +998,10 @@ export async function run_decay_process(): Promise<{
     console.log(`[DECAY] Retrieved ${mems.length} memories from database`);
     
     if (mems.length === 0) {
-        console.error('[DECAY] ⚠️  WARNING: No memories retrieved! Possible causes:');
-        console.error('[DECAY]    - Database not initialized');
-        console.error('[DECAY]    - Wrong database path');
-        console.error('[DECAY]    - Database file is empty');
+        console.warn('[DECAY] ⚠️  WARNING: No memories retrieved! Possible causes:');
+        console.warn('[DECAY]    - Database not initialized');
+        console.warn('[DECAY]    - Wrong database path');
+        console.warn('[DECAY]    - Database file is empty');
     }
     
     let p = 0,

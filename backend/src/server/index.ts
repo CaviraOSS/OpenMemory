@@ -21,6 +21,10 @@ const ASC = `   ____                   __  __
         | |                                                 __/ |
         |_|                                                |___/ `;
 
+// Database initialization delay in milliseconds
+// Allows time for SQLite connection to be fully established before running decay
+const DB_INIT_DELAY_MS = parseInt(process.env.OM_DB_INIT_DELAY_MS || '3000', 10);
+
 const app = server({ max_payload_size: env.max_payload_size });
 
 console.log(ASC);
@@ -113,7 +117,7 @@ setTimeout(async () => {
     } catch (error) {
         console.error("[INIT] Initial decay failed:", error);
     }
-}, 3000); // 3 second delay to ensure database connection is established
+}, DB_INIT_DELAY_MS);
 
 start_reflection();
 start_user_summary_reflection();
