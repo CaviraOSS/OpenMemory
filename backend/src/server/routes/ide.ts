@@ -1,5 +1,6 @@
 import { q } from "../../core/db";
 import { add_hsg_memory, hsg_query } from "../../memory/hsg";
+import { update_user_summary } from "../../memory/user_summary";
 import { j, p } from "../../utils";
 import * as crypto from "crypto";
 export function ide(app: any) {
@@ -15,8 +16,20 @@ export function ide(app: any) {
             if (!event_type)
                 return res.status(400).json({ err: "event_type_required" });
 
-            const memory_content =
-                `[${event_type}] ${file_path}\n${content}`.trim();
+            let memory_content = "";
+            if (event_type === "open") {
+                memory_content = `Opened file: ${file_path}`;
+            } else if (event_type === "save") {
+                if (content) {
+                    memory_content = `Saved file: ${file_path}\n\n${content}`;
+                } else {
+                    memory_content = `Saved file: ${file_path}`;
+                }
+            } else if (event_type === "close") {
+                memory_content = `Closed file: ${file_path}`;
+            } else {
+                memory_content = `[${event_type}] ${file_path}\n${content}`.trim();
+            }
 
             const full_metadata = {
                 ...metadata,
@@ -33,6 +46,13 @@ export function ide(app: any) {
                 full_metadata,
                 user_id,
             );
+
+            // Update user summary asynchronously
+            if (user_id && user_id !== "anonymous") {
+                update_user_summary(user_id).catch(err =>
+                    console.error("[IDE] Failed to update user summary:", err)
+                );
+            }
 
             res.json({
                 success: true,
@@ -124,6 +144,12 @@ export function ide(app: any) {
 
             const result = await add_hsg_memory(content, undefined, metadata, user_id);
 
+            if (user_id && user_id !== "anonymous") {
+                update_user_summary(user_id).catch(err =>
+                    console.error("[IDE] Failed to update summary on session start:", err)
+                );
+            }
+
             res.json({
                 success: true,
                 session_id: session_id,
@@ -175,7 +201,7 @@ export function ide(app: any) {
                     ) {
                         files.add(meta.ide_file_path);
                     }
-                } catch {}
+                } catch { }
             }
 
             const summary = `Session ${session_id} ended. Events: ${total_events}, Files: ${files.size}, Sectors: ${j(sectors)}`;
@@ -191,6 +217,12 @@ export function ide(app: any) {
             };
 
             const result = await add_hsg_memory(summary, undefined, metadata, user_id);
+
+            if (user_id && user_id !== "anonymous") {
+                update_user_summary(user_id).catch(err =>
+                    console.error("[IDE] Failed to update summary on session end:", err)
+                );
+            }
 
             res.json({
                 success: true,

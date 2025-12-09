@@ -1008,6 +1008,26 @@ export async function run_decay_process(): Promise<{
     if (d > 0) await log_maint_op("decay", d);
     return { processed: p, decayed: d };
 }
+
+// Helper to ensure user exists
+async function ensure_user_exists(user_id: string): Promise<void> {
+    try {
+        const existing = await q.get_user.get(user_id);
+        if (!existing) {
+            await q.ins_user.run(
+                user_id,
+                "User profile initializing...", // Initial summary
+                0, // Reflection count
+                Date.now(),
+                Date.now()
+            );
+        }
+    } catch (error) {
+        console.error(`[HSG] Failed to ensure user ${user_id} exists:`, error);
+        // Don't throw, proceed with memory creation (legacy behavior)
+    }
+}
+
 export async function add_hsg_memory(
     content: string,
     tags?: string,
@@ -1035,6 +1055,12 @@ export async function add_hsg_memory(
     }
     const id = crypto.randomUUID();
     const now = Date.now();
+
+    // Ensure user exists in the users table
+    if (user_id) {
+        await ensure_user_exists(user_id);
+    }
+
     const chunks = chunk_text(content);
     const use_chunking = chunks.length > 1;
     const classification = classify_content(content, metadata);

@@ -6,7 +6,7 @@
         "opm": "./bin/opm.js"
     },
     "scripts": {
-        "dev": "tsx src/server/index.ts",
+        "dev": "nodemon src/server/index.ts",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server/index.js",

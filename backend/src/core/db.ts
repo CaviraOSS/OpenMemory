@@ -548,10 +548,53 @@ if (is_pg) {
         console.log(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
     }
 
+    // Simple Mutex for transaction serialization
+    class Mutex {
+        private mutex = Promise.resolve();
+        lock(): Promise<() => void> {
+            let unlock: (value?: void) => void = () => { };
+            const willUnlock = new Promise<void>(resolve => {
+                unlock = resolve;
+            });
+            const willAcquire = this.mutex.then(() => unlock);
+            this.mutex = this.mutex.then(() => willUnlock);
+            return willAcquire;
+        }
+    }
+    const txLock = new Mutex();
+    let releaseTx: (() => void) | null = null;
+
     transaction = {
-        begin: () => exec("BEGIN TRANSACTION"),
-        commit: () => exec("COMMIT"),
-        rollback: () => exec("ROLLBACK"),
+        begin: async () => {
+            if (releaseTx) throw new Error("Transaction already active via lock");
+            const release = await txLock.lock();
+            releaseTx = release;
+            try {
+                await exec("BEGIN TRANSACTION");
+            } catch (e) {
+                releaseTx();
+                releaseTx = null;
+                throw e;
+            }
+        },
+        commit: async () => {
+            if (!releaseTx) return;
+            try {
+                await exec("COMMIT");
+            } finally {
+                releaseTx();
+                releaseTx = null;
+            }
+        },
+        rollback: async () => {
+            if (!releaseTx) return;
+            try {
+                await exec("ROLLBACK");
+            } finally {
+                releaseTx();
+                releaseTx = null;
+            }
+        },
     };
     q = {
         ins_mem: {
@@ -721,7 +764,7 @@ if (is_pg) {
         ins_user: {
             run: (...p) =>
                 exec(
-                    "insert or replace into users(user_id,summary,reflection_count,created_at,updated_at) values(?,?,?,?,?)",
+                    "insert or ignore into users(user_id,summary,reflection_count,created_at,updated_at) values(?,?,?,?,?)",
                     p,
                 ),
         },

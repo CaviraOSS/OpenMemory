@@ -1,12 +1,15 @@
 {
     "name": "openmemory-js",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Local-first long-term memory engine for AI apps and agents. Provides semantic search, multi-sector memory, temporal facts, decay, and full explainability. Works standalone or with the OpenMemory backend.",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
         "dist"
     ],
+    "bin": {
+        "mcp": "./dist/bin/mcp.js"
+    },
     "scripts": {
         "build": "tsc",
         "prepublishOnly": "npm run build"
@@ -43,7 +46,9 @@
         "turndown": "^7.1.2",
         "@google/generative-ai": "^0.1.0",
         "groq-sdk": "^0.3.0",
-        "@aws-sdk/client-bedrock-runtime": "^3.450.0"
+        "@aws-sdk/client-bedrock-runtime": "^3.450.0",
+        "@modelcontextprotocol/sdk": "^1.22.0",
+        "zod": "^3.23.8"
     },
     "devDependencies": {
         "@types/node": "^20.0.0",
