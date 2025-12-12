@@ -85,37 +85,39 @@ export const create_mcp_srv = () => {
         { capabilities: { tools: {}, resources: {}, logging: {} } },
     );
 
+    const query_schema = {
+        query: z
+            .string()
+            .min(1, "query text is required")
+            .describe("Free-form search text"),
+        k: z
+            .number()
+            .int()
+            .min(1)
+            .max(32)
+            .default(8)
+            .describe("Maximum results to return"),
+        sector: sec_enum
+            .optional()
+            .describe("Restrict search to a specific sector"),
+        min_salience: z
+            .number()
+            .min(0)
+            .max(1)
+            .optional()
+            .describe("Minimum salience threshold"),
+        user_id: z
+            .string()
+            .trim()
+            .min(1)
+            .optional()
+            .describe("Isolate results to a specific user identifier"),
+    };
+    // @ts-expect-error -- suppress ts2589 deep instantiation
     srv.tool(
         "openmemory_query",
         "Run a semantic retrieval against OpenMemory",
-        {
-            query: z
-                .string()
-                .min(1, "query text is required")
-                .describe("Free-form search text"),
-            k: z
-                .number()
-                .int()
-                .min(1)
-                .max(32)
-                .default(8)
-                .describe("Maximum results to return"),
-            sector: sec_enum
-                .optional()
-                .describe("Restrict search to a specific sector"),
-            min_salience: z
-                .number()
-                .min(0)
-                .max(1)
-                .optional()
-                .describe("Minimum salience threshold"),
-            user_id: z
-                .string()
-                .trim()
-                .min(1)
-                .optional()
-                .describe("Isolate results to a specific user identifier"),
-        },
+        query_schema,
         async ({ query, k, sector, min_salience, user_id }) => {
             const u = uid(user_id);
             const flt =
@@ -156,25 +158,27 @@ export const create_mcp_srv = () => {
         },
     );
 
+    const store_schema = {
+        content: z.string().min(1).describe("Raw memory text to store"),
+        tags: z.array(z.string()).optional().describe("Optional tag list"),
+        metadata: z
+            .record(z.any())
+            .optional()
+            .describe("Arbitrary metadata blob"),
+        user_id: z
+            .string()
+            .trim()
+            .min(1)
+            .optional()
+            .describe(
+                "Associate the memory with a specific user identifier",
+            ),
+    };
+    // @ts-expect-error -- suppress ts2589 deep instantiation
     srv.tool(
         "openmemory_store",
         "Persist new content into OpenMemory",
-        {
-            content: z.string().min(1).describe("Raw memory text to store"),
-            tags: z.array(z.string()).optional().describe("Optional tag list"),
-            metadata: z
-                .record(z.any())
-                .optional()
-                .describe("Arbitrary metadata blob"),
-            user_id: z
-                .string()
-                .trim()
-                .min(1)
-                .optional()
-                .describe(
-                    "Associate the memory with a specific user identifier",
-                ),
-        },
+        store_schema,
         async ({ content, tags, metadata, user_id }) => {
             const u = uid(user_id);
             const res = await add_hsg_memory(
@@ -283,24 +287,26 @@ export const create_mcp_srv = () => {
         },
     );
 
+    const get_schema = {
+        id: z.string().min(1).describe("Memory identifier to load"),
+        include_vectors: z
+            .boolean()
+            .default(false)
+            .describe("Include sector vector metadata"),
+        user_id: z
+            .string()
+            .trim()
+            .min(1)
+            .optional()
+            .describe(
+                "Validate ownership against a specific user identifier",
+            ),
+    };
+    // @ts-expect-error -- suppress ts2589 deep instantiation
     srv.tool(
         "openmemory_get",
         "Fetch a single memory by identifier",
-        {
-            id: z.string().min(1).describe("Memory identifier to load"),
-            include_vectors: z
-                .boolean()
-                .default(false)
-                .describe("Include sector vector metadata"),
-            user_id: z
-                .string()
-                .trim()
-                .min(1)
-                .optional()
-                .describe(
-                    "Validate ownership against a specific user identifier",
-                ),
-        },
+        get_schema,
         async ({ id, include_vectors, user_id }) => {
             const u = uid(user_id);
             const mem = await q.get_mem.get(id);
