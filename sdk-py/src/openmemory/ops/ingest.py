@@ -2,8 +2,9 @@ import uuid
 import time
 import json
 from ..core.db import q
+from ..core import db as core_db
 from ..memory.hsg import classify_content
-from ..__init__ import OpenMemory # Circular dependency? No, OpenMemory uses hsg, ingest uses hsg.
+# from ..__init__ import OpenMemory
 # Actually ingest uses add_hsg_memory from memory/hsg. I need to expose that or use OpenMemory.add logic.
 # In JS, it imports add_hsg_memory. I haven't implemented add_hsg_memory in hsg.py yet, I put it in OpenMemory.add.
 # I should refactor OpenMemory.add to use a standalone function in hsg.py or similar.
@@ -42,7 +43,8 @@ async def add_hsg_memory(content, tags, meta, user_id=None):
 
     for emb in embeddings:
         vec_buf = vector_to_buffer(emb["vector"])
-        q.ins_vec.run(id, emb["sector"], user_id, vec_buf, emb["dim"])
+        # q.ins_vec.run(id, emb["sector"], user_id, vec_buf, emb["dim"])
+        await core_db.vector_store.store_vector(id, emb["sector"], emb["vector"], emb["dim"], user_id)
         
     return {"id": id}
 
@@ -106,3 +108,33 @@ async def ingest_document(t, data, meta=None, cfg=None, user_id=None):
         "strategy": "root-child",
         "extraction": ex_meta
     }
+
+async def ingest_url(url, meta=None, cfg=None, user_id=None):
+    # Basic implementation using requests + simple extraction
+    try:
+        import requests
+        from bs4 import BeautifulSoup # Assuming accessible or basic text extraction
+    except ImportError:
+        # Fallback if deps missing, or just assume they are there (sdk-py usually has deps)
+        pass 
+        
+    # Re-use extract logic if available? extract.py exists but is empty? 
+    # Let's check extract.py size was 472.
+    # For now, minimal implementation:
+    
+    try:
+        with requests.get(url, timeout=10) as r:
+            r.raise_for_status()
+            text = r.text
+            # Simple strip HTML if bs4 missing?
+            # Ideally use extractURL from extract.py
+            
+            # Using extract.py if properly implemented
+            from .extract import extract_url as ex_url_func
+            ex = await ex_url_func(url)
+            
+            # Use ingest_document logic
+            return await ingest_document(ex["text"], None, {**(meta or {}), **ex["metadata"]}, cfg, user_id)
+            
+    except Exception as e:
+        raise Exception(f"Ingest URL failed: {str(e)}")

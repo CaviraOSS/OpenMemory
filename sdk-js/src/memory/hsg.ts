@@ -242,10 +242,10 @@ export function classify_content(
     const confidence =
         primaryScore > 0
             ? Math.min(
-                  1.0,
-                  primaryScore /
-                      (primaryScore + (sortedScores[1]?.[1] || 0) + 1),
-              )
+                1.0,
+                primaryScore /
+                (primaryScore + (sortedScores[1]?.[1] || 0) + 1),
+            )
             : 0.2;
     return {
         primary: primaryScore > 0 ? primary : "semantic",
@@ -412,6 +412,7 @@ import {
     run_async,
     transaction,
     log_maint_op,
+    vector_store,
 } from "../core/db";
 export async function create_cross_sector_waypoints(
     prim_id: string,
@@ -641,7 +642,7 @@ export async function calc_multi_vec_fusion_score(
     qe: Record<string, number[]>,
     w: multi_vec_fusion_weights,
 ): Promise<number> {
-    const vecs = await q.get_vecs_by_id.all(mid);
+    const vecs = await vector_store.getVectorsById(mid);
     let sum = 0,
         tot = 0;
     const wm: Record<string, number> = {
@@ -654,8 +655,12 @@ export async function calc_multi_vec_fusion_score(
     for (const v of vecs) {
         const qv = qe[v.sector];
         if (!qv) continue;
-        const mv = bufferToVector(v.v);
-        const sim = cosineSimilarity(qv, mv);
+        const mv = v.vector;
+        // Wait, SQLiteVectorStore returns { vector: number[] }. hsg logic expects...
+        // vectorToBuffer(v.v) suggests v.v is a Buffer.
+        // My SQLiteVectorStore implementation returns `vector: number[]`.
+        // So I don't need bufferToVector anymore.
+        const sim = cosineSimilarity(qv, v.vector);
         const wgt = wm[v.sector] || 0.5;
         sum += sim * wgt;
         tot += wgt;
@@ -712,7 +717,7 @@ setInterval(async () => {
                 cur_wt + hybrid_params.eta * (1 - cur_wt) * temp_fact,
             );
             await q.ins_waypoint.run(a, b, new_wt, wp?.created_at || now, now);
-        } catch (e) {}
+        } catch (e) { }
     }
 }, 1000);
 const get_sal = async (id: string, def_sal: number): Promise<number> => {
@@ -726,7 +731,7 @@ const get_sal = async (id: string, def_sal: number): Promise<number> => {
 export async function hsg_query(
     qt: string,
     k = 10,
-    f?: { sectors?: string[]; minSalience?: number; user_id?: string },
+    f?: { sectors?: string[]; minSalience?: number; user_id?: string; startTime?: number; endTime?: number },
 ): Promise<hsg_q_result[]> {
     if (active_queries >= env.max_active) {
         throw new Error(
@@ -772,11 +777,15 @@ export async function hsg_query(
         > = {};
         for (const s of ss) {
             const qv = qe[s];
-            const vecs = await q.get_vecs_by_sector.all(s);
+            const vecs = await vector_store.getVectorsBySector(s);
             const sims: Array<{ id: string; similarity: number }> = [];
             for (const vr of vecs) {
-                const mv = get_vec(vr.id, vr.v);
-                const sim = cosineSimilarity(qv, mv);
+                // vr is { id, vector, dim }
+                // get_vec cache expects (id, Buffer). logic has to change slightly.
+                // Or just bypass cache? getVectorsBySector returns all.
+                // The original code used `get_vec(vr.id, vr.v)` which cached buffer->vector conversion.
+                // Now `vector_store` returns vector directly.
+                const sim = cosineSimilarity(qv, vr.vector);
                 sims.push({ id: vr.id, similarity: sim });
             }
             sims.sort((a, b) => b.similarity - a.similarity);
@@ -822,6 +831,8 @@ export async function hsg_query(
             const m = await q.get_mem.get(mid);
             if (!m || (f?.minSalience && m.salience < f.minSalience)) continue;
             if (f?.user_id && m.user_id !== f.user_id) continue;
+            if (f?.startTime && m.created_at < f.startTime) continue;
+            if (f?.endTime && m.created_at > f.endTime) continue;
             const mvf = await calc_multi_vec_fusion_score(mid, qe, w);
             const csr = await calculateCrossSectorResonanceScore(
                 m.primary_sector,
@@ -962,7 +973,7 @@ export async function hsg_query(
         for (const r of top) {
             on_query_hit(r.id, r.primary_sector, (text) =>
                 embedForSector(text, r.primary_sector),
-            ).catch(() => {});
+            ).catch(() => { });
         }
 
         cache.set(h, { r: top, t: Date.now() });
@@ -1072,13 +1083,12 @@ export async function add_hsg_memory(
             use_chunking ? chunks : undefined,
         );
         for (const result of emb_res) {
-            const vec_buf = vectorToBuffer(result.vector);
-            await q.ins_vec.run(
+            await vector_store.storeVector(
                 id,
                 result.sector,
-                user_id || null,
-                vec_buf,
+                result.vector,
                 result.dim,
+                user_id || undefined
             );
         }
         const mean_vec = calc_mean_vec(emb_res, all_sectors);
@@ -1136,7 +1146,7 @@ export async function update_memory(
                 classification.primary,
                 ...classification.additional,
             ];
-            await q.del_vec.run(id);
+            await vector_store.deleteVectors(id);
             const emb_res = await embedMultiSector(
                 id,
                 new_content,
@@ -1144,13 +1154,12 @@ export async function update_memory(
                 use_chunking ? chunks : undefined,
             );
             for (const result of emb_res) {
-                const vec_buf = vectorToBuffer(result.vector);
-                await q.ins_vec.run(
+                await vector_store.storeVector(
                     id,
                     result.sector,
-                    mem.user_id || null,
-                    vec_buf,
+                    result.vector,
                     result.dim,
+                    mem.user_id || undefined
                 );
             }
             const mean_vec = calc_mean_vec(emb_res, all_sectors);

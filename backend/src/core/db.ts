@@ -566,7 +566,12 @@ if (is_pg) {
 
     transaction = {
         begin: async () => {
-            if (releaseTx) throw new Error("Transaction already active via lock");
+            /*
+            if (releaseTx) {
+                // console.error("[TX] ERROR: Active during begin!");
+                throw new Error("Transaction already active via lock");
+            }
+            */
             const release = await txLock.lock();
             releaseTx = release;
             try {

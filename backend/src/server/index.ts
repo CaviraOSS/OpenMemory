@@ -98,13 +98,15 @@ setInterval(
     },
     7 * 24 * 60 * 60 * 1000,
 );
-run_decay_process()
-    .then((result: any) => {
-        console.log(
-            `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
-        );
-    })
-    .catch(console.error);
+setTimeout(() => {
+    run_decay_process()
+        .then((result: any) => {
+            console.log(
+                `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
+            );
+        })
+        .catch(console.error);
+}, 3000);
 
 start_reflection();
 start_user_summary_reflection();

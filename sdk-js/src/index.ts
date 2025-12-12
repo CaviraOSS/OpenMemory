@@ -1,10 +1,11 @@
 ﻿import { randomUUID } from 'crypto';
-import { hsg_query, classify_content, sector_configs, create_cross_sector_waypoints, calc_mean_vec, create_single_waypoint } from './memory/hsg';
+import { hsg_query, classify_content, sector_configs, create_cross_sector_waypoints, calc_mean_vec, create_single_waypoint, reinforce_memory } from './memory/hsg';
 import { embedMultiSector, vectorToBuffer } from './memory/embed';
-import { q } from './core/db';
+import { q, init_db, log_maint_op, vector_store } from './core/db';
 import { chunk_text } from './utils/chunking';
-import { configure } from './core/cfg';
-import { init_db } from './core/db';
+import { configure, env, tier } from './core/cfg';
+import { ingestDocument, ingestURL, IngestionResult } from './ops/ingest';
+import { update_user_summary } from './memory/user_summary';
 
 export interface OpenMemoryOptions {
     mode?: 'local' | 'remote';
@@ -184,8 +185,7 @@ export class OpenMemory {
         );
 
         for (const emb of embeddings) {
-            const vec_buf = vectorToBuffer(emb.vector);
-            await q.ins_vec.run(id, emb.sector, options.userId || null, vec_buf, emb.dim);
+            await vector_store.storeVector(id, emb.sector, emb.vector, emb.dim, options.userId);
         }
 
         if (classification.additional.length > 0) {
@@ -199,17 +199,25 @@ export class OpenMemory {
 
     async query(query: string, options: {
         k?: number;
+        userId?: string;
         filters?: {
             sectors?: string[];
             minSalience?: number;
             user_id?: string;
+            startTime?: number;
+            endTime?: number;
         };
     } = {}): Promise<any[]> {
         if (this.mode === 'remote') {
             return this._remoteQuery(query, options);
         }
 
-        return await hsg_query(query, options.k || 10, options.filters);
+        const filters = {
+            ...options.filters,
+            user_id: options.filters?.user_id || options.userId
+        };
+
+        return await hsg_query(query, options.k || 10, filters);
     }
 
     async delete(id: string): Promise<void> {
@@ -218,7 +226,7 @@ export class OpenMemory {
         }
 
         await q.del_mem.run(id);
-        await q.del_vec.run(id);
+        await vector_store.deleteVectors(id);
         await q.del_waypoints.run(id, id);
     }
 
@@ -226,6 +234,7 @@ export class OpenMemory {
         limit?: number;
         offset?: number;
         sector?: string;
+        userId?: string;
     } = {}): Promise<any[]> {
         if (this.mode === 'remote') {
             return this._remoteGetAll(options);
@@ -234,10 +243,86 @@ export class OpenMemory {
         const limit = options.limit || 100;
         const offset = options.offset || 0;
 
+        if (options.userId) {
+            return await q.all_mem_by_user.all(options.userId, limit, offset);
+        }
         if (options.sector) {
             return await q.all_mem_by_sector.all(options.sector, limit, offset);
         }
         return await q.all_mem.all(limit, offset);
+    }
+
+    async getUserSummary(userId: string): Promise<any> {
+        if (this.mode === 'remote') {
+            return this._remoteGetUserSummary(userId);
+        }
+
+        const user = await q.get_user.get(userId);
+        return user ? {
+            userId: user.user_id,
+            summary: user.summary,
+            reflectionCount: user.reflection_count,
+            updatedAt: user.updated_at
+        } : null;
+    }
+
+    async reinforce(id: string, boost?: number): Promise<void> {
+        if (this.mode === 'remote') {
+            return this._remoteReinforce(id, boost);
+        }
+
+        await reinforce_memory(id, boost);
+    }
+
+    async ingest(content: string | Buffer, options: {
+        contentType: string;
+        metadata?: any;
+        userId?: string;
+        config?: any;
+    }): Promise<IngestionResult> {
+        if (this.mode === 'remote') {
+            return this._remoteIngest(content, options);
+        }
+
+        // Handle Buffer if passed
+        const data = Buffer.isBuffer(content) ? content : Buffer.from(content);
+        // If content is string and contentType implies text, pass as string for extraction
+
+        return await ingestDocument(
+            options.contentType,
+            content, // Types might need check, ingestDocument takes string | Buffer
+            options.metadata,
+            options.config,
+            options.userId
+        );
+    }
+
+    async ingestURL(url: string, options: {
+        metadata?: any;
+        userId?: string;
+        config?: any;
+    } = {}): Promise<IngestionResult> {
+        if (this.mode === 'remote') {
+            return this._remoteIngestURL(url, options);
+        }
+
+        return await ingestURL(url, options.metadata, options.config, options.userId);
+    }
+
+    async deleteUserMemories(userId: string): Promise<number> {
+        if (this.mode === 'remote') {
+            return this._remoteDeleteUserMemories(userId);
+        }
+
+        const mems = await q.all_mem_by_user.all(userId, 10000, 0);
+        let deleted = 0;
+        for (const m of mems) {
+            await q.del_mem.run(m.id);
+            await vector_store.deleteVectors(m.id);
+            await q.del_waypoints.run(m.id, m.id);
+            deleted++;
+        }
+        return deleted;
     }
 
     private async _remoteAdd(content: string, options: any): Promise<any> {
@@ -264,13 +349,20 @@ export class OpenMemory {
     }
 
     private async _remoteQuery(query: string, options: any): Promise<any[]> {
+        const payload = {
+            query,
+            k: options.k,
+            filters: options.filters,
+            user_id: options.userId
+        };
+
         const res = await fetch(`${this.url}/memory/query`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
             },
-            body: JSON.stringify({ query, ...options })
+            body: JSON.stringify(payload)
         });
 
         if (!res.ok) throw new Error(`Remote query failed: ${res.status}`);
@@ -293,6 +385,7 @@ export class OpenMemory {
         if (options.limit) params.set('limit', options.limit.toString());
         if (options.offset) params.set('offset', options.offset.toString());
         if (options.sector) params.set('sector', options.sector);
+        if (options.userId) params.set('user_id', options.userId);
 
         const res = await fetch(`${this.url}/memory/all?${params}`, {
             headers: {
@@ -302,6 +395,76 @@ export class OpenMemory {
 
         if (!res.ok) throw new Error(`Remote getAll failed: ${res.status}`);
         return await res.json() as any[];
+    }
+
+    private async _remoteGetUserSummary(userId: string): Promise<any> {
+        const res = await fetch(`${this.url}/users/${userId}/summary`, {
+            headers: { ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }) }
+        });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`Remote getUserSummary failed: ${res.status}`);
+        return await res.json();
+    }
+
+    private async _remoteReinforce(id: string, boost?: number): Promise<void> {
+        const res = await fetch(`${this.url}/memory/reinforce`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+            },
+            body: JSON.stringify({ id, boost })
+        });
+        if (!res.ok) throw new Error(`Remote reinforce failed: ${res.status}`);
+    }
+
+    private async _remoteIngest(content: string | Buffer, options: any): Promise<any> {
+        const payload = {
+            data: content.toString('base64'), // Send as base64 assuming logic
+            content_type: options.contentType,
+            metadata: options.metadata,
+            user_id: options.userId,
+            config: options.config
+        };
+        const res = await fetch(`${this.url}/memory/ingest`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`Remote ingest failed: ${res.status}`);
+        return await res.json();
+    }
+
+    private async _remoteIngestURL(url: string, options: any): Promise<any> {
+        const payload = {
+            url,
+            metadata: options.metadata,
+            user_id: options.userId,
+            config: options.config
+        };
+        const res = await fetch(`${this.url}/memory/ingest/url`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` })
+            },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`Remote ingestURL failed: ${res.status}`);
+        return await res.json();
+    }
+
+    private async _remoteDeleteUserMemories(userId: string): Promise<number> {
+        const res = await fetch(`${this.url}/users/${userId}/memories`, {
+            method: 'DELETE',
+            headers: { ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }) }
+        });
+        if (!res.ok) throw new Error(`Remote deleteUserMemories failed: ${res.status}`);
+        const json = await res.json() as any;
+        return json.deleted;
     }
 }
 

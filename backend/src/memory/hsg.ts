@@ -51,7 +51,7 @@ export const sector_configs: Record<string, sector_cfg> = {
         decay_lambda: 0.015,
         weight: 1.2,
         patterns: [
-            /\b(today|yesterday|last\s+week|remember\s+when|that\s+time)\b/i,
+            /\b(today|yesterday|last\s+week|remember\s+when|recall|that\s+time)\b/i,
             /\b(I\s+(did|went|saw|met|felt))\b/i,
             /\b(at\s+\d+:\d+|on\s+\w+day|in\s+\d{4})\b/i,
             /\b(happened|occurred|experience|event|moment)\b/i,
@@ -77,7 +77,7 @@ export const sector_configs: Record<string, sector_cfg> = {
             /\b(first|then|next|finally|afterwards)\b/i,
             /\b(install|configure|setup|run|execute)\b/i,
             /\b(tutorial|guide|instructions|manual)\b/i,
-            /\b(click|press|type|enter|select)\b/i,
+            /\b(click|press|type|enter|select|def|function|class|return|import|const|var|let)\b/i,
         ],
     },
     emotional: {
@@ -331,8 +331,9 @@ export function extract_essence(
     max_len: number,
 ): string {
     if (!env.use_summary_only || raw.length <= max_len) return raw;
+    // Split on sentence boundaries (punctuation followed by whitespace) to avoid breaking filenames
     const sents = raw
-        .split(/[.!?]+/)
+        .split(/(?<=[.!?])\s+/)
         .map((s) => s.trim())
         .filter((s) => s.length > 10);
     if (sents.length === 0) return raw.slice(0, max_len);
@@ -368,44 +369,32 @@ export function extract_essence(
         return sc;
     };
     const scored = sents.map((s, idx) => ({ text: s, score: score_sent(s, idx), idx }));
+    // Sort by score to pick the best sentences
     scored.sort((a, b) => b.score - a.score);
-    // Build result, ensuring first sentence is always included if space permits
-    let comp = "";
-    const firstSent = sents[0];
-    if (firstSent && firstSent.length <= max_len * 0.5) {
-        comp = firstSent;
-        const remaining = scored.filter((item) => item.idx !== 0);
-        for (const item of remaining) {
-            const cand = comp ? `${comp}. ${item.text}` : item.text;
-            if (cand.length <= max_len) {
-                comp = cand;
-            } else if (comp.length < max_len * 0.7) {
-                const rem = max_len - comp.length - 2;
-                if (rem > 20) {
-                    comp += ". " + item.text.slice(0, rem);
-                }
-                break;
-            } else {
-                break;
-            }
-        }
-    } else {
-        for (const item of scored) {
-            const cand = comp ? `${comp}. ${item.text}` : item.text;
-            if (cand.length <= max_len) {
-                comp = cand;
-            } else if (comp.length < max_len * 0.7) {
-                const rem = max_len - comp.length - 2;
-                if (rem > 20) {
-                    comp += ". " + item.text.slice(0, rem);
-                }
-                break;
-            } else {
-                break;
-            }
+
+    // Select top sentences until we hit max_len
+    const selected: typeof scored = [];
+    let current_len = 0;
+
+    // Always include the first sentence if it fits
+    const firstSent = scored.find(s => s.idx === 0);
+    if (firstSent && firstSent.text.length < max_len) {
+        selected.push(firstSent);
+        current_len += firstSent.text.length;
+    }
+
+    for (const item of scored) {
+        if (item.idx === 0) continue; // Already handled
+        if (current_len + item.text.length + 2 <= max_len) {
+            selected.push(item);
+            current_len += item.text.length + 2; // +2 for ". "
         }
     }
-    return comp || raw.slice(0, max_len);
+
+    // Sort selected sentences by their original index to restore context flow
+    selected.sort((a, b) => a.idx - b.idx);
+
+    return selected.map(s => s.text).join(" ");
 }
 export function compute_token_overlap(
     q_toks: Set<string>,
@@ -750,8 +739,12 @@ const get_sal = async (id: string, def_sal: number): Promise<number> => {
 export async function hsg_query(
     qt: string,
     k = 10,
-    f?: { sectors?: string[]; minSalience?: number; user_id?: string },
+    f?: { sectors?: string[]; minSalience?: number; user_id?: string; startTime?: number; endTime?: number },
 ): Promise<hsg_q_result[]> {
+    // ... (omitted lines to keep context correct, targeting start of function signature change)
+    // Actually I'll target the signature and the logic inside the loop.
+    // Split into two edits or use multi_replace.
+    // Let's use multi_replace.
     if (active_queries >= env.max_active) {
         throw new Error(
             `Rate limit: ${active_queries} active queries (max ${env.max_active})`,
@@ -839,6 +832,8 @@ export async function hsg_query(
             const m = await q.get_mem.get(mid);
             if (!m || (f?.minSalience && m.salience < f.minSalience)) continue;
             if (f?.user_id && m.user_id !== f.user_id) continue;
+            if (f?.startTime && m.created_at < f.startTime) continue;
+            if (f?.endTime && m.created_at > f.endTime) continue;
             const mvf = await calc_multi_vec_fusion_score(mid, qe, w);
             const csr = await calculateCrossSectorResonanceScore(
                 m.primary_sector,

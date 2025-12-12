@@ -339,6 +339,7 @@ export async function extractText(
             };
         }
 
+        case "text/plain":
         case "txt":
         case "text": {
             const text = data.toString();

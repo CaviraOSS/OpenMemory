@@ -2,6 +2,7 @@ try:
     import numpy as np
 except ImportError:
     np = None
+import time
 from openmemory.core.db import q
 from openmemory.memory.embed import embed_multi_sector, buffer_to_vector, vector_to_buffer
 
@@ -108,6 +109,12 @@ async def hsg_query(query, k=10, filters=None):
     for mem in all_memories:
         if not mem["mean_vec"]: continue
         
+        if filters:
+            if filters.get("user_id") and mem["user_id"] != filters["user_id"]: continue
+            if filters.get("startTime") and mem["created_at"] < filters["startTime"]: continue
+            if filters.get("endTime") and mem["created_at"] > filters["endTime"]: continue
+            if filters.get("minSalience") and mem.get("salience", 0) < filters["minSalience"]: continue
+
         vec = buffer_to_vector(mem["mean_vec"])
         if len(vec) != len(query_vec): continue
         
@@ -118,10 +125,27 @@ async def hsg_query(query, k=10, filters=None):
             score = sum(a*b for a,b in zip(vec, query_vec))
         
         results.append({
-            **mem,
+            **dict(mem), # Ensure it's a dict
             "score": float(score)
         })
         
     # Sort by score
     results.sort(key=lambda x: x["score"], reverse=True)
     return results[:k]
+
+async def reinforce_memory(id, boost=0.1):
+    mem = q.get_mem.get(id)
+    if not mem:
+        raise ValueError(f"Memory {id} not found")
+    
+    current_salience = mem["salience"] if "salience" in mem else 0.5
+    new_sal = min(1.0, current_salience + boost)
+    now_ts = int(time.time() * 1000)
+    
+    # We need a query to update salience. Python SDK db.py is missing generic update, implementing SQL exec.
+    # q.upd_seen logic from backend: update last_seen, salience.
+    # Let's add upd_seen to db.py or execute raw SQL here?
+    # db.exec_query is available.
+    
+    from ..core.db import exec_query
+    exec_query("update memories set salience=?, last_seen_at=?, updated_at=? where id=?", (new_sal, now_ts, now_ts, id))

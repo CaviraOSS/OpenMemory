@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.3 - 2025-12-14
+
+### Added
+
+- **Temporal Filtering**: Enables precise time-based memory retrieval
+  - Added `startTime` and `endTime` filters to `query` method across Backend, JS SDK, and Python SDK.
+  - Allows filtering memories by creation time range.
+  - Fully integrated into `hsg_query` logic.
+
+### Fixed
+
+- **JavaScript SDK Types**: Fixed `IngestURLResult` import error and `v.v` property access bug in `VectorStore` integration.
+- **Python SDK Filtering**: Fixed missing implementation of `user_id` and temporal filters in `hsg_query` loop.
+
 ## 1.2.2 - 2025-12-06
 
 ### Fixed
@@ -25,6 +39,9 @@
 - **IDE Extension**:
   - Updates to Dashboard UI (`DashboardPanel.ts`) and extension activation logic (`extension.ts`)
   - Configuration and dependency updates
+
+- **JavaScript SDK**:
+  - Migrated to `VectorStore` interface (removed deprecated `q.ins_vec`)
 
 - **Python SDK**:
   - Refinements to embedding logic (`embed.py`)

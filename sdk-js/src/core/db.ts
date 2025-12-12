@@ -2,6 +2,7 @@ import sqlite3 from "sqlite3";
 import { env } from "./cfg";
 import * as fs from "fs";
 import * as path from "path";
+import { SQLiteVectorStore, VectorStore } from "./vector_store";
 
 type q_type = {
     ins_mem: { run: (...p: any[]) => Promise<void> };
@@ -25,12 +26,12 @@ type q_type = {
     get_max_segment: { get: () => Promise<any> };
     get_segments: { all: () => Promise<any[]> };
     get_mem_by_segment: { all: (segment: number) => Promise<any[]> };
-    ins_vec: { run: (...p: any[]) => Promise<void> };
+    // ins_vec: { run: (...p: any[]) => Promise<void> };
     get_vec: { get: (id: string, sector: string) => Promise<any> };
     get_vecs_by_id: { all: (id: string) => Promise<any[]> };
     get_vecs_by_sector: { all: (sector: string) => Promise<any[]> };
     get_vecs_batch: { all: (ids: string[], sector: string) => Promise<any[]> };
-    del_vec: { run: (...p: any[]) => Promise<void> };
+    // del_vec: { run: (...p: any[]) => Promise<void> };
     del_vec_sector: { run: (...p: any[]) => Promise<void> };
     ins_waypoint: { run: (...p: any[]) => Promise<void> };
     get_neighbors: { all: (src: string) => Promise<any[]> };
@@ -57,6 +58,7 @@ let transaction: {
     rollback: () => Promise<void>;
 };
 let q: q_type;
+let vector_store: VectorStore;
 let memories_table: string;
 let db: sqlite3.Database | null = null;
 
@@ -176,6 +178,11 @@ const many = (sql: string, p: any[] = []) =>
 run_async = exec;
 get_async = one;
 all_async = many;
+
+// Initialize VectorStore
+const sqlite_vector_table = "vectors";
+vector_store = new SQLiteVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
+
 transaction = {
     begin: () => exec("BEGIN TRANSACTION"),
     commit: () => exec("COMMIT"),
@@ -274,6 +281,7 @@ q = {
                 [segment],
             ),
     },
+    /*
     ins_vec: {
         run: (...p) =>
             exec(
@@ -281,6 +289,7 @@ q = {
                 p,
             ),
     },
+    */
     get_vec: {
         get: (id, sector) =>
             one("select v,dim from vectors where id=? and sector=?", [
@@ -306,7 +315,7 @@ q = {
             );
         },
     },
-    del_vec: { run: (...p) => exec("delete from vectors where id=?", p) },
+    // del_vec: { run: (...p) => exec("delete from vectors where id=?", p) },
     del_vec_sector: {
         run: (...p) =>
             exec("delete from vectors where id=? and sector=?", p),
@@ -417,4 +426,4 @@ export const log_maint_op = async (
     }
 };
 
-export { q, transaction, all_async, get_async, run_async, memories_table };
+export { q, transaction, all_async, get_async, run_async, memories_table, vector_store };

@@ -75,7 +75,7 @@ export function mem(app: any) {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
                 minSalience: b.filters?.min_score,
-                user_id: b.filters?.user_id,
+                user_id: b.filters?.user_id || b.user_id,
             };
             const m = await hsg_query(b.query, k, f);
             res.json({

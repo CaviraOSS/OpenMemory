@@ -4,9 +4,11 @@ import time
 import json
 from openmemory.core.cfg import env
 from threading import Lock
+from openmemory.core.vector_store import SQLiteVectorStore
 
 db = None
 db_lock = Lock()
+vector_store = None
 
 def init_db(custom_path=None):
     global db
@@ -84,6 +86,13 @@ def init_db(custom_path=None):
         
         db.commit()
         
+        global vector_store
+        vector_store = SQLiteVectorStore({
+            'exec': exec_query,
+            'one': one_query,
+            'many': many_query
+        }, "vectors")
+        
 def close_db():
     global db
     if db:
@@ -123,10 +132,10 @@ class Q:
         def run(*p):
             exec_query("insert into memories(id,user_id,segment,content,simhash,primary_sector,tags,meta,created_at,updated_at,last_seen_at,salience,decay_lambda,version,mean_dim,mean_vec,compressed_vec,feedback_score) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", p)
     
-    class ins_vec:
-        @staticmethod
-        def run(*p):
-            exec_query("insert into vectors(id,sector,user_id,v,dim) values(?,?,?,?,?)", p)
+    # class ins_vec:
+    #     @staticmethod
+    #     def run(*p):
+    #         exec_query("insert into vectors(id,sector,user_id,v,dim) values(?,?,?,?,?)", p)
             
     class create_single_waypoint: # This was missing in the JS dump but used in index.ts, likely ins_waypoint
         pass
@@ -141,10 +150,10 @@ class Q:
         def run(*p):
             exec_query("delete from memories where id=?", p)
 
-    class del_vec:
-        @staticmethod
-        def run(*p):
-            exec_query("delete from vectors where id=?", p)
+    # class del_vec:
+    #     @staticmethod
+    #     def run(*p):
+    #         exec_query("delete from vectors where id=?", p)
 
     class del_waypoints:
         @staticmethod
@@ -160,6 +169,21 @@ class Q:
         @staticmethod
         def all(sector, limit, offset):
             return many_query("select * from memories where primary_sector=? order by created_at desc limit ? offset ?", (sector, limit, offset))
+
+    class all_mem_by_user:
+        @staticmethod
+        def all(user_id, limit, offset):
+            return many_query("select * from memories where user_id=? order by created_at desc limit ? offset ?", (user_id, limit, offset))
+
+    class get_user:
+        @staticmethod
+        def get(user_id):
+            return one_query("select * from users where user_id=?", (user_id,))
+
+    class get_mem:
+        @staticmethod
+        def get(id):
+            return one_query("select * from memories where id=?", (id,))
 
     # ... Add other queries as needed ...
 
