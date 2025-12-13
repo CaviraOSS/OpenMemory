@@ -674,6 +674,13 @@ Expanded tables preserved.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/dflor003">
+                    <img src="https://avatars.githubusercontent.com/u/103017?v=4" width="100;" alt="dflor003"/>
+                    <br />
+                    <sub><b>Danil Flores</b></sub>
+                </a>
+            </td>
+            <td align="center">
                 <a href="https://github.com/Dhravya">
                     <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
                     <br />
@@ -694,6 +701,8 @@ Expanded tables preserved.
                     <sub><b>Joseph Goksu</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/lwsinclair">
                     <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
@@ -701,8 +710,6 @@ Expanded tables preserved.
                     <sub><b>Lawrence Sinclair</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/oantoshchenko">
                     <img src="https://avatars.githubusercontent.com/u/1749531?v=4" width="100;" alt="oantoshchenko"/>
