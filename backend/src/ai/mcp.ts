@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
+import { AsyncLocalStorage } from "async_hooks";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -74,7 +75,28 @@ const send_err = (
     }
 };
 
-const uid = (val?: string | null) => (val?.trim() ? val.trim() : undefined);
+const userIdStorage = new AsyncLocalStorage<string | undefined>();
+
+const extractUserIdFromHeaders = (headers: Record<string, string | string[]>): string | undefined => {
+    const xUserId = headers['x-user-id'];
+    if (!xUserId) return undefined;
+    
+    if (Array.isArray(xUserId)) {
+        return xUserId[0]?.trim() || undefined;
+    }
+    
+    const trimmed = xUserId.trim();
+    return trimmed || undefined;
+};
+
+const uid = (val?: string | null) => {
+    // 优先从请求头获取 user_id
+    const headerUserId = userIdStorage.getStore();
+    if (headerUserId) return headerUserId;
+    
+    // 其次从参数获取
+    return val?.trim() ? val.trim() : undefined;
+};
 
 export const create_mcp_srv = () => {
     const srv = new McpServer(
@@ -431,14 +453,19 @@ export const mcp = (app: any) => {
     const handle_req = async (req: any, res: any) => {
         try {
             await srv_ready;
-            const pay = await extract_pay(req);
-            if (!pay || typeof pay !== "object") {
-                send_err(res, -32600, "Request body must be a JSON object");
-                return;
-            }
-            console.log("[MCP] Incoming request:", JSON.stringify(pay));
-            set_hdrs(res);
-            await trans.handleRequest(req, res, pay);
+            
+            const headerUserId = extractUserIdFromHeaders(req.headers);
+            
+            await userIdStorage.run(headerUserId, async () => {
+                const pay = await extract_pay(req);
+                if (!pay || typeof pay !== "object") {
+                    send_err(res, -32600, "Request body must be a JSON object");
+                    return;
+                }
+                console.log("[MCP] Incoming request:", JSON.stringify(pay));
+                set_hdrs(res);
+                await trans.handleRequest(req, res, pay);
+            });
         } catch (error) {
             console.error("[MCP] Error handling request:", error);
             if (error instanceof SyntaxError) {
