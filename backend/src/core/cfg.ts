@@ -107,4 +107,5 @@ export const env = {
     summary_layers: num(process.env.OM_SUMMARY_LAYERS, 3),
     keyword_boost: num(process.env.OM_KEYWORD_BOOST, 2.5),
     keyword_min_length: num(process.env.OM_KEYWORD_MIN_LENGTH, 3),
+    db_init_delay_ms: num(process.env.OM_DB_INIT_DELAY_MS, 3000),
 };

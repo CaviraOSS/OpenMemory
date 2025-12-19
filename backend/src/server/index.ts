@@ -11,8 +11,8 @@ import { start_reflection } from "../memory/reflect";
 import { start_user_summary_reflection } from "../memory/user_summary";
 import { sendTelemetry } from "../core/telemetry";
 import { req_tracker_mw } from "./routes/dashboard";
-
-const ASC = `   ____                   __  __                                 
+const ASC = `
+   ____                   __  __                                
   / __ \\                 |  \\/  |                                
  | |  | |_ __   ___ _ __ | \\  / | ___ _ __ ___   ___  _ __ _   _ 
  | |  | | '_ \\ / _ \\ '_ \\| |\\/| |/ _ \\ '_ \` _ \\ / _ \\| '__| | | |
@@ -20,10 +20,6 @@ const ASC = `   ____                   __  __
   \\____/| .__/ \\___|_| |_|_|  |_|\\___|_| |_| |_|\\___/|_|   \\__, |
         | |                                                 __/ |
         |_|                                                |___/ `;
-
-// Database initialization delay in milliseconds
-// Allows time for SQLite connection to be fully established before running decay
-const DB_INIT_DELAY_MS = parseInt(process.env.OM_DB_INIT_DELAY_MS || '3000', 10);
 
 const app = server({ max_payload_size: env.max_payload_size });
 
@@ -117,7 +113,7 @@ setTimeout(async () => {
     } catch (error) {
         console.error("[INIT] Initial decay failed:", error);
     }
-}, DB_INIT_DELAY_MS);
+}, env.db_init_delay_ms);
 
 start_reflection();
 start_user_summary_reflection();
