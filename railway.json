@@ -2,7 +2,7 @@
     "$schema": "https://railway.app/railway.schema.json",
     "build": {
         "builder": "NIXPACKS",
-        "rootDir": "backend",
+        "rootDir": "packages/openmemory-js",
         "buildCommand": "npm install && npm run build"
     },
     "deploy": {

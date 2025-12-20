@@ -22,6 +22,6 @@
         }
     },
     "scripts": {
-        "postdeploy": "npm run build"
+        "postdeploy": "cd packages/openmemory-js && npm install && npm run build"
     }
 }

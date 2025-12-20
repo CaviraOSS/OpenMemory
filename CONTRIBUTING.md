@@ -54,63 +54,38 @@ People _love_ thorough bug reports. I'm not even kidding.
 - Git
 - Docker (optional, for containerized development)
 
-### Backend Development
+### Backend/Node SDK Development
 
 ```bash
 # Clone the repository
 git clone https://github.com/CaviraOSS/OpenMemory.git
 cd openmemory
 
-# Install backend dependencies
-cd backend
+# Install dependencies
+cd packages/openmemory-js
 npm install
 
 # Start development server
 npm run dev
 
-# Run tests
-npm test
-
-# Build for production
-npm run build
-```
-
-### JavaScript SDK Development
-
-```bash
-# Navigate to JS SDK
-cd SDK/javascript
-
-# Install dependencies
-npm install
-
-# Build the SDK
-npm run build
-
-# Run tests
-npm test
-
-# Run examples
-cd ../examples/js-sdk
-node basic-usage.js
+# Run Omnibus Test (Comprehensive Parity Check)
+npx tsx tests/test_omnibus.ts
 ```
 
 ### Python SDK Development
 
 ```bash
 # Navigate to Python SDK
-cd SDK/python
+cd packages/openmemory-py
 
-# Install development dependencies (optional)
+# Install development dependencies
 pip install -e .[dev]
 
-# Run tests
-python -m pytest tests/
-
-# Run examples
-cd ../examples/py-sdk
-python basic_usage.py
+# Run Omnibus Test
+pytest tests/test_omnibus.py
 ```
+
+
 
 ### Docker Development
 
@@ -176,28 +151,18 @@ docs(api): update HSG endpoint documentation
 
 #### Backend Tests
 
-```bash
-cd backend
-npm test                 # Run all tests
-npm run test:watch      # Run tests in watch mode
-npm run test:coverage   # Run tests with coverage
-```
-
-#### JavaScript SDK Tests
+#### Node.js SDK / Backend Tests
 
 ```bash
-cd SDK/javascript
-npm test                # Run Jest tests
-npm run test:e2e       # Run end-to-end tests
+cd packages/openmemory-js
+npx tsx tests/test_omnibus.ts   # Run Omnibus Test
 ```
 
 #### Python SDK Tests
 
 ```bash
-cd SDK/python
-python -m pytest tests/              # Run all tests
-python -m pytest tests/ -v          # Verbose output
-python -m pytest tests/ --cov       # With coverage
+cd packages/openmemory-py
+python -m pytest tests/test_omnibus.py  # Run Omnibus Test
 ```
 
 ### Architecture Guidelines

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  test-python:
+    name: Test Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install Dependencies
+        run: |
+          cd packages/openmemory-py
+          pip install -e .[dev]
+          
+      - name: Run Omnibus Test (Deep Verify)
+        run: |
+          cd packages/openmemory-py
+          pytest tests/test_omnibus.py -v
+          
+  test-node:
+    name: Test Node.js SDK
+    runs-on: ubuntu-latest
+    env:
+      OM_DB_URL: "sqlite:///:memory:"
+      OM_TIER: "fast"
+      OM_VEC_DIM: "1536"
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          
+      - name: Install Dependencies
+        run: |
+          cd packages/openmemory-js
+          npm ci
+          
+      - name: Run Verification Test
+        run: |
+          cd packages/openmemory-js
+          npx tsx tests/test_omnibus.ts

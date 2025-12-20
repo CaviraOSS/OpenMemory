@@ -21,3 +21,6 @@ exports
 *.vsix
 __pycache__
 test
+*.db
+hits.json
+debug_*.log

@@ -11,7 +11,7 @@ OpenMemory v1.2 introduces per-user memory isolation with `user_id` fields. The 
 Run the migration before starting your server:
 
 ```bash
-cd backend
+cd packages/openmemory-js
 npm run migrate
 ```
 
@@ -46,7 +46,7 @@ npm run dev
 npm start
 ```
 
-**Location:** `backend/src/core/migrate.ts`
+**Location:** `packages/openmemory-js/src/migrate.ts`
 
 ---
 

@@ -52,10 +52,9 @@ OpenMemory is divided into modular components:
 
 | Module      | Lead              | Description                               |
 | ----------- | ----------------- | ----------------------------------------- |
-| `backend/`  | Core Team         | memory engine                             |
-| `sdk-js/`   | JS Maintainer     | JavaScript SDK for web and Node           |
-| `sdk-py/`   | Python Maintainer | Python SDK for researchers and AI devs    |
-| `examples/` | Community         | Reference implementations and agent demos |
+| `packages/openmemory-js` | Core Team / JS Maintainer | Memory Engine + Node.js SDK      |
+| `packages/openmemory-py` | Python Maintainer         | Python SDK                       |
+| `examples/`             | Community                 | Reference implementations & demos|
 
 Each module may evolve independently as long as compatibility with the API contracts is maintained.
 

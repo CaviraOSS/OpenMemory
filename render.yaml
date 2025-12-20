@@ -2,7 +2,7 @@ services:
   - type: web
     name: openmemory
     env: node
-    rootDir: backend
+    rootDir: packages/openmemory-js
     buildCommand: npm install && npm run build
     startCommand: npm start
     plan: free

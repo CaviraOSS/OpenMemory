@@ -1,14 +1,5 @@
 # Security Policy
 
-## Supported Versions
-
-We actively support the following versions of OpenMemory with security updates:
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.0.x   | :white_check_mark: |
-| 1.x.x   | :x:                |
-
 ## Reporting a Vulnerability
 
 We take the security of OpenMemory seriously. If you believe you have found a security vulnerability, please report it to us as described below.

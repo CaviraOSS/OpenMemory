@@ -2,17 +2,17 @@
     "version": 2,
     "builds": [
         {
-            "src": "backend/dist/index.js",
+            "src": "packages/openmemory-js/dist/index.js",
             "use": "@vercel/node"
         }
     ],
     "routes": [
         {
             "src": "/(.*)",
-            "dest": "backend/dist/index.js"
+            "dest": "packages/openmemory-js/dist/index.js"
         }
     ],
-    "buildCommand": "cd backend && npm install && npm run build",
+    "buildCommand": "cd packages/openmemory-js && npm install && npm run build",
     "env": {
         "NODE_ENV": "production"
     }

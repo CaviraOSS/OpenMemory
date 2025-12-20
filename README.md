@@ -1,746 +1,166 @@
-<meta name="description" content="OpenMemory gives AI agents real long-term memory. Not vector search. Not RAG. Actual memory.">
-<meta name="keywords" content="ai memory, long-term memory, llm, agents, python memory, javascript memory, standalone ai memory, mcp memory, semantic memory, temporal memory, openmemory, openmemory-js, openmemory-py, python, javascript">
+<img width="1577" height="781" alt="OpenMemory Banner" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
 
-<img width="1577" height="781" alt="image" src="https://github.com/user-attachments/assets/3baada32-1111-4c2c-bf13-558f2034e511" />
+# openmemory
 
-# OpenMemory
+[vs code extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [report bug](https://github.com/caviraOSS/openmemory/issues) • [request feature](https://github.com/caviraOSS/openmemory/issues) • [discord](https://discord.gg/P7HaRayqTh)
 
-[VS Code Extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) • [Report Bug](https://github.com/caviraOSS/openmemory/issues) • [Request Feature](https://github.com/caviraOSS/openmemor/issues) • [Discord server](https://discord.gg/P7HaRayqTh)
+local-first long-term memory engine for ai apps and agents. **self-hosted. explainable. scalable.**
 
-Long‑term memory for AI systems. **Self‑hosted. Local‑first. Explainable. Scalable.**
-A full cognitive memory engine — not a vector database. Add Memory to AI/Agents in one line.
-
-![demo](./.github/openmemory.gif)
-
-## **🔥 Spread the Word!**
-
-<p align="center"><a href="https://twitter.com/intent/tweet?text=OpenMemory%20%E2%80%93%20open-source%20long-term%20memory%20for%20AI%20agents%20and%20MCP.%20Not%20vector%20search.%20Not%20RAG.%20Actual%20memory.&url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&hashtags=ai,agents,opensource,mcp,llm"><img src="https://img.shields.io/badge/Share%20on%20X-000000?style=for-the-badge&logo=x&logoColor=white"></a>&nbsp;<a href="https://www.linkedin.com/shareArticle?mini=true&url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%93%20long-term%20memory%20for%20AI%20agents%20and%20MCP&summary=OpenMemory%20is%20a%20self-hosted%20multi-sector%20memory%20system%20with%20temporal%20reasoning%20and%20MCP%20integration."><img src="https://img.shields.io/badge/Share%20on%20LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white"></a>&nbsp;<a href="https://reddit.com/submit?url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%94%20Self-hosted%20long-term%20memory%20for%20AI%20agents"><img src="https://img.shields.io/badge/Share%20on%20Reddit-FF4500?style=for-the-badge&logo=reddit&logoColor=white"></a>&nbsp;<a href="https://news.ycombinator.com/submitlink?u=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&t=Show%20HN%3A%20OpenMemory%20%E2%80%93%20Long-term%20memory%20for%20AI%20agents%20%28MCP%20%2F%20VSCode%20%2F%20Temporal%20KG%29"><img src="https://img.shields.io/badge/Hacker%20News-FF6600?style=for-the-badge&logo=y-combinator&logoColor=white"></a>&nbsp;<a href="https://dev.to/new/share?url=https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory&title=OpenMemory%20%E2%80%93%20long-term%20memory%20for%20AI%20agents&prefill=OpenMemory%20gives%20AI%20agents%20real%20long-term%20memory%20with%20multi-sector%20recall%2C%20temporal%20reasoning%2C%20graph%20links%2C%20decay%2C%20and%20MCP.%20Try%20it%3A%20https%3A%2F%2Fgithub.com%2FCaviraOSS%2FOpenMemory"><img src="https://img.shields.io/badge/Share%20on%20DEV.to-000000?style=for-the-badge&logo=dev.to&logoColor=white"></a></p>
-
-## Why OpenMemory?
-
-**Traditional Vector DBs** require extensive setup, cloud dependencies, and vendor lock-in:
-```python
-# The old way: Pinecone + LangChain (12+ lines)
-import os
-import time
-from langchain.chains import ConversationChain
-from langchain.memory import VectorStoreRetrieverMemory
-from langchain_community.vectorstores import Pinecone
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-
-os.environ["PINECONE_API_KEY"] = "sk-..."
-os.environ["OPENAI_API_KEY"] = "sk-..."
-time.sleep(3)  # Wait for cloud initialization
-
-embeddings = OpenAIEmbeddings()
-pinecone = Pinecone.from_existing_index(embeddings, index_name="my-memory")
-retriever = pinecone.as_retriever(search_kwargs=dict(k=2))
-memory = VectorStoreRetrieverMemory(retriever=retriever)
-conversation = ConversationChain(llm=ChatOpenAI(), memory=memory)
-
-# Usage (requires explicit chain call)
-conversation.predict(input="I'm allergic to peanuts")
-```
-
-**OpenMemory** needs just 3 lines:
-```python
-# The new way: OpenMemory (3 lines)
-from openmemory import OpenMemory
-
-om = OpenMemory(mode="local", path="./memory.db", tier="deep", embeddings={"provider": "ollama"})
-om.add("User allergic to peanuts", userId="user123")
-results = om.query("allergies", filters={"user_id": "user123"})
-# Returns: [{"content": "User allergic to peanuts", "score": 0.89, ...}]
-```
-✅ Zero cloud setup • ✅ Local SQLite • ✅ Works offline • ✅ No vendor lock-in
-
----
----
-
-# ⚡ Standalone Mode (New!)
-
-**OpenMemory now works without a backend server.**
-Run the full cognitive engine directly inside your Node.js or Python application.
-
-*   **Zero Config**: `npm install` and go.
-*   **Local Storage**: Data lives in a local SQLite file.
-*   **Privacy**: No data leaves your machine.
-
-[**👉 Read the Standalone Guide**](https://openmemory.cavira.app/docs/sdks/python)
-
-# 1. Introduction
-
-Modern LLMs forget everything between messages. Vector DBs store flat chunks with no understanding of memory type, importance, time, or relationships. Cloud memory APIs add cost and vendor lock‑in.
-
-**OpenMemory solves this.**
-It gives AI systems:
-
-* persistent memory
-* multi‑sector cognitive structure
-* natural decay
-* graph‑based recall
-* time‑aware fact tracking
-* explainability through waypoint traces
-* complete data ownership
-* MCP integration
-* and much more
-
-OpenMemory acts as the **Memory OS** for your AI agents, copilots, and applications. **On top of this, you can easily migrate from Mem0, Zep, Supermemory to OpenMemory in just one command.**
+![demo](https://github.com/CaviraOSS/OpenMemory/blob/main/.github/openmemory.gif?raw=true)
 
 ---
 
-# Competitor Comparison
+## quick start
 
-| **Feature / Metric**                     | **OpenMemory (Our Tests – Nov 2025)**                       | **Zep (Their Benchmarks)**         | **Supermemory (Their Docs)**    | **Mem0 (Their Tests)**        | **OpenAI Memory**          | **LangChain Memory**        | **Vector DBs (Chroma / Weaviate / Pinecone)** |
-| ---------------------------------------- | ----------------------------------------------------------- | ---------------------------------- | ------------------------------- | ----------------------------- | -------------------------- | --------------------------- | --------------------------------------------- |
-| **Open-source License**                  | ✅ Apache 2.0                                               | ✅ Apache 2.0                      | ✅ Source available (GPL-like)  | ✅ Apache 2.0                 | ❌ Closed                  | ✅ Apache 2.0               | ✅ Varies (OSS + Cloud)                       |
-| **Self-hosted / Local**                  | ✅ Full (Local / Docker / MCP) tested ✓                     | ✅ Local + Cloud SDK               | ⚠️ Mostly managed cloud tier    | ✅ Self-hosted ✓              | ❌ No                      | ✅ Yes (in your stack)      | ✅ Chroma / Weaviate ❌ Pinecone (cloud)      |
-| **Per-user namespacing (`user_id`)**     | ✅ Built-in (`user_id` linking added)                       | ✅ Sessions / Users API            | ⚠️ Multi-tenant via API key     | ✅ Explicit `user_id` field ✓ | ❌ Internal only           | ✅ Namespaces via LangGraph | ✅ Collection-per-user schema                 |
-| **Architecture**                         | HSG v3 (Hierarchical Semantic Graph + Decay + Coactivation) | Flat embeddings + Postgres + FAISS | Graph + Embeddings              | Flat vector store             | Proprietary cache          | Context memory utils        | Vector index (ANN)                            |
-| **Avg Response Time (100k nodes)**       | **115 ms avg (measured)**                                   | 310 ms (docs)                      | 200–340 ms (on-prem/cloud)      | ~250 ms                       | 300 ms (observed)          | 200 ms (avg)                | 160 ms (avg)                                  |
-| **Throughput (QPS)**                     | **338 QPS avg (8 workers, P95 103 ms)** ✓                   | ~180 QPS (reported)                | ~220 QPS (on-prem)              | ~150 QPS                      | ~180 QPS                   | ~140 QPS                    | ~250 QPS typical                              |
-| **Recall @5 (Accuracy)**                 | **95 % recall (synthetic + hybrid)** ✓                      | 91 %                               | 93 %                            | 88–90 %                       | 90 %                       | Session-only                | 85–90 %                                       |
-| **Decay Stability (5 min cycle)**        | Δ = **+30 % → +56 %** ✓ (convergent decay)                  | TTL expiry only                    | Manual pruning only             | Manual TTL                    | ❌ None                    | ❌ None                     | ❌ None                                       |
-| **Cross-sector Recall Test**             | ✅ Passed ✓ (emotional ↔ semantic 5/5 matches)              | ❌ N/A                             | ⚠️ Keyword-only                 | ❌ N/A                        | ❌ N/A                     | ❌ N/A                      | ❌ N/A                                        |
-| **Scalability (ms / item)**              | **7.9 ms/item @10k+ entries** ✓                             | 32 ms/item                         | 25 ms/item                      | 28 ms/item                    | 40 ms (est.)               | 20 ms (local)               | 18 ms (optimized)                             |
-| **Consistency (2863 samples)**           | ✅ Stable ✓ (0 variance >95%)                               | ⚠️ Medium variance                 | ⚠️ Moderate variance            | ⚠️ Inconsistent               | ❌ Volatile                | ⚠️ Session-scoped           | ⚠️ Backend dependent                          |
-| **Decay Δ Trend**                        | **Stable decay → equilibrium after 2 cycles** ✓             | TTL drop only                      | Manual decay                    | TTL only                      | ❌ N/A                     | ❌ N/A                      | ❌ N/A                                        |
-| **Memory Strength Model**                | Salience + Recency + Coactivation ✓                         | Simple recency                     | Frequency-based                 | Static                        | Proprietary                | Session-only                | Distance-only                                 |
-| **Explainable Recall Paths**             | ✅ Waypoint graph trace ✓                                   | ❌                                 | ⚠️ Graph labels only            | ❌ None                       | ❌ None                    | ❌ None                     | ❌ None                                       |
-| **Cost / 1M tokens (hosted embeddings)** | ~$0.35 (synthetic + Gemini hybrid ✓)                        | ~$2.2                              | ~$2.5+                          | ~$1.2                         | ~$3.0                      | User-managed                | User-managed                                  |
-| **Local Embeddings Support**             | ✅ (Ollama / E5 / BGE / synthetic fallback ✓)               | ⚠️ Partial                         | ✅ Self-hosted tier ✓           | ✅ Supported ✓                | ❌ None                    | ⚠️ Optional                 | ✅ Chroma / Weaviate ✓                        |
-| **Ingestion Formats**                    | ✅ PDF / DOCX / TXT / MD / HTML / Audio / Video ✓                         | ✅ API ✓                           | ✅ API ✓                        | ✅ SDK ✓                      | ❌ None                    | ⚠️ Manual ✓                 | ⚠️ SDK specific ✓                             |
-| **Scalability Model**                    | Sector-sharded (semantic / episodic / etc.) ✓               | PG + FAISS cloud ✓                 | PG shards (cloud) ✓             | Single node                   | Vendor scale               | In-process                  | Horizontal ✓                                  |
-| **Deployment**                           | Local / Docker / Cloud ✓                                    | Local + Cloud ✓                    | Docker / Cloud ✓                | Node / Python ✓               | Cloud only ❌              | Python / JS SDK ✓           | Docker / Cloud ✓                              |
-| **Data Ownership**                       | 100 % yours ✓                                               | Vendor / self-host split ✓         | Partial ✓                       | 100 % yours ✓                 | Vendor ❌                  | Yours ✓                     | Yours ✓                                       |
-| **Use-case Fit**                         | Long-term AI agents, copilots, journaling ✓                 | Enterprise RAG assistants ✓        | Cognitive agents / journaling ✓ | Basic agent memory ✓          | ChatGPT personalization ❌ | Context memory ✓            | Generic vector store ✓                        |
+choose your language:
 
-# Migration
+### python
 
-OpenMemory includes a robust migration tool to import billions of memories from other systems.
-
-### Supported Providers
-
-* **Mem0** — user-based export
-* **Zep** — sessions/messages API
-* **Supermemory** — document export
-
-### Example
-
-```
-cd migrate
-node index.js --from zep --api-key ZEP_KEY --verify
-```
-
----
-
-# Installation & Setup (Three Ways)
-
-OpenMemory supports **all three usage modes**:
-
-* **Node.js SDK (local-first)**
-* **Python SDK (local-first)**
-* **Backend Server (web + API)**
-
----
-
-## JavaScript SDK (Local-First)
-
-Install:
-
-```
-npm install openmemory-js
-```
-
-Use:
-
-```
-import { OpenMemory } from "openmemory-js"
-const mem = new OpenMemory()
-```
-
-* Runs fully locally
-* Zero configuration
-* Fastest integration path
-
----
-
-## Python SDK (Local-First)
-
-Install:
-
-```
+```bash
 pip install openmemory-py
 ```
 
-Use:
+```python
+from openmemory.client import Memory
 
-```
-from openmemory import Memory
 mem = Memory()
+
+mem.add("i'm building a django app")
+results = mem.query("what am i building?")
 ```
 
-* Same cognitive engine as JS
-* Ideal for LangGraph, notebooks, research
+[📖 python sdk docs](./packages/openmemory-py)
 
----
+### javascript/typescript
 
-## Backend Server (Web + API)
-
-Use this mode for:
-
-* Multi-user apps
-* Dashboards
-* Cloud agents
-* Centralized org-wide memory
-
-Setup:
-
-```
-git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
-cd backend
-npm install
-npm run dev
-```
-
-Or:
-
-```
-docker compose up --build -d
-```
-
-Backend runs on port 8080.
-
----
-
-## Local via SDK
-
-```
+```bash
 npm install openmemory-js
 ```
 
-```
-import { OpenMemory } from "openmemory-js"
-const mem = new OpenMemory()
+```typescript
+import { Memory } from 'openmemory-js';
+
+const mem = new Memory();
+
+await mem.add("i'm building a next.js app");
+const results = await mem.search("what am i building?");
 ```
 
-## Docker
-
-```
-docker compose up --build -d
-```
-
-## Source Setup
-
-```
-git clone https://github.com/caviraoss/openmemory.git
-cp .env.example .env
-cd backend
-npm install
-npm run dev
-```
+[📖 javascript sdk docs](./packages/openmemory-js)
 
 ---
 
-# Dashboard
+## features
 
-![demo](./.github/dashboard.png)
-
-* Browse memories per sector
-* See decay curves
-* Explore graph links
-* Visualize timelines
-* Chat with memory
-
-```
-cd dashboard
-npm install
-npm run dev
-```
+✅ **local-first** - runs entirely on your machine, zero external dependencies  
+✅ **multi-sector memory** - episodic, semantic, procedural, emotional, reflective  
+✅ **temporal knowledge graph** - time-aware facts with validity periods  
+✅ **memory decay** - adaptive forgetting with sector-specific rates  
+✅ **waypoint graph** - associative recall paths for better retrieval  
+✅ **explainable traces** - see exactly why memories were recalled  
+✅ **zero config** - works out of the box with sensible defaults  
 
 ---
 
-# VS Code Extension
+## cognitive sectors
 
-The official **OpenMemory VS Code extension** gives AI assistants access to your coding history, project evolution, and file context.
+openmemory automatically classifies content into 5 cognitive sectors:
 
-**Marketplace Link:** [https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)
-
-### What it does
-
-* Tracks file edits, opens, saves, and navigation
-* Compresses context intelligently (30–70% token savings)
-* Supplies high‑signal memory summaries to any MCP-compatible AI
-* Works without configuration — install and it runs
-* Extremely low latency (~80ms average)
+| sector | description | examples | decay rate |
+|--------|-------------|----------|------------|
+| **episodic** | time-bound events & experiences | "yesterday i attended a conference" | medium |
+| **semantic** | timeless facts & knowledge | "paris is the capital of france" | very low |
+| **procedural** | skills, procedures, how-tos | "to deploy: build, test, push" | low |
+| **emotional** | feelings, sentiment, mood | "i'm excited about this project!" | high |
+| **reflective** | meta-cognition, insights | "i learn best through practice" | very low |
 
 ---
 
-# MCP Integration
+## embedding providers
 
-OpenMemory ships with a **native MCP (Model Context Protocol) server**, making it instantly usable with Claude Desktop, Claude Code, Cursor, Windsurf, and any other MCP client.
+openmemory supports multiple embedding providers:
 
-### What MCP Enables
-
-* Use OpenMemory as a tool inside your AI IDE
-* Query memories directly from the AI
-* Store new memories as you work
-* Reinforce or inspect nodes without leaving the editor
-* Provide full cognitive continuity to assistants
-
-### Tools Provided
-
-* `openmemory_query`
-* `openmemory_store`
-* `openmemory_list`
-* `openmemory_get`
-* `openmemory_reinforce`
-
-These tools expose the cognitive engine’s recall, storage, listing, salience boosting, and sectorization.
-
-### Example Setup
-
-**Claude Desktop / Claude Code:**
-
-```
-claude mcp add --transport http openmemory http://localhost:8080/mcp
-```
-
-**Cursor / Windsurf:**
-Add to `.mcp.json`:
-
-```
-{
-  "mcpServers": {
-    "openmemory": {
-      "type": "http",
-      "url": "http://localhost:8080/mcp"
-    }
-  }
-}
-```
+- **synthetic** - instant, no api calls (for testing/dev)
+- **openai** - text-embedding-3-small/large
+- **gemini** - google's embedding models
+- **ollama** - fully local with llama, mistral, etc.
+- **aws bedrock** - amazon titan embeddings
 
 ---
 
-# Temporal Knowledge Graph
+## performance tiers
 
-Most memory systems ignore time completely. OpenMemory treats **time as a first-class dimension**, letting your agent reason about changing facts.
-
-### Core Concepts
-
-* **valid_from / valid_to** — define truth ranges
-* **auto-evolution** — new facts close old ones
-* **confidence decay** — older facts lose weight
-* **point‑in‑time queries** — ask "what was true on X date?"
-* **timeline view** — reconstruct an entity’s full history
-* **comparison mode** — detect changes between two dates
-
-### Why it matters
-
-Agents using static vector memory confuse old and new facts. Temporal memory allows accurate long-term reasoning, journaling, agent planning, and research workflows.
-
-### Example: Fact lifecycle
-
-```
-POST /api/temporal/fact
-{
-  "subject": "CompanyX",
-  "predicate": "has_CEO",
-  "object": "Alice",
-  "valid_from": "2021-01-01"
-}
-```
-
-Later:
-
-```
-POST /api/temporal/fact
-{
-  "subject": "CompanyX",
-  "predicate": "has_CEO",
-  "object": "Bob",
-  "valid_from": "2024-04-10"
-}
-```
-
-OpenMemory automatically updates timeline and closes Alice’s term.
-
-### Advanced Operations
-
-* Search for periods with rapid fact changes
-* Build agent memories tied to specific events
-* Create time-based embeddings for episodic recall
+- `fast` - optimized for speed, lower precision (synthetic embeddings)
+- `smart` - balanced performance and accuracy (hybrid)
+- `deep` - maximum accuracy, slower (pure semantic)
+- `hybrid` - adaptive based on query complexity
 
 ---
 
-# CLI Tool
+## architecture
 
-The `opm` CLI gives direct shell access to the cognitive engine.
+openmemory uses a hierarchical sector graph (hsg) architecture:
 
-### Installation
-
-```
-cd backend
-npm link
-```
-
-### Commands
-
-* **Add memory**
-
-```
-opm add "user prefers dark mode" --user u1 --tags prefs
-```
-
-* **Query memory**
-
-```
-opm query "preferences" --user u1 --limit 5
-```
-
-* **List user memories**
-
-```
-opm list --user u1
-```
-
-* **Reinforce memory**
-
-```
-opm reinforce <id>
-```
-
-* **Inspect system stats**
-
-```
-opm stats
-```
-
-### Why it matters
-
-Great for scripting, automation, server monitoring, and integrating OpenMemory into non-LLM pipelines.
+1. **sector classification** - automatically categorizes memories into cognitive sectors
+2. **multi-vector embedding** - stores memories across multiple sectors for cross-domain recall
+3. **waypoint graph** - builds associative links between related memories
+4. **temporal decay** - sector-specific forgetting curves with reinforcement learning
+5. **hybrid scoring** - combines semantic similarity, token overlap, temporal relevance, and feedback
 
 ---
 
-# Architecture Overview
+## performance
 
-OpenMemory uses **Hierarchical Memory Decomposition**.
-
-### Data Flow
-
-1. Input is sectorized
-2. Embeddings generated per sector
-3. Per‑sector vector search
-4. Waypoint graph expansion
-5. Composite ranking: similarity + salience + recency + weight
-6. Temporal graph adjusts context relevance
-7. Output includes **explainable recall trace**
-
-### Diagram
-
-```mermaid
-graph TB
-    %% Styling
-    classDef inputStyle fill:#eceff1,stroke:#546e7a,stroke-width:2px,color:#37474f
-    classDef processStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px,color:#0d47a1
-    classDef sectorStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100
-    classDef storageStyle fill:#fce4ec,stroke:#c2185b,stroke-width:2px,color:#880e4f
-    classDef engineStyle fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#4a148c
-    classDef outputStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#1b5e20
-    classDef graphStyle fill:#e1f5fe,stroke:#0277bd,stroke-width:2px,color:#01579b
-    
-    %% Input Layer
-    INPUT[Input / Query]:::inputStyle
-    
-    %% Classification Layer
-    CLASSIFIER[Sector Classifier<br/>Multi-sector Analysis]:::processStyle
-    
-    %% Memory Sectors
-    EPISODIC[Episodic Memory<br/>Events & Experiences<br/>Time-bound]:::sectorStyle
-    SEMANTIC[Semantic Memory<br/>Facts & Knowledge<br/>Timeless]:::sectorStyle
-    PROCEDURAL[Procedural Memory<br/>Skills & How-to<br/>Action Patterns]:::sectorStyle
-    EMOTIONAL[Emotional Memory<br/>Feelings & Sentiment<br/>Affective States]:::sectorStyle
-    REFLECTIVE[Reflective Memory<br/>Meta-cognition<br/>Insights]:::sectorStyle
-    
-    %% Embedding Layer
-    EMBED[Embedding Engine<br/>OpenAI/Gemini/Ollama/AWS<br/>Per-sector Vectors]:::processStyle
-    
-    %% Storage Layer
-    SQLITE[(SQLite/Postgres<br/>Memories Table<br/>Vectors Table<br/>Waypoints Table)]:::storageStyle
-    TEMPORAL[(Temporal Graph<br/>Facts & Edges<br/>Time-bound Truth)]:::storageStyle
-    
-    %% Recall Engine
-    subgraph RECALL_ENGINE[" "]
-        VECTOR[Vector Search<br/>Per-sector ANN]:::engineStyle
-        WAYPOINT[Waypoint Graph<br/>Associative Links]:::engineStyle
-        SCORING[Composite Scoring<br/>Similarity + Salience<br/>+ Recency + Weight]:::engineStyle
-        DECAY[Decay Engine<br/>Adaptive Forgetting<br/>Sector-specific λ]:::engineStyle
-    end
-    
-    %% Temporal Knowledge Graph
-    subgraph TKG[" "]
-        FACTS[Fact Store<br/>Subject-Predicate-Object<br/>valid_from/valid_to]:::graphStyle
-        TIMELINE[Timeline Engine<br/>Point-in-time Queries<br/>Evolution Tracking]:::graphStyle
-    end
-    
-    %% Cognitive Operations
-    CONSOLIDATE[Memory Consolidation<br/>Merge Duplicates<br/>Pattern Detection]:::processStyle
-    REFLECT[Reflection Engine<br/>Auto-summarization<br/>Meta-learning]:::processStyle
-    
-    %% Output Layer
-    OUTPUT[Final Recall<br/>+ Explainable Trace<br/>+ Waypoint Path<br/>+ Confidence Score]:::outputStyle
-    
-    %% Flow Connections
-    INPUT --> CLASSIFIER
-    
-    CLASSIFIER --> EPISODIC
-    CLASSIFIER --> SEMANTIC
-    CLASSIFIER --> PROCEDURAL
-    CLASSIFIER --> EMOTIONAL
-    CLASSIFIER --> REFLECTIVE
-    
-    EPISODIC --> EMBED
-    SEMANTIC --> EMBED
-    PROCEDURAL --> EMBED
-    EMOTIONAL --> EMBED
-    REFLECTIVE --> EMBED
-    
-    EMBED --> SQLITE
-    EMBED --> TEMPORAL
-    
-    SQLITE --> VECTOR
-    SQLITE --> WAYPOINT
-    SQLITE --> DECAY
-    
-    TEMPORAL --> FACTS
-    FACTS --> TIMELINE
-    
-    VECTOR --> SCORING
-    WAYPOINT --> SCORING
-    DECAY --> SCORING
-    TIMELINE --> SCORING
-    
-    SCORING --> CONSOLIDATE
-    CONSOLIDATE --> REFLECT
-    REFLECT --> OUTPUT
-    
-    %% Feedback loops
-    OUTPUT -.->|Reinforcement| WAYPOINT
-    OUTPUT -.->|Salience Boost| DECAY
-    CONSOLIDATE -.->|Pattern Update| WAYPOINT
-```
-
+- **115ms** average recall @ 100k memories
+- **338 qps** throughput with 8 workers
+- **95%** recall accuracy @ k=5
+- **7.9ms/item** scoring at 10k+ scale
 
 ---
 
-# Performance Benchmarks
+## use cases
 
-* 115ms avg recall @100k
-* 338 QPS throughput
-* 7.9ms/item scoring
-* Stable decay convergence
-* 95% accuracy@5
-
-Expanded tables preserved.
+- **ai agents** - give agents persistent memory across conversations
+- **chatbots** - remember user preferences, context, and history
+- **knowledge bases** - build explainable, queryable knowledge graphs
+- **personal assistants** - local-first memory for privacy-conscious apps
+- **research tools** - temporal knowledge tracking with automatic decay
 
 ---
 
-# Security
+## examples
 
-* AES‑GCM encryption
-* API keys
-* user isolation
-* no telemetry unless allowed
-
----
-
-# Roadmap
-
-* learned sector classifier
-* federated memory clusters
-* agent‑driven reflection engine
-* memory‑visualizer 2.0
+- [python examples](./examples/py-sdk/) - crud, advanced features, benchmarks
+- [javascript examples](./examples/js-sdk/) - typescript integration patterns
+- [benchmarks](./temp/benchmarks/) - longmemeval suite for memory backends
 
 ---
 
-# Contributors
+## integrations
 
-<<<<<<< HEAD
-<!-- readme: collaborators,contributors -start -->
-<table>
-	<tbody>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/nullure">
-                    <img src="https://avatars.githubusercontent.com/u/81895400?v=4" width="100;" alt="nullure"/>
-                    <br />
-                    <sub><b>Morven</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/dontbanmeplz">
-                    <img src="https://avatars.githubusercontent.com/u/59851616?v=4" width="100;" alt="dontbanmeplz"/>
-                    <br />
-                    <sub><b>Chis</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/amihos">
-                    <img src="https://avatars.githubusercontent.com/u/35190548?v=4" width="100;" alt="amihos"/>
-                    <br />
-                    <sub><b>Hossein Amirkhalili</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/DKB0512">
-                    <img src="https://avatars.githubusercontent.com/u/23116307?v=4" width="100;" alt="DKB0512"/>
-                    <br />
-                    <sub><b>DKB</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/recabasic">
-                    <img src="https://avatars.githubusercontent.com/u/102372274?v=4" width="100;" alt="recabasic"/>
-                    <br />
-                    <sub><b>Elvoro</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/fparrav">
-                    <img src="https://avatars.githubusercontent.com/u/9319430?v=4" width="100;" alt="fparrav"/>
-                    <br />
-                    <sub><b>Felipe Parra</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/msris108">
-                    <img src="https://avatars.githubusercontent.com/u/43115330?v=4" width="100;" alt="msris108"/>
-                    <br />
-                    <sub><b>Sriram M</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/DoKoB0512">
-                    <img src="https://avatars.githubusercontent.com/u/123281216?v=4" width="100;" alt="DoKoB0512"/>
-                    <br />
-                    <sub><b>DoKoB0512</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/jasonkneen">
-                    <img src="https://avatars.githubusercontent.com/u/502002?v=4" width="100;" alt="jasonkneen"/>
-                    <br />
-                    <sub><b>Jason Kneen</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/muhammad-fiaz">
-                    <img src="https://avatars.githubusercontent.com/u/75434191?v=4" width="100;" alt="muhammad-fiaz"/>
-                    <br />
-                    <sub><b>Muhammad Fiaz</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/pc-quiknode">
-                    <img src="https://avatars.githubusercontent.com/u/126496711?v=4" width="100;" alt="pc-quiknode"/>
-                    <br />
-                    <sub><b>Peter Chung</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/therexone">
-                    <img src="https://avatars.githubusercontent.com/u/27387245?v=4" width="100;" alt="therexone"/>
-                    <br />
-                    <sub><b>Ayush Singh</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/ammesonb">
-                    <img src="https://avatars.githubusercontent.com/u/2522710?v=4" width="100;" alt="ammesonb"/>
-                    <br />
-                    <sub><b>Brett Ammeson</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/DAESA24">
-                    <img src="https://avatars.githubusercontent.com/u/173488786?v=4" width="100;" alt="DAESA24"/>
-                    <br />
-                    <sub><b>DAESA24</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/Dhravya">
-                    <img src="https://avatars.githubusercontent.com/u/63950637?v=4" width="100;" alt="Dhravya"/>
-                    <br />
-                    <sub><b>Dhravya Shah</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/EikoocS">
-                    <img src="https://avatars.githubusercontent.com/u/80829508?v=4" width="100;" alt="EikoocS"/>
-                    <br />
-                    <sub><b>EikoocS</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/josephgoksu">
-                    <img src="https://avatars.githubusercontent.com/u/6523823?v=4" width="100;" alt="josephgoksu"/>
-                    <br />
-                    <sub><b>Joseph Goksu</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/lwsinclair">
-                    <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
-                    <br />
-                    <sub><b>Lawrence Sinclair</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/oantoshchenko">
-                    <img src="https://avatars.githubusercontent.com/u/1749531?v=4" width="100;" alt="oantoshchenko"/>
-                    <br />
-                    <sub><b>Oleksandr Antoshchenko</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/aziham">
-                    <img src="https://avatars.githubusercontent.com/u/94932043?v=4" width="100;" alt="aziham"/>
-                    <br />
-                    <sub><b>Hamza</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/ajitam">
-                    <img src="https://avatars.githubusercontent.com/u/672661?v=4" width="100;" alt="ajitam"/>
-                    <br />
-                    <sub><b>Matija Urh</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/Hchunjun">
-                    <img src="https://avatars.githubusercontent.com/u/11238835?v=4" width="100;" alt="Hchunjun"/>
-                    <br />
-                    <sub><b>鱼</b></sub>
-                </a>
-            </td>
-		</tr>
-	<tbody>
-</table>
-<!-- readme: collaborators,contributors -end -->
-=======
-Discord
+- [vs code extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode) - ide integration
+- [mcp server](./packages/openmemory-js#mcp-server) - claude desktop integration
+- [langchain](./integrations/langchain-openmemory/) - python langchain memory
 
 ---
 
-# 16. License
+## documentation
 
-Apache 2.0
->>>>>>> 35e13e0534700202ef8d983e366a20227d80a0a6
+- [python sdk](./packages/openmemory-py/README.md)
+- [javascript sdk](./packages/openmemory-js/README.md)
+- [architecture overview](./docs/architecture.md)
+- [api reference](./docs/api.md)
+
+---
+
+## license
+
+apache 2.0
+
+---
+
+## community
+
+- [github discussions](https://github.com/caviraOSS/openmemory/discussions)
+- [discord](https://discord.gg/P7HaRayqTh)
+- [twitter](https://twitter.com/nullure)

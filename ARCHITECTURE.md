@@ -56,7 +56,7 @@ OpenMemory is a self-hosted AI memory engine implementing **Hierarchical Memory 
 
 ## Core Components
 
-### 1. REST API Server (`backend/src/server/`)
+### 1. REST API Server (`packages/openmemory-js/src/server/`)
 
 **Purpose:** HTTP endpoint layer for all memory operations
 
@@ -94,7 +94,7 @@ OpenMemory is a self-hosted AI memory engine implementing **Hierarchical Memory 
 
 ---
 
-### 2. HSG Memory Engine (`backend/src/hsg/`)
+### 2. HSG Memory Engine (`packages/openmemory-js/src/memory/`)
 
 **Purpose:** Core memory logic implementing Hierarchical Sectored Graph architecture
 
@@ -199,7 +199,7 @@ Memory A ──0.85──> Memory B
 
 ---
 
-### 3. Embedding Processor (`backend/src/embedding/`)
+### 3. Embedding Processor (`packages/openmemory-js/src/core/`)
 
 **Purpose:** Multi-provider embedding generation with batch support
 
@@ -242,7 +242,7 @@ For texts > 512 tokens:
 
 ---
 
-### 4. Database Layer (`backend/src/database/`)
+### 4. Database Layer (`packages/openmemory-js/src/core/db.ts`)
 
 **Purpose:** SQLite persistence with transactions
 
@@ -321,7 +321,7 @@ try {
 
 ---
 
-### 5. Ingestion Pipeline (`backend/src/ingestion/`)
+### 5. Ingestion Pipeline (`packages/openmemory-js/src/ops/`)
 
 **Purpose:** Document processing and content extraction
 
@@ -368,7 +368,7 @@ Document → Extract text → Chunk if needed →
 
 ---
 
-### 6. LangGraph Integration (`backend/src/langgraph/`)
+### 6. LangGraph Integration (`packages/openmemory-js/src/ai/graph.ts`)
 
 **Purpose:** Seamless integration with LangGraph workflows
 
@@ -689,7 +689,7 @@ Ports:
 ### Manual
 
 ```bash
-cd backend
+cd packages/openmemory-js
 npm install
 npm run dev
 ```
@@ -711,7 +711,7 @@ After=network.target
 [Service]
 Type=simple
 User=openmemory
-WorkingDirectory=/opt/openmemory/backend
+WorkingDirectory=/opt/openmemory/packages/openmemory-js
 ExecStart=/usr/bin/node dist/server/index.js
 Restart=always
 
