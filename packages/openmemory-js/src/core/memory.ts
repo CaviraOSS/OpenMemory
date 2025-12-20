@@ -33,7 +33,7 @@ export class Memory {
 
         // hsg.ts add_hsg_memory returns { id, ... } or similar?
         // Let's check hsg.ts exports. It's likely async and returns object.
-        const res = await add_hsg_memory(content, tags_str, meta, uid);
+        const res = await add_hsg_memory(content, tags_str, meta, uid ?? undefined);
         return res;
     }
 
