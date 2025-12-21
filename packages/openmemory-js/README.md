@@ -1,8 +1,22 @@
-# OpenMemory JavaScript SDK
+# openmemory javascript sdk
 
-[![npm version](https://badge.fury.io/js/openmemory-js.svg)](https://www.npmjs.com/package/openmemory-js)
+> **real long-term memory for ai agents. not rag. not a vector db. self-hosted.**
 
-Local-first long-term memory engine for AI apps and agents. **Self-hosted. Explainable. Scalable.**
+[![npm version](https://img.shields.io/npm/v/openmemory-js.svg)](https://www.npmjs.com/package/openmemory-js)
+[![license](https://img.shields.io/github/license/CaviraOSS/OpenMemory)](https://github.com/CaviraOSS/OpenMemory/blob/main/LICENSE)
+[![discord](https://img.shields.io/discord/1300368230320697404?label=Discord)](https://discord.gg/P7HaRayqTh)
+
+openmemory is a **cognitive memory engine** for llms and agents.
+
+- 🧠 real long-term memory (not just embeddings in a table)
+- 💾 self-hosted, local-first (sqlite / postgres)
+- 🧩 integrations: mcp, claude desktop, cursor, windsurf
+- 📥 sources: github, notion, google drive, onedrive, web crawler
+- 🔍 explainable traces (see *why* something was recalled)
+
+your model stays stateless. **your app stops being amnesiac.**
+
+---
 
 ## quick start
 
@@ -11,16 +25,37 @@ npm install openmemory-js
 ```
 
 ```typescript
-import { Memory } from 'openmemory-js';
+import { Memory } from "openmemory-js"
 
-const mem = new Memory();
-
-await mem.add("i'm building a next.js app with openmemory");
-const results = await mem.search("what am i building?");
-console.log(results);
+const mem = new Memory()
+await mem.add("user likes spicy food", { user_id: "u1" })
+const results = await mem.search("food?", { user_id: "u1" })
 ```
 
+drop this into:
+
+- node backends
+- clis
+- local tools
+- anything that needs durable memory without running a separate service
+
 **that's it.** you're now running a fully local cognitive memory engine 🎉
+
+---
+
+## 📥 sources (connectors)
+
+ingest data from external sources directly into memory:
+
+```typescript
+const github = await mem.source("github")
+await github.connect({ token: "ghp_..." })
+await github.ingest_all({ repo: "owner/repo" })
+```
+
+available sources: `github`, `notion`, `google_drive`, `google_sheets`, `google_slides`, `onedrive`, `web_crawler`
+
+---
 
 ## features
 
@@ -31,6 +66,22 @@ console.log(results);
 ✅ **waypoint graph** - associative recall paths for better retrieval  
 ✅ **explainable traces** - see exactly why memories were recalled  
 ✅ **zero config** - works out of the box with sensible defaults  
+
+---
+
+## cognitive sectors
+
+openmemory automatically classifies content into 5 cognitive sectors:
+
+| sector | description | examples | decay rate |
+|--------|-------------|----------|------------|
+| **episodic** | time-bound events & experiences | "yesterday i attended a conference" | medium |
+| **semantic** | timeless facts & knowledge | "paris is the capital of france" | very low |
+| **procedural** | skills, procedures, how-tos | "to deploy: build, test, push" | low |
+| **emotional** | feelings, sentiment, mood | "i'm excited about this project!" | high |
+| **reflective** | meta-cognition, insights | "i learn best through practice" | very low |
+
+---
 
 ## configuration
 
@@ -100,17 +151,7 @@ const memory = await mem.get("uuid-here");
 await mem.wipe();
 ```
 
-## cognitive sectors
-
-openmemory automatically classifies content into 5 cognitive sectors:
-
-| sector | description | examples | decay rate |
-|--------|-------------|----------|------------|
-| **episodic** | time-bound events & experiences | "yesterday i attended a conference" | medium |
-| **semantic** | timeless facts & knowledge | "paris is the capital of france" | very low |
-| **procedural** | skills, procedures, how-tos | "to deploy: build, test, push" | low |
-| **emotional** | feelings, sentiment, mood | "i'm excited about this project!" | high |
-| **reflective** | meta-cognition, insights | "i learn best through practice" | very low |
+---
 
 ## performance tiers
 
@@ -119,15 +160,17 @@ openmemory automatically classifies content into 5 cognitive sectors:
 - `deep` - pure semantic embeddings for maximum accuracy
 - `hybrid` - adaptive based on query complexity
 
+---
+
 ## mcp server
 
-openmemory-js includes an mcp server for integration with claude desktop and other mcp clients:
+openmemory-js includes an mcp server for integration with claude desktop, cursor, windsurf, and other mcp clients:
 
 ```bash
 npx openmemory-js serve --port 3000
 ```
 
-configure in claude desktop config:
+### claude desktop / cursor / windsurf
 
 ```json
 {
@@ -139,6 +182,16 @@ configure in claude desktop config:
   }
 }
 ```
+
+available mcp tools:
+
+- `openmemory_query` - search memories
+- `openmemory_store` - add new memories
+- `openmemory_list` - list all memories
+- `openmemory_get` - get memory by id
+- `openmemory_reinforce` - reinforce a memory
+
+---
 
 ## examples
 
@@ -161,6 +214,8 @@ const recent = await mem.search("user activity", {
 const facts = await mem.search("company info", { sectors: ["semantic"] });
 const howtos = await mem.search("deployment", { sectors: ["procedural"] });
 ```
+
+---
 
 ## api reference
 
@@ -205,12 +260,18 @@ retrieve a memory by id.
 
 **⚠️ danger**: delete all memories, vectors, and waypoints. useful for testing.
 
+---
+
 ## license
 
 apache 2.0
 
+---
+
 ## links
 
-- [main repository](https://github.com/caviraOSS/openmemory)
-- [python sdk](../openmemory-py)
+- [main repository](https://github.com/CaviraOSS/OpenMemory)
+- [python sdk](https://pypi.org/project/openmemory-py/)
 - [vs code extension](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)
+- [documentation](https://openmemory.cavira.app/docs/sdks/javascript)
+- [discord](https://discord.gg/P7HaRayqTh)

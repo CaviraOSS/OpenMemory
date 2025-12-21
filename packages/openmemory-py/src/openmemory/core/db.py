@@ -43,19 +43,18 @@ class DB:
         # Ensure migrations table
         c.execute("CREATE TABLE IF NOT EXISTS _migrations (name TEXT PRIMARY KEY, applied_at INTEGER)")
         
-        # Load migration files from package
-        import pkg_resources
-        # or importlib.resources since pkg_resources in deprecated
+        # Load migration files from package using importlib.resources (pkg_resources is deprecated)
+        files = []
         try:
             from importlib import resources
-            # list files in src.openmemory.migrations
-            # For 3.9+
+            # list files in openmemory.migrations (python 3.9+)
             files = [p.name for p in resources.files('openmemory.migrations').iterdir() if p.name.endswith(".sql")]
-        except ImportError:
-            # Fallback or older python
+        except (ImportError, TypeError, AttributeError):
+            # Fallback to direct file access for older python or package issues
             import os
             mig_path = Path(__file__).parent.parent / "migrations"
-            files = [f for f in os.listdir(mig_path) if f.endswith(".sql")]
+            if mig_path.exists():
+                files = [f for f in os.listdir(mig_path) if f.endswith(".sql")]
             
         files.sort()
         
@@ -64,9 +63,13 @@ class DB:
                 logger.info(f"[DB] Applying migration {f}")
                 try:
                     # Read content
+                    sql = None
                     try:
+                        from importlib import resources
                         sql = resources.files('openmemory.migrations').joinpath(f).read_text(encoding='utf-8')
                     except:
+                        pass
+                    if not sql:
                         sql = (Path(__file__).parent.parent / "migrations" / f).read_text(encoding="utf-8")
                         
                     # Execute script

@@ -53,6 +53,35 @@ class Memory:
         rows = q.all_mem_by_user(uid, limit, offset)
         return [dict(r) for r in rows]
 
+    def source(self, name: str):
+        """
+        get a pre-configured source connector.
+        
+        usage:
+            github = mem.source("github")
+            await github.connect(token="ghp_...")
+            await github.ingest_all(repo="owner/repo")
+        
+        available sources: github, notion, google_drive, google_sheets, 
+                          google_slides, onedrive, web_crawler
+        """
+        from . import connectors
+        
+        sources = {
+            "github": connectors.github_connector,
+            "notion": connectors.notion_connector,
+            "google_drive": connectors.google_drive_connector,
+            "google_sheets": connectors.google_sheets_connector,
+            "google_slides": connectors.google_slides_connector,
+            "onedrive": connectors.onedrive_connector,
+            "web_crawler": connectors.web_crawler_connector,
+        }
+        
+        if name not in sources:
+            raise ValueError(f"unknown source: {name}. available: {list(sources.keys())}")
+        
+        return sources[name](user_id=self.default_user)
+
 def run_mcp():
     import asyncio
     from .ai.mcp import run_mcp_server

@@ -11,7 +11,13 @@ dependencies = [
     "uvicorn",
     "pydantic",
     "numpy",
-    "httpx"
+    "httpx",
+    "google-api-python-client>=2.0",
+    "google-auth>=2.0",
+    "notion-client>=2.0",
+    "msal>=1.0",
+    "PyGithub>=2.0",
+    "beautifulsoup4>=4.0",
 ]
 
 [tool.hatch.build.targets.wheel]

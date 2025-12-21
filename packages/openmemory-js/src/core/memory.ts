@@ -66,4 +66,34 @@ export class Memory {
         // q is imported from db.ts
         await q.clear_all.run();
     }
+
+    /**
+     * get a pre-configured source connector.
+     * 
+     * usage:
+     *   const github = mem.source("github")
+     *   await github.connect({ token: "ghp_..." })
+     *   await github.ingest_all({ repo: "owner/repo" })
+     * 
+     * available sources: github, notion, google_drive, google_sheets, 
+     *                   google_slides, onedrive, web_crawler
+     */
+    source(name: string) {
+        // dynamic import to avoid circular deps
+        const sources: Record<string, any> = {
+            github: () => import("../sources/github").then(m => new m.github_source(this.default_user ?? undefined)),
+            notion: () => import("../sources/notion").then(m => new m.notion_source(this.default_user ?? undefined)),
+            google_drive: () => import("../sources/google_drive").then(m => new m.google_drive_source(this.default_user ?? undefined)),
+            google_sheets: () => import("../sources/google_sheets").then(m => new m.google_sheets_source(this.default_user ?? undefined)),
+            google_slides: () => import("../sources/google_slides").then(m => new m.google_slides_source(this.default_user ?? undefined)),
+            onedrive: () => import("../sources/onedrive").then(m => new m.onedrive_source(this.default_user ?? undefined)),
+            web_crawler: () => import("../sources/web_crawler").then(m => new m.web_crawler_source(this.default_user ?? undefined)),
+        };
+
+        if (!(name in sources)) {
+            throw new Error(`unknown source: ${name}. available: ${Object.keys(sources).join(", ")}`);
+        }
+
+        return sources[name]();
+    }
 }

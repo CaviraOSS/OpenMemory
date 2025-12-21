@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import time
 import logging
 from ..core.config import env
-from .routes import memory, health
+from .routes import memory, health, sources
 
 logger = logging.getLogger("server")
 
@@ -31,6 +31,7 @@ def create_app() -> FastAPI:
     # Routes
     app.include_router(health.router)
     app.include_router(memory.router, prefix="/memory", tags=["memory"])
+    app.include_router(sources.router)
     
     @app.on_event("startup")
     async def startup():
