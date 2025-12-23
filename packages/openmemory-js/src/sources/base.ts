@@ -216,7 +216,7 @@ export abstract class base_source {
     }
 
     async ingest_all(filters?: Record<string, any>): Promise<string[]> {
-        const { ingest_document } = await import('../ops/ingest');
+        const { ingestDocument } = await import('../ops/ingest');
 
         const items = await this.list_items(filters);
         const ids: string[] = [];
@@ -228,7 +228,7 @@ export abstract class base_source {
             const item = items[i];
             try {
                 const content = await this.fetch_item(item.id);
-                const result = await ingest_document(
+                const result = await ingestDocument(
                     content.type || 'text',
                     content.data || content.text || '',
                     { source: this.name, ...content.meta },

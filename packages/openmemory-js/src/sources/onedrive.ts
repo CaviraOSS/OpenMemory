@@ -71,13 +71,13 @@ export class onedrive_source extends base_source {
         let next_url: string | null = url;
 
         while (next_url) {
-            const resp = await fetch(next_url, {
+            const resp: Response = await fetch(next_url, {
                 headers: { Authorization: `Bearer ${this.access_token}` }
             });
 
             if (!resp.ok) throw new Error(`http ${resp.status}: ${resp.statusText}`);
 
-            const data = await resp.json();
+            const data: any = await resp.json();
 
             for (const item of data.value || []) {
                 results.push({

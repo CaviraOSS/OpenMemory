@@ -4,7 +4,13 @@
  * no auth required for public urls
  */
 
-import { base_source, source_config_error, source_item, source_content } from './base';
+import { base_source, source_config_error, source_item, source_content, source_config } from './base';
+
+export interface web_crawler_config extends source_config {
+    max_pages?: number;
+    max_depth?: number;
+    timeout?: number;
+}
 
 export class web_crawler_source extends base_source {
     name = 'web_crawler';
@@ -16,7 +22,7 @@ export class web_crawler_source extends base_source {
 
     constructor(
         user_id?: string,
-        config?: { max_pages?: number; max_depth?: number; timeout?: number } & Record<string, any>
+        config?: web_crawler_config
     ) {
         super(user_id, config);
         this.max_pages = config?.max_pages || 50;

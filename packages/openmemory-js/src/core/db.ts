@@ -142,7 +142,7 @@ if (is_pg) {
                 const admin = pool("postgres");
                 try {
                     await admin.query(`CREATE DATABASE ${db_name}`);
-                    console.log(`[DB] Created ${db_name}`);
+                    console.error(`[DB] Created ${db_name}`);
                 } catch (e: any) {
                     if (e.code !== "42P04") throw e;
                 } finally {
@@ -202,11 +202,11 @@ if (is_pg) {
         // Initialize VectorStore
         if (env.vector_backend === "valkey") {
             vector_store = new ValkeyVectorStore();
-            console.log("[DB] Using Valkey VectorStore");
+            console.error("[DB] Using Valkey VectorStore");
         } else {
             const vt = process.env.OM_VECTOR_TABLE || "openmemory_vectors";
             vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v.replace(/"/g, ""));
-            console.log(`[DB] Using Postgres VectorStore with table: ${v}`);
+            console.error(`[DB] Using Postgres VectorStore with table: ${v}`);
         }
     };
     init().catch((err) => {
@@ -551,10 +551,10 @@ if (is_pg) {
 
     if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
-        console.log("[DB] Using Valkey VectorStore");
+        console.error("[DB] Using Valkey VectorStore");
     } else {
         vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
-        console.log(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
+        console.error(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
     }
 
     // Simple Mutex for transaction serialization

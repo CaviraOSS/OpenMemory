@@ -8,7 +8,7 @@
  *   generic webhook endpoint for source-specific payloads
  */
 
-import * as sources from "../sources";
+import * as sources from "../../sources";
 
 export function src(app: any) {
     // list available sources
@@ -61,7 +61,7 @@ export function src(app: any) {
         }
 
         try {
-            const { ingest_document } = await import("../../ops/ingest");
+            const { ingestDocument } = await import("../../ops/ingest");
 
             // handle different github events
             let content = "";
@@ -85,7 +85,7 @@ export function src(app: any) {
             }
 
             if (content) {
-                const result = await ingest_document("text", content, meta);
+                const result = await ingestDocument("text", content, meta);
                 res.json({ ok: true, memory_id: result.root_memory_id, event: event_type });
             } else {
                 res.json({ ok: true, skipped: true, reason: "no content" });
@@ -100,9 +100,9 @@ export function src(app: any) {
         const payload = req.body;
 
         try {
-            const { ingest_document } = await import("../../ops/ingest");
+            const { ingestDocument } = await import("../../ops/ingest");
             const content = JSON.stringify(payload, null, 2);
-            const result = await ingest_document("text", content, { source: "notion_webhook" });
+            const result = await ingestDocument("text", content, { source: "notion_webhook" });
             res.json({ ok: true, memory_id: result.root_memory_id });
         } catch (e: any) {
             res.status(500).json({ error: e.message });
