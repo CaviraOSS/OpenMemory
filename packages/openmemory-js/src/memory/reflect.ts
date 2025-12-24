@@ -102,18 +102,18 @@ const boost = async (ids: string[]) => {
 };
 
 export const run_reflection = async () => {
-    console.log("[REFLECT] Starting reflection job...");
+    console.error("[REFLECT] Starting reflection job...");
     const min = env.reflect_min || 20;
     const mems = await q.all_mem.all(100, 0);
-    console.log(
+    console.error(
         `[REFLECT] Fetched ${mems.length} memories (min required: ${min})`,
     );
     if (mems.length < min) {
-        console.log("[REFLECT] Not enough memories, skipping");
+        console.error("[REFLECT] Not enough memories, skipping");
         return { created: 0, reason: "low" };
     }
     const cls = cluster(mems);
-    console.log(`[REFLECT] Clustered into ${cls.length} groups`);
+    console.error(`[REFLECT] Clustered into ${cls.length} groups`);
     let n = 0;
     for (const c of cls) {
         const txt = summ(c);
@@ -125,7 +125,7 @@ export const run_reflection = async () => {
             freq: c.n,
             at: new Date().toISOString(),
         };
-        console.log(
+        console.error(
             `[REFLECT] Creating reflection: ${c.n} memories, salience=${s.toFixed(3)}, sector=${c.mem[0].primary_sector}`,
         );
         await add_hsg_memory(txt, j(["reflect:auto"]), meta);
@@ -134,7 +134,7 @@ export const run_reflection = async () => {
         n++;
     }
     if (n > 0) await log_maint_op("reflect", n);
-    console.log(`[REFLECT] Job complete: created ${n} reflections`);
+    console.error(`[REFLECT] Job complete: created ${n} reflections`);
     return { created: n, clusters: cls.length };
 };
 
@@ -147,7 +147,7 @@ export const start_reflection = () => {
         () => run_reflection().catch((e) => console.error("[REFLECT]", e)),
         int,
     );
-    console.log(`[REFLECT] Started: every ${env.reflect_interval || 10}m`);
+    console.error(`[REFLECT] Started: every ${env.reflect_interval || 10}m`);
 };
 
 export const stop_reflection = () => {
