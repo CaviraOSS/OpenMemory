@@ -77,7 +77,7 @@ const fuse_vecs = (syn: number[], sem: number[]): number[] => {
 };
 
 export async function embedForSector(t: string, s: string): Promise<number[]> {
-    console.log(`[EMBED] Provider: ${env.emb_kind}, Tier: ${tier}, Sector: ${s}`);
+    console.error(`[EMBED] Provider: ${env.emb_kind}, Tier: ${tier}, Sector: ${s}`);
     if (!sector_configs[s]) throw new Error(`Unknown sector: ${s}`);
     if (tier === "hybrid") return gen_syn_emb(t, s);
     if (tier === "smart" && env.emb_kind !== "synthetic") {
@@ -113,7 +113,7 @@ export async function embedQueryForAllSectors(
             for (const s of sectors) txts[s] = query;
             return await emb_gemini(txts);
         } catch (e) {
-            console.warn(`[EMBED] Gemini batch failed, falling back to sequential: ${e}`);
+            console.error(`[EMBED] Gemini batch failed, falling back to sequential: ${e}`);
         }
     }
 
@@ -157,7 +157,7 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
         try {
             const result = await embed_with_provider(provider, t, s);
             if (i > 0) {
-                console.log(
+                console.error(
                     `[EMBED] Fallback to ${provider} succeeded for sector: ${s}`,
                 );
             }
@@ -167,7 +167,7 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
             const nextProvider = providers[i + 1];
 
             if (nextProvider) {
-                console.warn(
+                console.error(
                     `[EMBED] ${provider} failed: ${errMsg}, trying ${nextProvider}`,
                 );
             } else {
@@ -208,7 +208,7 @@ async function emb_batch_with_fallback(
                     }
             }
             if (i > 0) {
-                console.log(
+                console.error(
                     `[EMBED] Fallback to ${provider} succeeded for batch`,
                 );
             }
@@ -218,7 +218,7 @@ async function emb_batch_with_fallback(
             const nextProvider = providers[i + 1];
 
             if (nextProvider) {
-                console.warn(
+                console.error(
                     `[EMBED] ${provider} batch failed: ${errMsg}, trying ${nextProvider}`,
                 );
             } else {
@@ -325,7 +325,7 @@ async function emb_gemini(
                             1000,
                             1000 * Math.pow(2, a),
                         );
-                        console.warn(
+                        console.error(
                             `[EMBED] Gemini rate limit (${a + 1}/3), waiting ${d}ms`,
                         );
                         await new Promise((x) => setTimeout(x, d));
@@ -350,7 +350,7 @@ async function emb_gemini(
                         `Gemini failed after 3 attempts: ${errMsg}`,
                     );
                 }
-                console.warn(`[EMBED] Gemini error (${a + 1}/3): ${errMsg}`);
+                console.error(`[EMBED] Gemini error (${a + 1}/3): ${errMsg}`);
                 await new Promise((x) => setTimeout(x, 1000 * Math.pow(2, a)));
             }
         }
@@ -394,7 +394,7 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
 
         const jsonString = new TextDecoder().decode(response.body);
         const parsedResponse = JSON.parse(jsonString);
-        return resize_vec(parsedResponse, env.vec_dim);
+        return resize_vec(parsedResponse.embedding, env.vec_dim);
     } catch (error) {
         throw new Error(`AWS: ${error}`);
     }
@@ -402,7 +402,7 @@ async function emb_aws(t: string, s: string): Promise<number[]> {
 
 async function emb_local(t: string, s: string): Promise<number[]> {
     if (!env.local_model_path) {
-        console.warn("[EMBED] Local model missing, using synthetic");
+        console.error("[EMBED] Local model missing, using synthetic");
         return gen_syn_emb(t, s);
     }
     try {
@@ -419,7 +419,7 @@ async function emb_local(t: string, s: string): Promise<number[]> {
         const n = Math.sqrt(e.reduce((sum, v) => sum + v * v, 0));
         return e.map((v) => v / n);
     } catch {
-        console.warn("[EMBED] Local embedding failed, using synthetic");
+        console.error("[EMBED] Local embedding failed, using synthetic");
         return gen_syn_emb(t, s);
     }
 }
@@ -556,7 +556,7 @@ export async function embedMultiSector(
                 simp &&
                 (env.emb_kind === "gemini" || env.emb_kind === "openai")
             ) {
-                console.log(
+                console.error(
                     `[EMBED] Simple mode (1 batch for ${secs.length} sectors)`,
                 );
                 const tb: Record<string, string> = {};
@@ -567,7 +567,7 @@ export async function embedMultiSector(
                     r.push({ sector: s, vector: v, dim: v.length }),
                 );
             } else {
-                console.log(`[EMBED] Advanced mode (${secs.length} calls)`);
+                console.error(`[EMBED] Advanced mode (${secs.length} calls)`);
                 const par = env.adv_embed_parallel && env.emb_kind !== "gemini";
                 if (par) {
                     const p = secs.map(async (s) => {

@@ -9,13 +9,13 @@ export const load_models = (): model_cfg => {
     if (cfg) return cfg;
     const p = join(__dirname, "../../../models.yml");
     if (!existsSync(p)) {
-        console.warn("[MODELS] models.yml not found, using defaults");
+        console.error("[MODELS] models.yml not found, using defaults");
         return get_defaults();
     }
     try {
         const yml = readFileSync(p, "utf-8");
         cfg = parse_yaml(yml);
-        console.log(
+        console.error(
             `[MODELS] Loaded models.yml (${Object.keys(cfg).length} sectors)`,
         );
         return cfg;
