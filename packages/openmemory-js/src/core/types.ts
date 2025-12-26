@@ -14,6 +14,8 @@ export type q_req = {
         min_score?: number;
         sector?: string;
         user_id?: string;
+        startTime?: number;
+        endTime?: number;
     };
     user_id?: string;
 };

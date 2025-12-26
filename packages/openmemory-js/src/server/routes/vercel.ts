@@ -11,7 +11,9 @@ export function vercel(app: any) {
             const k: number = Math.max(1, Math.min(32, Number(b.k) || 8));
             if (!query) return res.status(400).json({ err: "query" });
 
-            const matches = await hsg_query(query, k, { user_id });
+            const startTime: number | undefined = b.startTime ? Number(b.startTime) : undefined;
+            const endTime: number | undefined = b.endTime ? Number(b.endTime) : undefined;
+            const matches = await hsg_query(query, k, { user_id, startTime, endTime });
             const lines = matches.map((m: any) => `- (${(m.score ?? 0).toFixed(2)}) ${m.content}`);
             const result = lines.join("\n");
 
