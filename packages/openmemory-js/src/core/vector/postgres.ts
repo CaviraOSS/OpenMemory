@@ -15,7 +15,7 @@ export class PostgresVectorStore implements VectorStore {
     }
 
     async storeVector(id: string, sector: string, vector: number[], dim: number, user_id?: string): Promise<void> {
-        console.log(`[Vector] Storing ID: ${id}, Sector: ${sector}, Dim: ${dim}`);
+        console.error(`[Vector] Storing ID: ${id}, Sector: ${sector}, Dim: ${dim}`);
         const v = vectorToBuffer(vector);
         const sql = `insert into ${this.table}(id,sector,user_id,v,dim) values($1,$2,$3,$4,$5) on conflict(id,sector) do update set user_id=excluded.user_id,v=excluded.v,dim=excluded.dim`;
         await this.db.run_async(sql, [id, sector, user_id || "anonymous", v, dim]);
@@ -32,7 +32,7 @@ export class PostgresVectorStore implements VectorStore {
     async searchSimilar(sector: string, queryVec: number[], topK: number): Promise<Array<{ id: string; score: number }>> {
         // Postgres implementation (in-memory cosine sim for now, as per original)
         const rows = await this.db.all_async(`select id,v,dim from ${this.table} where sector=$1`, [sector]);
-        console.log(`[Vector] Search Sector: ${sector}, Found ${rows.length} rows.`);
+        console.error(`[Vector] Search Sector: ${sector}, Found ${rows.length} rows.`);
         const sims: Array<{ id: string; score: number }> = [];
         for (const row of rows) {
             const vec = bufferToVector(row.v);
