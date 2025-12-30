@@ -15,6 +15,8 @@ import { getEmbeddingInfo } from "../memory/embed";
 import { j, p } from "../utils";
 import type { sector_type, mem_row, rpc_err_code } from "../core/types";
 import { update_user_summary } from "../memory/user_summary";
+import { insert_fact } from "../temporal_graph/store";
+import { query_facts_at_time } from "../temporal_graph/query";
 
 const sec_enum = z.enum([
     "episodic",
@@ -87,28 +89,60 @@ export const create_mcp_srv = () => {
 
     srv.tool(
         "openmemory_query",
-        "Run a semantic retrieval against OpenMemory",
+        "Query OpenMemory for contextual memories (HSG) and/or temporal facts",
         {
             query: z
                 .string()
                 .min(1, "query text is required")
                 .describe("Free-form search text"),
+            type: z
+                .enum(["contextual", "factual", "unified"])
+                .optional()
+                .default("contextual")
+                .describe(
+                    "Query type: 'contextual' for HSG semantic search (default), 'factual' for temporal fact queries, 'unified' for both",
+                ),
+            fact_pattern: z
+                .object({
+                    subject: z
+                        .string()
+                        .optional()
+                        .describe("Subject pattern (entity) - use undefined for wildcard"),
+                    predicate: z
+                        .string()
+                        .optional()
+                        .describe("Predicate pattern (relationship) - use undefined for wildcard"),
+                    object: z
+                        .string()
+                        .optional()
+                        .describe("Object pattern (value) - use undefined for wildcard"),
+                })
+                .optional()
+                .describe(
+                    "Fact pattern for temporal queries. Used when type is 'factual' or 'unified'",
+                ),
+            at: z
+                .string()
+                .optional()
+                .describe(
+                    "ISO date string for point-in-time queries (default: now). Queries facts valid at this time",
+                ),
             k: z
                 .number()
                 .int()
                 .min(1)
                 .max(32)
                 .default(8)
-                .describe("Maximum results to return"),
+                .describe("Maximum results to return (for HSG queries)"),
             sector: sec_enum
                 .optional()
-                .describe("Restrict search to a specific sector"),
+                .describe("Restrict search to a specific sector (for HSG queries)"),
             min_salience: z
                 .number()
                 .min(0)
                 .max(1)
                 .optional()
-                .describe("Minimum salience threshold"),
+                .describe("Minimum salience threshold (for HSG queries)"),
             user_id: z
                 .string()
                 .trim()
@@ -116,40 +150,117 @@ export const create_mcp_srv = () => {
                 .optional()
                 .describe("Isolate results to a specific user identifier"),
         },
-        async ({ query, k, sector, min_salience, user_id }) => {
+        async ({
+            query,
+            type = "contextual",
+            fact_pattern,
+            at,
+            k,
+            sector,
+            min_salience,
+            user_id,
+        }) => {
             const u = uid(user_id);
-            const flt =
-                sector || min_salience !== undefined || u
-                    ? {
-                        ...(sector
-                            ? { sectors: [sector as sector_type] }
-                            : {}),
-                        ...(min_salience !== undefined
-                            ? { minSalience: min_salience }
-                            : {}),
-                        ...(u ? { user_id: u } : {}),
-                    }
-                    : undefined;
-            const matches = await hsg_query(query, k ?? 8, flt);
-            const summ = matches.length
-                ? fmt_matches(matches)
-                : "No memories matched the supplied query.";
-            const pay = matches.map((m: any) => ({
-                id: m.id,
-                score: Number(m.score.toFixed(4)),
-                primary_sector: m.primary_sector,
-                sectors: m.sectors,
-                salience: Number(m.salience.toFixed(4)),
-                last_seen_at: m.last_seen_at,
-                path: m.path,
-                content: m.content,
-            }));
+            const results: any = { type, query };
+            const at_date = at ? new Date(at) : new Date();
+
+            // Query HSG if contextual or unified
+            if (type === "contextual" || type === "unified") {
+                const flt =
+                    sector || min_salience !== undefined || u
+                        ? {
+                            ...(sector ? { sectors: [sector as sector_type] } : {}),
+                            ...(min_salience !== undefined ? { minSalience: min_salience } : {}),
+                            ...(u ? { user_id: u } : {}),
+                        }
+                        : undefined;
+
+                const matches = await hsg_query(query, k ?? 8, flt);
+                results.contextual = matches.map((m: any) => ({
+                    source: "hsg",
+                    id: m.id,
+                    score: Number(m.score.toFixed(4)),
+                    primary_sector: m.primary_sector,
+                    sectors: m.sectors,
+                    salience: Number(m.salience.toFixed(4)),
+                    last_seen_at: m.last_seen_at,
+                    path: m.path,
+                    content: m.content,
+                }));
+            }
+
+            // Query temporal facts if factual or unified
+            if (type === "factual" || type === "unified") {
+                const facts = await query_facts_at_time(
+                    fact_pattern?.subject,
+                    fact_pattern?.predicate,
+                    fact_pattern?.object,
+                    at_date,
+                    0.0, // min_confidence
+                );
+
+                results.factual = facts.map((f: any) => ({
+                    source: "temporal",
+                    id: f.id,
+                    subject: f.subject,
+                    predicate: f.predicate,
+                    object: f.object,
+                    valid_from: f.valid_from,
+                    valid_to: f.valid_to,
+                    confidence: Number(f.confidence.toFixed(4)),
+                    content: `${f.subject} ${f.predicate} ${f.object}`,
+                }));
+            }
+
+            // Format text summary
+            let summ = "";
+            if (type === "contextual") {
+                summ = results.contextual.length
+                    ? fmt_matches(results.contextual)
+                    : "No contextual memories matched the query.";
+            } else if (type === "factual") {
+                if (results.factual.length === 0) {
+                    summ = "No temporal facts matched the query.";
+                } else {
+                    summ = results.factual
+                        .map(
+                            (f: any, idx: number) =>
+                                `${idx + 1}. [fact] confidence=${f.confidence} id=${f.id}\n${f.content}`,
+                        )
+                        .join("\n\n");
+                }
+            } else {
+                // unified
+                const ctx_count = results.contextual?.length || 0;
+                const fact_count = results.factual?.length || 0;
+                summ = `Found ${ctx_count} contextual memories and ${fact_count} temporal facts.\n\n`;
+
+                if (ctx_count > 0) {
+                    summ += "=== Contextual Memories ===\n";
+                    summ += fmt_matches(results.contextual) + "\n\n";
+                }
+
+                if (fact_count > 0) {
+                    summ += "=== Temporal Facts ===\n";
+                    summ += results.factual
+                        .map(
+                            (f: any, idx: number) =>
+                                `${idx + 1}. [fact] confidence=${f.confidence}\n${f.content}`,
+                        )
+                        .join("\n\n");
+                }
+
+                if (ctx_count === 0 && fact_count === 0) {
+                    summ = "No results found in either system.";
+                }
+            }
+
             return {
                 content: [
                     { type: "text", text: summ },
                     {
                         type: "text",
-                        text: JSON.stringify({ query, matches: pay }, null, 2),
+                        text: JSON.stringify(results, null, 2),
                     },
                 ],
             };
@@ -158,10 +269,39 @@ export const create_mcp_srv = () => {
 
     srv.tool(
         "openmemory_store",
-        "Persist new content into OpenMemory",
+        "Persist new content into OpenMemory (HSG contextual memory and/or temporal facts)",
         {
             content: z.string().min(1).describe("Raw memory text to store"),
-            tags: z.array(z.string()).optional().describe("Optional tag list"),
+            type: z
+                .enum(["contextual", "factual", "both"])
+                .optional()
+                .default("contextual")
+                .describe(
+                    "Storage type: 'contextual' for HSG only (default), 'factual' for temporal facts only, 'both' for both systems",
+                ),
+            facts: z
+                .array(
+                    z.object({
+                        subject: z.string().min(1).describe("Fact subject (entity)"),
+                        predicate: z.string().min(1).describe("Fact predicate (relationship)"),
+                        object: z.string().min(1).describe("Fact object (value)"),
+                        confidence: z
+                            .number()
+                            .min(0)
+                            .max(1)
+                            .optional()
+                            .describe("Confidence score (0-1, default 1.0)"),
+                        valid_from: z
+                            .string()
+                            .optional()
+                            .describe("ISO date string for fact validity start (default: now)"),
+                    }),
+                )
+                .optional()
+                .describe(
+                    "Array of facts to store in temporal graph. Required when type is 'factual' or 'both'",
+                ),
+            tags: z.array(z.string()).optional().describe("Optional tag list (for HSG storage)"),
             metadata: z
                 .record(z.any())
                 .optional()
@@ -175,29 +315,89 @@ export const create_mcp_srv = () => {
                     "Associate the memory with a specific user identifier",
                 ),
         },
-        async ({ content, tags, metadata, user_id }) => {
+        async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
             const u = uid(user_id);
-            const res = await add_hsg_memory(
-                content,
-                j(tags || []),
-                metadata,
-                u,
-            );
-            if (u)
-                update_user_summary(u).catch((err) =>
-                    console.error("[MCP] user summary update failed:", err),
+            const results: any = { type };
+
+            // Validate facts are provided when needed
+            if ((type === "factual" || type === "both") && (!facts || facts.length === 0)) {
+                throw new Error(
+                    `Facts array is required when type is '${type}'. Please provide at least one fact.`,
                 );
-            const txt = `Stored memory ${res.id} (primary=${res.primary_sector}) across sectors: ${res.sectors.join(", ")}${u ? ` [user=${u}]` : ""}`;
-            const payload = {
-                id: res.id,
-                primary_sector: res.primary_sector,
-                sectors: res.sectors,
-                user_id: u ?? null,
-            };
+            }
+
+            // Store in HSG if contextual or both
+            if (type === "contextual" || type === "both") {
+                const res = await add_hsg_memory(
+                    content,
+                    j(tags || []),
+                    metadata,
+                    u,
+                );
+                results.hsg = {
+                    id: res.id,
+                    primary_sector: res.primary_sector,
+                    sectors: res.sectors,
+                };
+                
+                if (u) {
+                    update_user_summary(u).catch((err) =>
+                        console.error("[MCP] user summary update failed:", err),
+                    );
+                }
+            }
+
+            // Store in temporal graph if factual or both
+            if ((type === "factual" || type === "both") && facts) {
+                const temporal_results = [];
+                for (const fact of facts) {
+                    const valid_from = fact.valid_from
+                        ? new Date(fact.valid_from)
+                        : new Date();
+                    const confidence = fact.confidence ?? 1.0;
+                    
+                    const fact_id = await insert_fact(
+                        fact.subject,
+                        fact.predicate,
+                        fact.object,
+                        valid_from,
+                        confidence,
+                        metadata,
+                    );
+                    
+                    temporal_results.push({
+                        id: fact_id,
+                        subject: fact.subject,
+                        predicate: fact.predicate,
+                        object: fact.object,
+                        valid_from: valid_from.toISOString(),
+                        confidence,
+                    });
+                }
+                results.temporal = temporal_results;
+            }
+
+            // Format response
+            let txt = "";
+            if (type === "contextual") {
+                txt = `Stored memory ${results.hsg.id} (primary=${results.hsg.primary_sector}) across sectors: ${results.hsg.sectors.join(", ")}${u ? ` [user=${u}]` : ""}`;
+            } else if (type === "factual") {
+                txt = `Stored ${results.temporal.length} temporal fact(s)${u ? ` [user=${u}]` : ""}`;
+            } else {
+                txt = `Stored in both systems: HSG memory ${results.hsg.id} + ${results.temporal.length} temporal fact(s)${u ? ` [user=${u}]` : ""}`;
+            }
+
             return {
                 content: [
                     { type: "text", text: txt },
-                    { type: "text", text: JSON.stringify(payload, null, 2) },
+                    {
+                        type: "text",
+                        text: JSON.stringify(
+                            { ...results, user_id: u ?? null },
+                            null,
+                            2,
+                        ),
+                    },
                 ],
             };
         },

@@ -171,6 +171,33 @@ if (is_pg) {
             `create table if not exists "${sc}"."stats"(id serial primary key,type text not null,count integer default 1,ts bigint not null)`,
         );
         await pg.query(
+            `create table if not exists "${sc}"."temporal_facts"(id uuid primary key,subject text not null,predicate text not null,object text not null,valid_from bigint not null,valid_to bigint,confidence double precision not null check(confidence >= 0 and confidence <= 1),last_updated bigint not null,metadata text,unique(subject,predicate,object,valid_from))`,
+        );
+        await pg.query(
+            `create table if not exists "${sc}"."temporal_edges"(id uuid primary key,source_id uuid not null,target_id uuid not null,relation_type text not null,valid_from bigint not null,valid_to bigint,weight double precision not null,metadata text,foreign key(source_id) references "${sc}"."temporal_facts"(id),foreign key(target_id) references "${sc}"."temporal_facts"(id))`,
+        );
+        await pg.query(
+            `create index if not exists temporal_facts_subject_idx on "${sc}"."temporal_facts"(subject)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_facts_predicate_idx on "${sc}"."temporal_facts"(predicate)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_facts_validity_idx on "${sc}"."temporal_facts"(valid_from,valid_to)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_facts_composite_idx on "${sc}"."temporal_facts"(subject,predicate,valid_from,valid_to)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_edges_source_idx on "${sc}"."temporal_edges"(source_id)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_edges_target_idx on "${sc}"."temporal_edges"(target_id)`,
+        );
+        await pg.query(
+            `create index if not exists temporal_edges_validity_idx on "${sc}"."temporal_edges"(valid_from,valid_to)`,
+        );
+        await pg.query(
             `create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`,
         );
         await pg.query(
