@@ -110,6 +110,31 @@ Drop this into:
 - local tools
 - anything that needs durable memory without running a separate service.
 
+#### ☁️ PostgreSQL + Supabase (Multi-Tenant SaaS)
+
+**NEW:** Use OpenMemory with PostgreSQL + pgvector for serverless/multi-tenant deployments:
+
+```ts
+import { OpenMemory } from "openmemory-js"
+
+const memory = new OpenMemory({
+  connectionString: process.env.DATABASE_URL,  // Supabase or PostgreSQL
+  tenant_id: "customer_123",
+  pgvector_enabled: true  // Native vector search (HNSW)
+})
+
+await memory.add("User prefers dark mode")
+const results = await memory.query("user preferences")
+```
+
+**Perfect for:**
+- 🚀 Cloud Run, Lambda, Vercel Edge Functions
+- 🏢 Multi-tenant SaaS applications
+- 📊 50M+ memories with sub-100ms queries
+- 🔒 Tenant isolation via `tenant_id`
+
+**See:** [CLIENT_USAGE.md](./CLIENT_USAGE.md) | [Examples](./examples/)
+
 ---
 
 ### 📥 Connectors
