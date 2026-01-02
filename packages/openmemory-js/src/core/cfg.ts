@@ -107,4 +107,12 @@ export const env = {
     summary_layers: num(process.env.OM_SUMMARY_LAYERS, 3),
     keyword_boost: num(process.env.OM_KEYWORD_BOOST, 2.5),
     keyword_min_length: num(process.env.OM_KEYWORD_MIN_LENGTH, 3),
+    // Multi-tenancy settings
+    multi_tenant: bool(process.env.OM_MULTI_TENANT),
+    default_tenant_id: str(process.env.OM_DEFAULT_TENANT_ID, "default"),
+    tenant_header: str(process.env.OM_TENANT_HEADER, "x-tenant-id"),
+    // pgvector settings
+    pgvector_enabled: bool(process.env.OM_PGVECTOR_ENABLED),
+    pgvector_index_type: str(process.env.OM_PGVECTOR_INDEX_TYPE, "hnsw"),
+    pgvector_distance: str(process.env.OM_PGVECTOR_DISTANCE, "cosine"),
 };
