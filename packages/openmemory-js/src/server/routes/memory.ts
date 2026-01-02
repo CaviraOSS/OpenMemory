@@ -9,6 +9,7 @@ import {
 import { ingestDocument, ingestURL } from "../../ops/ingest";
 import { env } from "../../core/cfg";
 import { update_user_summary } from "../../memory/user_summary";
+import { getTenantId } from "../../core/tenant";
 import type {
     add_req,
     q_req,
@@ -20,12 +21,14 @@ export function mem(app: any) {
     app.post("/memory/add", async (req: any, res: any) => {
         const b = req.body as add_req;
         if (!b?.content) return res.status(400).json({ err: "content" });
+        const tenant_id = getTenantId(req);
         try {
             const m = await add_hsg_memory(
                 b.content,
                 j(b.tags || []),
                 b.metadata,
                 b.user_id,
+                tenant_id,
             );
             res.json(m);
 
@@ -71,11 +74,13 @@ export function mem(app: any) {
     app.post("/memory/query", async (req: any, res: any) => {
         const b = req.body as q_req;
         const k = b.k || 8;
+        const tenant_id = getTenantId(req);
         try {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
                 minSalience: b.filters?.min_score,
                 user_id: b.filters?.user_id || b.user_id,
+                tenant_id: tenant_id,
                 startTime: b.filters?.startTime,
                 endTime: b.filters?.endTime,
             };
@@ -118,6 +123,7 @@ export function mem(app: any) {
             user_id?: string;
         };
         if (!id) return res.status(400).json({ err: "id" });
+        const tenant_id = getTenantId(req);
         try {
             // Check if memory exists and user has permission
             const m = await q.get_mem.get(id);
@@ -128,7 +134,7 @@ export function mem(app: any) {
                 return res.status(403).json({ err: "forbidden" });
             }
 
-            const r = await update_memory(id, b.content, b.tags, b.metadata);
+            const r = await update_memory(id, b.content, b.tags, b.metadata, tenant_id);
             res.json(r);
         } catch (e: any) {
             if (e.message.includes("not found")) {
@@ -182,6 +188,7 @@ export function mem(app: any) {
         try {
             const id = req.params.id;
             const user_id = req.query.user_id;
+            const tenant_id = getTenantId(req);
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
@@ -190,7 +197,7 @@ export function mem(app: any) {
                 return res.status(403).json({ err: "forbidden" });
             }
 
-            const v = await vector_store.getVectorsById(id);
+            const v = await vector_store.getVectorsById(id, tenant_id);
             const sec = v.map((x: any) => x.sector);
             res.json({
                 id: m.id,
@@ -216,6 +223,7 @@ export function mem(app: any) {
         try {
             const id = req.params.id;
             const user_id = req.query.user_id || req.body?.user_id;
+            const tenant_id = getTenantId(req);
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
@@ -225,7 +233,7 @@ export function mem(app: any) {
             }
 
             await q.del_mem.run(id);
-            await vector_store.deleteVectors(id);
+            await vector_store.deleteVectors(id, tenant_id);
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
         } catch (e: any) {

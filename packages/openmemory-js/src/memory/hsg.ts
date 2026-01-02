@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { canonical_token_set } from "../utils/text";
 import { inc_q, dec_q, on_query_hit } from "./decay";
 import { env, tier } from "../core/cfg";
+import { resolveTenantId } from "../core/tenant";
 import { cos_sim, buf_to_vec, vec_to_buf } from "../utils/index";
 export interface sector_cfg {
     model: string;
@@ -537,10 +538,12 @@ export async function create_inter_mem_waypoints(
     new_vec: number[],
     ts: number,
     user_id?: string | null,
+    tenant_id?: string,
 ): Promise<void> {
+    const resolved_tenant_id = resolveTenantId({ tenant_id, user_id });
     const thresh = 0.75;
     const wt = 0.5;
-    const vecs = await vector_store.getVectorsBySector(prim_sec);
+    const vecs = await vector_store.getVectorsBySector(prim_sec, resolved_tenant_id);
     for (const vr of vecs) {
         if (vr.id === new_id) continue;
         const ex_vec = vr.vector;
@@ -673,8 +676,10 @@ export async function calc_multi_vec_fusion_score(
     mid: string,
     qe: Record<string, number[]>,
     w: multi_vec_fusion_weights,
+    tenant_id?: string,
 ): Promise<number> {
-    const vecs = await vector_store.getVectorsById(mid);
+    const resolved_tenant_id = resolveTenantId({ tenant_id });
+    const vecs = await vector_store.getVectorsById(mid, resolved_tenant_id);
     let sum = 0,
         tot = 0;
     const wm: Record<string, number> = {
@@ -750,8 +755,10 @@ const get_sal = async (id: string, def_sal: number): Promise<number> => {
 export async function hsg_query(
     qt: string,
     k = 10,
-    f?: { sectors?: string[]; minSalience?: number; user_id?: string; startTime?: number; endTime?: number },
+    f?: { sectors?: string[]; minSalience?: number; user_id?: string; tenant_id?: string; startTime?: number; endTime?: number },
 ): Promise<hsg_q_result[]> {
+    // Resolve tenant_id using multi-tenant configuration
+    const resolved_tenant_id = resolveTenantId({ tenant_id: f?.tenant_id, user_id: f?.user_id });
     // ... (omitted lines to keep context correct, targeting start of function signature change)
     // Actually I'll target the signature and the logic inside the loop.
     // Split into two edits or use multi_replace.
@@ -800,7 +807,7 @@ export async function hsg_query(
         > = {};
         for (const s of ss) {
             const qv = qe[s];
-            const results = await vector_store.searchSimilar(s, qv, k * 3);
+            const results = await vector_store.searchSimilar(s, qv, k * 3, resolved_tenant_id);
             sr[s] = results.map(r => ({ id: r.id, similarity: r.score }));
         }
         const all_sims = Object.values(sr).flatMap((r) =>
@@ -895,7 +902,7 @@ export async function hsg_query(
                 keyword_boost,
                 tag_match,
             );
-            const msec = await vector_store.getVectorsById(mid);
+            const msec = await vector_store.getVectorsById(mid, resolved_tenant_id);
             const sl = msec.map((v) => v.sector);
             res.push({
                 id: mid,
@@ -1041,6 +1048,7 @@ export async function add_hsg_memory(
     tags?: string,
     metadata?: any,
     user_id?: string,
+    tenant_id?: string,
 ): Promise<{
     id: string;
     primary_sector: string;
@@ -1048,6 +1056,8 @@ export async function add_hsg_memory(
     chunks?: number;
     deduplicated?: boolean;
 }> {
+    // Resolve tenant_id using multi-tenant configuration
+    const resolved_tenant_id = resolveTenantId({ tenant_id, user_id });
     const simhash = compute_simhash(content);
     const existing = await q.get_mem_by_simhash.get(simhash);
     if (existing && hamming_dist(simhash, existing.simhash) <= 3) {
@@ -1128,6 +1138,7 @@ export async function add_hsg_memory(
                 result.sector,
                 result.vector,
                 result.dim,
+                resolved_tenant_id,
                 user_id || "anonymous",
             );
         }
@@ -1170,9 +1181,12 @@ export async function update_memory(
     content?: string,
     tags?: string[],
     metadata?: any,
+    tenant_id?: string,
 ): Promise<{ id: string; updated: boolean }> {
     const mem = await q.get_mem.get(id);
     if (!mem) throw new Error(`Memory ${id} not found`);
+    // Resolve tenant_id
+    const resolved_tenant_id = resolveTenantId({ tenant_id, user_id: mem.user_id });
     const new_content = content !== undefined ? content : mem.content;
     const new_tags = tags !== undefined ? j(tags) : mem.tags || "[]";
     const new_meta = metadata !== undefined ? j(metadata) : mem.meta || "{}";
@@ -1186,7 +1200,7 @@ export async function update_memory(
                 classification.primary,
                 ...classification.additional,
             ];
-            await vector_store.deleteVectors(id);
+            await vector_store.deleteVectors(id, resolved_tenant_id);
             const emb_res = await embedMultiSector(
                 id,
                 new_content,
@@ -1199,6 +1213,7 @@ export async function update_memory(
                     result.sector,
                     result.vector,
                     result.dim,
+                    resolved_tenant_id,
                     mem.user_id || "anonymous",
                 );
             }

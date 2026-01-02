@@ -153,50 +153,145 @@ if (is_pg) {
             } else throw err;
         }
         await pg.query(
-            `create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0)`,
+            `create table if not exists ${m}(
+                tenant_id text default '${env.default_tenant_id}',
+                id uuid,
+                user_id text,
+                segment integer default 0,
+                content text not null,
+                simhash text,
+                primary_sector text not null,
+                tags text,
+                meta text,
+                created_at bigint,
+                updated_at bigint,
+                last_seen_at bigint,
+                salience double precision,
+                decay_lambda double precision,
+                version integer default 1,
+                mean_dim integer,
+                mean_vec bytea,
+                compressed_vec bytea,
+                feedback_score double precision default 0,
+                primary key(${env.multi_tenant ? 'tenant_id, id' : 'id'})
+            )`,
+        );
+
+        // Create vectors table with optional pgvector support
+        const vectorType = env.pgvector_enabled ? `vector(${env.vec_dim})` : 'bytea';
+        await pg.query(
+            `create table if not exists ${v}(
+                tenant_id text default '${env.default_tenant_id}',
+                id uuid,
+                sector text,
+                user_id text,
+                v bytea,
+                embedding ${vectorType},
+                dim integer not null,
+                primary key(${env.multi_tenant ? 'tenant_id, id, sector' : 'id, sector'})
+            )`,
         );
         await pg.query(
-            `create table if not exists ${v}(id uuid,sector text,user_id text,v bytea,dim integer not null,primary key(id,sector))`,
+            `create table if not exists ${w}(
+                tenant_id text default '${env.default_tenant_id}',
+                src_id text,
+                dst_id text not null,
+                user_id text,
+                weight double precision not null,
+                created_at bigint,
+                updated_at bigint,
+                primary key(${env.multi_tenant ? 'tenant_id, src_id, dst_id' : 'src_id, user_id'})
+            )`,
         );
         await pg.query(
-            `create table if not exists ${w}(src_id text,dst_id text not null,user_id text,weight double precision not null,created_at bigint,updated_at bigint,primary key(src_id,user_id))`,
+            `create table if not exists ${l}(
+                id text primary key,
+                tenant_id text default '${env.default_tenant_id}',
+                model text,
+                status text,
+                ts bigint,
+                err text
+            )`,
         );
         await pg.query(
-            `create table if not exists ${l}(id text primary key,model text,status text,ts bigint,err text)`,
+            `create table if not exists "${sc}"."openmemory_users"(
+                tenant_id text default '${env.default_tenant_id}',
+                user_id text,
+                summary text,
+                reflection_count integer default 0,
+                created_at bigint,
+                updated_at bigint,
+                primary key(${env.multi_tenant ? 'tenant_id, user_id' : 'user_id'})
+            )`,
         );
         await pg.query(
-            `create table if not exists "${sc}"."openmemory_users"(user_id text primary key,summary text,reflection_count integer default 0,created_at bigint,updated_at bigint)`,
+            `create table if not exists "${sc}"."stats"(
+                id serial primary key,
+                tenant_id text default '${env.default_tenant_id}',
+                type text not null,
+                count integer default 1,
+                ts bigint not null
+            )`,
         );
-        await pg.query(
-            `create table if not exists "${sc}"."stats"(id serial primary key,type text not null,count integer default 1,ts bigint not null)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_memories_segment_idx on ${m}(segment)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_memories_simhash_idx on ${m}(simhash)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_memories_user_idx on ${m}(user_id)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_vectors_user_idx on ${v}(user_id)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_waypoints_user_idx on ${w}(user_id)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_stats_ts_idx on "${sc}"."stats"(ts)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
-        );
-        await pg.query(
-            `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
-        );
+        // Create indexes with tenant_id for multi-tenant mode
+        if (env.multi_tenant) {
+            await pg.query(
+                `create index if not exists openmemory_memories_tenant_sector_idx on ${m}(tenant_id, primary_sector)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_tenant_segment_idx on ${m}(tenant_id, segment)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_tenant_simhash_idx on ${m}(tenant_id, simhash)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_tenant_user_idx on ${m}(tenant_id, user_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_vectors_tenant_user_idx on ${v}(tenant_id, user_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_vectors_tenant_sector_idx on ${v}(tenant_id, sector)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_waypoints_tenant_src_idx on ${w}(tenant_id, src_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_waypoints_tenant_dst_idx on ${w}(tenant_id, dst_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_stats_tenant_ts_idx on "${sc}"."stats"(tenant_id, ts)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_stats_tenant_type_idx on "${sc}"."stats"(tenant_id, type)`,
+            );
+        } else {
+            // Single-tenant indexes (backward compatible)
+            await pg.query(
+                `create index if not exists openmemory_memories_sector_idx on ${m}(primary_sector)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_segment_idx on ${m}(segment)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_simhash_idx on ${m}(simhash)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_memories_user_idx on ${m}(user_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_vectors_user_idx on ${v}(user_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_waypoints_user_idx on ${w}(user_id)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_stats_ts_idx on "${sc}"."stats"(ts)`,
+            );
+            await pg.query(
+                `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
+            );
+        }
         ready = true;
 
         // Initialize VectorStore
@@ -205,8 +300,13 @@ if (is_pg) {
             console.error("[DB] Using Valkey VectorStore");
         } else {
             const vt = process.env.OM_VECTOR_TABLE || "openmemory_vectors";
-            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v.replace(/"/g, ""));
-            console.error(`[DB] Using Postgres VectorStore with table: ${v}`);
+            vector_store = new PostgresVectorStore(
+                { run_async, get_async, all_async },
+                v.replace(/"/g, ""),
+                env.pgvector_enabled  // Pass pgvector flag
+            );
+            const mode = env.pgvector_enabled ? 'pgvector (native)' : 'BYTEA (in-memory)';
+            console.error(`[DB] Using Postgres VectorStore [${mode}] with table: ${v}`);
         }
     };
     init().catch((err) => {
@@ -444,22 +544,79 @@ if (is_pg) {
         db.run("PRAGMA locking_mode=NORMAL"); // Changed from EXCLUSIVE to allow MCP access
         db.run("PRAGMA busy_timeout=5000"); // Increased timeout to handle concurrent access
         db.run(
-            `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
+            `create table if not exists memories(
+                id text primary key,
+                tenant_id text default '${env.default_tenant_id}',
+                user_id text,
+                segment integer default 0,
+                content text not null,
+                simhash text,
+                primary_sector text not null,
+                tags text,
+                meta text,
+                created_at integer,
+                updated_at integer,
+                last_seen_at integer,
+                salience real,
+                decay_lambda real,
+                version integer default 1,
+                mean_dim integer,
+                mean_vec blob,
+                compressed_vec blob,
+                feedback_score real default 0
+            )`,
         );
         db.run(
-            `create table if not exists ${sqlite_vector_table}(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
+            `create table if not exists ${sqlite_vector_table}(
+                id text not null,
+                sector text not null,
+                tenant_id text default '${env.default_tenant_id}',
+                user_id text,
+                v blob not null,
+                dim integer not null,
+                primary key(id,sector)
+            )`,
         );
         db.run(
-            `create table if not exists waypoints(src_id text,dst_id text not null,user_id text,weight real not null,created_at integer,updated_at integer,primary key(src_id,user_id))`,
+            `create table if not exists waypoints(
+                src_id text,
+                dst_id text not null,
+                tenant_id text default '${env.default_tenant_id}',
+                user_id text,
+                weight real not null,
+                created_at integer,
+                updated_at integer,
+                primary key(src_id,user_id)
+            )`,
         );
         db.run(
-            `create table if not exists embed_logs(id text primary key,model text,status text,ts integer,err text)`,
+            `create table if not exists embed_logs(
+                id text primary key,
+                tenant_id text default '${env.default_tenant_id}',
+                model text,
+                status text,
+                ts integer,
+                err text
+            )`,
         );
         db.run(
-            `create table if not exists users(user_id text primary key,summary text,reflection_count integer default 0,created_at integer,updated_at integer)`,
+            `create table if not exists users(
+                user_id text primary key,
+                tenant_id text default '${env.default_tenant_id}',
+                summary text,
+                reflection_count integer default 0,
+                created_at integer,
+                updated_at integer
+            )`,
         );
         db.run(
-            `create table if not exists stats(id integer primary key autoincrement,type text not null,count integer default 1,ts integer not null)`,
+            `create table if not exists stats(
+                id integer primary key autoincrement,
+                tenant_id text default '${env.default_tenant_id}',
+                type text not null,
+                count integer default 1,
+                ts integer not null
+            )`,
         );
         db.run(
             `create table if not exists temporal_facts(id text primary key,subject text not null,predicate text not null,object text not null,valid_from integer not null,valid_to integer,confidence real not null check(confidence >= 0 and confidence <= 1),last_updated integer not null,metadata text,unique(subject,predicate,object,valid_from))`,
@@ -553,8 +710,13 @@ if (is_pg) {
         vector_store = new ValkeyVectorStore();
         console.error("[DB] Using Valkey VectorStore");
     } else {
-        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
-        console.error(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
+        // SQLite doesn't support pgvector, always use BYTEA/BLOB with in-memory search
+        vector_store = new PostgresVectorStore(
+            { run_async, get_async, all_async },
+            sqlite_vector_table,
+            false  // pgvector not supported in SQLite
+        );
+        console.error(`[DB] Using SQLite VectorStore [BLOB/in-memory] with table: ${sqlite_vector_table}`);
     }
 
     // Simple Mutex for transaction serialization

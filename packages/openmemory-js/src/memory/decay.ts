@@ -1,6 +1,7 @@
 import { all_async, run_async, q, vector_store, memories_table } from "../core/db";
 import { now } from "../utils";
 import { env } from "../core/cfg";
+import { resolveTenantId } from "../core/tenant";
 
 type mem = {
     id: string;
@@ -286,7 +287,8 @@ export const apply_decay = async () => {
 
                     if (f < 0.7) {
                         const sector = m.primary_sector || "semantic";
-                        const vec_row = await vector_store.getVector(m.id, sector);
+                        const tenant_id = resolveTenantId({ tenant_id: (m as any).tenant_id });
+                        const vec_row = await vector_store.getVector(m.id, sector, tenant_id);
 
                         if (vec_row && vec_row.vector) {
                             const vec =
@@ -316,6 +318,7 @@ export const apply_decay = async () => {
                                         sector,
                                         new_vec,
                                         new_vec.length,
+                                        tenant_id,
                                     );
                                     compressed = true;
                                     tot_comp++;
@@ -334,12 +337,14 @@ export const apply_decay = async () => {
 
                     if (f < Math.max(0.3, cfg.cold_threshold)) {
                         const sector = m.primary_sector || "semantic";
+                        const tenant_id = resolveTenantId({ tenant_id: (m as any).tenant_id });
                         const fp = fingerprint_mem(m);
                         await vector_store.storeVector(
                             m.id,
                             sector,
                             fp.vector,
                             fp.vector.length,
+                            tenant_id,
                         );
                         await run_async(
                             "update memories set summary=? where id=?",
@@ -380,16 +385,19 @@ export const on_query_hit = async (
     mem_id: string,
     sector: string,
     reembed?: (text: string) => Promise<number[]>,
+    tenant_id?: string,
 ) => {
     if (!cfg.regeneration_enabled && !cfg.reinforce_on_query) return;
 
     const m = await q.get_mem.get(mem_id);
     if (!m) return;
 
+    const resolved_tenant_id = resolveTenantId({ tenant_id: tenant_id || (m as any).tenant_id });
+
     let updated = false;
 
     if (cfg.regeneration_enabled && reembed) {
-        const vec_row = await vector_store.getVector(mem_id, sector);
+        const vec_row = await vector_store.getVector(mem_id, sector, resolved_tenant_id);
         if (vec_row && vec_row.vector) {
             const vec =
                 typeof vec_row.vector === "string"
@@ -404,6 +412,7 @@ export const on_query_hit = async (
                         sector,
                         new_vec,
                         new_vec.length,
+                        resolved_tenant_id,
                     );
                     updated = true;
                 } catch (e) { }
