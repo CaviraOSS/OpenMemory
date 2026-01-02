@@ -1,6 +1,5 @@
 node_modules
 .env
-dist
 data
 .vscode
 target/
