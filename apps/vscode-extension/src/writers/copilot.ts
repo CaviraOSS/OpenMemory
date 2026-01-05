@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { resolveOpenMemoryMcpServerPath } from '../utils/mcpPath';
 
 export interface CopilotConfig {
     name: string;
@@ -19,7 +20,7 @@ export interface CopilotConfig {
 
 export function generateCopilotConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): CopilotConfig {
     if (useMCP) {
-        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
+        const backendMcpPath = resolveOpenMemoryMcpServerPath(mcpServerPath);
         const config: CopilotConfig = {
             name: 'OpenMemory',
             type: 'mcp',

@@ -190,6 +190,8 @@ available mcp tools:
 - `openmemory_list` - list all memories
 - `openmemory_get` - get memory by id
 - `openmemory_reinforce` - reinforce a memory
+- `openmemory_update` - update memory content/tags/metadata
+- `openmemory_delete` - delete a memory
 
 ---
 

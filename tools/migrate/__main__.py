@@ -22,7 +22,7 @@ async def main():
     parser.add_argument("--api-key", required=True, help="Source API Key")
     parser.add_argument("--url", help="Source API URL (optional)")
     parser.add_argument("--output", default="./exports", help="Export directory")
-    parser.add_argument("--openmemory-url", default=os.getenv("OPENMEMORY_URL", "http://localhost:8080"), help="Target OpenMemory URL")
+    parser.add_argument("--openmemory-url", default=os.getenv("OPENMEMORY_URL", "http://localhost:18080"), help="Target OpenMemory URL")
     parser.add_argument("--openmemory-key", default=os.getenv("OPENMEMORY_API_KEY", ""), help="Target OpenMemory Key")
     parser.add_argument("--verbose", action="store_true", help="Debug logging")
     parser.add_argument("--verify", action="store_true", help="Run verification")

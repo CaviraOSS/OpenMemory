@@ -9,6 +9,7 @@ import {
     hsg_query,
     reinforce_memory,
     sector_configs,
+    update_memory,
 } from "../memory/hsg";
 import { q, all_async, memories_table, vector_store } from "../core/db";
 import { getEmbeddingInfo } from "../memory/embed";
@@ -544,6 +545,134 @@ export const create_mcp_srv = () => {
         },
     );
 
+    srv.tool(
+        "openmemory_update",
+        "Update an existing memory (content, tags, metadata)",
+        {
+            id: z.string().min(1).describe("Memory identifier to update"),
+            content: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("New memory content (omit to keep current)"),
+            tags: z
+                .array(z.string())
+                .optional()
+                .describe("Replace tags (omit to keep current)"),
+            metadata: z
+                .record(z.any())
+                .optional()
+                .describe("Replace metadata (omit to keep current)"),
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Validate ownership against a specific user identifier"),
+        },
+        async ({ id, content, tags, metadata, user_id }) => {
+            if (
+                content === undefined &&
+                tags === undefined &&
+                metadata === undefined
+            ) {
+                throw new Error("No updates provided");
+            }
+            const u = uid(user_id);
+            const mem = await q.get_mem.get(id);
+            if (!mem)
+                return {
+                    content: [
+                        { type: "text", text: `Memory ${id} not found.` },
+                    ],
+                };
+            if (u && mem.user_id !== u)
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Memory ${id} not found for user ${u}.`,
+                        },
+                    ],
+                };
+
+            const res = await update_memory(id, content, tags, metadata);
+            const owner = mem.user_id || u;
+            if (owner) {
+                update_user_summary(owner).catch((err) =>
+                    console.error("[MCP] user summary update failed:", err),
+                );
+            }
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Updated memory ${id}`,
+                    },
+                    {
+                        type: "text",
+                        text: JSON.stringify(
+                            {
+                                id,
+                                updated: res.updated,
+                                user_id: owner ?? null,
+                            },
+                            null,
+                            2,
+                        ),
+                    },
+                ],
+            };
+        },
+    );
+
+    srv.tool(
+        "openmemory_delete",
+        "Delete a memory by identifier",
+        {
+            id: z.string().min(1).describe("Memory identifier to delete"),
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Validate ownership against a specific user identifier"),
+        },
+        async ({ id, user_id }) => {
+            const u = uid(user_id);
+            const mem = await q.get_mem.get(id);
+            if (!mem)
+                return {
+                    content: [
+                        { type: "text", text: `Memory ${id} not found.` },
+                    ],
+                };
+            if (u && mem.user_id !== u)
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Memory ${id} not found for user ${u}.`,
+                        },
+                    ],
+                };
+            await q.del_mem.run(id);
+            await vector_store.deleteVectors(id);
+            await q.del_waypoints.run(id, id);
+            const owner = mem.user_id || u;
+            if (owner) {
+                update_user_summary(owner).catch((err) =>
+                    console.error("[MCP] user summary update failed:", err),
+                );
+            }
+            return {
+                content: [
+                    { type: "text", text: `Deleted memory ${id}` },
+                ],
+            };
+        },
+    );
+
     srv.resource(
         "openmemory-config",
         "openmemory://config",
@@ -568,6 +697,8 @@ export const create_mcp_srv = () => {
                     "openmemory_reinforce",
                     "openmemory_list",
                     "openmemory_get",
+                    "openmemory_update",
+                    "openmemory_delete",
                 ],
             };
             return {

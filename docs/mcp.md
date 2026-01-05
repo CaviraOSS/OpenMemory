@@ -243,6 +243,52 @@ Fetch a single memory by ID.
 }
 ```
 
+### openmemory_update
+
+Update a memory (content, tags, metadata).
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `id` | string | Yes | - | Memory identifier |
+| `content` | string | No | - | New memory content |
+| `tags` | string[] | No | - | Replace tags |
+| `metadata` | object | No | - | Replace metadata |
+| `user_id` | string | No | - | User identifier |
+
+#### Example
+
+```json
+{
+  "id": "mem_abc123",
+  "content": "Updated preference: user prefers email reports",
+  "tags": ["preference", "reporting"],
+  "metadata": { "source": "manual" },
+  "user_id": "user_123"
+}
+```
+
+### openmemory_delete
+
+Delete a memory by ID.
+
+#### Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `id` | string | Yes | - | Memory identifier |
+| `user_id` | string | No | - | User identifier |
+
+#### Example
+
+```json
+{
+  "id": "mem_abc123",
+  "user_id": "user_123"
+}
+```
+
 ### openmemory_reinforce
 
 Boost salience of a memory.

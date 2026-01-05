@@ -16,7 +16,11 @@ const get_tier = (): tier => {
     return "hybrid";
 };
 export const tier = get_tier();
-const tier_dims = { fast: 1536, smart: 1536, deep: 1536, hybrid: 1536 };
+// Defaults mirror `.env.example` and docs:
+// - fast/hybrid: 256-dim synthetic
+// - smart: 256-dim synthetic + 128-dim compressed semantic => 384
+// - deep: full semantic embeddings (typically 1536)
+const tier_dims = { fast: 256, smart: 384, deep: 1536, hybrid: 256 };
 const tier_cache = { fast: 2, smart: 3, deep: 5, hybrid: 3 };
 const tier_max_active = { fast: 32, smart: 64, deep: 128, hybrid: 64 };
 
@@ -76,7 +80,11 @@ export const env = {
         process.env.OM_METADATA_BACKEND,
         "sqlite",
     ).toLowerCase(),
-    vector_backend: str(process.env.OM_VECTOR_BACKEND, "postgres").toLowerCase(),
+    // By default, vectors follow the metadata backend unless explicitly overridden (e.g. "valkey").
+    vector_backend: str(
+        process.env.OM_VECTOR_BACKEND,
+        process.env.OM_METADATA_BACKEND || "sqlite",
+    ).toLowerCase(),
     valkey_host: str(process.env.OM_VALKEY_HOST, "localhost"),
     valkey_port: num(process.env.OM_VALKEY_PORT, 6379),
     valkey_password: process.env.OM_VALKEY_PASSWORD,

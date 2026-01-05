@@ -4,6 +4,15 @@ import { update_user_summary } from "../../memory/user_summary";
 import { j, p } from "../../utils";
 import * as crypto from "crypto";
 export function ide(app: any) {
+    const hdr_user_id = (req: any): string | undefined => {
+        const h =
+            req?.headers?.["x-om-user-id"] ??
+            req?.headers?.["x-openmemory-user-id"];
+        if (typeof h === "string") return h;
+        if (Array.isArray(h) && typeof h[0] === "string") return h[0];
+        return undefined;
+    };
+
     app.post("/api/ide/events", async (req: any, res: any) => {
         try {
             const event_type = req.body.event_type;
@@ -11,7 +20,7 @@ export function ide(app: any) {
             const content = req.body.content || "";
             const session_id = req.body.session_id || "default";
             const metadata = req.body.metadata || {};
-            const user_id = req.body.user_id || "anonymous";
+            const user_id = req.body.user_id || hdr_user_id(req) || "anonymous";
 
             if (!event_type)
                 return res.status(400).json({ err: "event_type_required" });
@@ -72,10 +81,11 @@ export function ide(app: any) {
             const k = req.body.k || req.body.limit || 5;
             const session_id = req.body.session_id;
             const file_path = req.body.file_path;
+            const user_id = req.body.user_id || hdr_user_id(req);
 
             if (!query) return res.status(400).json({ err: "query_required" });
 
-            const results = await hsg_query(query, k);
+            const results = await hsg_query(query, k, user_id ? { user_id } : undefined);
 
             let filtered = results;
 

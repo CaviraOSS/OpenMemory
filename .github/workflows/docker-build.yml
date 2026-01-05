@@ -47,7 +47,7 @@ jobs:
         run: |
           max_attempts=30
           attempt=0
-          until curl -f http://localhost:8080/health || [ $attempt -eq $max_attempts ]; do
+          until curl -f http://localhost:18080/health || [ $attempt -eq $max_attempts ]; do
             echo "Waiting for service to be healthy... (attempt $((attempt+1))/$max_attempts)"
             sleep 2
             attempt=$((attempt+1))
@@ -60,7 +60,7 @@ jobs:
           fi
 
           echo "✅ Service is healthy!"
-          curl -v http://localhost:8080/health
+          curl -v http://localhost:18080/health
 
       - name: Show Container Logs
         if: failure()

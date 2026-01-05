@@ -174,25 +174,94 @@ git clone https://github.com/CaviraOSS/OpenMemory.git
 cd OpenMemory
 cp .env.example .env
 
-cd backend
+cd packages/openmemory-js
 npm install
-npm run dev   # default :8080
+npm run dev   # default :18080 (see OM_PORT in .env)
 ```
 
 Or with Docker:
 
 ```bash
-docker compose up --build -d
+docker compose up --build -d openmemory
 ```
+
+Default port is `18080` (set `OM_PORT` in `.env` to override).
+
+Validate:
+
+```bash
+curl http://localhost:18080/health
+```
+
+Stop:
+
+```bash
+docker compose down
+```
+
+### Multi-project (project-scoped by default)
+
+Run one OpenMemory instance per project by using a separate env file + compose project name (each gets its own volume and port):
+
+```bash
+docker compose --project-name om_projectA --env-file .env.projectA up -d --build openmemory
+docker compose --project-name om_projectB --env-file .env.projectB up -d --build openmemory
+```
+
+Optional “team-shared” memory is just another explicit instance:
+
+```bash
+docker compose --project-name om_team --env-file .env.team up -d --build openmemory
+```
+
+VS Code: keep memory per project by using workspace settings (`openmemory.backendUrl` + optional `openmemory.userId`). By default the extension now scopes `user_id` per workspace project name.
+
+Practical WB Repricer System setup: `docs/projects/wb-repricer.md`.
 
 The backend exposes:
 
-- `/api/memory/*` – memory operations
+- `/memory/*` – memory operations
 - `/api/temporal/*` – temporal knowledge graph
-- `/mcp` – MCP server
-- dashboard UI
+- `/api/ide/*` – IDE events + context endpoint
+- `/mcp` – MCP server (HTTP transport)
 
 ---
+
+### 2.4 Integrate OpenMemory into your projects
+
+Recommended default: **one OpenMemory instance per project** (separate port + DB volume + API key). “Team memory” is a separate explicit instance you connect to only when needed.
+
+**A) Start per-project backend**
+
+- Create `.env.project.<name>` from `.env.project.example` and choose a unique `OM_PORT` / `OM_API_KEY`.
+- Run (isolated volume + container names):
+
+```bash
+docker compose --project-name om_<project> --env-file .env.project.<project> up -d --build openmemory
+```
+
+**B) Connect IDEs (VS Code / Cursor / Claude / Codex / etc.)**
+
+- VS Code extension: set `openmemory.backendUrl` to your project instance (e.g. `http://localhost:<OM_PORT>`) and set `openmemory.apiKey`.
+- By default, the extension scopes `user_id` per workspace project; set `openmemory.userId` if you want a stable shared identity across IDEs for the same person/agent.
+- MCP clients: point to `http://localhost:<OM_PORT>/mcp` (auth via `x-api-key`).
+
+**C) Connect your app / agents**
+
+Use the SDKs for embedded memory, or call the server:
+
+```bash
+# server mode
+curl -H "x-api-key: $OM_API_KEY" -H "content-type: application/json" \
+  -d '{"content":"decision: use docker per project","user_id":"agent-core"}' \
+  http://localhost:<OM_PORT>/memory/add
+```
+
+Conventions that work well:
+- `user_id`: actor identity inside the project (`alice`, `codex`, `ci`, `agent-core`).
+- `metadata`: include `project`, `repo`, `branch`, `task_id`, `source` when writing memories.
+
+More details: `docs/multi-project.md`.
 
 ## 3. Why OpenMemory (vs RAG, vs “just vectors”)
 
@@ -310,7 +379,7 @@ OpenMemory ships a native MCP server, so any MCP‑aware client can treat it as 
 ### Claude / Claude Code
 
 ```bash
-claude mcp add --transport http openmemory http://localhost:8080/mcp
+claude mcp add --transport http openmemory http://localhost:18080/mcp
 ```
 
 ### Cursor / Windsurf
@@ -322,7 +391,7 @@ claude mcp add --transport http openmemory http://localhost:8080/mcp
   "mcpServers": {
     "openmemory": {
       "type": "http",
-      "url": "http://localhost:8080/mcp"
+      "url": "http://localhost:18080/mcp"
     }
   }
 }
@@ -335,6 +404,8 @@ Available tools include:
 - `openmemory_list`
 - `openmemory_get`
 - `openmemory_reinforce`
+- `openmemory_update`
+- `openmemory_delete`
 
 Your IDE assistant can query, store, list, and reinforce memories without you wiring every call manually.
 
@@ -388,7 +459,7 @@ The `opm` CLI talks directly to the engine / server.
 ### Install
 
 ```bash
-cd backend
+cd packages/openmemory-js
 npm install
 npm link   # adds `opm` to your PATH
 ```

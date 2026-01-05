@@ -19,7 +19,7 @@ const loadenv = () => {
 };
 loadenv();
 
-const port = process.env.OM_PORT || '8080';
+const port = process.env.OM_PORT || '18080';
 const url = process.env.OPENMEMORY_URL || `http://localhost:${port}`;
 const key = process.env.OPENMEMORY_API_KEY || process.env.OM_API_KEY || '';
 
@@ -46,7 +46,7 @@ options:
   -h, --help            show help
 
 env vars:
-  OPENMEMORY_URL        api url (default: http://localhost:8080)
+  OPENMEMORY_URL        api url (default: http://localhost:18080)
   OPENMEMORY_API_KEY    auth key
   OM_API_KEY            alt auth key
 
