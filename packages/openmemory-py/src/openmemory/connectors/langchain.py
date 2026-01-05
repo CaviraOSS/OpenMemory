@@ -7,8 +7,29 @@ try:
     from langchain_core.callbacks import CallbackManagerForRetrieverRun
 except ImportError:
     # Optional dependencies
-    BaseChatMessageHistory = object
-    BaseRetriever = object
+    class BaseChatMessageHistory:  # type: ignore
+        pass
+
+    class BaseRetriever:  # type: ignore
+        pass
+
+    class BaseMessage:  # type: ignore
+        def __init__(self, content: str = ""):
+            self.content = content
+
+    class HumanMessage(BaseMessage):  # type: ignore
+        pass
+
+    class AIMessage(BaseMessage):  # type: ignore
+        pass
+
+    class Document:  # type: ignore
+        def __init__(self, page_content: str, metadata: Any | None = None):
+            self.page_content = page_content
+            self.metadata = metadata or {}
+
+    class CallbackManagerForRetrieverRun:  # type: ignore
+        pass
 
 from ..main import Memory
 
