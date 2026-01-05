@@ -83,6 +83,11 @@ const send_err = (
 };
 
 const uid = (val?: string | null) => (val?.trim() ? val.trim() : undefined);
+const default_user_id = uid(
+    process.env.OM_DEFAULT_USER_ID ||
+        process.env.OPENMEMORY_DEFAULT_USER_ID ||
+        process.env.OPENMEMORY_USER_ID,
+);
 
 export const create_mcp_srv = () => {
     const srv = new McpServer(
@@ -166,7 +171,7 @@ export const create_mcp_srv = () => {
             min_salience,
             user_id,
         }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
 
@@ -322,7 +327,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const results: any = { type };
 
             // Validate facts are provided when needed
@@ -456,7 +461,7 @@ export const create_mcp_srv = () => {
                 .describe("Restrict results to a specific user identifier"),
         },
         async ({ limit, sector, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             let rows: mem_row[];
             if (u) {
                 const all = await q.all_mem_by_user.all(u, limit ?? 10, 0);
@@ -508,7 +513,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ id, include_vectors, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const mem = await q.get_mem.get(id);
             if (!mem)
                 return {
@@ -583,7 +588,7 @@ export const create_mcp_srv = () => {
             ) {
                 throw new Error("No updates provided");
             }
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const mem = await q.get_mem.get(id);
             if (!mem)
                 return {
@@ -644,7 +649,7 @@ export const create_mcp_srv = () => {
                 .describe("Validate ownership against a specific user identifier"),
         },
         async ({ id, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const mem = await q.get_mem.get(id);
             if (!mem)
                 return {
