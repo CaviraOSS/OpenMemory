@@ -45,6 +45,36 @@ Search for memories.
 }
 ```
 
+### `PATCH /memory/:id`
+
+Update an existing memory. If `content` changes, embeddings are recomputed.
+
+**Headers:**
+- `x-api-key: <OM_API_KEY>` (required if auth is enabled)
+
+**Body:**
+```json
+{
+  "content": "Updated content (optional)",
+  "tags": ["tag1", "tag2"],
+  "metadata": { "source": "manual" },
+  "user_id": "user_123"
+}
+```
+
+### `DELETE /memory/:id`
+
+Delete a memory by id (also removes vectors and waypoint links).
+
+**Headers:**
+- `x-api-key: <OM_API_KEY>` (required if auth is enabled)
+
+**Example:**
+```bash
+curl -X DELETE "http://localhost:18080/memory/mem_abc123?user_id=user_123" \
+  -H "x-api-key: <OM_API_KEY>"
+```
+
 ### `GET /health`
 
 Returns `200 OK` if the system is running.

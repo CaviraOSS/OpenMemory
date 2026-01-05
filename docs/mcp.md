@@ -570,6 +570,29 @@ const result = await client.callTool({
 // Returns: Excel
 ```
 
+### Update / Delete (Contextual Memory)
+
+Use these for cleanup, corrections, and redactions:
+
+```json
+// Update an existing memory
+{
+  "id": "mem_abc123",
+  "content": "Corrected content",
+  "tags": ["corrected"],
+  "metadata": { "source": "cleanup" },
+  "user_id": "user_123"
+}
+```
+
+```json
+// Delete an old / incorrect memory
+{
+  "id": "mem_abc123",
+  "user_id": "user_123"
+}
+```
+
 ### Historical Analysis
 
 ```json

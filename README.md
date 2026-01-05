@@ -225,6 +225,8 @@ The backend exposes:
 - `/api/ide/*` – IDE events + context endpoint
 - `/mcp` – MCP server (HTTP transport)
 
+Update/delete are supported via both HTTP (`PATCH /memory/:id`, `DELETE /memory/:id`) and MCP (`openmemory_update`, `openmemory_delete`).
+
 ---
 
 ### 2.4 Integrate OpenMemory into your projects
