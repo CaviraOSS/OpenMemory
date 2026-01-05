@@ -47,14 +47,19 @@ const fmt_matches = (matches: Awaited<ReturnType<typeof hsg_query>>) =>
         })
         .join("\n\n");
 
-const set_hdrs = (res: ServerResponse) => {
-    res.setHeader("Content-Type", "application/json");
+const set_cors_hdrs = (res: ServerResponse) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
     res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type,Authorization,Mcp-Session-Id",
+        "Content-Type,Authorization,x-api-key,mcp-session-id,mcp-protocol-version,last-event-id",
     );
+    res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+};
+
+const set_json_hdrs = (res: ServerResponse) => {
+    res.setHeader("Content-Type", "application/json");
+    set_cors_hdrs(res);
 };
 
 const send_err = (
@@ -66,7 +71,7 @@ const send_err = (
 ) => {
     if (!res.headersSent) {
         res.statusCode = status;
-        set_hdrs(res);
+        set_json_hdrs(res);
         res.end(
             JSON.stringify({
                 jsonrpc: "2.0",
@@ -762,14 +767,24 @@ export const mcp = (app: any) => {
     const handle_req = async (req: any, res: any) => {
         try {
             await srv_ready;
-            const pay = await extract_pay(req);
-            if (!pay || typeof pay !== "object") {
-                send_err(res, -32600, "Request body must be a JSON object");
+            set_cors_hdrs(res);
+
+            if (req.method === "POST") {
+                const pay = await extract_pay(req);
+                if (!pay || typeof pay !== "object") {
+                    send_err(res, -32600, "Request body must be a JSON object");
+                    return;
+                }
+                console.error("[MCP] Incoming request:", JSON.stringify(pay));
+                await trans.handleRequest(req, res, pay);
                 return;
             }
-            console.error("[MCP] Incoming request:", JSON.stringify(pay));
-            set_hdrs(res);
-            await trans.handleRequest(req, res, pay);
+
+            // Streamable HTTP transport supports:
+            // - GET for SSE stream (optional but used by many clients)
+            // - DELETE to close session
+            // - other methods return an error per transport
+            await trans.handleRequest(req, res, undefined);
         } catch (error) {
             console.error("[MCP] Error handling request:", error);
             if (error instanceof SyntaxError) {
@@ -787,27 +802,21 @@ export const mcp = (app: any) => {
         }
     };
 
-    app.post("/mcp", (req: any, res: any) => {
+    app.all("/mcp", (req: any, res: any) => {
+        if (req.method === "OPTIONS") {
+            res.statusCode = 204;
+            set_cors_hdrs(res);
+            res.end();
+            return;
+        }
         void handle_req(req, res);
     });
+
     app.options("/mcp", (_req: any, res: any) => {
         res.statusCode = 204;
-        set_hdrs(res);
+        set_cors_hdrs(res);
         res.end();
     });
-
-    const method_not_allowed = (_req: IncomingMessage, res: ServerResponse) => {
-        send_err(
-            res,
-            -32600,
-            "Method not supported. Use POST  /mcp with JSON payload.",
-            null,
-            405,
-        );
-    };
-    app.get("/mcp", method_not_allowed);
-    app.delete("/mcp", method_not_allowed);
-    app.put("/mcp", method_not_allowed);
 };
 
 export const start_mcp_stdio = async () => {
