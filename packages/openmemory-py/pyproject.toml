@@ -13,6 +13,7 @@ dependencies = [
     "numpy",
     "httpx",
     "python-dotenv>=1.0",
+    "PyYAML>=6.0",
     "google-api-python-client>=2.0",
     "google-auth>=2.0",
     "notion-client>=2.0",
