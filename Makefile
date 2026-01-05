@@ -111,7 +111,7 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run Docker container
 	@echo "🐳 Running Docker container..."
-	docker run -p 8080:8080 openmemory
+	docker run -p 18080:18080 openmemory
 
 docker-dev: ## Run development environment with Docker
 	@echo "🐳 Starting development environment..."

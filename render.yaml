@@ -10,5 +10,3 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: OM_PORT
-        value: 8080

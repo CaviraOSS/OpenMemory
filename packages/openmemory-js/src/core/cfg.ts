@@ -25,7 +25,7 @@ const tier_cache = { fast: 2, smart: 3, deep: 5, hybrid: 3 };
 const tier_max_active = { fast: 32, smart: 64, deep: 128, hybrid: 64 };
 
 export const env = {
-    port: num(process.env.OM_PORT, 8080),
+    port: num(process.env.OM_PORT ?? process.env.PORT, 18080),
     db_path: str(
         process.env.OM_DB_PATH,
         path.resolve(__dirname, "../../data/openmemory.sqlite"),
