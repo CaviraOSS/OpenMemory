@@ -24,3 +24,5 @@ test
 *.db
 hits.json
 debug_*.log
+test-results/
+.DS_Store
