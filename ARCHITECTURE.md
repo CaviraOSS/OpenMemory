@@ -20,7 +20,7 @@ OpenMemory is a self-hosted AI memory engine implementing **Hierarchical Memory 
                          ┌───────────▼───────────┐
                          │   REST API SERVER     │
                          │   (TypeScript/Node)   │
-                         │   Port: 8080          │
+                         │   Port: 18080         │
                          └───────────┬───────────┘
                                      │
         ┌────────────────────────────┼────────────────────────────┐
@@ -529,7 +529,7 @@ NODE_SECTOR_MAP = {
 
 ```bash
 # Server
-OM_PORT=8080
+OM_PORT=18080
 OM_DB_PATH=./data/openmemory.sqlite
 OM_API_KEY=                      # Optional bearer token
 
@@ -683,7 +683,7 @@ docker compose up -d
 
 Ports:
 
-- `8080` → API server
+- `18080` → API server
 - Data persisted in `/data/openmemory.sqlite`
 
 ### Manual

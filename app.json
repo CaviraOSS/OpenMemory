@@ -11,9 +11,6 @@
         "NODE_ENV": {
             "value": "production"
         },
-        "OM_PORT": {
-            "value": "8080"
-        },
         "OM_API_KEY": {
             "description": "Secure API key"
         },

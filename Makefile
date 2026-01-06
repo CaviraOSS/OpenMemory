@@ -11,48 +11,43 @@ help: ## Show this help message
 
 # Installation and Setup
 install: ## Install all dependencies
-	@echo "📦 Installing backend dependencies..."
-	cd backend && npm install
-	@echo "📦 Installing JavaScript SDK dependencies..."
-	cd sdk-js && npm install
+	@echo "📦 Installing JavaScript (server + SDK) dependencies..."
+	cd packages/openmemory-js && npm install
 	@echo "📦 Installing Python SDK dependencies..."
-	cd sdk-py && pip install -e .
+	cd packages/openmemory-py && pip install -e .
 	@echo "✅ All dependencies installed!"
 
 install-dev: ## Install development dependencies
 	@echo "🛠️ Installing development dependencies..."
-	cd backend && npm install
-	cd sdk-js && npm install
-	cd sdk-py && pip install -e .[dev]
+	cd packages/openmemory-js && npm install
+	cd packages/openmemory-py && pip install -e .[dev]
 	@echo "✅ Development dependencies installed!"
 
 # Build
 build: ## Build all components
-	@echo "🏗️ Building backend..."
-	cd backend && npm run build
-	@echo "🏗️ Building JavaScript SDK..."
-	cd sdk-js && npm run build
+	@echo "🏗️ Building JavaScript (server + SDK)..."
+	cd packages/openmemory-js && npm run build
 	@echo "✅ All components built!"
 
 build-backend: ## Build backend only
-	cd backend && npm run build
+	cd packages/openmemory-js && npm run build
 
 build-js-sdk: ## Build JavaScript SDK only
-	cd sdk-js && npm run build
+	cd packages/openmemory-js && npm run build
 
 # Development
 dev: ## Start development server
 	@echo "🚀 Starting development server..."
-	cd backend && npm run dev
+	cd packages/openmemory-js && npm run dev
 
 dev-watch: ## Start development server with file watching
 	@echo "👀 Starting development server with watching..."
-	cd backend && npm run dev
+	cd packages/openmemory-js && npm run dev
 
 # Production
 start: ## Start production server
 	@echo "🚀 Starting production server..."
-	cd backend && npm start
+	cd packages/openmemory-js && npm run start
 
 stop: ## Stop server (if running as daemon)
 	@echo "🛑 Stopping server..."
@@ -61,57 +56,52 @@ stop: ## Stop server (if running as daemon)
 # Testing
 test: ## Run all tests
 	@echo "🧪 Running all tests..."
-	@echo "Testing backend API..."
-	node tests/backend/api-simple.test.js
-	@echo "Testing JavaScript SDK..."
-	node tests/js-sdk/sdk-simple.test.js
+	@echo "Testing JavaScript (server + SDK)..."
+	cd packages/openmemory-js && npx tsx tests/verify.ts
 	@echo "Testing Python SDK..."
-	cd tests/py-sdk && python test-simple.py
+	cd packages/openmemory-py && python -m pytest -q
 
 test-backend: ## Run backend tests only
-	@echo "🧪 Testing backend API..."
-	node tests/backend/api-simple.test.js
+	@echo "🧪 Testing JavaScript (server + SDK)..."
+	cd packages/openmemory-js && npx tsx tests/verify.ts
 
 test-js-sdk: ## Run JavaScript SDK tests only
-	@echo "🧪 Testing JavaScript SDK..."
-	node tests/js-sdk/sdk-simple.test.js
+	@echo "🧪 Testing JavaScript (server + SDK)..."
+	cd packages/openmemory-js && npx tsx tests/verify.ts
 
 test-py-sdk: ## Run Python SDK tests only
 	@echo "🧪 Testing Python SDK..."
-	cd tests/py-sdk && python test-simple.py
+	cd packages/openmemory-py && python -m pytest -q
 
 test-integration: ## Run integration tests
 	@echo "🔗 Running integration tests..."
-	node tests/backend/api.test.js
+	cd packages/openmemory-js && npx tsx tests/test_omnibus.ts
 
 # Code Quality
 lint: ## Run linters
 	@echo "🔍 Running linters..."
-	cd backend && npm run lint || echo "Backend linting completed"
-	cd sdk-js && npm run lint || echo "JS SDK linting completed"
-	cd sdk-py && python -m flake8 . || echo "Python linting completed"
+	cd packages/openmemory-js && npx prettier --check "src/**/*.ts" "tests/**/*.ts" || echo "JS formatting check completed"
+	cd packages/openmemory-py && python -m black --check . || echo "Python formatting check completed"
 
 format: ## Format code
 	@echo "🎨 Formatting code..."
-	cd backend && npm run format || echo "Backend formatting completed"
-	cd sdk-js && npm run format || echo "JS SDK formatting completed"
-	cd sdk-py && python -m black . || echo "Python formatting completed"
+	cd packages/openmemory-js && npm run format || echo "JS formatting completed"
+	cd packages/openmemory-py && python -m black . || echo "Python formatting completed"
 
 type-check: ## Run type checking
 	@echo "🏷️ Running type checks..."
-	cd backend && npx tsc --noEmit
-	cd sdk-js && npx tsc --noEmit
+	cd packages/openmemory-js && npx tsc --noEmit
 
 # Database
 db-reset: ## Reset database
 	@echo "🗄️ Resetting database..."
-	rm -f backend/database/*.db
+	rm -f packages/openmemory-js/data/*.sqlite
 	@echo "✅ Database reset!"
 
 db-backup: ## Backup database
 	@echo "💾 Backing up database..."
 	mkdir -p backups
-	cp backend/database/*.db backups/ || echo "No database files found"
+	cp packages/openmemory-js/data/*.sqlite backups/ || echo "No database files found"
 	@echo "✅ Database backed up!"
 
 # Docker
@@ -121,36 +111,33 @@ docker-build: ## Build Docker image
 
 docker-run: ## Run Docker container
 	@echo "🐳 Running Docker container..."
-	docker run -p 8080:8080 openmemory
+	docker run -p 18080:18080 openmemory
 
 docker-dev: ## Run development environment with Docker
 	@echo "🐳 Starting development environment..."
-	docker-compose up --build
+	docker compose up --build openmemory
 
 docker-stop: ## Stop Docker containers
 	@echo "🐳 Stopping Docker containers..."
-	docker-compose down
+	docker compose down
 
 run: docker-dev ## Alias for docker-dev
 
 # Cleanup
 clean: ## Clean build artifacts
 	@echo "🧹 Cleaning build artifacts..."
-	rm -rf backend/dist/
-	rm -rf sdk-js/dist/
-	rm -rf sdk-js/node_modules/.cache/
-	rm -rf backend/node_modules/.cache/
+	rm -rf packages/openmemory-js/dist/
+	rm -rf packages/openmemory-js/node_modules/.cache/
 	find . -name "*.pyc" -delete
 	find . -name "__pycache__" -type d -exec rm -rf {} + || true
 	@echo "✅ Cleanup complete!"
 
 clean-all: clean ## Clean everything including node_modules
 	@echo "🧹 Deep cleaning..."
-	rm -rf backend/node_modules/
-	rm -rf sdk-js/node_modules/
-	rm -rf sdk-py/build/
-	rm -rf sdk-py/dist/
-	rm -rf sdk-py/*.egg-info/
+	rm -rf packages/openmemory-js/node_modules/
+	rm -rf packages/openmemory-py/build/
+	rm -rf packages/openmemory-py/dist/
+	rm -rf packages/openmemory-py/*.egg-info/
 	@echo "✅ Deep cleanup complete!"
 
 # Examples

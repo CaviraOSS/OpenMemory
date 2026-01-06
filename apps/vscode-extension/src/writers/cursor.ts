@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { resolveOpenMemoryMcpServerPath } from '../utils/mcpPath';
 
 export interface CursorConfig {
     name: string;
@@ -17,7 +18,7 @@ export interface CursorConfig {
 
 export function generateCursorConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): CursorConfig {
     if (useMCP) {
-        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
+        const backendMcpPath = resolveOpenMemoryMcpServerPath(mcpServerPath);
         return {
             name: 'OpenMemory',
             type: 'mcp',

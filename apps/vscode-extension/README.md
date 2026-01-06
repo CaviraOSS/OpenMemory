@@ -26,11 +26,11 @@ Backend server required.
 
 ## Settings
 
-- `openmemory.backendUrl`: Backend URL (default: `http://localhost:8080`)
+- `openmemory.backendUrl`: Backend URL (default: `http://localhost:18080`)
 - `openmemory.apiKey`: API key for auth (optional)
 - `openmemory.useMCP`: Use MCP protocol mode (default: `false`) - connects to backend MCP server with tools: `openmemory_query`, `openmemory_store`, `openmemory_list`, `openmemory_get`, `openmemory_reinforce`
-- `openmemory.mcpServerPath`: Path to backend MCP server (default: `backend/dist/ai/mcp.js`)
-- `openmemory.userId`: Custom User ID (optional, defaults to auto-generated)
+- `openmemory.mcpServerPath`: Path to OpenMemory MCP server (defaults to `packages/openmemory-js/dist/ai/mcp.js` in this repo; legacy `backend/dist/ai/mcp.js` is also supported)
+- `openmemory.userId`: Custom User ID (optional). If unset, OpenMemory generates a stable `user_id` per workspace project (project-scoped by default).
 - `openmemory.projectName`: Custom Project Name (optional, defaults to workspace name)
 
 ## Commands
@@ -48,7 +48,7 @@ All data stores locally. No telemetry. Open source code available for audit.
 
 ## Troubleshooting
 
-Check backend running: `curl http://localhost:8080/health`
+Check backend running: `curl http://localhost:18080/health`
 
 For issues, see [GitHub](https://github.com/CaviraOSS/OpenMemory/issues)
 

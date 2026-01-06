@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { resolveOpenMemoryMcpServerPath } from '../utils/mcpPath';
 
 export interface WindsurfConfig {
     contextProvider?: string;
@@ -13,7 +14,7 @@ export interface WindsurfConfig {
 
 export function generateWindsurfConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): WindsurfConfig {
     if (useMCP) {
-        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
+        const backendMcpPath = resolveOpenMemoryMcpServerPath(mcpServerPath);
         return {
             contextProvider: 'openmemory-mcp',
             mcp: {

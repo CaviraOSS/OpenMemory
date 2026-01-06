@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
 import { shouldSkipEvent, getSectorFilter } from './hooks/ideEvents';
 import { writeCursorConfig } from './writers/cursor';
 import { writeClaudeConfig } from './writers/claude';
@@ -9,7 +10,7 @@ import { DashboardPanel } from './panels/DashboardPanel';
 import { generateDiff } from './utils/diff';
 
 let session_id: string | null = null;
-let backend_url = 'http://localhost:8080';
+let backend_url = 'http://localhost:18080';
 let api_key: string | undefined = undefined;
 let status_bar: vscode.StatusBarItem;
 let is_tracking = false;
@@ -23,7 +24,7 @@ const fileCache = new Map<string, string>();
 export function activate(context: vscode.ExtensionContext) {
     const config = vscode.workspace.getConfiguration('openmemory');
     is_enabled = config.get('enabled') ?? true;
-    backend_url = config.get('backendUrl') || 'http://localhost:8080';
+    backend_url = config.get('backendUrl') || 'http://localhost:18080';
     api_key = config.get('apiKey') || undefined;
     use_mcp = config.get('useMCP') || false;
     mcp_server_path = config.get('mcpServerPath') || '';
@@ -334,7 +335,7 @@ async function show_quick_setup() {
             }
             break;
         case 'url':
-            const url = await vscode.window.showInputBox({ prompt: 'Enter backend URL', value: backend_url, placeHolder: 'http://localhost:8080' });
+            const url = await vscode.window.showInputBox({ prompt: 'Enter backend URL', value: backend_url, placeHolder: 'http://localhost:18080' });
             if (url) {
                 const config = vscode.workspace.getConfiguration('openmemory');
                 await config.update('backendUrl', url, vscode.ConfigurationTarget.Global);
@@ -359,25 +360,36 @@ async function show_quick_setup() {
     }
 }
 
-function getUserId(context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
-    // 1. Check if user has configured a custom userId
-    const configuredUserId = config.get<string>('userId');
-    if (configuredUserId) return configuredUserId;
+	function getUserId(context: vscode.ExtensionContext, config: vscode.WorkspaceConfiguration): string {
+	    // 1. Check if user has configured a custom userId
+	    const configuredUserId = config.get<string>('userId');
+	    if (configuredUserId) return configuredUserId;
 
-    // 2. Check if we have a persistent userId in global state
-    let persistedUserId = context.globalState.get<string>('openmemory.userId');
-    if (persistedUserId) return persistedUserId;
+	    // 2. Project-scoped by default (separate memory per project/workspace)
+	    const configuredProject = config.get<string>('projectName');
+	    const project = configuredProject || vscode.workspace.workspaceFolders?.[0]?.name || 'unknown';
+	    const projectHash = crypto.createHash('sha1').update(project).digest('hex').slice(0, 10);
+	    const projectUserIdKey = `openmemory.userId.${projectHash}`;
 
-    // 3. Generate a new unique userId based on machine ID
-    const machineId = vscode.env.machineId; // Unique per machine
-    const userName = process.env.USERNAME || process.env.USER || 'user';
-    persistedUserId = `${userName}-${machineId.substring(0, 8)}`;
+	    let persistedUserId = context.globalState.get<string>(projectUserIdKey);
+	    if (persistedUserId) return persistedUserId;
 
-    // 4. Persist it for future sessions
-    context.globalState.update('openmemory.userId', persistedUserId);
+	    // 3. Generate a new unique userId based on machine ID
+	    const machineId = vscode.env.machineId; // Unique per machine
+	    const userName = process.env.USERNAME || process.env.USER || 'user';
+	    const projectSlug = project
+	        .toLowerCase()
+	        .replace(/[^a-z0-9]+/g, '-')
+	        .replace(/^-+|-+$/g, '')
+	        .slice(0, 32) || 'project';
 
-    return persistedUserId;
-}
+	    persistedUserId = `${userName}-${machineId.substring(0, 8)}:${projectSlug}`;
+
+	    // 4. Persist it for future sessions
+	    context.globalState.update(projectUserIdKey, persistedUserId);
+
+	    return persistedUserId;
+	}
 
 async function check_connection(): Promise<boolean> {
     try {
@@ -428,7 +440,7 @@ async function send_event(event_data: { event_type: string; file_path: string; l
 }
 
 async function query_context(query: string, file: string) {
-    const response = await fetch(`${backend_url}/api/ide/context`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ query, session_id, file_path: file, limit: 10 }) });
+    const response = await fetch(`${backend_url}/api/ide/context`, { method: 'POST', headers: get_headers(), body: JSON.stringify({ query, session_id, user_id, file_path: file, limit: 10 }) });
     const data = await response.json();
     return data.memories || [];
 }

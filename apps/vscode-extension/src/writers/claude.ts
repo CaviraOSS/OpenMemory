@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { resolveOpenMemoryMcpServerPath } from '../utils/mcpPath';
 
 export interface ClaudeConfig {
     mcpServers?: {
@@ -17,7 +18,7 @@ export interface ClaudeConfig {
 
 export function generateClaudeConfig(backendUrl: string, apiKey?: string, useMCP = false, mcpServerPath?: string): ClaudeConfig {
     if (useMCP) {
-        const backendMcpPath = mcpServerPath || path.join(process.cwd(), 'backend', 'dist', 'ai', 'mcp.js');
+        const backendMcpPath = resolveOpenMemoryMcpServerPath(mcpServerPath);
         return {
             mcpServers: {
                 openmemory: {

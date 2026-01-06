@@ -16,7 +16,7 @@ class MigrationConfig:
     output_dir: str = "./exports"
     batch_size: int = 1000
     rate_limit: float = 1.0
-    openmemory_url: str = "http://localhost:8080"
+    openmemory_url: str = "http://localhost:18080"
     openmemory_key: str = ""
     verify: bool = False
     resume: bool = False

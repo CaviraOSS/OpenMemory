@@ -31,6 +31,8 @@ jobs:
     needs: detect-changes
     runs-on: ubuntu-latest
     if: needs.detect-changes.outputs.js_changed == 'true' || github.event_name == 'workflow_dispatch'
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -54,9 +56,14 @@ jobs:
         run: cd packages/openmemory-js && npm run build
 
       - name: publish
+        if: env.NPM_TOKEN != ''
         run: cd packages/openmemory-js && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: publish skipped
+        if: env.NPM_TOKEN == ''
+        run: echo "ℹ️ NPM_TOKEN not set; skipping npm publish."
 
       - name: notify
         run: |
@@ -66,6 +73,8 @@ jobs:
     needs: detect-changes
     runs-on: ubuntu-latest
     if: needs.detect-changes.outputs.py_changed == 'true' || github.event_name == 'workflow_dispatch'
+    env:
+      PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -88,10 +97,15 @@ jobs:
         run: cd packages/openmemory-py && python -m build
 
       - name: publish
+        if: env.PYPI_TOKEN != ''
         run: cd packages/openmemory-py && python -m twine upload dist/* --skip-existing
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+
+      - name: publish skipped
+        if: env.PYPI_TOKEN == ''
+        run: echo "ℹ️ PYPI_TOKEN not set; skipping twine upload."
 
       - name: notify
         run: |

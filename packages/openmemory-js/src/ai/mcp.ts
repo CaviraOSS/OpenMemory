@@ -9,6 +9,7 @@ import {
     hsg_query,
     reinforce_memory,
     sector_configs,
+    update_memory,
 } from "../memory/hsg";
 import { q, all_async, memories_table, vector_store } from "../core/db";
 import { getEmbeddingInfo } from "../memory/embed";
@@ -46,14 +47,19 @@ const fmt_matches = (matches: Awaited<ReturnType<typeof hsg_query>>) =>
         })
         .join("\n\n");
 
-const set_hdrs = (res: ServerResponse) => {
-    res.setHeader("Content-Type", "application/json");
+const set_cors_hdrs = (res: ServerResponse) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
     res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type,Authorization,Mcp-Session-Id",
+        "Content-Type,Authorization,x-api-key,mcp-session-id,mcp-protocol-version,last-event-id",
     );
+    res.setHeader("Access-Control-Expose-Headers", "mcp-session-id");
+};
+
+const set_json_hdrs = (res: ServerResponse) => {
+    res.setHeader("Content-Type", "application/json");
+    set_cors_hdrs(res);
 };
 
 const send_err = (
@@ -65,7 +71,7 @@ const send_err = (
 ) => {
     if (!res.headersSent) {
         res.statusCode = status;
-        set_hdrs(res);
+        set_json_hdrs(res);
         res.end(
             JSON.stringify({
                 jsonrpc: "2.0",
@@ -77,6 +83,11 @@ const send_err = (
 };
 
 const uid = (val?: string | null) => (val?.trim() ? val.trim() : undefined);
+const default_user_id = uid(
+    process.env.OM_DEFAULT_USER_ID ||
+        process.env.OPENMEMORY_DEFAULT_USER_ID ||
+        process.env.OPENMEMORY_USER_ID,
+);
 
 export const create_mcp_srv = () => {
     const srv = new McpServer(
@@ -160,7 +171,7 @@ export const create_mcp_srv = () => {
             min_salience,
             user_id,
         }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
 
@@ -316,7 +327,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const results: any = { type };
 
             // Validate facts are provided when needed
@@ -450,7 +461,7 @@ export const create_mcp_srv = () => {
                 .describe("Restrict results to a specific user identifier"),
         },
         async ({ limit, sector, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             let rows: mem_row[];
             if (u) {
                 const all = await q.all_mem_by_user.all(u, limit ?? 10, 0);
@@ -502,7 +513,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ id, include_vectors, user_id }) => {
-            const u = uid(user_id);
+            const u = uid(user_id) ?? default_user_id;
             const mem = await q.get_mem.get(id);
             if (!mem)
                 return {
@@ -544,6 +555,134 @@ export const create_mcp_srv = () => {
         },
     );
 
+    srv.tool(
+        "openmemory_update",
+        "Update an existing memory (content, tags, metadata)",
+        {
+            id: z.string().min(1).describe("Memory identifier to update"),
+            content: z
+                .string()
+                .min(1)
+                .optional()
+                .describe("New memory content (omit to keep current)"),
+            tags: z
+                .array(z.string())
+                .optional()
+                .describe("Replace tags (omit to keep current)"),
+            metadata: z
+                .record(z.any())
+                .optional()
+                .describe("Replace metadata (omit to keep current)"),
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Validate ownership against a specific user identifier"),
+        },
+        async ({ id, content, tags, metadata, user_id }) => {
+            if (
+                content === undefined &&
+                tags === undefined &&
+                metadata === undefined
+            ) {
+                throw new Error("No updates provided");
+            }
+            const u = uid(user_id) ?? default_user_id;
+            const mem = await q.get_mem.get(id);
+            if (!mem)
+                return {
+                    content: [
+                        { type: "text", text: `Memory ${id} not found.` },
+                    ],
+                };
+            if (u && mem.user_id !== u)
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Memory ${id} not found for user ${u}.`,
+                        },
+                    ],
+                };
+
+            const res = await update_memory(id, content, tags, metadata);
+            const owner = mem.user_id || u;
+            if (owner) {
+                update_user_summary(owner).catch((err) =>
+                    console.error("[MCP] user summary update failed:", err),
+                );
+            }
+            return {
+                content: [
+                    {
+                        type: "text",
+                        text: `Updated memory ${id}`,
+                    },
+                    {
+                        type: "text",
+                        text: JSON.stringify(
+                            {
+                                id,
+                                updated: res.updated,
+                                user_id: owner ?? null,
+                            },
+                            null,
+                            2,
+                        ),
+                    },
+                ],
+            };
+        },
+    );
+
+    srv.tool(
+        "openmemory_delete",
+        "Delete a memory by identifier",
+        {
+            id: z.string().min(1).describe("Memory identifier to delete"),
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Validate ownership against a specific user identifier"),
+        },
+        async ({ id, user_id }) => {
+            const u = uid(user_id) ?? default_user_id;
+            const mem = await q.get_mem.get(id);
+            if (!mem)
+                return {
+                    content: [
+                        { type: "text", text: `Memory ${id} not found.` },
+                    ],
+                };
+            if (u && mem.user_id !== u)
+                return {
+                    content: [
+                        {
+                            type: "text",
+                            text: `Memory ${id} not found for user ${u}.`,
+                        },
+                    ],
+                };
+            await q.del_mem.run(id);
+            await vector_store.deleteVectors(id);
+            await q.del_waypoints.run(id, id);
+            const owner = mem.user_id || u;
+            if (owner) {
+                update_user_summary(owner).catch((err) =>
+                    console.error("[MCP] user summary update failed:", err),
+                );
+            }
+            return {
+                content: [
+                    { type: "text", text: `Deleted memory ${id}` },
+                ],
+            };
+        },
+    );
+
     srv.resource(
         "openmemory-config",
         "openmemory://config",
@@ -568,6 +707,8 @@ export const create_mcp_srv = () => {
                     "openmemory_reinforce",
                     "openmemory_list",
                     "openmemory_get",
+                    "openmemory_update",
+                    "openmemory_delete",
                 ],
             };
             return {
@@ -631,14 +772,24 @@ export const mcp = (app: any) => {
     const handle_req = async (req: any, res: any) => {
         try {
             await srv_ready;
-            const pay = await extract_pay(req);
-            if (!pay || typeof pay !== "object") {
-                send_err(res, -32600, "Request body must be a JSON object");
+            set_cors_hdrs(res);
+
+            if (req.method === "POST") {
+                const pay = await extract_pay(req);
+                if (!pay || typeof pay !== "object") {
+                    send_err(res, -32600, "Request body must be a JSON object");
+                    return;
+                }
+                console.error("[MCP] Incoming request:", JSON.stringify(pay));
+                await trans.handleRequest(req, res, pay);
                 return;
             }
-            console.error("[MCP] Incoming request:", JSON.stringify(pay));
-            set_hdrs(res);
-            await trans.handleRequest(req, res, pay);
+
+            // Streamable HTTP transport supports:
+            // - GET for SSE stream (optional but used by many clients)
+            // - DELETE to close session
+            // - other methods return an error per transport
+            await trans.handleRequest(req, res, undefined);
         } catch (error) {
             console.error("[MCP] Error handling request:", error);
             if (error instanceof SyntaxError) {
@@ -656,27 +807,21 @@ export const mcp = (app: any) => {
         }
     };
 
-    app.post("/mcp", (req: any, res: any) => {
+    app.all("/mcp", (req: any, res: any) => {
+        if (req.method === "OPTIONS") {
+            res.statusCode = 204;
+            set_cors_hdrs(res);
+            res.end();
+            return;
+        }
         void handle_req(req, res);
     });
+
     app.options("/mcp", (_req: any, res: any) => {
         res.statusCode = 204;
-        set_hdrs(res);
+        set_cors_hdrs(res);
         res.end();
     });
-
-    const method_not_allowed = (_req: IncomingMessage, res: ServerResponse) => {
-        send_err(
-            res,
-            -32600,
-            "Method not supported. Use POST  /mcp with JSON payload.",
-            null,
-            405,
-        );
-    };
-    app.get("/mcp", method_not_allowed);
-    app.delete("/mcp", method_not_allowed);
-    app.put("/mcp", method_not_allowed);
 };
 
 export const start_mcp_stdio = async () => {

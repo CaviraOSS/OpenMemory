@@ -48,7 +48,7 @@ app.use((req: any, res: any, next: any) => {
     );
     res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type,Authorization,x-api-key",
+        "Content-Type,Authorization,x-api-key,x-om-user-id,x-openmemory-user-id",
     );
     if (req.method === "OPTIONS") {
         res.status(200).end();

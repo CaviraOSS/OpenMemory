@@ -74,7 +74,7 @@
                 },
                 "openmemory.backendUrl": {
                     "type": "string",
-                    "default": "http://localhost:8080",
+                    "default": "http://localhost:18080",
                     "description": "URL of the OpenMemory backend server"
                 },
                 "openmemory.apiKey": {
@@ -111,7 +111,7 @@
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile",
         "lint": "eslint src --ext ts",
-        "postinstall": "node postinstall.js"
+        "postinstall": "npm run compile && node postinstall.js"
     },
     "dependencies": {},
     "devDependencies": {

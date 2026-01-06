@@ -58,12 +58,12 @@ RUN mkdir -p /data \
 # Switch to non-root user
 USER appuser
 
-# Expose the application port
-EXPOSE 8080
+# Expose the default application port (override with OM_PORT)
+EXPOSE 18080
 
 # Define a lightweight health check that verifies the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8080/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+  CMD node -e "const port=process.env.OM_PORT||18080;require('http').get(`http://localhost:${port}/health`,(res)=>process.exit(res.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
 # Start the application using npm
 ENTRYPOINT ["npm", "start"]

@@ -52,7 +52,7 @@ console.log(results[0].content);
 The Node package also contains the API server.
 
 ```bash
-# Start the server on port 8080
+# Start the server (default port: 18080)
 npx openmemory-js serve
 # or
 npx opm serve

@@ -1,15 +1,13 @@
-version: '3.8'
-
 services:
   openmemory:
     build:
       context: ./packages/openmemory-js
       dockerfile: Dockerfile
     ports:
-      - '8080:8080'
+      - '${OM_PORT:-18080}:${OM_PORT:-18080}'
     environment:
       # Core Configuration
-      - OM_PORT=${OM_PORT:-8080}
+      - OM_PORT=${OM_PORT:-18080}
       - OM_MODE=${OM_MODE:-standard}
       - OM_TIER=${OM_TIER:-hybrid}
       - OM_DB_PATH=${OM_DB_PATH:-/data/openmemory.sqlite}
@@ -122,7 +120,7 @@ services:
       - openmemory_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:8080/health']
+      test: ['CMD-SHELL', 'wget --no-verbose --tries=1 --spider "http://localhost:${OM_PORT:-18080}/health"']
       interval: 30s
       timeout: 10s
       retries: 3
@@ -130,13 +128,14 @@ services:
 
   # Dashboard: Web UI for visualizing and managing memories
   dashboard:
+    profiles: ["dashboard"]
     build:
       context: ./dashboard
       dockerfile: Dockerfile
     ports:
       - '3000:3000'
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:${OM_PORT:-18080}}
       - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
     depends_on:
       openmemory:
