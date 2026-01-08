@@ -1,8 +1,6 @@
 import re
 from typing import List, Set, Dict
 
-# Ported from backend/src/utils/text.ts
-
 SYN_GRPS = [
     ["prefer", "like", "love", "enjoy", "favor"],
     ["theme", "mode", "style", "layout"],

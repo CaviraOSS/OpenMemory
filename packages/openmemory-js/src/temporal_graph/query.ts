@@ -15,7 +15,7 @@ export const query_facts_at_time = async (
     const conditions: string[] = []
     const params: any[] = []
 
-    // Build WHERE clause
+
     conditions.push('(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))')
     params.push(timestamp, timestamp)
 

@@ -10,16 +10,12 @@ logger = logging.getLogger("server")
 
 def create_app() -> FastAPI:
     app = FastAPI(title="OpenMemory API", version="1.2.2")
-    
-    # CORS
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
-    # Middleware for logging/auth (simplified)
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         start = time.time()
@@ -27,14 +23,12 @@ def create_app() -> FastAPI:
         process_time = (time.time() - start) * 1000
         logger.info(f"{request.method} {request.url.path} - {response.status_code} ({process_time:.2f}ms)")
         return response
-
-    # Routes
     app.include_router(health.router)
     app.include_router(memory.router, prefix="/memory", tags=["memory"])
     app.include_router(sources.router)
-    
+
     @app.on_event("startup")
     async def startup():
         logger.info(f"OpenMemory Server running on port {env.port}")
-        
+
     return app

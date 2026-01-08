@@ -29,7 +29,7 @@ type q_type = {
     get_max_segment: { get: () => Promise<any> };
     get_segments: { all: () => Promise<any[]> };
     get_mem_by_segment: { all: (segment: number) => Promise<any[]> };
-    // Vector operations removed, use vector_store instead
+
     ins_waypoint: { run: (...p: any[]) => Promise<void> };
     get_neighbors: { all: (src: string) => Promise<any[]> };
     get_waypoints_by_src: { all: (src: string) => Promise<any[]> };
@@ -61,7 +61,7 @@ let memories_table: string;
 
 const is_pg = env.metadata_backend === "postgres";
 
-// Convert SQLite-style ? placeholders to PostgreSQL $1, $2, $3 placeholders
+
 function convertPlaceholders(sql: string): string {
     if (!is_pg) return sql;
     let index = 1;
@@ -226,7 +226,7 @@ if (is_pg) {
         );
         ready = true;
 
-        // Initialize VectorStore
+
         if (env.vector_backend === "valkey") {
             vector_store = new ValkeyVectorStore();
             console.error("[DB] Using Valkey VectorStore");
@@ -349,7 +349,7 @@ if (is_pg) {
                     [segment],
                 ),
         },
-        // Vector operations removed
+
         ins_waypoint: {
             run: (...p) =>
                 run_async(
@@ -458,7 +458,7 @@ if (is_pg) {
     const dir = path.dirname(db_path);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);
-    // SQLite vector table name from env (default: "vectors" for backward compatibility)
+
     const sqlite_vector_table = process.env.OM_VECTOR_TABLE || "vectors";
     db.serialize(() => {
         db.run("PRAGMA journal_mode=WAL");
@@ -468,8 +468,8 @@ if (is_pg) {
         db.run("PRAGMA mmap_size=134217728");
         db.run("PRAGMA foreign_keys=OFF");
         db.run("PRAGMA wal_autocheckpoint=20000");
-        db.run("PRAGMA locking_mode=NORMAL"); // Changed from EXCLUSIVE to allow MCP access
-        db.run("PRAGMA busy_timeout=5000"); // Increased timeout to handle concurrent access
+        db.run("PRAGMA locking_mode=NORMAL");
+        db.run("PRAGMA busy_timeout=5000");
         db.run(
             `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
         );
@@ -565,16 +565,16 @@ if (is_pg) {
     get_async = one;
     all_async = many;
 
-    // Initialize VectorStore (SQLite fallback uses PostgresVectorStore logic but with SQLite db ops)
-    // Note: PostgresVectorStore uses SQL syntax which might be compatible with SQLite for simple things, 
-    // but `bytea` vs `blob` might differ.
-    // However, the interface implementation I wrote uses `run_async` etc.
-    // I should probably rename PostgresVectorStore to SqlVectorStore or similar if it supports both.
-    // For now, I'll use it for SQLite too as the SQL seems standard enough (except maybe bytea/blob handling in param binding).
-    // SQLite uses `blob`. Postgres uses `bytea`.
-    // The `PostgresVectorStore` implementation uses `vectorToBuffer` which returns a Buffer.
-    // `sqlite3` handles Buffer as BLOB. `pg` handles Buffer as bytea.
-    // So it should work.
+
+
+
+
+
+
+
+
+
+
 
     if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
@@ -584,7 +584,7 @@ if (is_pg) {
         console.error(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
     }
 
-    // Simple Mutex for transaction serialization
+
     class Mutex {
         private mutex = Promise.resolve();
         lock(): Promise<() => void> {
@@ -604,7 +604,7 @@ if (is_pg) {
         begin: async () => {
             /*
             if (releaseTx) {
-                // console.error("[TX] ERROR: Active during begin!");
+
                 throw new Error("Transaction already active via lock");
             }
             */
@@ -647,7 +647,7 @@ if (is_pg) {
         },
         upd_mean_vec: {
             run: (...p) =>
-                // p: [id, mean_dim, mean_vec]
+
                 exec("update memories set mean_dim=?,mean_vec=? where id=?", [
                     p[1],
                     p[2],
@@ -735,7 +735,7 @@ if (is_pg) {
                     [segment],
                 ),
         },
-        // Vector operations removed
+
         ins_waypoint: {
             run: (...p) =>
                 exec(
@@ -830,7 +830,7 @@ if (is_pg) {
                 await exec("delete from memories");
                 await exec("delete from waypoints");
                 await exec("delete from users");
-                // vector table name is variable
+
                 const vec_table = process.env.OM_VECTOR_TABLE || "vectors";
                 await exec(`delete from ${vec_table}`);
             },

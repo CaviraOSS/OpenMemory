@@ -1,6 +1,6 @@
 /**
  * openmemory sources - production-grade data source integrations
- * 
+ *
  * provides connectors for external data sources:
  * - google drive, sheets, slides
  * - notion

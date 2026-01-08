@@ -119,11 +119,11 @@ export function mem(app: any) {
         };
         if (!id) return res.status(400).json({ err: "id" });
         try {
-            // Check if memory exists and user has permission
+
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
-            // Check user ownership if user_id is provided
+
             if (b.user_id && m.user_id !== b.user_id) {
                 return res.status(403).json({ err: "forbidden" });
             }
@@ -148,13 +148,13 @@ export function mem(app: any) {
 
             let r;
             if (user_id) {
-                // Filter by user_id
+
                 r = await q.all_mem_by_user.all(user_id, l, u);
             } else if (s) {
-                // Filter by sector
+
                 r = await q.all_mem_by_sector.all(s, l, u);
             } else {
-                // No filter
+
                 r = await q.all_mem.all(l, u);
             }
 
@@ -185,7 +185,7 @@ export function mem(app: any) {
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
-            // Check user ownership if user_id is provided
+
             if (user_id && m.user_id !== user_id) {
                 return res.status(403).json({ err: "forbidden" });
             }
@@ -219,7 +219,7 @@ export function mem(app: any) {
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
 
-            // Check user ownership if user_id is provided
+
             if (user_id && m.user_id !== user_id) {
                 return res.status(403).json({ err: "forbidden" });
             }

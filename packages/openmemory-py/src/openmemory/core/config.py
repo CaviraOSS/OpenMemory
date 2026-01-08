@@ -3,11 +3,6 @@ import sys
 from pathlib import Path
 from typing import Literal, List, Optional, Any
 from dotenv import load_dotenv
-
-# load .env from project root
-# assuming we are in src/openmemory/core aka 3 levels deep from root?
-# backend was config({path: resolve(__dirname, "../../../.env")})
-# we are in src/openmemory/core -> ../../../.env is correct
 msg_root = Path(__file__).parent.parent.parent.parent / ".env"
 load_dotenv(msg_root)
 
@@ -33,57 +28,41 @@ except ImportError:
 
 class EnvConfig:
     def __init__(self):
-        # 1. Load TOML
         self._toml = {}
         toml_path = Path("openmemory.toml")
         if tomllib and toml_path.exists():
             with open(toml_path, "rb") as f:
                 self._toml = tomllib.load(f)
-        
-        # Helper to get from TOML or Env
         def get(sec: str, key: str, env_var: str, default: Any) -> Any:
             val = self._toml.get(sec, {}).get(key)
             if val is not None: return val
             return os.getenv(env_var, default)
-
-        # [db]
-        # V2: url = "sqlite:///openmemory.db"
         self.db_url = get("db", "url", "OM_DB_URL", "sqlite:///openmemory.db")
-        # Legacy back-compat for db_path if url is sqlite
         if self.db_url.startswith("sqlite:///"):
             self.db_path = self.db_url.replace("sqlite:///", "")
         else:
-            # Fallback path if using legacy env
             default_db_path = str(Path(__file__).parent.parent.parent.parent / "datta" / "openmemory.sqlite")
             self.db_path = s_str(os.getenv("OM_DB_PATH"), default_db_path)
-
-        # [context]
         self.max_context_items = int(get("context", "max_items", "OM_MAX_CONTEXT_ITEMS", 16))
         self.max_context_tokens = int(get("context", "max_tokens", "OM_MAX_CONTEXT_TOKENS", 2048))
-
-        # [decay]
         self.decay_half_life = float(get("decay", "half_life_days", "OM_DECAY_HALF_LIFE", 14))
-        self.decay_lambda = num(os.getenv("OM_DECAY_LAMBDA"), 0.02) # legacy env
-
-        # [ai] or root params
+        self.decay_lambda = num(os.getenv("OM_DECAY_LAMBDA"), 0.02)
         self.openai_key = get("ai", "openai_key", "OPENAI_API_KEY", "") or os.getenv("OM_OPENAI_API_KEY")
         self.openai_base_url = get("ai", "openai_base", "OM_OPENAI_BASE_URL", "https://api.openai.com/v1")
         self.openai_model = get("ai", "openai_model", "OM_OPENAI_MODEL", None)
-        
+
         self.ollama_url = get("ai", "ollama_url", "OLLAMA_URL", "http://localhost:11434")
-        
+
         self.emb_kind = get("ai", "embedding_provider", "OM_EMBED_KIND", "synthetic")
         self.gemini_key = get("ai", "gemini_key", "GEMINI_API_KEY",  os.getenv("OM_GEMINI_KEY"))
         self.aws_region = get("ai", "aws_region", "AWS_REGION", None)
         self.aws_access_key_id = get("ai", "aws_access_key_id", "AWS_ACCESS_KEY_ID", None)
         self.aws_secret_access_key = get("ai", "aws_secret_access_key", "AWS_SECRET_ACCESS_KEY", None)
-
-        # Legacy / Internal
         self.vec_dim = int(num(os.getenv("OM_VEC_DIM"), 1536))
         self.min_score = num(os.getenv("OM_MIN_SCORE"), 0.3)
         self.keyword_boost = num(os.getenv("OM_KEYWORD_BOOST"), 2.5)
         self.seg_size = int(num(os.getenv("OM_SEG_SIZE"), 10000))
-        
+
         self.decay_threads = int(num(os.getenv("OM_DECAY_THREADS"), 3))
         self.decay_cold_threshold = num(os.getenv("OM_DECAY_COLD_THRESHOLD"), 0.25)
         self.max_vector_dim = int(num(os.getenv("OM_MAX_VECTOR_DIM"), 1536))
@@ -101,8 +80,6 @@ class EnvConfig:
         self.ollama_embedding_model = os.getenv("OM_OLLAMA_EMBEDDING_MODEL")
         self.gemini_embedding_model = os.getenv("OM_GEMINI_EMBEDDING_MODEL")
         self.aws_embedding_model = os.getenv("OM_AWS_EMBEDDING_MODEL")
-
-    # Property for V2 access
     @property
     def database_url(self) -> str:
         return self.db_url

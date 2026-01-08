@@ -2,7 +2,7 @@ import { hsg_query, add_hsg_memory } from "../../memory/hsg";
 import { j } from "../../utils";
 
 export function vercel(app: any) {
-    // Simple memory query endpoint for Vercel AI SDK adapters
+
     app.post("/query", async (req: any, res: any) => {
         try {
             const b = req.body || {};
@@ -36,7 +36,7 @@ export function vercel(app: any) {
         }
     });
 
-    // Simple memory store endpoint for chat transcripts or summaries
+
     app.post("/memories", async (req: any, res: any) => {
         try {
             const b = req.body || {};

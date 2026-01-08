@@ -12,9 +12,9 @@ import { start_user_summary_reflection } from "../memory/user_summary";
 import { sendTelemetry } from "../core/telemetry";
 import { req_tracker_mw } from "./routes/dashboard";
 
-const ASC = `   ____                   __  __                                 
-  / __ \\                 |  \\/  |                                
- | |  | |_ __   ___ _ __ | \\  / | ___ _ __ ___   ___  _ __ _   _ 
+const ASC = `   ____                   __  __
+  / __ \\                 |  \\/  |
+ | |  | |_ __   ___ _ __ | \\  / | ___ _ __ ___   ___  _ __ _   _
  | |  | | '_ \\ / _ \\ '_ \\| |\\/| |/ _ \\ '_ \` _ \\ / _ \\| '__| | | |
  | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
   \\____/| .__/ \\___|_| |_|_|  |_|\\___|_| |_| |_|\\___/|_|   \\__, |
@@ -28,7 +28,7 @@ console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
 console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
 console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
-// Warn about configuration mismatch that causes embedding incompatibility
+
 if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
     console.warn(
         `[CONFIG] ⚠️  WARNING: Embedding configuration mismatch detected!\n` +
@@ -115,6 +115,6 @@ console.log(`[SERVER] Starting on port ${env.port}`);
 app.listen(env.port, () => {
     console.log(`[SERVER] Running on http://localhost:${env.port}`);
     sendTelemetry().catch(() => {
-        // ignore telemetry failures
+
     });
 });

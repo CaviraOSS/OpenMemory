@@ -4,13 +4,11 @@ from typing import List, Dict, Any, Optional
 
 from ..core.db import db
 
-# Port of backend/src/temporal_graph/query.ts
-
 async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional[str] = None, subject_object: Optional[str] = None, at: int = None, min_confidence: float = 0.1) -> List[Dict[str, Any]]:
     ts = at if at is not None else int(time.time()*1000)
     conds = ["(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))"]
     params = [ts, ts]
-    
+
     if subject:
         conds.append("subject = ?")
         params.append(subject)
@@ -23,7 +21,7 @@ async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional
     if min_confidence > 0:
         conds.append("confidence >= ?")
         params.append(min_confidence)
-        
+
     sql = f"""
         SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
@@ -48,7 +46,7 @@ async def get_current_fact(subject: str, predicate: str) -> Optional[Dict[str, A
 async def query_facts_in_range(subject: str = None, predicate: str = None, start: int = None, end: int = None, min_confidence: float = 0.1) -> List[Dict[str, Any]]:
     conds = []
     params = []
-    
+
     if start is not None and end is not None:
         conds.append("((valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?)) OR (valid_from >= ? AND valid_from <= ?))")
         params.extend([end, start, start, end])
@@ -58,7 +56,7 @@ async def query_facts_in_range(subject: str = None, predicate: str = None, start
     elif end is not None:
         conds.append("valid_from <= ?")
         params.append(end)
-        
+
     if subject:
         conds.append("subject = ?")
         params.append(subject)
@@ -68,8 +66,8 @@ async def query_facts_in_range(subject: str = None, predicate: str = None, start
     if min_confidence > 0:
         conds.append("confidence >= ?")
         params.append(min_confidence)
-        
-    where = f"WHERE {' AND '.join(conds)}" if conds else "" 
+
+    where = f"WHERE {' AND '.join(conds)}" if conds else ""
     sql = f"""
         SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
@@ -110,17 +108,15 @@ async def get_facts_by_subject(subject: str, at: int = None, include_historical:
             ORDER BY predicate ASC, confidence DESC
         """
         params.extend([ts, ts])
-        
+
     rows = db.fetchall(sql, tuple(params))
     return [format_fact(r) for r in rows]
 
 async def search_facts(pattern: str, field: str = "subject", at: int = None) -> List[Dict[str, Any]]:
     ts = at if at is not None else int(time.time()*1000)
     search_pat = f"%{pattern}%"
-    
-    # sanitize field? 1:1, TS restricts type.
     if field not in ["subject", "predicate", "object"]: field = "subject"
-    
+
     sql = f"""
         SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
@@ -136,11 +132,11 @@ async def get_related_facts(fact_id: str, relation_type: str = None, at: int = N
     ts = at if at is not None else int(time.time()*1000)
     conds = ["(e.valid_from <= ? AND (e.valid_to IS NULL OR e.valid_to >= ?))"]
     params = [ts, ts]
-    
+
     if relation_type:
         conds.append("e.relation_type = ?")
         params.append(relation_type)
-        
+
     sql = f"""
         SELECT f.*, e.relation_type, e.weight
         FROM temporal_edges e
@@ -150,9 +146,9 @@ async def get_related_facts(fact_id: str, relation_type: str = None, at: int = N
         AND (f.valid_from <= ? AND (f.valid_to IS NULL OR f.valid_to >= ?))
         ORDER BY e.weight DESC, f.confidence DESC
     """
-    params.insert(0, fact_id) # source_id
-    params.extend([ts, ts]) # for f validation
-    
+    params.insert(0, fact_id)
+    params.extend([ts, ts])
+
     rows = db.fetchall(sql, tuple(params))
     return [{
         "fact": format_fact(r),

@@ -143,8 +143,8 @@ export const reinforcement = {
     prune_threshold: 0.05,
 };
 
-// Sector relationship matrix for cross-sector retrieval
-// Higher values = stronger relationship = less penalty
+
+
 export const sector_relationships: Record<string, Record<string, number>> = {
     semantic: { procedural: 0.8, episodic: 0.6, reflective: 0.7, emotional: 0.4 },
     procedural: { semantic: 0.8, episodic: 0.6, reflective: 0.6, emotional: 0.3 },
@@ -153,19 +153,19 @@ export const sector_relationships: Record<string, Record<string, number>> = {
     emotional: { episodic: 0.7, reflective: 0.6, semantic: 0.4, procedural: 0.3 },
 };
 
-// Detect temporal markers in query for full-sector search
+
 function has_temporal_markers(text: string): boolean {
     const temporal_patterns = [
         /\b(today|yesterday|tomorrow|this\s+week|last\s+week|this\s+morning)\b/i,
-        /\b\d{4}-\d{2}-\d{2}\b/,  // ISO date format like 2025-11-20
-        /\b20\d{2}[/-]?(0[1-9]|1[0-2])[/-]?(0[1-9]|[12]\d|3[01])\b/, // Date patterns
+        /\b\d{4}-\d{2}-\d{2}\b/,
+        /\b20\d{2}[/-]?(0[1-9]|1[0-2])[/-]?(0[1-9]|[12]\d|3[01])\b/,
         /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}/i,
-        /\bwhat\s+(did|have)\s+(i|we)\s+(do|done)\b/i,  // "what did I do" patterns
+        /\bwhat\s+(did|have)\s+(i|we)\s+(do|done)\b/i,
     ];
     return temporal_patterns.some(p => p.test(text));
 }
 
-// Calculate tag match score between query tokens and memory tags
+
 async function compute_tag_match_score(memory_id: string, query_tokens: Set<string>): Promise<number> {
     const mem = await q.get_mem.get(memory_id);
     if (!mem?.tags) return 0;
@@ -177,11 +177,11 @@ async function compute_tag_match_score(memory_id: string, query_tokens: Set<stri
         let matches = 0;
         for (const tag of tags) {
             const tag_lower = String(tag).toLowerCase();
-            // Check exact match
+
             if (query_tokens.has(tag_lower)) {
-                matches += 2;  // Exact match bonus
+                matches += 2;
             } else {
-                // Check partial match
+
                 for (const token of query_tokens) {
                     if (tag_lower.includes(token) || token.includes(tag_lower)) {
                         matches += 1;
@@ -342,7 +342,7 @@ export function extract_essence(
     max_len: number,
 ): string {
     if (!env.use_summary_only || raw.length <= max_len) return raw;
-    // Split on sentence boundaries (punctuation followed by whitespace) to avoid breaking filenames
+
     const sents = raw
         .split(/(?<=[.!?])\s+/)
         .map((s) => s.trim())
@@ -350,15 +350,15 @@ export function extract_essence(
     if (sents.length === 0) return raw.slice(0, max_len);
     const score_sent = (s: string, idx: number): number => {
         let sc = 0;
-        // First sentence bonus - titles/headers are essential for retrieval
+
         if (idx === 0) sc += 10;
-        // Second sentence often contains key context
+
         if (idx === 1) sc += 5;
-        // Header/section markers (markdown or label-style)
+
         if (/^#+\s/.test(s) || /^[A-Z][A-Z\s]+:/.test(s)) sc += 8;
-        // Colon-prefixed labels like "PROBLEM:", "SOLUTION:", "CONTEXT:"
+
         if (/^[A-Z][a-z]+:/i.test(s)) sc += 6;
-        // Date patterns (ISO format)
+
         if (/\d{4}-\d{2}-\d{2}/.test(s)) sc += 7;
         if (
             /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d+/i.test(
@@ -380,14 +380,14 @@ export function extract_essence(
         return sc;
     };
     const scored = sents.map((s, idx) => ({ text: s, score: score_sent(s, idx), idx }));
-    // Sort by score to pick the best sentences
+
     scored.sort((a, b) => b.score - a.score);
 
-    // Select top sentences until we hit max_len
+
     const selected: typeof scored = [];
     let current_len = 0;
 
-    // Always include the first sentence if it fits
+
     const firstSent = scored.find(s => s.idx === 0);
     if (firstSent && firstSent.text.length < max_len) {
         selected.push(firstSent);
@@ -395,14 +395,14 @@ export function extract_essence(
     }
 
     for (const item of scored) {
-        if (item.idx === 0) continue; // Already handled
+        if (item.idx === 0) continue;
         if (current_len + item.text.length + 2 <= max_len) {
             selected.push(item);
-            current_len += item.text.length + 2; // +2 for ". "
+            current_len += item.text.length + 2;
         }
     }
 
-    // Sort selected sentences by their original index to restore context flow
+
     selected.sort((a, b) => a.idx - b.idx);
 
     return selected.map(s => s.text).join(" ");
@@ -607,7 +607,7 @@ export async function expand_via_waypoints(
         const neighs = await q.get_neighbors.all(cur.id);
         for (const neigh of neighs) {
             if (vis.has(neigh.dst_id)) continue;
-            // Clamp neighbor weight to valid range - protect against corrupted data
+
             const neigh_wt = Math.min(1.0, Math.max(0, neigh.weight || 0));
             const exp_wt = cur.weight * neigh_wt * 0.8;
             if (exp_wt < 0.1) continue;
@@ -697,13 +697,13 @@ export async function calc_multi_vec_fusion_score(
 }
 const cache = new Map<string, { r: hsg_q_result[]; t: number }>();
 const sal_cache = new Map<string, { s: number; t: number }>();
-// vec_cache removed
+
 const seg_cache = new Map<number, any[]>();
 const coact_buf: Array<[string, string]> = [];
 const TTL = 60000;
 const VEC_CACHE_MAX = 1000;
 let active_queries = 0;
-// get_vec removed
+
 const get_segment = async (seg: number): Promise<any[]> => {
     if (seg_cache.has(seg)) return seg_cache.get(seg)!;
     const rows = await q.get_mem_by_segment.all(seg);
@@ -752,10 +752,10 @@ export async function hsg_query(
     k = 10,
     f?: { sectors?: string[]; minSalience?: number; user_id?: string; startTime?: number; endTime?: number },
 ): Promise<hsg_q_result[]> {
-    // ... (omitted lines to keep context correct, targeting start of function signature change)
-    // Actually I'll target the signature and the logic inside the loop.
-    // Split into two edits or use multi_replace.
-    // Let's use multi_replace.
+
+
+
+
     if (active_queries >= env.max_active) {
         throw new Error(
             `Rate limit: ${active_queries} active queries (max ${env.max_active})`,
@@ -770,20 +770,20 @@ export async function hsg_query(
         const qc = classify_content(qt);
         const is_temporal = has_temporal_markers(qt);
         const qtk = canonical_token_set(qt);
-        // Store primary sectors for scoring purposes
+
         const primary_sectors = [qc.primary, ...qc.additional];
-        // Determine which sectors to search
+
         let ss: string[];
         if (f?.sectors?.length) {
-            // User explicitly requested specific sectors
+
             ss = f.sectors;
         } else {
-            // IMPORTANT: Search ALL sectors to enable cross-sector retrieval
-            // The sector relationship penalty will down-weight less relevant sectors
+
+
             ss = [...sectors];
         }
         if (!ss.length) ss.push("semantic");
-        // Batch embed all sectors in one API call for faster queries
+
         const qe = await embedQueryForAllSectors(qt, ss);
         const w: multi_vec_fusion_weights = {
             semantic_dimension_weight: qc.primary === "semantic" ? 1.2 : 0.8,
@@ -861,18 +861,18 @@ export async function hsg_query(
                 }
             }
 
-            // Apply sector relationship penalty for cross-sector results
+
             const mem_sector = m.primary_sector;
             const query_sector = qc.primary;
             let sector_penalty = 1.0;
             if (mem_sector !== query_sector && !primary_sectors.includes(mem_sector)) {
-                // Apply penalty based on sector relationship strength
+
                 sector_penalty = sector_relationships[query_sector]?.[mem_sector] || 0.3;
             }
             const adjusted_sim = bs * sector_penalty;
 
             const em = exp.find((e: { id: string }) => e.id === mid);
-            // Clamp waypoint weight to valid range [0, 1] - protect against corrupted data
+
             const ww = Math.min(1.0, Math.max(0, em?.weight || 0));
             const ds = (Date.now() - m.last_seen_at) / 86400000;
             const sal = calc_decay(m.primary_sector, m.salience, ds);
@@ -880,7 +880,7 @@ export async function hsg_query(
             const tok_ov = compute_token_overlap(qtk, mtk);
             const rec_sc = calc_recency_score(m.last_seen_at);
 
-            // Calculate tag match score
+
             const tag_match = await compute_tag_match_score(mid, qtk);
 
             const keyword_boost =
@@ -927,10 +927,10 @@ export async function hsg_query(
         const top = top_cands.slice(0, k);
         const tids = top.map((r) => r.id);
 
-        // Update feedback scores for returned memories (simple learning)
+
         for (const r of top) {
             const cur_fb = (await q.get_mem.get(r.id))?.feedback_score || 0;
-            const new_fb = cur_fb * 0.9 + r.score * 0.1; // Exponential moving average
+            const new_fb = cur_fb * 0.9 + r.score * 0.1;
             await q.upd_feedback.run(r.id, new_fb);
         }
 
@@ -1017,22 +1017,22 @@ export async function run_decay_process(): Promise<{
     return { processed: p, decayed: d };
 }
 
-// Helper to ensure user exists
+
 async function ensure_user_exists(user_id: string): Promise<void> {
     try {
         const existing = await q.get_user.get(user_id);
         if (!existing) {
             await q.ins_user.run(
                 user_id,
-                "User profile initializing...", // Initial summary
-                0, // Reflection count
+                "User profile initializing...",
+                0,
                 Date.now(),
                 Date.now()
             );
         }
     } catch (error) {
         console.error(`[HSG] Failed to ensure user ${user_id} exists:`, error);
-        // Don't throw, proceed with memory creation (legacy behavior)
+
     }
 }
 
@@ -1064,7 +1064,7 @@ export async function add_hsg_memory(
     const id = crypto.randomUUID();
     const now = Date.now();
 
-    // Ensure user exists in the users table
+
     if (user_id) {
         await ensure_user_exists(user_id);
     }
@@ -1081,7 +1081,7 @@ export async function add_hsg_memory(
         const seg_cnt = seg_cnt_res?.c ?? 0;
         if (seg_cnt >= env.seg_size) {
             cur_seg++;
-            // Use stderr for debug output to avoid breaking MCP JSON-RPC protocol
+
             console.error(
                 `[HSG] Rotated to segment ${cur_seg} (previous segment full: ${seg_cnt} memories)`,
             );
@@ -1113,8 +1113,8 @@ export async function add_hsg_memory(
             1,
             null,
             null,
-            null, // compressed_vec
-            0, // feedback_score
+            null,
+            0,
         );
         const emb_res = await embedMultiSector(
             id,
@@ -1135,7 +1135,7 @@ export async function add_hsg_memory(
         const mean_vec_buf = vectorToBuffer(mean_vec);
         await q.upd_mean_vec.run(id, mean_vec.length, mean_vec_buf);
 
-        // Store compressed vector for smart tier (for future query optimization)
+
         if (tier === "smart" && mean_vec.length > 128) {
             const comp = compress_vec_for_storage(mean_vec, 128);
             const comp_buf = vectorToBuffer(comp);

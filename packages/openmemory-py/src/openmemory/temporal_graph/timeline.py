@@ -5,16 +5,14 @@ from typing import List, Dict, Any, Optional
 from ..core.db import db
 from .query import query_facts_at_time
 
-# Port of backend/src/temporal_graph/timeline.ts
-
 async def get_subject_timeline(subject: str, predicate: str = None) -> List[Dict[str, Any]]:
     conds = ["subject = ?"]
     params = [subject]
-    
+
     if predicate:
         conds.append("predicate = ?")
         params.append(predicate)
-        
+
     sql = f"""
         SELECT subject, predicate, object, confidence, valid_from, valid_to
         FROM temporal_facts
@@ -23,7 +21,7 @@ async def get_subject_timeline(subject: str, predicate: str = None) -> List[Dict
     """
     rows = db.fetchall(sql, tuple(params))
     timeline = []
-    
+
     for row in rows:
         timeline.append({
             "timestamp": row["valid_from"],
@@ -42,21 +40,21 @@ async def get_subject_timeline(subject: str, predicate: str = None) -> List[Dict
                 "confidence": row["confidence"],
                 "change_type": "invalidated"
             })
-            
+
     timeline.sort(key=lambda x: x["timestamp"])
     return timeline
 
 async def get_predicate_timeline(predicate: str, start: int = None, end: int = None) -> List[Dict[str, Any]]:
     conds = ["predicate = ?"]
     params = [predicate]
-    
+
     if start is not None:
         conds.append("valid_from >= ?")
         params.append(start)
     if end is not None:
         conds.append("valid_from <= ?")
         params.append(end)
-        
+
     sql = f"""
         SELECT subject, predicate, object, confidence, valid_from, valid_to
         FROM temporal_facts
@@ -83,20 +81,20 @@ async def get_predicate_timeline(predicate: str, start: int = None, end: int = N
                 "confidence": row["confidence"],
                 "change_type": "invalidated"
             })
-            
+
     timeline.sort(key=lambda x: x["timestamp"])
     return timeline
 
 async def get_changes_in_window(start: int, end: int, subject: str = None) -> List[Dict[str, Any]]:
     conds = []
-    params = [start, end, start, end] # from_ts, to_ts, from_ts, to_ts
-    
+    params = [start, end, start, end]
+
     if subject:
         conds.append("subject = ?")
         params.append(subject)
-        
+
     where_sub = f"AND {' AND '.join(conds)}" if conds else ""
-    
+
     sql = f"""
         SELECT subject, predicate, object, confidence, valid_from, valid_to
         FROM temporal_facts
@@ -106,7 +104,7 @@ async def get_changes_in_window(start: int, end: int, subject: str = None) -> Li
     """
     rows = db.fetchall(sql, tuple(params))
     timeline = []
-    
+
     for row in rows:
         if row["valid_from"] >= start and row["valid_from"] <= end:
             timeline.append({
@@ -126,12 +124,11 @@ async def get_changes_in_window(start: int, end: int, subject: str = None) -> Li
                 "confidence": row["confidence"],
                 "change_type": "invalidated"
             })
-            
+
     timeline.sort(key=lambda x: x["timestamp"])
     return timeline
 
 def _row_to_fact(row: Dict[str, Any]) -> Dict[str, Any]:
-    # helper duplicated from query.py but useful here
     return {
         "id": row["id"],
         "subject": row["subject"],
@@ -145,9 +142,7 @@ def _row_to_fact(row: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 async def compare_time_points(subject: str, t1: int, t2: int) -> Dict[str, List[Dict[str, Any]]]:
-    # Reuse query_facts_at_time/query_facts internal logic or manual query?
-    # Direct query is faster as in TS
-    
+
     sql1 = """
         SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
@@ -156,15 +151,15 @@ async def compare_time_points(subject: str, t1: int, t2: int) -> Dict[str, List[
     """
     f1 = db.fetchall(sql1, (subject, t1, t1))
     f2 = db.fetchall(sql1, (subject, t2, t2))
-    
+
     m1 = {r["predicate"]: r for r in f1}
     m2 = {r["predicate"]: r for r in f2}
-    
+
     added = []
     removed = []
     changed = []
     unchanged = []
-    
+
     for pred, fact2 in m2.items():
         fact1 = m1.get(pred)
         if not fact1:
@@ -176,17 +171,17 @@ async def compare_time_points(subject: str, t1: int, t2: int) -> Dict[str, List[
             })
         else:
             unchanged.append(_row_to_fact(fact2))
-            
+
     for pred, fact1 in m1.items():
         if pred not in m2:
             removed.append(_row_to_fact(fact1))
-            
+
     return {"added": added, "removed": removed, "changed": changed, "unchanged": unchanged}
 
 async def get_change_frequency(subject: str, predicate: str, window_days: int = 30) -> Dict[str, Any]:
     now = int(time.time()*1000)
     start = now - (window_days * 86400000)
-    
+
     sql = """
         SELECT valid_from, valid_to
         FROM temporal_facts
@@ -195,19 +190,19 @@ async def get_change_frequency(subject: str, predicate: str, window_days: int = 
         ORDER BY valid_from ASC
     """
     rows = db.fetchall(sql, (subject, predicate, start))
-    
+
     total_changes = len(rows)
     total_dur = 0
     valid_count = 0
-    
+
     for r in rows:
         if r["valid_to"]:
             total_dur += (r["valid_to"] - r["valid_from"])
             valid_count += 1
-            
+
     avg_dur = total_dur / valid_count if valid_count > 0 else 0
     rate = total_changes / window_days
-    
+
     return {
         "predicate": predicate,
         "total_changes": total_changes,
@@ -218,7 +213,7 @@ async def get_change_frequency(subject: str, predicate: str, window_days: int = 
 async def get_volatile_facts(subject: str = None, limit: int = 10) -> List[Dict[str, Any]]:
     where = "WHERE subject = ?" if subject else ""
     params = [subject] if subject else []
-    
+
     sql = f"""
         SELECT subject, predicate, COUNT(*) as change_count, AVG(confidence) as avg_confidence
         FROM temporal_facts

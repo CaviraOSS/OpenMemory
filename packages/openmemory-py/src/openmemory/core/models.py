@@ -19,13 +19,11 @@ def get_defaults() -> ModelCfg:
 def load_models() -> ModelCfg:
     global _cfg
     if _cfg: return _cfg
-    
-    # path: ../../../models.yml relative to core
     p = Path(__file__).parent.parent.parent.parent / "models.yml"
     if not p.exists():
         print("[MODELS] models.yml not found, using defaults")
         return get_defaults()
-        
+
     try:
         with open(p, "r", encoding="utf-8") as f:
             _cfg = yaml.safe_load(f)

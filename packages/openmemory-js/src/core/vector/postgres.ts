@@ -30,7 +30,7 @@ export class PostgresVectorStore implements VectorStore {
     }
 
     async searchSimilar(sector: string, queryVec: number[], topK: number): Promise<Array<{ id: string; score: number }>> {
-        // Postgres implementation (in-memory cosine sim for now, as per original)
+
         const rows = await this.db.all_async(`select id,v,dim from ${this.table} where sector=$1`, [sector]);
         console.error(`[Vector] Search Sector: ${sector}, Found ${rows.length} rows.`);
         const sims: Array<{ id: string; score: number }> = [];

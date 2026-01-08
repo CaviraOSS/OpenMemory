@@ -27,7 +27,7 @@ export const get_subject_timeline = async (
     const timeline: TimelineEntry[] = []
 
     for (const row of rows) {
-        // Creation event
+
         timeline.push({
             timestamp: new Date(row.valid_from),
             subject: row.subject,
@@ -37,7 +37,7 @@ export const get_subject_timeline = async (
             change_type: 'created'
         })
 
-        // Invalidation event (if applicable)
+
         if (row.valid_to) {
             timeline.push({
                 timestamp: new Date(row.valid_to),
@@ -177,7 +177,7 @@ export const compare_time_points = async (
     const t1_ts = time1.getTime()
     const t2_ts = time2.getTime()
 
-    // Get all facts for subject at both times
+
     const facts_t1 = await all_async(`
         SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
@@ -208,7 +208,7 @@ export const compare_time_points = async (
     const changed: Array<{ before: TemporalFact; after: TemporalFact }> = []
     const unchanged: TemporalFact[] = []
 
-    // Find added and changed
+
     for (const [pred, fact2] of map_t2) {
         const fact1 = map_t1.get(pred)
         if (!fact1) {
@@ -223,7 +223,7 @@ export const compare_time_points = async (
         }
     }
 
-    // Find removed
+
     for (const [pred, fact1] of map_t1) {
         if (!map_t2.has(pred)) {
             removed.push(row_to_fact(fact1))
@@ -303,7 +303,7 @@ export const get_volatile_facts = async (
     return await all_async(sql, [...params, limit])
 }
 
-// Helper function
+
 function row_to_fact(row: any): TemporalFact {
     return {
         id: row.id,

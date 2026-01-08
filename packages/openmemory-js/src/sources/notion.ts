@@ -112,7 +112,7 @@ export class notion_source extends base_source {
         const page = await this.client.pages.retrieve({ page_id: item_id });
         const title = this.extract_title(page);
 
-        // get all blocks
+
         const blocks: any[] = [];
         let has_more = true;
         let start_cursor: string | undefined;

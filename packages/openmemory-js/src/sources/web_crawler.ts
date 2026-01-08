@@ -31,7 +31,7 @@ export class web_crawler_source extends base_source {
     }
 
     async _connect(): Promise<boolean> {
-        return true; // no auth needed
+        return true;
     }
 
     async _list_items(filters: Record<string, any>): Promise<source_item[]> {
@@ -89,7 +89,7 @@ export class web_crawler_source extends base_source {
                     depth
                 });
 
-                // find and queue links
+
                 if (follow_links && depth < this.max_depth) {
                     $('a[href]').each((_: any, el: any) => {
                         try {
@@ -99,7 +99,7 @@ export class web_crawler_source extends base_source {
                             const full_url = new URL(href, url);
                             if (full_url.hostname !== base_domain) return;
 
-                            const clean_url = `${full_url.protocol}//${full_url.hostname}${full_url.pathname}`;
+                            const clean_url = `${full_url.protocol}
                             if (!this.visited.has(clean_url)) {
                                 to_visit.push({ url: clean_url, depth: depth + 1 });
                             }
@@ -137,16 +137,16 @@ export class web_crawler_source extends base_source {
         const html = await resp.text();
         const $ = cheerio.load(html);
 
-        // remove noise
+
         $('script, style, nav, footer, header, aside').remove();
 
         const title = $('title').text() || item_id;
 
-        // get main content
+
         const main = $('main').length ? $('main') : $('article').length ? $('article') : $('body');
         let text = main.text();
 
-        // clean up whitespace
+
         text = text.split('\n').map((l: string) => l.trim()).filter(Boolean).join('\n');
 
         return {

@@ -370,7 +370,7 @@ export const apply_decay = async () => {
     }
 
     const tot = performance.now() - t0;
-    // Use stderr for debug output to avoid breaking MCP JSON-RPC protocol
+
     console.error(
         `[decay-2.0] ${tot_chg}/${tot_proc} | tiers: hot=${tier_counts.hot} warm=${tier_counts.warm} cold=${tier_counts.cold} | compressed=${tot_comp} fingerprinted=${tot_fp} | ${tot.toFixed(1)}ms across ${segments.length} segments`,
     );
@@ -421,7 +421,7 @@ export const on_query_hit = async (
     }
 
     if (updated) {
-        // Use stderr for debug output to avoid breaking MCP JSON-RPC protocol
+
         console.error(`[decay-2.0] regenerated/reinforced memory ${mem_id}`);
     }
 };

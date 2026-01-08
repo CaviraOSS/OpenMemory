@@ -51,8 +51,8 @@ export function sys(app: any) {
         async (incoming_http_request: any, outgoing_http_response: any) => {
             try {
                 const database_sector_statistics_rows = await all_async(`
-                select primary_sector as sector, count(*) as count, avg(salience) as avg_salience 
-                from memories 
+                select primary_sector as sector, count(*) as count, avg(salience) as avg_salience
+                from memories
                 group by primary_sector
             `);
                 outgoing_http_response.json({

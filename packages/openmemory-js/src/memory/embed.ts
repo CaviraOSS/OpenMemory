@@ -11,7 +11,7 @@ import {
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
 
-// Fetch with timeout to prevent hanging requests and enable fallback chain
+
 const EMBED_TIMEOUT_MS = Number(process.env.OM_EMBED_TIMEOUT_MS) || 30000;
 async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController();
@@ -99,14 +99,14 @@ export async function embedQueryForAllSectors(
     query: string,
     sectors: string[],
 ): Promise<Record<string, number[]>> {
-    // For hybrid/fast tiers, use synthetic embeddings (already fast)
+
     if (tier === "hybrid" || tier === "fast") {
         const result: Record<string, number[]> = {};
         for (const s of sectors) result[s] = gen_syn_emb(query, s);
         return result;
     }
 
-    // For deep/smart tiers with Gemini, batch all sectors in ONE API call
+
     if (env.emb_kind === "gemini" && env.gemini_key) {
         try {
             const txts: Record<string, string> = {};
@@ -117,13 +117,13 @@ export async function embedQueryForAllSectors(
         }
     }
 
-    // Fallback: sequential embedding for each sector
+
     const result: Record<string, number[]> = {};
     for (const s of sectors) result[s] = await embedForSector(query, s);
     return result;
 }
 
-// Embed with a specific provider (throws on failure)
+
 async function embed_with_provider(
     provider: string,
     t: string,
@@ -147,9 +147,9 @@ async function embed_with_provider(
     }
 }
 
-// Get semantic embedding with configurable fallback chain
+
 async function get_sem_emb(t: string, s: string): Promise<number[]> {
-    // Deduplicate providers to avoid wasteful retries (e.g., gemini,gemini,synthetic)
+
     const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
 
     for (let i = 0; i < providers.length; i++) {
@@ -178,12 +178,12 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
             }
         }
     }
-    // Fallback if providers array is empty (shouldn't happen with defaults)
+
     return gen_syn_emb(t, s);
 }
 
 
-// Batch embedding with fallback chain support (for simple mode)
+
 async function emb_batch_with_fallback(
     txts: Record<string, string>,
 ): Promise<Record<string, number[]>> {
@@ -201,7 +201,7 @@ async function emb_batch_with_fallback(
                     result = await emb_batch_openai(txts);
                     break;
                 default:
-                    // For providers without batch support, embed each sector individually
+
                     result = {};
                     for (const [s, t] of Object.entries(txts)) {
                         result[s] = await embed_with_provider(provider, t, s);
@@ -225,7 +225,7 @@ async function emb_batch_with_fallback(
                 console.error(
                     `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}. Using synthetic.`,
                 );
-                // Fall back to synthetic for all sectors
+
                 const result: Record<string, number[]> = {};
                 for (const [s, t] of Object.entries(txts)) {
                     result[s] = gen_syn_emb(t, s);
@@ -234,7 +234,7 @@ async function emb_batch_with_fallback(
             }
         }
     }
-    // Fallback if providers array is empty
+
     const result: Record<string, number[]> = {};
     for (const [s, t] of Object.entries(txts)) {
         result[s] = gen_syn_emb(t, s);
@@ -561,7 +561,7 @@ export async function embedMultiSector(
                 );
                 const tb: Record<string, string> = {};
                 secs.forEach((s) => (tb[s] = txt));
-                // Use batch embedding with fallback support
+
                 const b = await emb_batch_with_fallback(tb);
                 Object.entries(b).forEach(([s, v]) =>
                     r.push({ sector: s, vector: v, dim: v.length }),

@@ -2,8 +2,6 @@ import math
 import re
 from typing import List, Dict, TypedDict
 
-# Ported from backend/src/utils/chunking.ts
-
 class Chunk(TypedDict):
     text: str
     start: int
@@ -18,15 +16,15 @@ def chunk_text(txt: str, tgt: int = 768, ovr: float = 0.1) -> List[Chunk]:
     tot = est(txt)
     if tot <= tgt:
         return [{"text": txt, "start": 0, "end": len(txt), "tokens": tot}]
-    
+
     tch = tgt * CPT
     och = math.floor(tch * ovr)
     paras = re.split(r"\n\n+", txt)
-    
+
     chks: List[Chunk] = []
     cur = ""
     cs = 0
-    
+
     for p in paras:
         sents = re.split(r"(?<=[.!?])\s+", p)
         for s in sents:
@@ -40,10 +38,10 @@ def chunk_text(txt: str, tgt: int = 768, ovr: float = 0.1) -> List[Chunk]:
                 })
                 ovt = cur[-och:] if och < len(cur) else cur
                 cur = ovt + " " + s
-                cs = cs + len(cur) - len(ovt) - 1 # rough adjustment
+                cs = cs + len(cur) - len(ovt) - 1
             else:
                 cur = pot
-                
+
     if len(cur) > 0:
         chks.append({
             "text": cur,
@@ -57,13 +55,13 @@ def agg_vec(vecs: List[List[float]]) -> List[float]:
     n = len(vecs)
     if not n: raise ValueError("no vecs")
     if n == 1: return vecs[0].copy()
-    
+
     d = len(vecs[0])
     r = [0.0] * d
     for v in vecs:
         for i in range(d):
             r[i] += v[i]
-            
+
     rc = 1.0 / n
     for i in range(d):
         r[i] *= rc

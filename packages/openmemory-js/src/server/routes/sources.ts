@@ -1,9 +1,9 @@
 /**
  * sources webhook routes - ingest data from external sources via HTTP
- * 
+ *
  * POST /sources/:source/ingest
  *   body: { creds: {...}, filters: {...}, user_id?: string }
- * 
+ *
  * POST /sources/webhook/:source
  *   generic webhook endpoint for source-specific payloads
  */
@@ -11,7 +11,7 @@
 import * as sources from "../../sources";
 
 export function src(app: any) {
-    // list available sources
+
     app.get("/sources", async (req: any, res: any) => {
         res.json({
             sources: ["github", "notion", "google_drive", "google_sheets", "google_slides", "onedrive", "web_crawler"],
@@ -22,7 +22,7 @@ export function src(app: any) {
         });
     });
 
-    // ingest from a source
+
     app.post("/sources/:source/ingest", async (req: any, res: any) => {
         const { source } = req.params;
         const { creds = {}, filters = {}, user_id } = req.body || {};
@@ -51,7 +51,7 @@ export function src(app: any) {
         }
     });
 
-    // webhook endpoint for github events
+
     app.post("/sources/webhook/github", async (req: any, res: any) => {
         const event_type = req.headers["x-github-event"];
         const payload = req.body;
@@ -63,7 +63,7 @@ export function src(app: any) {
         try {
             const { ingestDocument } = await import("../../ops/ingest");
 
-            // handle different github events
+
             let content = "";
             let meta: Record<string, any> = { source: "github_webhook", event: event_type };
 
@@ -95,7 +95,7 @@ export function src(app: any) {
         }
     });
 
-    // generic webhook for notion
+
     app.post("/sources/webhook/notion", async (req: any, res: any) => {
         const payload = req.body;
 

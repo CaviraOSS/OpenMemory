@@ -214,7 +214,7 @@ class MemoryCompressionEngine {
         if (!t || t.length < 50) return this.compress(t, "semantic");
         const code =
             /\b(function|const|let|var|def|class|import|export)\b/.test(t);
-        const urls = /https?:\/\//.test(t);
+        const urls = /https?:\/\
         const verb = t.split(/\s+/).length > 100;
         let a: "semantic" | "syntactic" | "aggressive";
         if (code || urls) a = "aggressive";

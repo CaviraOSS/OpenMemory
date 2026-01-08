@@ -1,6 +1,6 @@
 /**
  * base source class for openmemory data sources - production grade
- * 
+ *
  * features:
  * - custom exception hierarchy
  * - logging
@@ -8,7 +8,7 @@
  * - rate limiting
  */
 
-// -- exceptions --
+
 
 export class source_error extends Error {
     source?: string;
@@ -53,7 +53,7 @@ export class source_fetch_error extends source_error {
     }
 }
 
-// -- types --
+
 
 export interface source_item {
     id: string;
@@ -77,7 +77,7 @@ export interface source_config {
     log_level?: 'debug' | 'info' | 'warn' | 'error';
 }
 
-// -- rate limiter --
+
 
 export class rate_limiter {
     private rps: number;
@@ -106,7 +106,7 @@ export class rate_limiter {
     }
 }
 
-// -- retry helper --
+
 
 export async function with_retry<T>(
     fn: () => Promise<T>,
@@ -123,7 +123,7 @@ export async function with_retry<T>(
             last_err = e;
 
             if (e instanceof source_auth_error) {
-                throw e; // don't retry auth errors
+                throw e;
             }
 
             if (attempt < max_attempts - 1) {
@@ -140,7 +140,7 @@ export async function with_retry<T>(
     throw last_err;
 }
 
-// -- base source --
+
 
 export abstract class base_source {
     name: string = 'base';
@@ -250,7 +250,7 @@ export abstract class base_source {
         return process.env[key] || default_val;
     }
 
-    // abstract methods for subclasses
+
     protected abstract _connect(creds: Record<string, any>): Promise<boolean>;
     protected abstract _list_items(filters: Record<string, any>): Promise<source_item[]>;
     protected abstract _fetch_item(item_id: string): Promise<source_content>;

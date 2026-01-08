@@ -47,7 +47,7 @@ export function ide(app: any) {
                 user_id,
             );
 
-            // Update user summary asynchronously
+
             if (user_id && user_id !== "anonymous") {
                 update_user_summary(user_id).catch(err =>
                     console.error("[IDE] Failed to update user summary:", err)

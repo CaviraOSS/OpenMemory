@@ -65,7 +65,7 @@ export class google_sheets_source extends base_source {
 
         const values = result.data.values || [];
 
-        // convert to markdown table
+
         const lines = values.map((row: any[], i: number) => {
             const line = row.map(String).join(' | ');
             return i === 0 ? `${line}\n${row.map(() => '---').join(' | ')}` : line;

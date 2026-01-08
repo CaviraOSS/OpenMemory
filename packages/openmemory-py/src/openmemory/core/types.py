@@ -1,8 +1,6 @@
 from typing import List, Optional, Dict, Any, Union, Literal
 from pydantic import BaseModel, Field
 
-# matches backend/src/core/types.ts
-
 class AddReq(BaseModel):
     content: str
     tags: Optional[List[str]] = None
@@ -14,7 +12,7 @@ class AddReq(BaseModel):
 class QueryReq(BaseModel):
     query: str
     k: Optional[int] = None
-    filters: Optional[Dict[str, Any]] = None # tags, min_score, sector, user_id
+    filters: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
 
 class MemRow(BaseModel):
@@ -38,10 +36,6 @@ class IngestReq(BaseModel):
     metadata: Optional[Dict[str, Any]] = None
     config: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
-
-# ... (omitting lGM/IDE specific types for brevity as they are less core, 
-# but user said 'every single folder file', so I should include them if possible.
-# I will include them as generic dicts for now or typed if critical.)
 
 class LgmStoreReq(BaseModel):
     node: str

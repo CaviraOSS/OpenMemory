@@ -5,11 +5,11 @@ const DISABLED = (process.env.OM_TELEMETRY ?? '').toLowerCase() === 'false'
 const gatherVersion = (): string => {
     if (process.env.npm_package_version) return process.env.npm_package_version
     try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
+
         const pkg = require('../../package.json')
         if (pkg?.version) return pkg.version
     } catch {
-        // ignore
+
     }
     return 'unknown'
 }
@@ -41,7 +41,7 @@ export const sendTelemetry = async () => {
             console.log(`[telemetry] sent`)
         }
     } catch {
-        // silently ignore telemetry errors
+
     }
 }
 

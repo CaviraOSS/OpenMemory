@@ -1,8 +1,6 @@
 from typing import Dict, List, TypedDict, Pattern
 import re
 
-# Ported from backend/src/memory/hsg.ts to avoid circular dep
-
 class SectorCfg(TypedDict):
     model: str
     decay_lambda: float

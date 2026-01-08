@@ -34,12 +34,12 @@ export class github_source extends base_source {
         }
 
         const [owner, repo] = filters.repo.split('/');
-        const path = filters.path?.replace(/^\//, '') || '';
+        const path = filters.path?.replace(/^\
         const include_issues = filters.include_issues || false;
 
         const results: source_item[] = [];
 
-        // list files
+
         try {
             const resp = await this.octokit.repos.getContent({ owner, repo, path });
             const contents = Array.isArray(resp.data) ? resp.data : [resp.data];
@@ -58,7 +58,7 @@ export class github_source extends base_source {
             console.warn(`[github] failed to list ${path}: ${e.message}`);
         }
 
-        // list issues if requested
+
         if (include_issues) {
             try {
                 const resp = await this.octokit.issues.listForRepo({ owner, repo, state: 'all', per_page: 50 });
@@ -86,7 +86,7 @@ export class github_source extends base_source {
         const repo_full = parts[0];
         const [owner, repo] = repo_full.split('/');
 
-        // issue
+
         if (parts.length >= 3 && parts[1] === 'issue') {
             const issue_num = parseInt(parts[2]);
             const issue = await this.octokit.issues.get({ owner, repo, issue_number: issue_num });
@@ -117,7 +117,7 @@ export class github_source extends base_source {
             };
         }
 
-        // file
+
         const path = parts.slice(1).join(':');
         const resp = await this.octokit.repos.getContent({ owner, repo, path });
 

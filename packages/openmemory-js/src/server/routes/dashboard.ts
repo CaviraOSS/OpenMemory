@@ -40,7 +40,7 @@ export function track_req(success: boolean) {
         reqz.qps_hist.push(qps);
         if (reqz.qps_hist.length > 5) reqz.qps_hist.shift();
 
-        // Log metrics to database every second
+
         log_metric("qps", qps).catch(console.error);
         if (!success) log_metric("error", 1).catch(console.error);
 
@@ -122,7 +122,7 @@ export function dash(app: any) {
             `);
             const upt = process.uptime();
 
-            // Calculate QPS stats from database (last hour)
+
             const hour_ago = Date.now() - 60 * 60 * 1000;
             const sc = process.env.OM_PG_SCHEMA || "public";
             const qps_data = await all_async(
@@ -278,12 +278,12 @@ export function dash(app: any) {
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
 
-            // Use different grouping based on time range
+
             let displayFormat: string;
             let sortFormat: string;
             let timeKey: string;
             if (hrs <= 24) {
-                // For 24 hours or less, group by date+hour for sorting, display only hour
+
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'HH24:00')"
                     : "strftime('%H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
@@ -292,7 +292,7 @@ export function dash(app: any) {
                     : "strftime('%Y-%m-%d %H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "hour";
             } else if (hrs <= 168) {
-                // For up to 7 days, group by day
+
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
                     : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
@@ -301,7 +301,7 @@ export function dash(app: any) {
                     : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "day";
             } else {
-                // For longer periods (30 days), group by day showing month-day
+
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
                     : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";

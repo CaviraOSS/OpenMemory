@@ -11,14 +11,12 @@ from ..core.vector_store import vector_store as store
 from ..utils.vectors import buf_to_vec, vec_to_buf, cos_sim
 from ..utils.text import canonical_tokens_from_text
 
-# Ported from backend/src/memory/decay.ts
-
 class DecayCfg:
     def __init__(self):
         self.threads = int(env.decay_threads or 3)
         self.cold_threshold = float(env.decay_cold_threshold or 0.25)
-        self.reinforce_on_query = True # default true
-        self.regeneration_enabled = True # default true
+        self.reinforce_on_query = True
+        self.regeneration_enabled = True
         self.max_vec_dim = int(env.max_vector_dim or 1536)
         self.min_vec_dim = int(env.min_vector_dim or 64)
         self.summary_layers = min(3, max(1, int(env.summary_layers or 3)))
@@ -61,15 +59,15 @@ def compress_vector(vec: List[float], f: float, min_dim=64, max_dim=1536) -> Lis
     src = vec if vec else [1.0]
     tgt_dim = max(min_dim, min(max_dim, math.floor(len(src) * max(0.0, min(1.0, f)))))
     dim = max(min_dim, min(len(src), tgt_dim))
-    
+
     if dim >= len(src): return list(src)
-    
+
     pooled = []
     bucket = math.ceil(len(src) / dim)
     for i in range(0, len(src), bucket):
         sub = src[i : i+bucket]
         pooled.append(mean(sub))
-    
+
     normalize(pooled)
     return pooled
 
@@ -78,7 +76,7 @@ def hash_to_vec(s: str, d=32) -> List[float]:
     for c in s:
         h ^= ord(c)
         h = (h * 16777619) & 0xffffffff
-        
+
     out = [0.0] * max(2, d)
     x = h or 1
     for i in range(len(out)):
@@ -86,12 +84,11 @@ def hash_to_vec(s: str, d=32) -> List[float]:
         x ^= (x >> 17) & 0xffffffff
         x ^= (x << 5) & 0xffffffff
         out[i] = ((x / 0xffffffff) * 2 - 1)
-        
+
     normalize(out)
     return out
 
 def top_keywords(t: str, k=5) -> List[str]:
-    # simple version
     words = canonical_tokens_from_text(t)
     freq = {}
     for w in words: freq[w] = freq.get(w, 0) + 1
@@ -107,67 +104,56 @@ def fingerprint_mem(m: Dict) -> Dict[str, Any]:
 def calc_recency_score(last_seen: int) -> float:
     now = int(time.time() * 1000)
     dt = max(0, now - last_seen)
-    # Base decay using lambda_cold as baseline
     hours = dt / 3600000.0
-    return math.exp(-0.05 * hours) # approximate decay logic
+    return math.exp(-0.05 * hours)
 
-    
+
 async def apply_decay():
     global last_decay
     if active_q > 0:
         print(f"[decay] skipped - {active_q} active queries")
         return
-        
+
     now_ts = int(time.time() * 1000)
     if now_ts - last_decay < COOLDOWN:
         rem = (COOLDOWN - (now_ts - last_decay)) / 1000
         print(f"[decay] skipped - cooldown active ({rem:.0f}s left)")
         return
-        
+
     last_decay = now_ts
     t0 = time.time()
-    
-    # get segments
     segments_rows = db.fetchall("SELECT DISTINCT segment FROM memories ORDER BY segment DESC")
     segments = [r["segment"] for r in segments_rows]
-    
+
     tot_proc = 0
     tot_chg = 0
     tot_comp = 0
     tot_fp = 0
     tier_counts = {"hot": 0, "warm": 0, "cold": 0}
-    
+
     for seg in segments:
         rows = db.fetchall("SELECT id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,feedback_score as coactivations FROM memories WHERE segment=?", (seg,))
-        # Schema note: TS referenced `coactivations` which maps to `feedback_score` in standard schema.
-        # Using aliased feedback_score or null default.
-        
+
         decay_ratio = env.decay_ratio or 0.03
         batch_sz = max(1, int(len(rows) * decay_ratio))
         if not rows: continue
-        
-        start_idx = random.randint(0, max(0, len(rows) - batch_sz)) # fix range
+
+        start_idx = random.randint(0, max(0, len(rows) - batch_sz))
         batch = rows[start_idx : start_idx + batch_sz]
-        
-        # Parallel logic in Python: just await loop, or task group. 
-        # Since DB is sync (sqlite), concurrency is limited by I/O lock mostly.
-        # But computation (compress) is CPU.
-        
-        for m in batch: # simplified loop
+
+        for m in batch:
             dict_m = dict(m)
             m_tier = pick_tier(dict_m, now_ts)
             tier_counts[m_tier] += 1
-            
+
             lam = cfg.lambda_hot if m_tier == "hot" else (cfg.lambda_warm if m_tier == "warm" else cfg.lambda_cold)
             dt = max(0, (now_ts - (dict_m["last_seen_at"] or dict_m["updated_at"] or 0)) / cfg.time_unit_ms)
             act = max(0, dict_m.get("coactivations") or dict_m.get("feedback_score") or 0)
             sal = max(0.0, min(1.0, (dict_m["salience"] or 0.5) * (1 + math.log1p(act))))
-            
+
             f = math.exp(-lam * (dt / (sal + 0.1)))
             new_sal = max(0.0, min(1.0, sal * f))
             changed = abs(new_sal - (dict_m["salience"] or 0)) > 0.001
-            
-            # Compression
             if f < 0.7:
                 sector = dict_m["primary_sector"] or "semantic"
                 vec_row = await store.getVector(dict_m["id"], sector)
@@ -175,15 +161,11 @@ async def apply_decay():
                     vec = vec_row.vector
                     if len(vec) > 0:
                          new_vec = compress_vector(vec, f, cfg.min_vec_dim, cfg.max_vec_dim)
-                         # summary compression omitted for brevity/complexity parity (requires LLM sometimes or simple keys)
-                         # TS `compress_summary` uses `top_keywords`.
-                         
+
                          if len(new_vec) < len(vec):
                              await store.storeVector(dict_m["id"], sector, new_vec, len(new_vec))
                              tot_comp += 1
                              changed = True
-                             
-            # Fingerprinting (Cold storage)
             if f < max(0.3, cfg.cold_threshold):
                 sector = dict_m["primary_sector"] or "semantic"
                 fp = fingerprint_mem(dict_m)
@@ -195,28 +177,24 @@ async def apply_decay():
             if changed:
                 db.conn.execute("UPDATE memories SET salience=?, updated_at=? WHERE id=?", (new_sal, int(time.time()*1000), dict_m["id"]))
                 tot_chg += 1
-            
+
             tot_proc += 1
-            await asyncio.sleep(0) # yield
-            
+            await asyncio.sleep(0)
+
     db.commit()
     dur = (time.time() - t0) * 1000
     print(f"[decay] {tot_chg}/{tot_proc} | tiers: {tier_counts} | comp={tot_comp} fp={tot_fp} | {dur:.1f}ms")
 
 async def on_query_hit(mem_id: str, sector: str, reembed_fn = None):
-    # reembed_fn: async (text) -> list[float]
     if not cfg.regeneration_enabled and not cfg.reinforce_on_query: return
-    
+
     m = q.get_mem(mem_id)
     if not m: return
-    
+
     updated = False
-    
-    # Regeneration (if vector degraded/compressed but accessed again)
     if cfg.regeneration_enabled and reembed_fn:
         vec_row = await store.getVector(mem_id, sector)
         if vec_row and vec_row.vector and len(vec_row.vector) <= 64:
-             # it was compressed/cold, regenerate full
              try:
                  base = m["summary"] or m["content"] or ""
                  new_vec = await reembed_fn(base)
@@ -224,19 +202,13 @@ async def on_query_hit(mem_id: str, sector: str, reembed_fn = None):
                  updated = True
              except Exception:
                  pass
-
-    # Reinforcement
     if cfg.reinforce_on_query:
-        new_sal = min(1.0, (m["salience"] or 0.5) + 0.15) # increased boost slightly from TS logic of +0.5?? TS line 415 says +0.5, line 1042 says +0.15. I'll stick to conservative +0.15 matching 1042.
-        # Actually TS line 415: `clamp_f((m.salience || 0.5) + 0.5, 0, 1)`. That's huge!
-        # Maybe it means "boost TO at least 0.5"? No, `+ 0.5`.
-        # I'll use 0.5 boost if TS does.
+        new_sal = min(1.0, (m["salience"] or 0.5) + 0.15)
         new_sal = min(1.0, (m["salience"] or 0.5) + 0.5)
-        
+
         db.conn.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (new_sal, int(time.time()*1000), mem_id))
         db.commit()
         updated = True
-        
+
     if updated:
-        # print(f"[decay] reinforced {mem_id}")
         pass

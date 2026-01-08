@@ -1,13 +1,11 @@
 from typing import TypedDict, Optional, Any, Dict
 
-# Port of backend/src/temporal_graph/types.ts
-
 class TemporalFact(TypedDict):
     id: str
     subject: str
     predicate: str
     object: str
-    valid_from: int # TS uses Date, we use ms timestamp
+    valid_from: int
     valid_to: Optional[int]
     confidence: float
     last_updated: int
@@ -29,13 +27,13 @@ class TimelineEntry(TypedDict):
     predicate: str
     object: str
     confidence: float
-    change_type: str # 'created' | 'updated' | 'invalidated'
+    change_type: str
 
 class TemporalQuery(TypedDict, total=False):
     subject: Optional[str]
     predicate: Optional[str]
     object: Optional[str]
     at: Optional[int]
-    start: Optional[int] # from
-    end: Optional[int] # to
+    start: Optional[int]
+    end: Optional[int]
     min_confidence: Optional[float]

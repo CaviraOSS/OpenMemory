@@ -8,16 +8,16 @@ logger = logging.getLogger("openmemory.client")
 class OpenAIRegistrar:
     def __init__(self, memory_instance):
         self.mem = memory_instance
-        
+
     def register(self, client: Any, user_id: str = None):
         try:
             original_create = client.chat.completions.create
         except AttributeError:
              return client
-             
+
         memory = self.mem
         is_async = hasattr(client, "_is_async") and client._is_async
-        
+
         if is_async:
             async def wrapped_create(*args, **kwargs):
                 messages = kwargs.get("messages", [])
@@ -82,6 +82,6 @@ class OpenAIRegistrar:
                     asyncio.run(memory.add(f"user: {query}\nassistant: {answer}", user_id=uid))
                 except Exception: pass
                 return response
-            
+
         client.chat.completions.create = wrapped_create
         return client

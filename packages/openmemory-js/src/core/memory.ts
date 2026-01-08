@@ -24,15 +24,15 @@ export class Memory {
         delete meta.user_id;
         delete meta.tags;
 
-        // Ensure tags is JSON string if needed by add_hsg_memory
-        // hsg.ts signature: add_hsg_memory(content, tags, meta, user_id)
-        // tags is usually stringified JSON or string? 
-        // Checked hsg.ts: interface hsg_mem { tags?: string }
-        // Let's pass JSON string for tags.
+
+
+
+
+
         const tags_str = JSON.stringify(tags);
 
-        // hsg.ts add_hsg_memory returns { id, ... } or similar?
-        // Let's check hsg.ts exports. It's likely async and returns object.
+
+
         const res = await add_hsg_memory(content, tags_str, meta, uid ?? undefined);
         return res;
     }
@@ -42,7 +42,7 @@ export class Memory {
     }
 
     async search(query: string, opts?: { user_id?: string, limit?: number, sectors?: string[] }) {
-        // hsg_query(qt, k, f)
+
         const k = opts?.limit || 10;
         const uid = opts?.user_id || this.default_user;
         const f: any = {};
@@ -55,31 +55,31 @@ export class Memory {
     async delete_all(user_id?: string) {
         const uid = user_id || this.default_user;
         if (uid) {
-            // q.del_mem usually exists or we execute raw SQL
-            // But we can't easily access q here if not exported or if we want to change memory.ts minimal
-            // I'll add a wipe() method that calls q directly if q is imported
+
+
+
         }
     }
 
     async wipe() {
         console.log("[Memory] Wiping DB...");
-        // q is imported from db.ts
+
         await q.clear_all.run();
     }
 
     /**
      * get a pre-configured source connector.
-     * 
+     *
      * usage:
      *   const github = mem.source("github")
      *   await github.connect({ token: "ghp_..." })
      *   await github.ingest_all({ repo: "owner/repo" })
-     * 
-     * available sources: github, notion, google_drive, google_sheets, 
+     *
+     * available sources: github, notion, google_drive, google_sheets,
      *                   google_slides, onedrive, web_crawler
      */
     source(name: string) {
-        // dynamic import to avoid circular deps
+
         const sources: Record<string, any> = {
             github: () => import("../sources/github").then(m => new m.github_source(this.default_user ?? undefined)),
             notion: () => import("../sources/notion").then(m => new m.notion_source(this.default_user ?? undefined)),

@@ -161,7 +161,7 @@ async function get_db_version_pg(pool: Pool): Promise<string | null> {
         const sc = process.env.OM_PG_SCHEMA || "public";
         const check = await pool.query(
             `SELECT EXISTS (
-        SELECT FROM information_schema.tables 
+        SELECT FROM information_schema.tables
         WHERE table_schema = $1 AND table_name = 'schema_version'
       )`,
             [sc],
@@ -185,7 +185,7 @@ async function set_db_version_pg(pool: Pool, version: string): Promise<void> {
     )`,
     );
     await pool.query(
-        `INSERT INTO "${sc}"."schema_version" VALUES ($1, $2) 
+        `INSERT INTO "${sc}"."schema_version" VALUES ($1, $2)
      ON CONFLICT (version) DO UPDATE SET applied_at = EXCLUDED.applied_at`,
         [version, Date.now()],
     );
@@ -200,7 +200,7 @@ async function check_column_exists_pg(
     const tbl = table.replace(/"/g, "").split(".").pop() || table;
     const res = await pool.query(
         `SELECT EXISTS (
-      SELECT FROM information_schema.columns 
+      SELECT FROM information_schema.columns
       WHERE table_schema = $1 AND table_name = $2 AND column_name = $3
     )`,
         [sc, tbl, column],

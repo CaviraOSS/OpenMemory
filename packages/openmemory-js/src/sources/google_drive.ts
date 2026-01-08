@@ -103,25 +103,25 @@ export class google_drive_source extends base_source {
         let text = '';
         let data: string | Buffer = '';
 
-        // google docs -> export as text
+
         if (mime === 'application/vnd.google-apps.document') {
             const resp = await this.service.files.export({ fileId: item_id, mimeType: 'text/plain' });
             text = resp.data;
             data = text;
         }
-        // google sheets -> export as csv
+
         else if (mime === 'application/vnd.google-apps.spreadsheet') {
             const resp = await this.service.files.export({ fileId: item_id, mimeType: 'text/csv' });
             text = resp.data;
             data = text;
         }
-        // google slides -> export as plain text
+
         else if (mime === 'application/vnd.google-apps.presentation') {
             const resp = await this.service.files.export({ fileId: item_id, mimeType: 'text/plain' });
             text = resp.data;
             data = text;
         }
-        // other files -> download raw
+
         else {
             const resp = await this.service.files.get({ fileId: item_id, alt: 'media' }, { responseType: 'arraybuffer' });
             data = Buffer.from(resp.data);

@@ -5,9 +5,6 @@ from typing import List, Dict, Any, Optional
 from ..core.db import q, db
 from ..core.constants import SECTOR_CONFIGS
 
-# Port from backend/src/ops/dynamics.ts
-# Only porting unused functions if needed, but focusing on core ones used by HSG.
-
 ALPHA_LEARNING_RATE_FOR_RECALL_REINFORCEMENT = 0.15
 BETA_LEARNING_RATE_FOR_EMOTIONAL_FREQUENCY = 0.2
 GAMMA_ATTENUATION_CONSTANT_FOR_GRAPH_DISTANCE = 0.35
@@ -39,21 +36,18 @@ async def calculateCrossSectorResonanceScore(ms: str, qs: str, bs: float) -> flo
     return bs * SECTORAL_INTERDEPENDENCE_MATRIX_FOR_COGNITIVE_RESONANCE[si][ti]
 
 async def applyRetrievalTraceReinforcementToMemory(mid: str, sal: float) -> float:
-    # sal + ETA * (1 - sal)
     return min(1.0, sal + ETA_REINFORCEMENT_FACTOR_FOR_TRACE_LEARNING * (1.0 - sal))
 
 async def propagateAssociativeReinforcementToLinkedNodes(sid: str, ssal: float, wps: List[Dict]) -> List[Dict]:
-    # wps: [{target_id, weight}]
     ups = []
     for wp in wps:
         tid = wp["target_id"]
         wt = wp["weight"]
-        # get current salience
         ld = q.get_mem(tid)
         if ld:
              curr = ld["salience"] or 0
              pr = ETA_REINFORCEMENT_FACTOR_FOR_TRACE_LEARNING * wt * ssal
              new_sal = min(1.0, curr + pr)
              ups.append({"node_id": tid, "new_salience": new_sal})
-             
+
     return ups

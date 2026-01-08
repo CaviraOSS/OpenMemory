@@ -32,10 +32,10 @@ async def list_sources():
 async def ingest_source(source: str, req: ingest_req):
     from ..connectors import (
         github_connector, notion_connector, google_drive_connector,
-        google_sheets_connector, google_slides_connector, 
+        google_sheets_connector, google_slides_connector,
         onedrive_connector, web_crawler_connector
     )
-    
+
     source_map = {
         "github": github_connector,
         "notion": notion_connector,
@@ -45,10 +45,10 @@ async def ingest_source(source: str, req: ingest_req):
         "onedrive": onedrive_connector,
         "web_crawler": web_crawler_connector,
     }
-    
+
     if source not in source_map:
         raise HTTPException(400, f"unknown source: {source}. available: {list(source_map.keys())}")
-    
+
     try:
         src = source_map[source](user_id=req.user_id)
         await src.connect(**req.creds)
@@ -60,17 +60,17 @@ async def ingest_source(source: str, req: ingest_req):
 @router.post("/webhook/github")
 async def github_webhook(request: Request):
     from ..ops.ingest import ingest_document
-    
+
     event_type = request.headers.get("x-github-event", "unknown")
     payload = await request.json()
-    
+
     if not payload:
         raise HTTPException(400, "no payload")
-    
+
     try:
         content = ""
         meta = {"source": "github_webhook", "event": event_type}
-        
+
         if event_type == "push":
             commits = payload.get("commits", [])
             content = "\n\n".join([f"{c['message']}\n{c['url']}" for c in commits])
@@ -89,7 +89,7 @@ async def github_webhook(request: Request):
         else:
             import json
             content = json.dumps(payload, indent=2)
-        
+
         if content:
             result = await ingest_document("text", content, meta=meta)
             return {"ok": True, "memory_id": result.get("root_memory_id"), "event": event_type}
@@ -101,9 +101,9 @@ async def github_webhook(request: Request):
 async def notion_webhook(request: Request):
     from ..ops.ingest import ingest_document
     import json
-    
+
     payload = await request.json()
-    
+
     try:
         content = json.dumps(payload, indent=2)
         result = await ingest_document("text", content, meta={"source": "notion_webhook"})

@@ -118,27 +118,27 @@ export async function extractAudio(
         );
     }
 
-    // Check file size (Whisper API limit is 25MB)
-    const maxSize = 25 * 1024 * 1024; // 25MB
+
+    const maxSize = 25 * 1024 * 1024;
     if (buffer.length > maxSize) {
         throw new Error(
             `Audio file too large: ${(buffer.length / 1024 / 1024).toFixed(2)}MB. Maximum size is 25MB.`,
         );
     }
 
-    // Create temporary file for Whisper API
+
     const tempDir = os.tmpdir();
     const ext = getAudioExtension(mimeType);
     const tempFilePath = path.join(tempDir, `audio-${Date.now()}${ext}`);
 
     try {
-        // Write buffer to temp file
+
         fs.writeFileSync(tempFilePath, buffer);
 
-        // Initialize OpenAI client
+
         const openai = new OpenAI({ apiKey });
 
-        // Transcribe audio using Whisper
+
         const transcription = await openai.audio.transcriptions.create({
             file: fs.createReadStream(tempFilePath),
             model: "whisper-1",
@@ -165,7 +165,7 @@ export async function extractAudio(
         console.error("[EXTRACT] Audio transcription failed:", error);
         throw new Error(`Audio transcription failed: ${error.message}`);
     } finally {
-        // Clean up temp file
+
         try {
             if (fs.existsSync(tempFilePath)) {
                 fs.unlinkSync(tempFilePath);
@@ -179,7 +179,7 @@ export async function extractAudio(
 export async function extractVideo(
     buffer: Buffer,
 ): Promise<ExtractionResult> {
-    // Create temporary files for video and audio
+
     const tempDir = os.tmpdir();
     const videoPath = path.join(
         tempDir,
@@ -191,10 +191,10 @@ export async function extractVideo(
     );
 
     try {
-        // Write video buffer to temp file
+
         fs.writeFileSync(videoPath, buffer);
 
-        // Extract audio using ffmpeg
+
         await new Promise<void>((resolve, reject) => {
             ffmpeg(videoPath)
                 .output(audioPath)
@@ -205,13 +205,13 @@ export async function extractVideo(
                 .run();
         });
 
-        // Read extracted audio
+
         const audioBuffer = fs.readFileSync(audioPath);
 
-        // Transcribe extracted audio
+
         const result = await extractAudio(audioBuffer, "audio/mpeg");
 
-        // Update metadata to reflect video source
+
         result.metadata.content_type = "video";
         result.metadata.extraction_method = "ffmpeg+whisper";
         result.metadata.video_file_size_bytes = buffer.length;
@@ -231,7 +231,7 @@ export async function extractVideo(
         console.error("[EXTRACT] Video processing failed:", error);
         throw new Error(`Video processing failed: ${error.message}`);
     } finally {
-        // Clean up temp files
+
         try {
             if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
             if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
@@ -263,7 +263,7 @@ export async function extractText(
 ): Promise<ExtractionResult> {
     const type = contentType.toLowerCase();
 
-    // Audio formats
+
     if (
         type === "mp3" ||
         type === "audio" ||
@@ -288,7 +288,7 @@ export async function extractText(
         return extractAudio(buffer, type.startsWith("audio/") ? type : `audio/${type}`);
     }
 
-    // Video formats
+
     if (
         type === "mp4" ||
         type === "video" ||

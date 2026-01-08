@@ -5,9 +5,6 @@ import logging
 from ..types import MemRow
 from ..vector_store import VectorStore, VectorRow
 
-# You should install asyncpg: pip install asyncpg
-# And ensure pgvector extension is enabled in your DB: CREATE EXTENSION vector;
-
 logger = logging.getLogger("vector_store.postgres")
 
 class PostgresVectorStore(VectorStore):
@@ -20,7 +17,6 @@ class PostgresVectorStore(VectorStore):
         import asyncpg
         if not self.pool:
             self.pool = await asyncpg.create_pool(self.dsn)
-            # Ensure table exists
             async with self.pool.acquire() as conn:
                 await conn.execute(f"""
                     CREATE TABLE IF NOT EXISTS {self.table} (
@@ -32,17 +28,12 @@ class PostgresVectorStore(VectorStore):
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     )
                 """)
-                # Index
-                # await conn.execute(f"CREATE INDEX IF NOT EXISTS {self.table}_idx ON {self.table} USING hnsw (v vector_cosine_ops)")
         return self.pool
 
     async def storeVector(self, id: str, sector: str, vector: List[float], dim: int, user_id: Optional[str] = None):
         pool = await self._get_pool()
-        # pgvector expects a list of floats, asyncpg handles it if registered or passed as array string? 
-        # Actually asyncpg needs manual casting or use of pgvector-python type if registered.
-        # Simplest way: pass as string list format '[1.1,2.2,...]'
         vec_str = str(vector)
-        
+
         sql = f"""
             INSERT INTO {self.table} (id, sector, user_id, v, dim)
             VALUES ($1, $2, $3, $4::vector, $5)
@@ -59,10 +50,9 @@ class PostgresVectorStore(VectorStore):
         sql = f"SELECT id, sector, v::text as v_txt, dim FROM {self.table} WHERE id=$1"
         async with pool.acquire() as conn:
             rows = await conn.fetch(sql, id)
-        
+
         res = []
         for r in rows:
-            # Parse "[1.0, 2.0]" string back to list
             vec = json.loads(r["v_txt"])
             res.append(VectorRow(r["id"], r["sector"], vec, r["dim"]))
         return res
@@ -72,7 +62,7 @@ class PostgresVectorStore(VectorStore):
         sql = f"SELECT id, sector, v::text as v_txt, dim FROM {self.table} WHERE id=$1 AND sector=$2"
         async with pool.acquire() as conn:
             r = await conn.fetchrow(sql, id, sector)
-        
+
         if not r: return None
         vec = json.loads(r["v_txt"])
         return VectorRow(r["id"], r["sector"], vec, r["dim"])
@@ -85,7 +75,7 @@ class PostgresVectorStore(VectorStore):
     async def search(self, vector: List[float], sector: str, k: int, filter: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         pool = await self._get_pool()
         vec_str = str(vector)
-        
+
         filter_sql = " AND sector=$2"
         args = [vec_str, sector]
         arg_idx = 3
@@ -94,8 +84,6 @@ class PostgresVectorStore(VectorStore):
             filter_sql += f" AND user_id=${arg_idx}"
             args.append(filter["user_id"])
             arg_idx += 1
-        
-        # <=> is cosine distance operator
         sql = f"""
             SELECT id, 1 - (v <=> $1::vector) as similarity
             FROM {self.table}
@@ -103,8 +91,8 @@ class PostgresVectorStore(VectorStore):
             ORDER BY v <=> $1::vector
             LIMIT {k}
         """
-        
+
         async with pool.acquire() as conn:
             rows = await conn.fetch(sql, *args)
-            
+
         return [{"id": r["id"], "similarity": float(r["similarity"])} for r in rows]
