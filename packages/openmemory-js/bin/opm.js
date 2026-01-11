@@ -38,6 +38,7 @@ commands:
   user <id>             get user summary
   health                ping server
   mcp                   start mcp server (stdio)
+  serve                 start api server
 
 options:
   --user <id>           user id
@@ -252,6 +253,16 @@ for (let i = 1; i < argv.length; i++) {
             }
         } catch (e) {
             console.error('[error] failed to start mcp server. ensure project is built (npm run build).');
+            console.error(e.message);
+            process.exit(1);
+        }
+        break;
+      case 'serve':
+        try {
+            console.log('[opm] passing control to server...');
+            require('../dist/server/index.js');
+        } catch (e) {
+            console.error('[error] failed to start server. ensure project is built (npm run build).');
             console.error(e.message);
             process.exit(1);
         }

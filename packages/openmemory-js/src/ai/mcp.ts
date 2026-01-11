@@ -8,6 +8,7 @@ import {
     add_hsg_memory,
     hsg_query,
     reinforce_memory,
+    delete_memory,
     sector_configs,
 } from "../memory/hsg";
 import { q, all_async, memories_table, vector_store } from "../core/db";
@@ -440,6 +441,37 @@ export const create_mcp_srv = () => {
                         text: `Reinforced memory ${id} by ${boost}`,
                     },
                 ],
+            };
+        },
+    );
+
+    registry.tool(
+        "openmemory_delete",
+        "Delete a memory by identifier",
+        {
+            id: z.string().min(1).describe("Memory identifier to delete"),
+            user_id: z.string().trim().min(1).optional().describe("Validate ownership"),
+        },
+        async ({ id, user_id }) => {
+            const u = uid(user_id);
+            if (u) {
+                // Pre-check ownership if user_id provided
+                const mem = await q.get_mem.get(id);
+                if (mem && mem.user_id !== u) {
+                    throw new Error(`Memory ${id} not found for user ${u}`);
+                }
+            }
+
+            const success = await delete_memory(id);
+            if (!success) {
+                return {
+                    content: [{ type: "text", text: `Memory ${id} not found or could not be deleted.` }],
+                    isError: true
+                };
+            }
+
+            return {
+                content: [{ type: "text", text: `Memory ${id} successfully deleted.` }],
             };
         },
     );

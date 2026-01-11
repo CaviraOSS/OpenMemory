@@ -63,6 +63,19 @@ async def run_mcp_server():
                     },
                     "required": ["id"]
                 }
+                }
+            ),
+             Tool(
+                name="openmemory_delete",
+                description="Delete a memory by ID",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "user_id": {"type": "string"}
+                    },
+                    "required": ["id"]
+                }
             ),
              Tool(
                 name="openmemory_list",
@@ -120,6 +133,21 @@ async def run_mcp_server():
                 if not m:
                     return [TextContent(type="text", text=f"Memory {mid} not found")]
                 return [TextContent(type="text", text=json.dumps(dict(m), default=str, indent=2))]
+
+            elif name == "openmemory_delete":
+                mid = args.get("id")
+                uid = args.get("user_id")
+                
+                # Check exist/ownership
+                m = await mem.get(mid)
+                if not m:
+                    return [TextContent(type="text", text=f"Memory {mid} not found")]
+                
+                if uid and m["user_id"] != uid:
+                     return [TextContent(type="text", text=f"Memory {mid} not found for user {uid}")]
+
+                await mem.delete(mid)
+                return [TextContent(type="text", text=f"Memory {mid} deleted")]
 
             elif name == "openmemory_list":
                 limit = args.get("limit", 20)

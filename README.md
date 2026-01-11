@@ -53,6 +53,7 @@ from openmemory.client import Memory
 mem = Memory()
 mem.add("user prefers dark mode", user_id="u1")
 results = mem.search("preferences", user_id="u1")
+await mem.delete("memory_id")
 ```
 
 > Note: `add`, `search`, `get`, `delete` are async. Use `await` in async contexts.
@@ -101,6 +102,7 @@ import { Memory } from "openmemory-js"
 const mem = new Memory()
 await mem.add("user likes spicy food", { user_id: "u1" })
 const results = await mem.search("food?", { user_id: "u1" })
+await mem.delete("memory_id")
 ```
 
 Drop this into:
@@ -388,9 +390,22 @@ The `opm` CLI talks directly to the engine / server.
 ### Install
 
 ```bash
-cd backend
+cd packages/openmemory-js
 npm install
+npm run build
 npm link   # adds `opm` to your PATH
+```
+
+### Usage
+
+```bash
+# Start the API server
+opm serve
+
+# In another terminal:
+opm health
+opm add "Recall that I prefer TypeScript over Python" --tags preference
+opm query "language preference"
 ```
 
 ### Commands
@@ -399,6 +414,7 @@ npm link   # adds `opm` to your PATH
 opm add "user prefers dark mode" --user u1 --tags prefs
 opm query "preferences" --user u1 --limit 5
 opm list --user u1
+opm delete <id>
 opm reinforce <id>
 opm stats
 ```

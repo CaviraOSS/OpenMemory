@@ -34,7 +34,7 @@ export class github_source extends base_source {
         }
 
         const [owner, repo] = filters.repo.split('/');
-        const path = filters.path?.replace(/^\
+        const path = filters.path?.replace(/^\//, "") || "";
         const include_issues = filters.include_issues || false;
 
         const results: source_item[] = [];

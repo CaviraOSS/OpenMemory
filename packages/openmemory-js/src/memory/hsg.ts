@@ -1155,6 +1155,21 @@ export async function add_hsg_memory(
         throw error;
     }
 }
+export async function delete_memory(id: string): Promise<boolean> {
+    const mem = await q.get_mem.get(id);
+    if (!mem) return false;
+    await transaction.begin();
+    try {
+        await q.del_mem.run(id);
+        await q.del_waypoints.run(id, id);
+        await vector_store.deleteVectors(id);
+        await transaction.commit();
+        return true;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
 export async function reinforce_memory(
     id: string,
     boost: number = 0.1,

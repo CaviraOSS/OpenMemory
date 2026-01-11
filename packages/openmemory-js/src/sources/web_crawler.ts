@@ -99,7 +99,7 @@ export class web_crawler_source extends base_source {
                             const full_url = new URL(href, url);
                             if (full_url.hostname !== base_domain) return;
 
-                            const clean_url = `${full_url.protocol}
+                            const clean_url = `${full_url.protocol}//${full_url.host}${full_url.pathname}`;
                             if (!this.visited.has(clean_url)) {
                                 to_visit.push({ url: clean_url, depth: depth + 1 });
                             }
