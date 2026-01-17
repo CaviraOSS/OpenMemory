@@ -283,8 +283,7 @@ export async function run_migrations() {
 
         await pool.end();
     } else {
-        const db_path = process.env.OM_DB_PATH || "./data/openmemory.sqlite";
-        const db = new sqlite3.Database(db_path);
+        const db = new sqlite3.Database(env.db_path);
 
         const current = await get_db_version_sqlite(db);
         log(`Current database version: ${current || "none"}`);
