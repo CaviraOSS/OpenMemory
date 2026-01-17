@@ -89,7 +89,7 @@ openmemory automatically classifies content into 5 cognitive sectors:
 
 ```bash
 # database
-OM_DB_PATH=./data/om.db              # sqlite file path (default: ./data/openmemory.sqlite)
+OM_DB_PATH=/data/openmemory.sqlite   # sqlite file path (absolute path for Docker persistence)
 OM_DB_URL=sqlite://:memory:          # or use in-memory db
 
 # embeddings

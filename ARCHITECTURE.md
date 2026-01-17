@@ -530,7 +530,7 @@ NODE_SECTOR_MAP = {
 ```bash
 # Server
 OM_PORT=8080
-OM_DB_PATH=./data/openmemory.sqlite
+OM_DB_PATH=/data/openmemory.sqlite
 OM_API_KEY=                      # Optional bearer token
 
 # Embeddings

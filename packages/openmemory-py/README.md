@@ -125,7 +125,7 @@ customize via environment variables or constructor:
 ```python
 # via environment variables
 import os
-os.environ['OM_DB_PATH'] = './data/memory.sqlite'
+os.environ['OM_DB_PATH'] = '/data/openmemory.sqlite'  # Use absolute path for Docker
 os.environ['OM_TIER'] = 'deep'
 os.environ['OM_EMBEDDINGS'] = 'ollama'
 
