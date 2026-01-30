@@ -1,0 +1,46 @@
+name: Build and Publish to GHCR
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: youneedmonitoring/openmemory
+
+jobs:
+  build:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate build ID
+        id: build
+        run: |
+          sha=${GITHUB_SHA::8}
+          ts=$(date +%s)
+          echo "tag=production-${sha}-${ts}" >> $GITHUB_OUTPUT
+
+      - name: Build and push image
+        uses: useblacksmith/build-push-action@v2
+        with:
+          context: ./packages/openmemory-js
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.build.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
