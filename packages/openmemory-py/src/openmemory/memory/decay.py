@@ -20,10 +20,16 @@ class DecayCfg:
         self.max_vec_dim = int(env.max_vector_dim or 1536)
         self.min_vec_dim = int(env.min_vector_dim or 64)
         self.summary_layers = min(3, max(1, int(env.summary_layers or 3)))
+        # Fast decay (salience) - ~14 day half-life for recent relevance
         self.lambda_hot = 0.005
         self.lambda_warm = 0.02
         self.lambda_cold = 0.05
+        # Slow decay (salience_slow) - ~2 year half-life for wisdom retention
+        self.lambda_slow = 0.001
         self.time_unit_ms = 86_400_000
+        # Reinforcement boosts on query hit
+        self.reinforce_fast = 0.5   # Boost for salience (fast)
+        self.reinforce_slow = 0.1   # Boost for salience_slow (wisdom)
 
 cfg = DecayCfg()
 
@@ -132,7 +138,7 @@ async def apply_decay():
     tier_counts = {"hot": 0, "warm": 0, "cold": 0}
 
     for seg in segments:
-        rows = db.fetchall("SELECT id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,feedback_score as coactivations FROM memories WHERE segment=?", (seg,))
+        rows = db.fetchall("SELECT id,content,summary,salience,salience_slow,decay_lambda,last_seen_at,updated_at,primary_sector,feedback_score as coactivations FROM memories WHERE segment=?", (seg,))
 
         decay_ratio = env.decay_ratio or 0.03
         batch_sz = max(1, int(len(rows) * decay_ratio))
@@ -146,6 +152,7 @@ async def apply_decay():
             m_tier = pick_tier(dict_m, now_ts)
             tier_counts[m_tier] += 1
 
+            # Fast salience decay (tier-based)
             lam = cfg.lambda_hot if m_tier == "hot" else (cfg.lambda_warm if m_tier == "warm" else cfg.lambda_cold)
             dt = max(0, (now_ts - (dict_m["last_seen_at"] or dict_m["updated_at"] or 0)) / cfg.time_unit_ms)
             act = max(0, dict_m.get("coactivations") or dict_m.get("feedback_score") or 0)
@@ -153,7 +160,13 @@ async def apply_decay():
 
             f = math.exp(-lam * (dt / (sal + 0.1)))
             new_sal = max(0.0, min(1.0, sal * f))
-            changed = abs(new_sal - (dict_m["salience"] or 0)) > 0.001
+
+            # Slow salience decay (wisdom retention - much slower)
+            sal_slow = dict_m.get("salience_slow") or 0.5
+            f_slow = math.exp(-cfg.lambda_slow * dt)
+            new_sal_slow = max(0.0, min(1.0, sal_slow * f_slow))
+
+            changed = abs(new_sal - (dict_m["salience"] or 0)) > 0.001 or abs(new_sal_slow - sal_slow) > 0.001
             if f < 0.7:
                 sector = dict_m["primary_sector"] or "semantic"
                 vec_row = await store.getVector(dict_m["id"], sector)
@@ -175,7 +188,7 @@ async def apply_decay():
                 changed = True
 
             if changed:
-                db.conn.execute("UPDATE memories SET salience=?, updated_at=? WHERE id=?", (new_sal, int(time.time()*1000), dict_m["id"]))
+                db.conn.execute("UPDATE memories SET salience=?, salience_slow=?, updated_at=? WHERE id=?", (new_sal, new_sal_slow, int(time.time()*1000), dict_m["id"]))
                 tot_chg += 1
 
             tot_proc += 1
@@ -203,10 +216,13 @@ async def on_query_hit(mem_id: str, sector: str, reembed_fn = None):
              except Exception:
                  pass
     if cfg.reinforce_on_query:
-        new_sal = min(1.0, (m["salience"] or 0.5) + 0.15)
-        new_sal = min(1.0, (m["salience"] or 0.5) + 0.5)
+        # Boost fast salience significantly (+0.5)
+        new_sal = min(1.0, (m["salience"] or 0.5) + cfg.reinforce_fast)
+        # Boost slow salience modestly (+0.1) - wisdom accumulates slowly
+        new_sal_slow = min(1.0, (m["salience_slow"] or 0.5) + cfg.reinforce_slow)
 
-        db.conn.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (new_sal, int(time.time()*1000), mem_id))
+        db.conn.execute("UPDATE memories SET salience=?, salience_slow=?, last_seen_at=? WHERE id=?",
+                       (new_sal, new_sal_slow, int(time.time()*1000), mem_id))
         db.commit()
         updated = True
 

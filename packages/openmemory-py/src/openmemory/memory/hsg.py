@@ -415,7 +415,16 @@ async def add_hsg_memory(content: str, tags: Optional[str] = None, metadata: Any
 
         stored = extract_essence(content, cls["primary"], env.summary_max_length)
         sec_cfg = SECTOR_CONFIGS[cls["primary"]]
-        init_sal = max(0.0, min(1.0, 0.4 + 0.1 * len(cls["additional"])))
+
+        # Allow caller to set initial salience values via metadata
+        meta_dict = metadata if isinstance(metadata, dict) else {}
+        init_sal = meta_dict.get("initial_salience")
+        if init_sal is None:
+            init_sal = max(0.0, min(1.0, 0.4 + 0.1 * len(cls["additional"])))
+        init_sal_slow = meta_dict.get("initial_salience_slow")
+        if init_sal_slow is None:
+            init_sal_slow = 0.3  # Default: start low, accumulate through reinforcement
+
         q.ins_mem(
             id=mid,
             user_id=user_id or "anonymous",
@@ -429,6 +438,7 @@ async def add_hsg_memory(content: str, tags: Optional[str] = None, metadata: Any
             updated_at=now,
             last_seen_at=now,
             salience=init_sal,
+            salience_slow=init_sal_slow,
             decay_lambda=sec_cfg["decay_lambda"],
             version=1,
             mean_dim=None,
@@ -487,11 +497,25 @@ async def expand_via_waypoints(ids: List[str], max_exp: int = 10):
             cnt += 1
     return exp
 
-async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None,
+                    reserved_slots: bool = False, wisdom_ratio: float = 0.2) -> List[Dict[str, Any]]:
+    """
+    Query the HSG memory system.
+
+    Args:
+        qt: Query text
+        k: Number of results to return
+        f: Filter dict (user_id, sectors, minSalience, debug)
+        reserved_slots: If True, use reserved-slots ranking (wisdom + recent)
+        wisdom_ratio: Fraction of slots reserved for high salience_slow items (default 20%)
+
+    Returns:
+        List of memory results, each containing content, score, salience, salience_slow, etc.
+    """
     start_q = time.time()
     inc_q()
     try:
-        cache_key = f"{qt}:{k}:{json.dumps(f)}"
+        cache_key = f"{qt}:{k}:{json.dumps(f)}:{reserved_slots}:{wisdom_ratio}"
         if cache_key in cache:
             entry = cache[cache_key]
             if time.time()*1000 - entry["t"] < TTL: return entry["r"]
@@ -582,7 +606,7 @@ async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict
                 "primary_sector": m["primary_sector"],
                 "path": em["path"] if em else [mid],
                 "salience": sal,
-                "salience": sal,
+                "salience_slow": m["salience_slow"] if m["salience_slow"] is not None else 0.5,
                 "last_seen_at": m["last_seen_at"],
                 "tags": json.loads(m["tags"] or "[]"),
                 "metadata": json.loads(m["meta"] or "{}")
@@ -600,8 +624,39 @@ async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict
 
             res_list.append(item)
 
-        res_list.sort(key=lambda x: x["score"], reverse=True)
-        top = res_list[:k]
+        # Reserved-slots ranking: wisdom never crowded out by churn
+        if reserved_slots and len(res_list) > 0:
+            # Calculate number of wisdom slots (e.g., 20% of k)
+            wisdom_slots = max(1, int(k * wisdom_ratio))
+            recent_slots = k - wisdom_slots
+
+            # Sort by salience_slow DESC for wisdom picks
+            wisdom_sorted = sorted(res_list, key=lambda x: x.get("salience_slow", 0), reverse=True)
+            wisdom_picks = []
+            wisdom_ids = set()
+            for item in wisdom_sorted:
+                if len(wisdom_picks) >= wisdom_slots:
+                    break
+                wisdom_picks.append(item)
+                wisdom_ids.add(item["id"])
+
+            # Sort remaining by hybrid score for recent relevance
+            remaining = [r for r in res_list if r["id"] not in wisdom_ids]
+            remaining.sort(key=lambda x: x["score"], reverse=True)
+            recent_picks = remaining[:recent_slots]
+
+            # Combine: wisdom first, then recent
+            top = wisdom_picks + recent_picks
+
+            # Mark items as wisdom or recent for caller
+            for item in wisdom_picks:
+                item["_wisdom"] = True
+            for item in recent_picks:
+                item["_wisdom"] = False
+        else:
+            res_list.sort(key=lambda x: x["score"], reverse=True)
+            top = res_list[:k]
+
         for r in top:
              rsal = await applyRetrievalTraceReinforcementToMemory(r["id"], r["salience"])
              now = int(time.time()*1000)

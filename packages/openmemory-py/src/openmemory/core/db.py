@@ -86,18 +86,18 @@ db = DB()
 class Queries:
     def ins_mem(self, **k):
         sql = """
-        INSERT INTO memories(id, user_id, segment, content, simhash, primary_sector, tags, meta, created_at, updated_at, last_seen_at, salience, decay_lambda, version, mean_dim, mean_vec, compressed_vec, feedback_score)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO memories(id, user_id, segment, content, simhash, primary_sector, tags, meta, created_at, updated_at, last_seen_at, salience, salience_slow, decay_lambda, version, mean_dim, mean_vec, compressed_vec, feedback_score)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET
         user_id=excluded.user_id, segment=excluded.segment, content=excluded.content, simhash=excluded.simhash, primary_sector=excluded.primary_sector,
         tags=excluded.tags, meta=excluded.meta, created_at=excluded.created_at, updated_at=excluded.updated_at, last_seen_at=excluded.last_seen_at,
-        salience=excluded.salience, decay_lambda=excluded.decay_lambda, version=excluded.version, mean_dim=excluded.mean_dim,
+        salience=excluded.salience, salience_slow=excluded.salience_slow, decay_lambda=excluded.decay_lambda, version=excluded.version, mean_dim=excluded.mean_dim,
         mean_vec=excluded.mean_vec, compressed_vec=excluded.compressed_vec, feedback_score=excluded.feedback_score
         """
         vals = (
             k.get("id"), k.get("user_id"), k.get("segment", 0), k.get("content"), k.get("simhash"),
             k.get("primary_sector"), k.get("tags"), k.get("meta"), k.get("created_at"), k.get("updated_at"),
-            k.get("last_seen_at"), k.get("salience", 1.0), k.get("decay_lambda", 0.02), k.get("version", 1),
+            k.get("last_seen_at"), k.get("salience", 1.0), k.get("salience_slow", 0.5), k.get("decay_lambda", 0.02), k.get("version", 1),
             k.get("mean_dim"), k.get("mean_vec"), k.get("compressed_vec"), k.get("feedback_score", 0)
         )
         db.execute(sql, vals)

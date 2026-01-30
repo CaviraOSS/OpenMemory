@@ -8,6 +8,11 @@ try:
 except ImportError:
     BaseChatMessageHistory = object
     BaseRetriever = object
+    BaseMessage = object
+    HumanMessage = object
+    AIMessage = object
+    Document = object
+    CallbackManagerForRetrieverRun = object
 
 from ..main import Memory
 
