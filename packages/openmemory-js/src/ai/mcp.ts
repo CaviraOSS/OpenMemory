@@ -203,6 +203,7 @@ export const create_mcp_srv = () => {
                     fact_pattern?.object,
                     at_date,
                     0.0,
+                    u,
                 );
 
                 results.factual = facts.map((f: any) => ({
@@ -380,6 +381,7 @@ export const create_mcp_srv = () => {
                         valid_from,
                         confidence,
                         metadata,
+                        u,
                     );
 
                     temporal_results.push({

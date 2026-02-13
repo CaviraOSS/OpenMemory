@@ -1,13 +1,14 @@
 export interface TemporalFact {
-    id: string
-    subject: string
-    predicate: string
-    object: string
-    valid_from: Date
-    valid_to: Date | null
-    confidence: number
-    last_updated: Date
-    metadata?: Record<string, any>
+    id: string;
+    user_id?: string;
+    subject: string;
+    predicate: string;
+    object: string;
+    valid_from: Date;
+    valid_to: Date | null;
+    confidence: number;
+    last_updated: Date;
+    metadata?: Record<string, any>;
 }
 
 export interface TemporalEdge {

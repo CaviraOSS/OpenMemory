@@ -18,6 +18,9 @@ class PostgresVectorStore(VectorStore):
         if not self.pool:
             self.pool = await asyncpg.create_pool(self.dsn)
             async with self.pool.acquire() as conn:
+                await conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+                logger.info("pgvector extension enabled")
+                
                 await conn.execute(f"""
                     CREATE TABLE IF NOT EXISTS {self.table} (
                         id TEXT PRIMARY KEY,
@@ -28,6 +31,12 @@ class PostgresVectorStore(VectorStore):
                         created_at TIMESTAMPTZ DEFAULT NOW()
                     )
                 """)
+                
+                await conn.execute(f"""
+                    CREATE INDEX IF NOT EXISTS {self.table}_hnsw_idx
+                    ON {self.table} USING hnsw (v vector_cosine_ops)
+                """)
+                logger.info(f"HNSW index created on {self.table} for fast ANN queries")
         return self.pool
 
     async def storeVector(self, id: str, sector: str, vector: List[float], dim: int, user_id: Optional[str] = None):

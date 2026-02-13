@@ -12,20 +12,23 @@ async def insert_fact(subject: str, predicate: str, subject_object: str, valid_f
     fact_id = str(uuid.uuid4())
     now = int(time.time() * 1000)
     valid_from_ts = valid_from if valid_from is not None else now
-    existing = db.fetchall("SELECT id, valid_from FROM temporal_facts WHERE subject=? AND predicate=? AND valid_to IS NULL ORDER BY valid_from DESC", (subject, predicate))
+    
+    existing_sql = "SELECT id, valid_from FROM temporal_facts WHERE subject=? AND predicate=? AND valid_to IS NULL"
+    existing_params = [subject, predicate]
+    if user_id:
+        existing_sql += " AND user_id=?"
+        existing_params.append(user_id)
+    existing_sql += " ORDER BY valid_from DESC"
+    existing = db.fetchall(existing_sql, tuple(existing_params))
 
     for old in existing:
         if old["valid_from"] < valid_from_ts:
             db.execute("UPDATE temporal_facts SET valid_to=? WHERE id=?", (valid_from_ts - 1, old["id"]))
 
     meta_json = json.dumps(metadata) if metadata else None
-    if user_id:
-        md = metadata or {}
-        md["user_id"] = user_id
-        meta_json = json.dumps(md)
 
-    db.execute("INSERT INTO temporal_facts(id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata) VALUES (?,?,?,?,?,NULL,?,?,?)",
-               (fact_id, subject, predicate, subject_object, valid_from_ts, confidence, now, meta_json))
+    db.execute("INSERT INTO temporal_facts(id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata) VALUES (?,?,?,?,?,?,NULL,?,?,?)",
+               (fact_id, user_id, subject, predicate, subject_object, valid_from_ts, confidence, now, meta_json))
 
     db.commit()
     return fact_id

@@ -19,14 +19,26 @@ class OpenMemoryChatMessageHistory(BaseChatMessageHistory):
 
     @property
     def messages(self) -> List[BaseMessage]:
+        """synchronous property required by langchain"""
         import asyncio
-        return []
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # in async context, return empty and let aget_messages handle it
+                return []
+            else:
+                # not in async context, run sync
+                return loop.run_until_complete(self.aget_messages())
+        except RuntimeError:
+            # no event loop, create one
+            return asyncio.run(self.aget_messages())
 
     async def aget_messages(self) -> List[BaseMessage]:
-        history = await self.mem.history(self.user_id)
+        # history() is synchronous, not async
+        history = self.mem.history(user_id=self.user_id, limit=20)
         msgs = []
         for h in history:
-            c = h["content"]
+            c = h.get("content", "")
             if c.startswith("User:"):
                 msgs.append(HumanMessage(content=c[5:].strip()))
             elif c.startswith("Assistant:"):
@@ -36,9 +48,28 @@ class OpenMemoryChatMessageHistory(BaseChatMessageHistory):
         return msgs
 
     def add_message(self, message: BaseMessage) -> None:
+        """sync method that properly handles async storage"""
         role = "User" if isinstance(message, HumanMessage) else "Assistant"
+        content = f"{role}: {message.content}"
+        
         import asyncio
-        asyncio.create_task(self.mem.add(f"{role}: {message.content}", user_id=self.user_id))
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # schedule as task
+                loop.create_task(self.mem.add(content, user_id=self.user_id))
+            else:
+                # run synchronously
+                loop.run_until_complete(self.mem.add(content, user_id=self.user_id))
+        except RuntimeError:
+            # no loop, create one
+            asyncio.run(self.mem.add(content, user_id=self.user_id))
+    
+    async def aadd_messages(self, messages: List[BaseMessage]) -> None:
+        """async batch add for langchain"""
+        for msg in messages:
+            role = "User" if isinstance(msg, HumanMessage) else "Assistant"
+            await self.mem.add(f"{role}: {msg.content}", user_id=self.user_id)
 
     def clear(self) -> None:
         pass
