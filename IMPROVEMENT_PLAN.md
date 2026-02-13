@@ -29,13 +29,13 @@
 - Source ingestion + GitHub webhook route exists (`server/routes/sources.ts`)
 - Version field already exists on memory rows (`version integer default 1`)
 
-### 1.3 Validation baseline from this issue run
+### 1.3 Build/Test Validation Baseline
 
-- `packages/openmemory-js`: `npm run build` currently fails in this environment due missing module/type resolution
+- `packages/openmemory-js`: `npm run build` currently fails in this environment due to missing module/type resolution
 - `packages/openmemory-py`: `pytest` unavailable in current environment (`No module named pytest`)
 - `dashboard`: `npm run lint` fails in this environment (`eslint: not found`)
 
-These are environment/dependency setup issues, not changes introduced by this planning task.
+These are environment/dependency setup issues, not changes introduced by this improvement planning update.
 
 ---
 
