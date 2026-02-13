@@ -249,7 +249,7 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
     AWS_REGION: {
         category: 'API Keys',
         label: 'AWS Region',
-        description: 'Region aws (us-east-1 prefered)',
+        description: 'Region aws (us-east-1 preferred)',
         type: 'text',
         placeholder: 'us-east-1'
     },
