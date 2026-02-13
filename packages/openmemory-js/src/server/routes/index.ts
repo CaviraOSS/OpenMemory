@@ -14,6 +14,7 @@ import { versioning } from "./versioning";
 import { citations } from "./citations";
 import { extraction } from "./extraction";
 import { clauses } from "./clauses";
+import { templates } from "./templates";
 
 export function routes(app: any) {
     sys(app);
@@ -32,5 +33,6 @@ export function routes(app: any) {
     citations(app);
     extraction(app);
     clauses(app);
+    templates(app);
 }
 

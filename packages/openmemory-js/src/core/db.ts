@@ -314,6 +314,16 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_clauses_type_idx on "${sc}"."openmemory_clauses"(clause_type)`,
         );
+        // Template management table (D6)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_templates"(id uuid primary key,name text not null,description text,category text not null default 'general',content text not null,variables text,tags text,version integer default 1,created_at bigint not null,updated_at bigint not null,created_by text)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_templates_category_idx on "${sc}"."openmemory_templates"(category)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_templates_name_idx on "${sc}"."openmemory_templates"(name)`,
+        );
         ready = true;
 
 
@@ -700,6 +710,16 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_clauses_type on clauses(clause_type)",
+        );
+        // Template management table (D6)
+        db.run(
+            "create table if not exists templates(id text primary key,name text not null,description text,category text not null default 'general',content text not null,variables text,tags text,version integer default 1,created_at integer not null,updated_at integer not null,created_by text)",
+        );
+        db.run(
+            "create index if not exists idx_templates_category on templates(category)",
+        );
+        db.run(
+            "create index if not exists idx_templates_name on templates(name)",
         );
     });
     memories_table = "memories";
