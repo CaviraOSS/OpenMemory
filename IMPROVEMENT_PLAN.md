@@ -238,6 +238,15 @@ Each quick win should land behind ingestion metadata enrichment, without API bre
 
 ## 7) Implementation Sequence (Recommended)
 
+### 7.1 Parallel execution lanes (apply in every phase)
+
+- **Lane 1 — API/Schema**: route updates, migrations, storage/index changes
+- **Lane 2 — Extraction/Memory Logic**: parsing, classification, ranking, retry logic
+- **Lane 3 — SDK/Parity**: Python parity updates and compatibility checks
+- **Lane 4 — Validation/Docs**: tests, benchmarks, security checks, and docs updates
+
+When a phase starts, schedule independent items across these lanes concurrently (for example: `A2 + B2 + C3` can run in parallel by separate owners, then merge after validation).
+
 ### Phase 0 — Hardening + enablement (Week 1)
 - A1, A2, A4
 - D0 foundation
