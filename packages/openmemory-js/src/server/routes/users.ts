@@ -22,7 +22,8 @@ export const usr = (app: any) => {
                 updated_at: user.updated_at,
             });
         } catch (err: any) {
-            res.status(500).json({ error: err.message });
+            console.error("[users] get summary err:", err);
+            res.status(500).json({ error: "summary_retrieval_failed" });
         }
     });
 
@@ -44,7 +45,8 @@ export const usr = (app: any) => {
                     reflection_count: user?.reflection_count,
                 });
             } catch (err: any) {
-                res.status(500).json({ err: err.message });
+                console.error("[users] regenerate summary err:", err);
+                res.status(500).json({ err: "summary_regeneration_failed" });
             }
         },
     );
@@ -54,7 +56,8 @@ export const usr = (app: any) => {
             const result = await auto_update_user_summaries();
             res.json({ ok: true, updated: result.updated });
         } catch (err: any) {
-            res.status(500).json({ err: err.message });
+            console.error("[users] regenerate all summaries err:", err);
+            res.status(500).json({ err: "batch_regeneration_failed" });
         }
     });
 
@@ -83,7 +86,8 @@ export const usr = (app: any) => {
             }));
             res.json({ user_id, items: i });
         } catch (err: any) {
-            res.status(500).json({ err: err.message });
+            console.error("[users] get memories err:", err);
+            res.status(500).json({ err: "memories_retrieval_failed" });
         }
     });
 
@@ -105,7 +109,8 @@ export const usr = (app: any) => {
 
             res.json({ ok: true, deleted });
         } catch (err: any) {
-            res.status(500).json({ err: err.message });
+            console.error("[users] delete memories err:", err);
+            res.status(500).json({ err: "memories_deletion_failed" });
         }
     });
 };

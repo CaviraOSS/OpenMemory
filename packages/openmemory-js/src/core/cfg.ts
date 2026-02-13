@@ -27,6 +27,10 @@ export const env = {
         path.resolve(__dirname, "../../data/openmemory.sqlite"),
     ),
     api_key: process.env.OM_API_KEY,
+    require_auth: bool(process.env.OM_REQUIRE_AUTH),
+    cors_allowed_origins: process.env.OM_CORS_ALLOWED_ORIGINS
+        ? process.env.OM_CORS_ALLOWED_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+        : null,
     rate_limit_enabled: bool(process.env.OM_RATE_LIMIT_ENABLED),
     rate_limit_window_ms: num(process.env.OM_RATE_LIMIT_WINDOW_MS, 60000),
     rate_limit_max_requests: num(process.env.OM_RATE_LIMIT_MAX_REQUESTS, 100),

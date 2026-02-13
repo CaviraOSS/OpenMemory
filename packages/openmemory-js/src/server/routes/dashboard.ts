@@ -214,7 +214,7 @@ export function dash(app: any) {
             });
         } catch (e: any) {
             console.error("[dash] stats err:", e);
-            res.status(500).json({ err: "internal", message: e.message });
+            res.status(500).json({ err: "internal" });
         }
     });
 
@@ -241,7 +241,8 @@ export function dash(app: any) {
                 },
             });
         } catch (e: any) {
-            res.status(500).json({ err: "internal", message: e.message });
+            console.error("[dash] health err:", e);
+            res.status(500).json({ err: "internal" });
         }
     });
 
@@ -268,7 +269,8 @@ export function dash(app: any) {
                 })),
             });
         } catch (e: any) {
-            res.status(500).json({ err: "internal", message: e.message });
+            console.error("[dash] activity err:", e);
+            res.status(500).json({ err: "internal" });
         }
     });
 
@@ -324,7 +326,8 @@ export function dash(app: any) {
                 grouping: timeKey,
             });
         } catch (e: any) {
-            res.status(500).json({ err: "internal", message: e.message });
+            console.error("[dash] timeline err:", e);
+            res.status(500).json({ err: "internal" });
         }
     });
 
@@ -350,7 +353,8 @@ export function dash(app: any) {
                 })),
             });
         } catch (e: any) {
-            res.status(500).json({ err: "internal", message: e.message });
+            console.error("[dash] top-memories err:", e);
+            res.status(500).json({ err: "internal" });
         }
     });
 
@@ -414,7 +418,8 @@ export function dash(app: any) {
                 },
             });
         } catch (e: any) {
-            res.status(500).json({ err: "internal", message: e.message });
+            console.error("[dash] maintenance err:", e);
+            res.status(500).json({ err: "internal" });
         }
     });
 }

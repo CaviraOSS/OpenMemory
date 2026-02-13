@@ -149,7 +149,8 @@ export function src(app: any) {
             const result = await ingestDocument("text", content, { source: "notion_webhook" });
             res.json({ ok: true, memory_id: result.root_memory_id });
         } catch (e: any) {
-            res.status(500).json({ error: e.message });
+            console.error("[webhook] notion processing failed:", e);
+            res.status(500).json({ error: "webhook_processing_failed" });
         }
     });
 }
