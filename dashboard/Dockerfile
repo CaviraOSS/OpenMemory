@@ -10,6 +10,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Accept API URL at build time (baked into NEXT_PUBLIC_ client bundle)
+ARG NEXT_PUBLIC_API_URL=http://localhost:8080
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
 # Build the Next.js application
 RUN npm run build
 
@@ -18,9 +22,9 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install only production dependencies
+# Install production dependencies + typescript (needed for next.config.ts at runtime)
 COPY package*.json ./
-RUN npm install --omit=dev
+RUN npm install --omit=dev && npm install typescript
 
 # Copy built assets from builder
 COPY --from=builder /app/.next ./.next

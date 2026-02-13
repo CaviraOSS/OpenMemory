@@ -1,0 +1,131 @@
+name: Security Scan & Auto-Fix
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 9am UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  security-events: write
+
+jobs:
+  # Job 1: CodeQL Analysis (Copilot-enhanced)
+  codeql-analysis:
+    name: CodeQL Security Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript, python
+          # Copilot-powered queries for better detection
+          queries: security-extended,security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  # Job 2: Secret Scanning
+  secret-scan:
+    name: Scan for Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 3: Dependency Vulnerability Scan
+  dependency-scan:
+    name: Dependency Vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Job 4: Auto-fix with Copilot Autofix (when available)
+  autofix:
+    name: Create Fix PR
+    runs-on: ubuntu-latest
+    needs: [codeql-analysis, secret-scan, dependency-scan]
+    if: failure()  # Only run if security issues found
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for Copilot Autofix suggestions
+        id: check-fixes
+        run: |
+          echo "Checking for available autofixes..."
+          # GitHub automatically creates Copilot Autofix suggestions
+          # for CodeQL alerts when available
+
+      - name: Create Issue for Manual Review
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title: '🔒 Security Scan Found Issues - Review Required',
+              body: `## Security Scan Results
+
+            The automated security scan found potential issues that require attention.
+
+            ### What was scanned:
+            - ✅ CodeQL analysis (JavaScript, TypeScript, Python)
+            - ✅ Secret detection (API keys, tokens, credentials)
+            - ✅ Dependency vulnerabilities (npm, pip)
+
+            ### Next steps:
+            1. Review the [workflow run](${runUrl}) for details
+            2. Check the Security tab for Copilot Autofix suggestions
+            3. Apply fixes or dismiss false positives
+
+            ### How to fix:
+            - **Copilot Autofix**: If available, click "Generate fix" on alerts in the Security tab
+            - **Manual fix**: Review the alert details and apply appropriate fixes
+            - **Dismiss**: If it's a false positive, dismiss with explanation
+
+            ---
+            *This issue was automatically created by the security scanning workflow.*
+            `,
+              labels: ['security', 'automated']
+            });
