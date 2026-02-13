@@ -11,6 +11,7 @@ import { vercel } from "./vercel";
 import { src } from "./sources";
 import { audit } from "./audit";
 import { versioning } from "./versioning";
+import { citations } from "./citations";
 
 export function routes(app: any) {
     sys(app);
@@ -26,5 +27,6 @@ export function routes(app: any) {
     src(app);
     audit(app);
     versioning(app);
+    citations(app);
 }
 

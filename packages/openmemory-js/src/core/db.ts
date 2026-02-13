@@ -285,6 +285,25 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_version_number_idx on "${sc}"."openmemory_version_history"(memory_id,version_number)`,
         );
+        // Citation tracking tables (D2)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_citations"(id uuid primary key,raw_text text not null,normalized text not null unique,citation_type text not null,metadata text,created_at bigint not null)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_citations_type_idx on "${sc}"."openmemory_citations"(citation_type)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_citations_normalized_idx on "${sc}"."openmemory_citations"(normalized)`,
+        );
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_citation_edges"(id uuid primary key,source_memory_id uuid not null,citation_id uuid not null,position integer,context text,created_at bigint not null,unique(source_memory_id,citation_id))`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_citation_edges_source_idx on "${sc}"."openmemory_citation_edges"(source_memory_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_citation_edges_citation_idx on "${sc}"."openmemory_citation_edges"(citation_id)`,
+        );
         ready = true;
 
 
@@ -642,6 +661,25 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_version_number on version_history(memory_id,version_number)",
+        );
+        // Citation tracking tables (D2)
+        db.run(
+            "create table if not exists citations(id text primary key,raw_text text not null,normalized text not null unique,citation_type text not null,metadata text,created_at integer not null)",
+        );
+        db.run(
+            "create index if not exists idx_citations_type on citations(citation_type)",
+        );
+        db.run(
+            "create index if not exists idx_citations_normalized on citations(normalized)",
+        );
+        db.run(
+            "create table if not exists citation_edges(id text primary key,source_memory_id text not null,citation_id text not null,position integer,context text,created_at integer not null,unique(source_memory_id,citation_id))",
+        );
+        db.run(
+            "create index if not exists idx_citation_edges_source on citation_edges(source_memory_id)",
+        );
+        db.run(
+            "create index if not exists idx_citation_edges_citation on citation_edges(citation_id)",
         );
     });
     memories_table = "memories";
