@@ -570,9 +570,9 @@ async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict
             mtk = canonical_token_set(m["content"])
             tok_ov = compute_token_overlap(qtk, mtk)
             rec_sc = calc_recency_score_decay(m["last_seen_at"])
-            tag_Match = compute_tag_match_score(m, qtk)
+            tag_match = compute_tag_match_score(m, qtk)
 
-            fs = compute_hybrid_score(adj, tok_ov, ww, rec_sc, kw_scores.get(mid, 0), tag_Match)
+            fs = compute_hybrid_score(adj, tok_ov, ww, rec_sc, kw_scores.get(mid, 0), tag_match)
 
             item = {
                 "id": mid,

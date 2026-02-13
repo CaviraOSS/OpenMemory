@@ -56,6 +56,8 @@ function check_rate_limit(client_id: string): {
     const data = rate_limit_store.get(client_id);
     if (!data || now >= data.reset_time) {
         // Enforce max entry cap with oldest-entry eviction
+        // Note: O(n) linear scan only happens when adding the 10,001st entry
+        // This is acceptable given the cap and typical usage patterns
         if (rate_limit_store.size >= MAX_RATE_LIMIT_ENTRIES) {
             // Find and remove the oldest entry (entry with earliest reset_time)
             let oldest_key: string | null = null;
