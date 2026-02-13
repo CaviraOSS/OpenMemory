@@ -84,8 +84,21 @@ if (is_pg) {
             user: process.env.OM_PG_USER,
             password: process.env.OM_PG_PASSWORD,
             ssl,
+            // Connection pool settings
+            max: process.env.OM_PG_POOL_MAX ? +process.env.OM_PG_POOL_MAX : 20,
+            min: process.env.OM_PG_POOL_MIN ? +process.env.OM_PG_POOL_MIN : 0,
+            idleTimeoutMillis: process.env.OM_PG_POOL_IDLE_TIMEOUT 
+                ? +process.env.OM_PG_POOL_IDLE_TIMEOUT 
+                : 30000, // 30 seconds
+            connectionTimeoutMillis: process.env.OM_PG_POOL_CONNECTION_TIMEOUT 
+                ? +process.env.OM_PG_POOL_CONNECTION_TIMEOUT 
+                : 10000, // 10 seconds
         });
     let pg = pool(db_name);
+    
+    // Log connection pool configuration
+    console.log(`[DB] PostgreSQL pool config: max=${pg.options.max}, min=${pg.options.min || 0}, idleTimeout=${pg.options.idleTimeoutMillis || 30000}ms, connectionTimeout=${pg.options.connectionTimeoutMillis || 10000}ms`);
+    
     let cli: PoolClient | null = null;
     const sc = process.env.OM_PG_SCHEMA || "public";
     const m = `"${sc}"."${process.env.OM_PG_TABLE || "openmemory_memories"}"`;
