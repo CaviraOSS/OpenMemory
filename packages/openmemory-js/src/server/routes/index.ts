@@ -12,6 +12,7 @@ import { src } from "./sources";
 import { audit } from "./audit";
 import { versioning } from "./versioning";
 import { citations } from "./citations";
+import { extraction } from "./extraction";
 
 export function routes(app: any) {
     sys(app);
@@ -28,5 +29,6 @@ export function routes(app: any) {
     audit(app);
     versioning(app);
     citations(app);
+    extraction(app);
 }
 
