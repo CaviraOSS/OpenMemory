@@ -45,6 +45,68 @@ class MemoryCompressionEngine {
     private readonly MAX = 500;
     private readonly MS = 0.05;
 
+    // Hoist regex patterns to avoid recompilation
+    private readonly SEM_FILTERS = [
+        /\b(just|really|very|quite|rather|somewhat|somehow)\b/gi,
+        /\b(actually|basically|essentially|literally)\b/gi,
+        /\b(I think that|I believe that|It seems that|It appears that)\b/gi,
+        /\b(in order to)\b/gi,
+    ];
+
+    private readonly SEM_REPLACEMENTS: [RegExp, string][] = [
+        [/\bat this point in time\b/gi, "now"],
+        [/\bdue to the fact that\b/gi, "because"],
+        [/\bin the event that\b/gi, "if"],
+        [/\bfor the purpose of\b/gi, "to"],
+        [/\bin the near future\b/gi, "soon"],
+        [/\ba number of\b/gi, "several"],
+        [/\bprior to\b/gi, "before"],
+        [/\bsubsequent to\b/gi, "after"],
+    ];
+
+    private readonly SYN_CONTRACTIONS: [RegExp, string][] = [
+        [/\bdo not\b/gi, "don't"],
+        [/\bcannot\b/gi, "can't"],
+        [/\bwill not\b/gi, "won't"],
+        [/\bshould not\b/gi, "shouldn't"],
+        [/\bwould not\b/gi, "wouldn't"],
+        [/\bit is\b/gi, "it's"],
+        [/\bthat is\b/gi, "that's"],
+        [/\bwhat is\b/gi, "what's"],
+        [/\bwho is\b/gi, "who's"],
+        [/\bthere is\b/gi, "there's"],
+        [/\bhas been\b/gi, "been"],
+        [/\bhave been\b/gi, "been"],
+    ];
+
+    private readonly SENTENCE_SPLIT = /[.!?]+\s+/;
+    private readonly WHITESPACE_NORM = /\s+/g;
+    private readonly ARTICLE_REDUCTION = /\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+/gi;
+    private readonly BRACE_COMPRESS = [/\s*{\s*/g, /\s*}\s*/g];
+    private readonly PAREN_COMPRESS = [/\s*\(\s*/g, /\s*\)\s*/g];
+    private readonly SEMICOLON_COMPRESS = /\s*;\s*/g;
+
+    private readonly AGG_MARKDOWN_CHARS = /[*_~`#]/g;
+    private readonly AGG_URL_COMPRESS = /https?:\/\/(www\.)?([^\/\s]+)(\/[^\s]*)?/gi;
+    private readonly AGG_ABBREVIATIONS: [RegExp, string][] = [
+        [/\bJavaScript\b/gi, "JS"],
+        [/\bTypeScript\b/gi, "TS"],
+        [/\bPython\b/gi, "Py"],
+        [/\bapplication\b/gi, "app"],
+        [/\bfunction\b/gi, "fn"],
+        [/\bparameter\b/gi, "param"],
+        [/\bargument\b/gi, "arg"],
+        [/\breturn\b/gi, "ret"],
+        [/\bvariable\b/gi, "var"],
+        [/\bconstant\b/gi, "const"],
+        [/\bdatabase\b/gi, "db"],
+        [/\brepository\b/gi, "repo"],
+        [/\benvironment\b/gi, "env"],
+        [/\bconfiguration\b/gi, "config"],
+        [/\bdocumentation\b/gi, "docs"],
+    ];
+    private readonly AGG_NEWLINE_COMPRESS = /\n{3,}/g;
+
     private tok(t: string): number {
         if (!t) return 0;
         const w = t.split(/\s+/).length;
@@ -55,7 +117,7 @@ class MemoryCompressionEngine {
     private sem(t: string): string {
         if (!t || t.length < 50) return t;
         let c = t;
-        const s = c.split(/[.!?]+\s+/);
+        const s = c.split(this.SENTENCE_SPLIT);
         const u = s.filter((x, i, a) => {
             if (i === 0) return true;
             const n = x.toLowerCase().trim();
@@ -63,50 +125,20 @@ class MemoryCompressionEngine {
             return n !== p;
         });
         c = u.join(". ").trim();
-        const f = [
-            /\b(just|really|very|quite|rather|somewhat|somehow)\b/gi,
-            /\b(actually|basically|essentially|literally)\b/gi,
-            /\b(I think that|I believe that|It seems that|It appears that)\b/gi,
-            /\b(in order to)\b/gi,
-        ];
-        for (const p of f) c = c.replace(p, "");
-        c = c.replace(/\s+/g, " ").trim();
-        const r: [RegExp, string][] = [
-            [/\bat this point in time\b/gi, "now"],
-            [/\bdue to the fact that\b/gi, "because"],
-            [/\bin the event that\b/gi, "if"],
-            [/\bfor the purpose of\b/gi, "to"],
-            [/\bin the near future\b/gi, "soon"],
-            [/\ba number of\b/gi, "several"],
-            [/\bprior to\b/gi, "before"],
-            [/\bsubsequent to\b/gi, "after"],
-        ];
-        for (const [p, x] of r) c = c.replace(p, x);
+        for (const p of this.SEM_FILTERS) c = c.replace(p, "");
+        c = c.replace(this.WHITESPACE_NORM, " ").trim();
+        for (const [p, x] of this.SEM_REPLACEMENTS) c = c.replace(p, x);
         return c;
     }
 
     private syn(t: string): string {
         if (!t || t.length < 30) return t;
         let c = t;
-        const ct: [RegExp, string][] = [
-            [/\bdo not\b/gi, "don't"],
-            [/\bcannot\b/gi, "can't"],
-            [/\bwill not\b/gi, "won't"],
-            [/\bshould not\b/gi, "shouldn't"],
-            [/\bwould not\b/gi, "wouldn't"],
-            [/\bit is\b/gi, "it's"],
-            [/\bthat is\b/gi, "that's"],
-            [/\bwhat is\b/gi, "what's"],
-            [/\bwho is\b/gi, "who's"],
-            [/\bthere is\b/gi, "there's"],
-            [/\bhas been\b/gi, "been"],
-            [/\bhave been\b/gi, "been"],
-        ];
-        for (const [p, x] of ct) c = c.replace(p, x);
-        c = c.replace(/\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+/gi, "$2, ");
-        c = c.replace(/\s*{\s*/g, "{").replace(/\s*}\s*/g, "}");
-        c = c.replace(/\s*\(\s*/g, "(").replace(/\s*\)\s*/g, ")");
-        c = c.replace(/\s*;\s*/g, ";");
+        for (const [p, x] of this.SYN_CONTRACTIONS) c = c.replace(p, x);
+        c = c.replace(this.ARTICLE_REDUCTION, "$2, ");
+        c = c.replace(this.BRACE_COMPRESS[0], "{").replace(this.BRACE_COMPRESS[1], "}");
+        c = c.replace(this.PAREN_COMPRESS[0], "(").replace(this.PAREN_COMPRESS[1], ")");
+        c = c.replace(this.SEMICOLON_COMPRESS, ";");
         return c;
     }
 
@@ -114,27 +146,10 @@ class MemoryCompressionEngine {
         if (!t) return t;
         let c = this.sem(t);
         c = this.syn(c);
-        c = c.replace(/[*_~`#]/g, "");
-        c = c.replace(/https?:\/\/(www\.)?([^\/\s]+)(\/[^\s]*)?/gi, "$2");
-        const a: [RegExp, string][] = [
-            [/\bJavaScript\b/gi, "JS"],
-            [/\bTypeScript\b/gi, "TS"],
-            [/\bPython\b/gi, "Py"],
-            [/\bapplication\b/gi, "app"],
-            [/\bfunction\b/gi, "fn"],
-            [/\bparameter\b/gi, "param"],
-            [/\bargument\b/gi, "arg"],
-            [/\breturn\b/gi, "ret"],
-            [/\bvariable\b/gi, "var"],
-            [/\bconstant\b/gi, "const"],
-            [/\bdatabase\b/gi, "db"],
-            [/\brepository\b/gi, "repo"],
-            [/\benvironment\b/gi, "env"],
-            [/\bconfiguration\b/gi, "config"],
-            [/\bdocumentation\b/gi, "docs"],
-        ];
-        for (const [p, x] of a) c = c.replace(p, x);
-        c = c.replace(/\n{3,}/g, "\n\n");
+        c = c.replace(this.AGG_MARKDOWN_CHARS, "");
+        c = c.replace(this.AGG_URL_COMPRESS, "$2");
+        for (const [p, x] of this.AGG_ABBREVIATIONS) c = c.replace(p, x);
+        c = c.replace(this.AGG_NEWLINE_COMPRESS, "\n\n");
         c = c
             .split("\n")
             .map((l) => l.trim())
