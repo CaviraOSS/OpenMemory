@@ -166,12 +166,11 @@ function has_temporal_markers(text: string): boolean {
 }
 
 
-async function compute_tag_match_score(memory_id: string, query_tokens: Set<string>): Promise<number> {
-    const mem = await q.get_mem.get(memory_id);
-    if (!mem?.tags) return 0;
+function compute_tag_match_score(memory: any, query_tokens: Set<string>): number {
+    if (!memory?.tags) return 0;
 
     try {
-        const tags = JSON.parse(mem.tags);
+        const tags = typeof memory.tags === 'string' ? JSON.parse(memory.tags) : memory.tags;
         if (!Array.isArray(tags)) return 0;
 
         let matches = 0;
@@ -881,7 +880,7 @@ export async function hsg_query(
             const rec_sc = calc_recency_score(m.last_seen_at);
 
 
-            const tag_match = await compute_tag_match_score(mid, qtk);
+            const tag_match = compute_tag_match_score(m, qtk);
 
             const keyword_boost =
                 tier === "hybrid"
