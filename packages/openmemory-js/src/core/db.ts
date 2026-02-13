@@ -304,6 +304,16 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_citation_edges_citation_idx on "${sc}"."openmemory_citation_edges"(citation_id)`,
         );
+        // Clause similarity table (D8)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_clauses"(id uuid primary key,memory_id uuid not null,clause_number integer not null,clause_type text not null,heading text,content text not null,start_position integer,end_position integer,word_count integer,created_at bigint not null)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_clauses_memory_idx on "${sc}"."openmemory_clauses"(memory_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_clauses_type_idx on "${sc}"."openmemory_clauses"(clause_type)`,
+        );
         ready = true;
 
 
@@ -680,6 +690,16 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_citation_edges_citation on citation_edges(citation_id)",
+        );
+        // Clause similarity table (D8)
+        db.run(
+            "create table if not exists clauses(id text primary key,memory_id text not null,clause_number integer not null,clause_type text not null,heading text,content text not null,start_position integer,end_position integer,word_count integer,created_at integer not null)",
+        );
+        db.run(
+            "create index if not exists idx_clauses_memory on clauses(memory_id)",
+        );
+        db.run(
+            "create index if not exists idx_clauses_type on clauses(clause_type)",
         );
     });
     memories_table = "memories";

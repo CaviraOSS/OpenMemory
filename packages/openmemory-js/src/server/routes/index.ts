@@ -13,6 +13,7 @@ import { audit } from "./audit";
 import { versioning } from "./versioning";
 import { citations } from "./citations";
 import { extraction } from "./extraction";
+import { clauses } from "./clauses";
 
 export function routes(app: any) {
     sys(app);
@@ -30,5 +31,6 @@ export function routes(app: any) {
     versioning(app);
     citations(app);
     extraction(app);
+    clauses(app);
 }
 
