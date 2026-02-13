@@ -84,8 +84,25 @@ if (is_pg) {
             user: process.env.OM_PG_USER,
             password: process.env.OM_PG_PASSWORD,
             ssl,
+            // Connection pool settings
+            max: process.env.OM_PG_POOL_MAX ? +process.env.OM_PG_POOL_MAX : 20,
+            min: process.env.OM_PG_POOL_MIN ? +process.env.OM_PG_POOL_MIN : 0,
+            idleTimeoutMillis: process.env.OM_PG_POOL_IDLE_TIMEOUT 
+                ? +process.env.OM_PG_POOL_IDLE_TIMEOUT 
+                : 30000, // 30 seconds
+            connectionTimeoutMillis: process.env.OM_PG_POOL_CONNECTION_TIMEOUT 
+                ? +process.env.OM_PG_POOL_CONNECTION_TIMEOUT 
+                : 10000, // 10 seconds
         });
     let pg = pool(db_name);
+    
+    // Log connection pool configuration
+    const poolMax = process.env.OM_PG_POOL_MAX ? +process.env.OM_PG_POOL_MAX : 20;
+    const poolMin = process.env.OM_PG_POOL_MIN ? +process.env.OM_PG_POOL_MIN : 0;
+    const idleTimeout = process.env.OM_PG_POOL_IDLE_TIMEOUT ? +process.env.OM_PG_POOL_IDLE_TIMEOUT : 30000;
+    const connTimeout = process.env.OM_PG_POOL_CONNECTION_TIMEOUT ? +process.env.OM_PG_POOL_CONNECTION_TIMEOUT : 10000;
+    console.log(`[DB] PostgreSQL pool config: max=${poolMax}, min=${poolMin}, idleTimeout=${idleTimeout}ms, connectionTimeout=${connTimeout}ms`);
+    
     let cli: PoolClient | null = null;
     const sc = process.env.OM_PG_SCHEMA || "public";
     const m = `"${sc}"."${process.env.OM_PG_TABLE || "openmemory_memories"}"`;
@@ -217,6 +234,18 @@ if (is_pg) {
         );
         await pg.query(
             `create index if not exists openmemory_memories_user_idx on ${m}(user_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_salience_idx on ${m}(salience)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_created_at_idx on ${m}(created_at)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_last_seen_at_idx on ${m}(last_seen_at)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_user_created_idx on ${m}(user_id, created_at)`,
         );
         await pg.query(
             `create index if not exists openmemory_vectors_user_idx on ${v}(user_id)`,
@@ -520,6 +549,15 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_memories_user on memories(user_id)",
+        );
+        db.run(
+            "create index if not exists idx_memories_salience on memories(salience)",
+        );
+        db.run(
+            "create index if not exists idx_memories_created_at on memories(created_at)",
+        );
+        db.run(
+            "create index if not exists idx_memories_user_created on memories(user_id, created_at)",
         );
         db.run(
             `create index if not exists idx_vectors_user on ${sqlite_vector_table}(user_id)`,

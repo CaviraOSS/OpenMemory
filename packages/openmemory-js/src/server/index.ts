@@ -41,7 +41,19 @@ if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
 app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    
+    // If CORS allowlist is configured, check if origin is allowed
+    if (env.cors_allowed_origins && env.cors_allowed_origins.length > 0) {
+        if (origin && env.cors_allowed_origins.includes(origin)) {
+            res.setHeader("Access-Control-Allow-Origin", origin);
+        }
+        // If origin is not in allowlist, don't set permissive CORS headers
+    } else {
+        // No allowlist configured, use wildcard (backward compatible)
+        res.setHeader("Access-Control-Allow-Origin", "*");
+    }
+    
     res.setHeader(
         "Access-Control-Allow-Methods",
         "GET,POST,PUT,PATCH,DELETE,OPTIONS",

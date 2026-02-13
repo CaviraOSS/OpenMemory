@@ -5,8 +5,11 @@ const rate_limit_store = new Map<
     string,
     { count: number; reset_time: number }
 >();
+const MAX_RATE_LIMIT_ENTRIES = 10000; // Cap to prevent unbounded growth
+
 const auth_config = {
     api_key: env.api_key,
+    require_auth: env.require_auth,
     api_key_header: "x-api-key",
     rate_limit_enabled: env.rate_limit_enabled,
     rate_limit_window_ms: env.rate_limit_window_ms,
@@ -52,6 +55,24 @@ function check_rate_limit(client_id: string): {
     const now = Date.now();
     const data = rate_limit_store.get(client_id);
     if (!data || now >= data.reset_time) {
+        // Enforce max entry cap with oldest-entry eviction
+        // Note: O(n) linear scan only happens when adding the 10,001st entry
+        // This is acceptable given the cap and typical usage patterns
+        if (rate_limit_store.size >= MAX_RATE_LIMIT_ENTRIES) {
+            // Find and remove the oldest entry (entry with earliest reset_time)
+            let oldest_key: string | null = null;
+            let oldest_time = Infinity;
+            for (const [key, value] of rate_limit_store.entries()) {
+                if (value.reset_time < oldest_time) {
+                    oldest_time = value.reset_time;
+                    oldest_key = key;
+                }
+            }
+            if (oldest_key) {
+                rate_limit_store.delete(oldest_key);
+            }
+        }
+        
         const new_data = {
             count: 1,
             reset_time: now + auth_config.rate_limit_window_ms,
@@ -86,13 +107,24 @@ function get_client_id(req: any, api_key: string | null): string {
 export function authenticate_api_request(req: any, res: any, next: any) {
     const path = req.path || req.url;
     if (is_public_endpoint(path)) return next();
+    
+    // Strict mode: authentication is required but not configured
+    if (auth_config.require_auth && (!auth_config.api_key || auth_config.api_key === "")) {
+        console.error("[AUTH] STRICT MODE: OM_REQUIRE_AUTH is enabled but OM_API_KEY is not set");
+        return res.status(503).json({ 
+            error: "service_unavailable", 
+            message: "Authentication is required but not configured" 
+        });
+    }
+    
+    // Non-strict mode: authentication is not configured, proceed with warning
     if (!auth_config.api_key || auth_config.api_key === "") {
         console.warn("[AUTH] No API key configured - authentication is DISABLED");
         console.warn("[AUTH] Set OM_API_KEY environment variable to enable authentication");
-        // In production, you may want to require authentication:
-        // return res.status(503).json({ error: "service_unavailable", message: "Authentication not configured" });
+        console.warn("[AUTH] Set OM_REQUIRE_AUTH=true to enforce authentication in production");
         return next();
     }
+    
     const provided = extract_api_key(req);
     if (!provided)
         return res

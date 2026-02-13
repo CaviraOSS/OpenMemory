@@ -166,12 +166,23 @@ function has_temporal_markers(text: string): boolean {
 }
 
 
-async function compute_tag_match_score(memory_id: string, query_tokens: Set<string>): Promise<number> {
-    const mem = await q.get_mem.get(memory_id);
-    if (!mem?.tags) return 0;
+function parse_json_field(field: any, fallback: any): any {
+    if (!field) return fallback;
+    if (typeof field === 'string') {
+        try {
+            return JSON.parse(field);
+        } catch {
+            return fallback;
+        }
+    }
+    return field;
+}
+
+function compute_tag_match_score(memory: any, query_tokens: Set<string>): number {
+    if (!memory?.tags) return 0;
 
     try {
-        const tags = JSON.parse(mem.tags);
+        const tags = parse_json_field(memory.tags, []);
         if (!Array.isArray(tags)) return 0;
 
         let matches = 0;
@@ -881,7 +892,7 @@ export async function hsg_query(
             const rec_sc = calc_recency_score(m.last_seen_at);
 
 
-            const tag_match = await compute_tag_match_score(mid, qtk);
+            const tag_match = compute_tag_match_score(m, qtk);
 
             const keyword_boost =
                 tier === "hybrid"
@@ -906,8 +917,8 @@ export async function hsg_query(
                 path: em?.path || [mid],
                 salience: sal,
                 last_seen_at: m.last_seen_at,
-                tags: typeof m.tags === 'string' ? JSON.parse(m.tags) : (m.tags || []),
-                meta: typeof m.meta === 'string' ? JSON.parse(m.meta) : (m.meta || {}),
+                tags: parse_json_field(m.tags, []),
+                meta: parse_json_field(m.meta, {}),
             });
         }
         res.sort((a, b) => b.score - a.score);
