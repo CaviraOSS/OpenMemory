@@ -218,7 +218,7 @@ def extract_essence(raw: str, sec: str, max_len: int) -> str:
         sc = 0
         if idx == 0: sc += 10
         if idx == 1: sc += 5
-        if re.match(r"^
+        #if re.match(r"^#+\s", s) or re.match(r"^[A-Z][A-Z\s]+:", s): sc += 8
         if re.match(r"^[A-Z][a-z]+:", s): sc += 6
         if re.search(r"\d{4}-\d{2}-\d{2}", s): sc += 7
         if re.search(r"\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d+", s, re.I): sc += 5

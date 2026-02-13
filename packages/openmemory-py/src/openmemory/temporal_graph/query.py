@@ -4,11 +4,14 @@ from typing import List, Dict, Any, Optional
 
 from ..core.db import db
 
-async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional[str] = None, subject_object: Optional[str] = None, at: int = None, min_confidence: float = 0.1) -> List[Dict[str, Any]]:
+async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional[str] = None, subject_object: Optional[str] = None, at: int = None, min_confidence: float = 0.1, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
     ts = at if at is not None else int(time.time()*1000)
     conds = ["(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))"]
     params = [ts, ts]
 
+    if user_id:
+        conds.append("user_id = ?")
+        params.append(user_id)
     if subject:
         conds.append("subject = ?")
         params.append(subject)
@@ -23,7 +26,7 @@ async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional
         params.append(min_confidence)
 
     sql = f"""
-        SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
         WHERE {' AND '.join(conds)}
         ORDER BY confidence DESC, valid_from DESC
@@ -159,6 +162,7 @@ async def get_related_facts(fact_id: str, relation_type: str = None, at: int = N
 def format_fact(row: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": row["id"],
+        "user_id": row.get("user_id"),
         "subject": row["subject"],
         "predicate": row["predicate"],
         "object": row["object"],

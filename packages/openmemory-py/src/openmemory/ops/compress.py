@@ -97,7 +97,7 @@ class MemoryCompressionEngine:
         if not t: return t
         c = self.sem(t)
         c = self.syn(c)
-        c = re.sub(r"[*_~`
+        c = re.sub(r"[*_~`#]", "", c)
         c = re.sub(r"https?://(www\.)?([^\/\s]+)(/[^\s]*)?", r"\2", c, flags=re.IGNORECASE)
 
         abbr = [

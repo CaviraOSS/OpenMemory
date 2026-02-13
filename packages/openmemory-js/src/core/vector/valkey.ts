@@ -61,21 +61,18 @@ export class ValkeyVectorStore implements VectorStore {
         } while (cursor !== "0");
     }
 
-    async searchSimilar(sector: string, queryVec: number[], topK: number): Promise<Array<{ id: string; score: number }>> {
-
-
-
+    async searchSimilar(sector: string, queryVec: number[], topK: number, user_id?: string): Promise<Array<{ id: string; score: number }>> {
+        // Valkey/Redis doesn't support user_id filtering in FT.SEARCH easily
+        // For now we'll need to post-filter or use a more complex query
         const indexName = `idx:${sector}`;
         const blob = vectorToBuffer(queryVec);
 
         try {
-
-
-
+            // Use FT.SEARCH with vector similarity
             const res = await this.client.call(
                 "FT.SEARCH",
                 indexName,
-                `*=>[KNN ${topK} @v $blob AS score]`,
+                `*=>[KNN ${topK * 2} @v $blob AS score]`,  // fetch more to allow filtering
                 "PARAMS",
                 "2",
                 "blob",
@@ -84,64 +81,27 @@ export class ValkeyVectorStore implements VectorStore {
                 "2"
             ) as any[];
 
-
-
-
-            const count = res[0];
+            // Parse results and filter by user_id if provided
             const results: Array<{ id: string; score: number }> = [];
             for (let i = 1; i < res.length; i += 2) {
                 const key = res[i] as string;
                 const fields = res[i + 1] as any[];
                 let id = "";
-                let score = 0;
-
-                for (let j = 0; j < fields.length; j += 2) {
-                    const f = fields[j];
-                    const v = fields[j + 1];
-                    if (f === "id") id = v;
-                    if (f === "score") score = 1 - (parseFloat(v) / 2);
-
-
-
-
-
-                }
-
-                if (!id) {
-                    const parts = key.split(":");
-                    id = parts[parts.length - 1];
-                }
-
-
-
-
-
-
-
-
-
-
-
-
-
-                results.push({ id, score: 1 - parseFloat(fields.find((f: any, idx: number) => f === "score" && idx % 2 === 0 ? false : fields[idx - 1] === "score") || "0") });
-
-
-            }
-
-
-            results.length = 0;
-            for (let i = 1; i < res.length; i += 2) {
-                const key = res[i] as string;
-                const fields = res[i + 1] as any[];
-                let id = "";
                 let dist = 0;
+                let vec_user_id = "";
+
                 for (let j = 0; j < fields.length; j += 2) {
                     if (fields[j] === "id") id = fields[j + 1];
                     if (fields[j] === "score") dist = parseFloat(fields[j + 1]);
+                    if (fields[j] === "user_id") vec_user_id = fields[j + 1];
                 }
                 if (!id) id = key.split(":").pop()!;
-                results.push({ id, score: 1 - dist });
+
+                // Filter by user_id if provided
+                if (!user_id || vec_user_id === user_id) {
+                    results.push({ id, score: 1 - dist });
+                    if (results.length >= topK) break;
+                }
             }
 
             return results;
@@ -149,23 +109,26 @@ export class ValkeyVectorStore implements VectorStore {
         } catch (e) {
             console.warn(`[Valkey] FT.SEARCH failed for ${sector}, falling back to scan (slow):`, e);
 
-
+            // Fallback: scan all vectors and filter
             let cursor = "0";
-            const allVecs: Array<{ id: string; vector: number[] }> = [];
+            const allVecs: Array<{ id: string; vector: number[]; user_id: string }> = [];
             do {
                 const res = await this.client.scan(cursor, "MATCH", `vec:${sector}:*`, "COUNT", 100);
                 cursor = res[0];
                 const keys = res[1];
                 if (keys.length) {
-
                     const pipe = this.client.pipeline();
-                    keys.forEach(k => pipe.hget(k, "v"));
+                    keys.forEach(k => pipe.hmget(k, "v", "user_id"));
                     const buffers = await pipe.exec();
                     buffers?.forEach((b, idx) => {
                         if (b && b[1]) {
-                            const buf = b[1] as Buffer;
+                            const [buf, vec_user_id] = b[1] as [Buffer, string];
                             const id = keys[idx].split(":").pop()!;
-                            allVecs.push({ id, vector: bufferToVector(buf) });
+
+                            // Filter by user_id during scan
+                            if (!user_id || vec_user_id === user_id) {
+                                allVecs.push({ id, vector: bufferToVector(buf), user_id: vec_user_id });
+                            }
                         }
                     });
                 }

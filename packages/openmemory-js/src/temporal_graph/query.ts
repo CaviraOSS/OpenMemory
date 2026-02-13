@@ -9,7 +9,8 @@ export const query_facts_at_time = async (
     predicate?: string,
     object?: string,
     at: Date = new Date(),
-    min_confidence: number = 0.1
+    min_confidence: number = 0.1,
+    user_id?: string
 ): Promise<TemporalFact[]> => {
     const timestamp = at.getTime()
     const conditions: string[] = []
@@ -18,6 +19,11 @@ export const query_facts_at_time = async (
 
     conditions.push('(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))')
     params.push(timestamp, timestamp)
+
+    if (user_id) {
+        conditions.push('user_id = ?')
+        params.push(user_id)
+    }
 
     if (subject) {
         conditions.push('subject = ?')
@@ -40,7 +46,7 @@ export const query_facts_at_time = async (
     }
 
     const sql = `
-        SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
         WHERE ${conditions.join(' AND ')}
         ORDER BY confidence DESC, valid_from DESC
@@ -49,6 +55,7 @@ export const query_facts_at_time = async (
     const rows = await all_async(sql, params)
     return rows.map(row => ({
         id: row.id,
+        user_id: row.user_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -63,22 +70,24 @@ export const query_facts_at_time = async (
 
 export const get_current_fact = async (
     subject: string,
-    predicate: string
+    predicate: string,
+    user_id?: string
 ): Promise<TemporalFact | null> => {
     const now = Date.now()
 
     const row = await get_async(`
-        SELECT id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
-        WHERE subject = ? AND predicate = ? AND valid_to IS NULL
+        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? ' AND user_id = ?' : ''}
         ORDER BY valid_from DESC
         LIMIT 1
-    `, [subject, predicate])
+    `, user_id ? [subject, predicate, user_id] : [subject, predicate])
 
     if (!row) return null
 
     return {
         id: row.id,
+        user_id: row.user_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,

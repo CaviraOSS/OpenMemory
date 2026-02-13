@@ -8,7 +8,8 @@ export const insert_fact = async (
     object: string,
     valid_from: Date = new Date(),
     confidence: number = 1.0,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
+    user_id?: string
 ): Promise<string> => {
     const id = randomUUID()
     const now = Date.now()
@@ -16,9 +17,9 @@ export const insert_fact = async (
 
     const existing = await all_async(`
         SELECT id, valid_from FROM temporal_facts
-        WHERE subject = ? AND predicate = ? AND valid_to IS NULL
+        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? ' AND user_id = ?' : ''}
         ORDER BY valid_from DESC
-    `, [subject, predicate])
+    `, user_id ? [subject, predicate, user_id] : [subject, predicate])
 
     for (const old of existing) {
         if (old.valid_from < valid_from_ts) {
@@ -28,11 +29,11 @@ export const insert_fact = async (
     }
 
     await run_async(`
-        INSERT INTO temporal_facts (id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata)
-        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)
-    `, [id, subject, predicate, object, valid_from_ts, confidence, now, metadata ? JSON.stringify(metadata) : null])
+        INSERT INTO temporal_facts (id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+    `, [id, user_id || null, subject, predicate, object, valid_from_ts, confidence, now, metadata ? JSON.stringify(metadata) : null])
 
-    console.error(`[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence})`)
+    console.error(`[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence}${user_id ? `, user=${user_id}` : ''})`)
     return id
 }
 
@@ -103,7 +104,7 @@ export const batch_insert_facts = async (facts: Array<{
     valid_from?: Date
     confidence?: number
     metadata?: Record<string, any>
-}>): Promise<string[]> => {
+}>, user_id?: string): Promise<string[]> => {
     const ids: string[] = []
 
     await run_async('BEGIN TRANSACTION')
@@ -115,7 +116,8 @@ export const batch_insert_facts = async (facts: Array<{
                 fact.object,
                 fact.valid_from,
                 fact.confidence,
-                fact.metadata
+                fact.metadata,
+                user_id
             )
             ids.push(id)
         }
