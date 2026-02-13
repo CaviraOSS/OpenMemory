@@ -158,8 +158,8 @@ async def run_mcp_server():
                     facts = await query_facts_at_time(
                         subject=fact_pattern.get("subject"),
                         predicate=fact_pattern.get("predicate"),
-                        obj=fact_pattern.get("object"),
-                        at_time=at_ts,
+                        subject_object=fact_pattern.get("object"),
+                        at=at_ts,
                         min_confidence=0.0,
                         user_id=uid
                     )
