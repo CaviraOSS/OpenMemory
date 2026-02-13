@@ -35,7 +35,8 @@ export function mem(app: any) {
                 );
             }
         } catch (e: any) {
-            res.status(500).json({ err: e.message });
+            console.error("[mem] add failed:", e);
+            res.status(500).json({ err: "memory_add_failed" });
         }
     });
 
@@ -53,7 +54,8 @@ export function mem(app: any) {
             );
             res.json(r);
         } catch (e: any) {
-            res.status(500).json({ err: "ingest_fail", msg: e.message });
+            console.error("[mem] ingest failed:", e);
+            res.status(500).json({ err: "ingest_failed" });
         }
     });
 
@@ -64,7 +66,8 @@ export function mem(app: any) {
             const r = await ingestURL(b.url, b.metadata, b.config, b.user_id);
             res.json(r);
         } catch (e: any) {
-            res.status(500).json({ err: "url_fail", msg: e.message });
+            console.error("[mem] url ingest failed:", e);
+            res.status(500).json({ err: "url_ingest_failed" });
         }
     });
 
