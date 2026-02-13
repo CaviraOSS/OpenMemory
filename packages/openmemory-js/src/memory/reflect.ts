@@ -2,6 +2,12 @@ import { q, log_maint_op } from "../core/db";
 import { add_hsg_memory } from "./hsg";
 import { env } from "../core/cfg";
 import { j } from "../utils";
+import {
+    TASK_NAMES,
+    task_start,
+    task_success,
+    task_failure,
+} from "../core/observability";
 
 const sim = (t1: string, t2: string): number => {
 
@@ -102,18 +108,14 @@ const boost = async (ids: string[]) => {
 };
 
 export const run_reflection = async () => {
-    console.error("[REFLECT] Starting reflection job...");
     const min = env.reflect_min || 20;
     const mems = await q.all_mem.all(100, 0);
-    console.error(
-        `[REFLECT] Fetched ${mems.length} memories (min required: ${min})`,
-    );
+
     if (mems.length < min) {
-        console.error("[REFLECT] Not enough memories, skipping");
-        return { created: 0, reason: "low" };
+        return { created: 0, reason: "insufficient_memories", memories_found: mems.length, min_required: min };
     }
+
     const cls = cluster(mems);
-    console.error(`[REFLECT] Clustered into ${cls.length} groups`);
     let n = 0;
     for (const c of cls) {
         const txt = summ(c);
@@ -125,17 +127,13 @@ export const run_reflection = async () => {
             freq: c.n,
             at: new Date().toISOString(),
         };
-        console.error(
-            `[REFLECT] Creating reflection: ${c.n} memories, salience=${s.toFixed(3)}, sector=${c.mem[0].primary_sector}`,
-        );
         await add_hsg_memory(txt, j(["reflect:auto"]), meta);
         await mark(src);
         await boost(src);
         n++;
     }
     if (n > 0) await log_maint_op("reflect", n);
-    console.error(`[REFLECT] Job complete: created ${n} reflections`);
-    return { created: n, clusters: cls.length };
+    return { created: n, clusters: cls.length, memories_processed: mems.length };
 };
 
 let timer: NodeJS.Timeout | null = null;
@@ -143,11 +141,16 @@ let timer: NodeJS.Timeout | null = null;
 export const start_reflection = () => {
     if (!env.auto_reflect || timer) return;
     const int = (env.reflect_interval || 10) * 60000;
-    timer = setInterval(
-        () => run_reflection().catch((e) => console.error("[REFLECT]", e)),
-        int,
-    );
-    console.error(`[REFLECT] Started: every ${env.reflect_interval || 10}m`);
+    timer = setInterval(async () => {
+        const start = task_start(TASK_NAMES.REFLECT);
+        try {
+            const result = await run_reflection();
+            task_success(TASK_NAMES.REFLECT, start, result);
+        } catch (error) {
+            task_failure(TASK_NAMES.REFLECT, start, error);
+        }
+    }, int);
+    console.log(`[REFLECT] Background task started: every ${env.reflect_interval || 10}m`);
 };
 
 export const stop_reflection = () => {

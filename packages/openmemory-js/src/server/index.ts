@@ -11,6 +11,12 @@ import { start_reflection } from "../memory/reflect";
 import { start_user_summary_reflection } from "../memory/user_summary";
 import { sendTelemetry } from "../core/telemetry";
 import { req_tracker_mw } from "./routes/dashboard";
+import {
+    TASK_NAMES,
+    task_start,
+    task_success,
+    task_failure,
+} from "../core/observability";
 
 const ASC = `   ____                   __  __
   / __ \\                 |  \\/  |
@@ -88,36 +94,44 @@ console.log(
 );
 
 setInterval(async () => {
-    console.log("[DECAY] Running HSG decay process...");
+    const start = task_start(TASK_NAMES.DECAY);
     try {
         const result = await run_decay_process();
-        console.log(
-            `[DECAY] Completed: ${result.decayed}/${result.processed} memories updated`,
-        );
+        task_success(TASK_NAMES.DECAY, start, {
+            decayed: result.decayed,
+            processed: result.processed,
+        });
     } catch (error) {
-        console.error("[DECAY] Process failed:", error);
+        task_failure(TASK_NAMES.DECAY, start, error);
     }
 }, decayIntervalMs);
+
 setInterval(
     async () => {
-        console.log("[PRUNE] Pruning weak waypoints...");
+        const start = task_start(TASK_NAMES.PRUNE);
         try {
             const pruned = await prune_weak_waypoints();
-            console.log(`[PRUNE] Completed: ${pruned} waypoints removed`);
+            task_success(TASK_NAMES.PRUNE, start, { pruned });
         } catch (error) {
-            console.error("[PRUNE] Failed:", error);
+            task_failure(TASK_NAMES.PRUNE, start, error);
         }
     },
     7 * 24 * 60 * 60 * 1000,
 );
+
 setTimeout(() => {
+    const start = task_start(TASK_NAMES.DECAY);
     run_decay_process()
         .then((result: any) => {
-            console.log(
-                `[INIT] Initial decay: ${result.decayed}/${result.processed} memories updated`,
-            );
+            task_success(TASK_NAMES.DECAY, start, {
+                decayed: result.decayed,
+                processed: result.processed,
+                initial: true,
+            });
         })
-        .catch(console.error);
+        .catch((error) => {
+            task_failure(TASK_NAMES.DECAY, start, error);
+        });
 }, 3000);
 
 start_reflection();

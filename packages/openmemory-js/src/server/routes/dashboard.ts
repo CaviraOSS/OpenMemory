@@ -2,6 +2,10 @@ import { q, all_async, run_async } from "../../core/db";
 import { env } from "../../core/cfg";
 import * as fs from "fs";
 import * as path from "path";
+import {
+    get_all_task_metrics,
+    get_task_summary,
+} from "../../core/observability";
 
 const is_pg = env.metadata_backend === "postgres";
 
@@ -419,6 +423,25 @@ export function dash(app: any) {
             });
         } catch (e: any) {
             console.error("[dash] maintenance err:", e);
+            res.status(500).json({ err: "internal" });
+        }
+    });
+
+    /**
+     * Background task observability endpoint (C3)
+     * Returns metrics for all background tasks: decay, prune, reflect, user_summary
+     */
+    app.get("/dashboard/tasks", async (_req: any, res: any) => {
+        try {
+            const tasks = get_all_task_metrics();
+            const summary = get_task_summary();
+
+            res.json({
+                tasks,
+                summary,
+            });
+        } catch (e: any) {
+            console.error("[dash] tasks err:", e);
             res.status(500).json({ err: "internal" });
         }
     });

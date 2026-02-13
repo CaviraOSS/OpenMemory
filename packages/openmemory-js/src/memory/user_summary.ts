@@ -1,5 +1,11 @@
 import { q } from "../core/db";
 import { env } from "../core/cfg";
+import {
+    TASK_NAMES,
+    task_start,
+    task_success,
+    task_failure,
+} from "../core/observability";
 
 const cos = (a: number[], b: number[]): number => {
     let d = 0,
@@ -93,13 +99,16 @@ let timer: NodeJS.Timeout | null = null;
 export const start_user_summary_reflection = () => {
     if (timer) return;
     const int = (env.user_summary_interval || 30) * 60000;
-    timer = setInterval(
-        () =>
-            auto_update_user_summaries().catch((e) =>
-                console.error("[USER_SUMMARY]", e),
-            ),
-        int,
-    );
+    timer = setInterval(async () => {
+        const start = task_start(TASK_NAMES.USER_SUMMARY);
+        try {
+            const result = await auto_update_user_summaries();
+            task_success(TASK_NAMES.USER_SUMMARY, start, result);
+        } catch (error) {
+            task_failure(TASK_NAMES.USER_SUMMARY, start, error);
+        }
+    }, int);
+    console.log(`[USER_SUMMARY] Background task started: every ${env.user_summary_interval || 30}m`);
 };
 
 export const stop_user_summary_reflection = () => {

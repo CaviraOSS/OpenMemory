@@ -473,13 +473,19 @@ The program is complete when:
 - **Fix**: Add validation in `cfg.ts` with `Math.max(1, num(...))` for pool max
 - **Priority**: Very Low (unlikely misconfiguration)
 
-### 12.3 Phase 1 Incomplete Items
+### 12.3 Phase 1 Remaining Items
 
-#### C3. Background-task Observability ❌ NOT STARTED
+#### C3. Background-task Observability ✅ COMPLETE
 
-**Status**: Listed in Phase 1 scope but not implemented in PR #5.
+**Status**: Implemented in Phase 0/1 Remediation workstream.
 
-**Recommendation**: Move to Phase 0/1 Remediation or Phase 2.
+**Implementation**:
+- Created `core/observability.ts` module with structured logging and metrics
+- Updated `server/index.ts` to wrap decay and prune tasks with observability
+- Updated `memory/reflect.ts` to use observability for reflection tasks
+- Updated `memory/user_summary.ts` to use observability for user summary tasks
+- Added `/dashboard/tasks` endpoint exposing task metrics (run count, success/failure rates, last errors)
+- All background tasks now log structured output with duration and result data
 
 #### D5. Audit Trail System ❌ NOT STARTED
 
@@ -523,9 +529,9 @@ The program is complete when:
 
 ### Recommended Remediation Order
 
-1. **B2.1** — Quick fix, removes code smell
-2. **A1.1** — Quick fix, improves log hygiene
-3. **C3** — Should have been in Phase 1, important for operations
+1. **B2.1** — Quick fix, removes code smell ✅ DONE
+2. **A1.1** — Quick fix, improves log hygiene ✅ DONE
+3. **C3** — Should have been in Phase 1, important for operations ✅ DONE
 4. **Python parity** — Verify or implement missing changes
 
 ---
