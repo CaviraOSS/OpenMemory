@@ -275,6 +275,16 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_audit_ts_idx on "${sc}"."openmemory_audit_logs"(timestamp)`,
         );
+        // Version history table (D1)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_version_history"(id uuid primary key,memory_id uuid not null,version_number integer not null,content text not null,tags text,metadata text,primary_sector text not null,change_summary text,created_at bigint not null,created_by text,unique(memory_id,version_number))`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_version_memory_idx on "${sc}"."openmemory_version_history"(memory_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_version_number_idx on "${sc}"."openmemory_version_history"(memory_id,version_number)`,
+        );
         ready = true;
 
 
@@ -622,6 +632,16 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_audit_ts on audit_logs(timestamp)",
+        );
+        // Version history table (D1)
+        db.run(
+            "create table if not exists version_history(id text primary key,memory_id text not null,version_number integer not null,content text not null,tags text,metadata text,primary_sector text not null,change_summary text,created_at integer not null,created_by text,unique(memory_id,version_number))",
+        );
+        db.run(
+            "create index if not exists idx_version_memory on version_history(memory_id)",
+        );
+        db.run(
+            "create index if not exists idx_version_number on version_history(memory_id,version_number)",
         );
     });
     memories_table = "memories";

@@ -10,6 +10,7 @@ import { dash } from "./dashboard";
 import { vercel } from "./vercel";
 import { src } from "./sources";
 import { audit } from "./audit";
+import { versioning } from "./versioning";
 
 export function routes(app: any) {
     sys(app);
@@ -24,5 +25,6 @@ export function routes(app: any) {
     vercel(app);
     src(app);
     audit(app);
+    versioning(app);
 }
 

@@ -188,16 +188,23 @@ These are environment/dependency setup issues, not changes introduced by this im
 - Add migration pattern for additive tables/columns and rollback instructions.
 - Define route versioning strategy for new document endpoints.
 
-## D1. Document versioning (HIGH)
+## D1. Document versioning (HIGH) ✅ COMPLETE
 - **Touchpoints**: `server/routes/memory.ts`, `memory/hsg.ts`, DB schema in `core/db.ts`
 - **Schema plan**:
   - Reuse existing `version` field, add `previous_version_id`, `change_summary`, `diff_blob` (JSON/text).
 - **API plan**:
-  - `POST /memory/:id/version`
-  - `GET /memory/:id/versions`
-  - `GET /memory/:id/diff/:other_id`
+  - `POST /memory/:id/version` ✅
+  - `GET /memory/:id/versions` ✅
+  - `GET /memory/:id/diff/:other_id` ✅
 - **Acceptance criteria**:
-  - Version chain is queryable and diff output is deterministic.
+  - Version chain is queryable and diff output is deterministic. ✅
+
+**Implementation**:
+- Created `core/versioning.ts` with version storage, diff computation, and history retrieval
+- Added `version_history` table to both Postgres and SQLite
+- Created versioning routes: `/memory/:id/versions`, `/memory/:id/version`, `/memory/:id/diff/*`, `/memory/:id/restore/:version`
+- Auto-versioning on content updates via `update_memory()` function
+- Line-based diff with change classification (minor/moderate/major)
 
 ## D2. Citation tracking & reference graph (HIGH)
 - **Touchpoints**: `ops/extract.ts`, `memory/hsg.ts`, `server/routes/memory.ts` or new `routes/citations.ts`

@@ -666,6 +666,7 @@ import {
 import { chunk_text } from "../utils/chunking";
 import { j } from "../utils";
 import { keyword_filter_memories, extract_keywords } from "../utils/keyword";
+import { save_version, compute_diff, generate_change_summary } from "../core/versioning";
 import {
     calculateCrossSectorResonanceScore,
     applyRetrievalTraceReinforcementToMemory,
@@ -1196,12 +1197,29 @@ export async function update_memory(
     content?: string,
     tags?: string[],
     metadata?: any,
-): Promise<{ id: string; updated: boolean }> {
+    options?: { skip_version?: boolean; user_id?: string },
+): Promise<{ id: string; updated: boolean; version: number }> {
     const mem = await q.get_mem.get(id);
     if (!mem) throw new Error(`Memory ${id} not found`);
     const new_content = content !== undefined ? content : mem.content;
     const new_tags = tags !== undefined ? j(tags) : mem.tags || "[]";
     const new_meta = metadata !== undefined ? j(metadata) : mem.meta || "{}";
+
+    // Save version snapshot before making changes (D1)
+    if (!options?.skip_version && content !== undefined && content !== mem.content) {
+        const diff = compute_diff(mem.content, content);
+        const change_summary = generate_change_summary(diff);
+        await save_version(
+            id,
+            mem.content,
+            mem.tags,
+            mem.meta,
+            mem.primary_sector,
+            mem.version,
+            change_summary,
+            options?.user_id || mem.user_id
+        ).catch((e) => console.error("[versioning] save failed:", e));
+    }
     await transaction.begin();
     try {
         if (content !== undefined && content !== mem.content) {
@@ -1249,7 +1267,9 @@ export async function update_memory(
             );
         }
         await transaction.commit();
-        return { id, updated: true };
+        // Get updated version number
+        const updated = await q.get_mem.get(id);
+        return { id, updated: true, version: updated?.version || mem.version + 1 };
     } catch (error) {
         await transaction.rollback();
         throw error;
