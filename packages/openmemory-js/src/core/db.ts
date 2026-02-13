@@ -259,6 +259,22 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
         );
+        // Audit trail table (D5)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_audit_logs"(id uuid primary key,resource_type text not null,resource_id text not null,action text not null,actor_id text,actor_type text not null default 'api',timestamp bigint not null,changes text,metadata text)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_audit_resource_idx on "${sc}"."openmemory_audit_logs"(resource_type,resource_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_audit_action_idx on "${sc}"."openmemory_audit_logs"(action)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_audit_actor_idx on "${sc}"."openmemory_audit_logs"(actor_id)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_audit_ts_idx on "${sc}"."openmemory_audit_logs"(timestamp)`,
+        );
         ready = true;
 
 
@@ -590,6 +606,22 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_edges_validity on temporal_edges(valid_from,valid_to)",
+        );
+        // Audit trail table (D5)
+        db.run(
+            "create table if not exists audit_logs(id text primary key,resource_type text not null,resource_id text not null,action text not null,actor_id text,actor_type text not null default 'api',timestamp integer not null,changes text,metadata text)",
+        );
+        db.run(
+            "create index if not exists idx_audit_resource on audit_logs(resource_type,resource_id)",
+        );
+        db.run(
+            "create index if not exists idx_audit_action on audit_logs(action)",
+        );
+        db.run(
+            "create index if not exists idx_audit_actor on audit_logs(actor_id)",
+        );
+        db.run(
+            "create index if not exists idx_audit_ts on audit_logs(timestamp)",
         );
     });
     memories_table = "memories";

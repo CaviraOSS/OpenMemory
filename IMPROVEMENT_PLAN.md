@@ -487,11 +487,16 @@ The program is complete when:
 - Added `/dashboard/tasks` endpoint exposing task metrics (run count, success/failure rates, last errors)
 - All background tasks now log structured output with duration and result data
 
-#### D5. Audit Trail System ❌ NOT STARTED
+#### D5. Audit Trail System ✅ COMPLETE
 
-**Status**: Listed in Phase 1 scope but not implemented in PR #5.
+**Status**: Implemented in Phase 0/1 Remediation workstream.
 
-**Recommendation**: Move to Phase 2 (document intelligence phase).
+**Implementation**:
+- Created `core/audit.ts` module with audit_log(), query_audit_logs(), count_audit_logs(), get_resource_history() functions
+- Added audit_logs table to both Postgres and SQLite database initialization
+- Created `/audit/logs`, `/audit/resource/:type/:id`, `/audit/stats` API endpoints
+- Hooked audit logging into memory routes: create, update, delete, reinforce, ingest actions
+- All audit entries include: resource_type, resource_id, action, actor_id, actor_type, timestamp, changes, metadata
 
 ### 12.4 Additional Observations
 

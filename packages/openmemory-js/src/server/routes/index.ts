@@ -9,6 +9,7 @@ import { temporal } from "./temporal";
 import { dash } from "./dashboard";
 import { vercel } from "./vercel";
 import { src } from "./sources";
+import { audit } from "./audit";
 
 export function routes(app: any) {
     sys(app);
@@ -22,5 +23,6 @@ export function routes(app: any) {
     dash(app);
     vercel(app);
     src(app);
+    audit(app);
 }
 

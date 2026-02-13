@@ -9,6 +9,7 @@ import {
 import { ingestDocument, ingestURL } from "../../ops/ingest";
 import { env } from "../../core/cfg";
 import { update_user_summary } from "../../memory/user_summary";
+import { audit_log } from "../../core/audit";
 import type {
     add_req,
     q_req,
@@ -28,6 +29,12 @@ export function mem(app: any) {
                 b.user_id,
             );
             res.json(m);
+
+            // Audit log (fire-and-forget)
+            audit_log("memory", m.id, "create", {
+                actor_id: b.user_id,
+                metadata: { tags: b.tags, sector: m.primary_sector },
+            }).catch((e) => console.error("[audit] log failed:", e));
 
             if (b.user_id) {
                 update_user_summary(b.user_id).catch((e) =>
@@ -53,6 +60,16 @@ export function mem(app: any) {
                 b.user_id,
             );
             res.json(r);
+
+            // Audit log (fire-and-forget)
+            audit_log("memory", r.root_memory_id, "ingest", {
+                actor_id: b.user_id,
+                metadata: {
+                    content_type: b.content_type,
+                    strategy: r.strategy,
+                    child_count: r.child_count,
+                },
+            }).catch((e) => console.error("[audit] log failed:", e));
         } catch (e: any) {
             console.error("[mem] ingest failed:", e);
             res.status(500).json({ err: "ingest_failed" });
@@ -102,11 +119,17 @@ export function mem(app: any) {
     });
 
     app.post("/memory/reinforce", async (req: any, res: any) => {
-        const b = req.body as { id: string; boost?: number };
+        const b = req.body as { id: string; boost?: number; user_id?: string };
         if (!b?.id) return res.status(400).json({ err: "id" });
         try {
             await reinforce_memory(b.id, b.boost);
             res.json({ ok: true });
+
+            // Audit log (fire-and-forget)
+            audit_log("memory", b.id, "reinforce", {
+                actor_id: b.user_id,
+                changes: { boost: b.boost || 0.1 },
+            }).catch((e) => console.error("[audit] log failed:", e));
         } catch (e: any) {
             res.status(404).json({ err: "nf" });
         }
@@ -133,6 +156,17 @@ export function mem(app: any) {
 
             const r = await update_memory(id, b.content, b.tags, b.metadata);
             res.json(r);
+
+            // Audit log (fire-and-forget)
+            const changes: Record<string, unknown> = {};
+            if (b.content !== undefined) changes.content = "updated";
+            if (b.tags !== undefined) changes.tags = b.tags;
+            if (b.metadata !== undefined) changes.metadata = "updated";
+            audit_log("memory", id, "update", {
+                actor_id: b.user_id || m.user_id,
+                changes,
+                metadata: { old_version: m.version, new_version: r.version },
+            }).catch((e) => console.error("[audit] log failed:", e));
         } catch (e: any) {
             if (e.message.includes("not found")) {
                 res.status(404).json({ err: "nf" });
@@ -231,6 +265,12 @@ export function mem(app: any) {
             await vector_store.deleteVectors(id);
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
+
+            // Audit log (fire-and-forget)
+            audit_log("memory", id, "delete", {
+                actor_id: user_id || m.user_id,
+                metadata: { sector: m.primary_sector, version: m.version },
+            }).catch((e) => console.error("[audit] log failed:", e));
         } catch (e: any) {
             res.status(500).json({ err: "internal" });
         }
