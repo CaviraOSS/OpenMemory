@@ -13,7 +13,8 @@
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server/index.js",
-        "migrate": "tsx src/migrate.ts"
+        "migrate": "tsx src/migrate.ts",
+        "check-parity": "npx ts-node ../../scripts/check-sector-parity.ts"
     },
     "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "^3.932.0",

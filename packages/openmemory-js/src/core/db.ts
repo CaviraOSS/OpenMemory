@@ -324,6 +324,19 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_templates_name_idx on "${sc}"."openmemory_templates"(name)`,
         );
+        // Compliance rules engine tables (D7)
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_compliance_rules"(id uuid primary key,name text not null,description text,type text not null,severity text not null,config text,category text,enabled integer default 1,created_at bigint not null,updated_at bigint not null)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_compliance_rules_type_idx on "${sc}"."openmemory_compliance_rules"(type)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_compliance_rules_category_idx on "${sc}"."openmemory_compliance_rules"(category)`,
+        );
+        await pg.query(
+            `create table if not exists "${sc}"."openmemory_rule_sets"(id uuid primary key,name text not null,description text,rules text,category text,created_at bigint not null,updated_at bigint not null)`,
+        );
         ready = true;
 
 
@@ -720,6 +733,19 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_templates_name on templates(name)",
+        );
+        // Compliance rules engine tables (D7)
+        db.run(
+            "create table if not exists compliance_rules(id text primary key,name text not null,description text,type text not null,severity text not null,config text,category text,enabled integer default 1,created_at integer not null,updated_at integer not null)",
+        );
+        db.run(
+            "create index if not exists idx_compliance_rules_type on compliance_rules(type)",
+        );
+        db.run(
+            "create index if not exists idx_compliance_rules_category on compliance_rules(category)",
+        );
+        db.run(
+            "create table if not exists rule_sets(id text primary key,name text not null,description text,rules text,category text,created_at integer not null,updated_at integer not null)",
         );
     });
     memories_table = "memories";

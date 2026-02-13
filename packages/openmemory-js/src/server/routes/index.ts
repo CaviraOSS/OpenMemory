@@ -15,6 +15,7 @@ import { citations } from "./citations";
 import { extraction } from "./extraction";
 import { clauses } from "./clauses";
 import { templates } from "./templates";
+import { compliance } from "./compliance";
 
 export function routes(app: any) {
     sys(app);
@@ -34,5 +35,6 @@ export function routes(app: any) {
     extraction(app);
     clauses(app);
     templates(app);
+    compliance(app);
 }
 
