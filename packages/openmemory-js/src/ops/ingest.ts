@@ -2,6 +2,7 @@ import { add_hsg_memory } from "../memory/hsg";
 import { q, transaction } from "../core/db";
 import { rid, now, j } from "../utils";
 import { extractText, ExtractionResult } from "./extract";
+import { enrichDocumentMetadata } from "./document_metadata";
 
 const LG = 8000,
     SEC = 3000;
@@ -131,6 +132,7 @@ export async function ingestDocument(
         sz = cfg?.sec_sz || SEC;
     const ex = await extractText(t, data);
     const { text, metadata: exMeta } = ex;
+    const enrichedMeta = enrichDocumentMetadata(text, meta);
     const useRC = cfg?.force_root || exMeta.estimated_tokens > th;
 
     if (!useRC) {
@@ -138,7 +140,7 @@ export async function ingestDocument(
             text,
             j([]),
             {
-                ...meta,
+                ...enrichedMeta,
                 ...exMeta,
                 ingestion_strategy: "single",
                 ingested_at: now(),
@@ -162,7 +164,7 @@ export async function ingestDocument(
     const cids: string[] = [];
 
     try {
-        rid = await mkRoot(text, ex, meta, user_id);
+        rid = await mkRoot(text, ex, enrichedMeta, user_id);
         console.log(`[INGEST] Root memory created: ${rid}`);
         for (let i = 0; i < secs.length; i++) {
             try {
@@ -171,7 +173,7 @@ export async function ingestDocument(
                     i,
                     secs.length,
                     rid,
-                    meta,
+                    enrichedMeta,
                     user_id,
                 );
                 cids.push(cid);
@@ -213,6 +215,7 @@ export async function ingestURL(
     const ex = await extractURL(url);
     const th = cfg?.lg_thresh || LG,
         sz = cfg?.sec_sz || SEC;
+    const enrichedMeta = enrichDocumentMetadata(ex.text, meta);
     const useRC = cfg?.force_root || ex.metadata.estimated_tokens > th;
 
     if (!useRC) {
@@ -220,7 +223,7 @@ export async function ingestURL(
             ex.text,
             j([]),
             {
-                ...meta,
+                ...enrichedMeta,
                 ...ex.metadata,
                 ingestion_strategy: "single",
                 ingested_at: now(),
@@ -244,7 +247,7 @@ export async function ingestURL(
     const cids: string[] = [];
 
     try {
-        rid = await mkRoot(ex.text, ex, { ...meta, source_url: url }, user_id);
+        rid = await mkRoot(ex.text, ex, { ...enrichedMeta, source_url: url }, user_id);
         console.log(`[INGEST] Root memory for URL: ${rid}`);
         for (let i = 0; i < secs.length; i++) {
             try {
@@ -253,7 +256,7 @@ export async function ingestURL(
                     i,
                     secs.length,
                     rid,
-                    { ...meta, source_url: url },
+                    { ...enrichedMeta, source_url: url },
                     user_id,
                 );
                 cids.push(cid);
