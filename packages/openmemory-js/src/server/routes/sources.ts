@@ -9,6 +9,7 @@
  */
 
 import * as sources from "../../sources";
+import crypto from "crypto";
 
 export function src(app: any) {
 
@@ -47,7 +48,8 @@ export function src(app: any) {
             const ids = await src.ingest_all(filters);
             res.json({ ok: true, ingested: ids.length, memory_ids: ids });
         } catch (e: any) {
-            res.status(500).json({ error: e.message });
+            console.error("[sources] ingest failed:", e);
+            res.status(500).json({ error: "source_ingest_failed" });
         }
     });
 
@@ -55,9 +57,50 @@ export function src(app: any) {
     app.post("/sources/webhook/github", async (req: any, res: any) => {
         const event_type = req.headers["x-github-event"];
         const payload = req.body;
+        const signature = req.headers["x-hub-signature-256"];
 
         if (!payload) {
             return res.status(400).json({ error: "no payload" });
+        }
+
+        // Verify webhook signature if GitHub webhook secret is configured
+        const webhook_secret = process.env.GITHUB_WEBHOOK_SECRET;
+        if (webhook_secret) {
+            if (!signature) {
+                console.warn("[webhook] GitHub webhook secret configured but no signature provided");
+                return res.status(401).json({ error: "signature_required" });
+            }
+
+            // Require raw body for signature verification
+            if (!req.rawBody) {
+                console.error("[webhook] Raw body not available for signature verification");
+                return res.status(500).json({ error: "signature_verification_unavailable" });
+            }
+
+            const expected_signature = "sha256=" + crypto
+                .createHmac("sha256", webhook_secret)
+                .update(req.rawBody)
+                .digest("hex");
+
+            // Safe comparison - check lengths first
+            if (signature.length !== expected_signature.length) {
+                console.warn("[webhook] Invalid GitHub signature (length mismatch)");
+                return res.status(401).json({ error: "invalid_signature" });
+            }
+
+            // Use timing-safe comparison
+            try {
+                if (!crypto.timingSafeEqual(
+                    Buffer.from(signature),
+                    Buffer.from(expected_signature)
+                )) {
+                    console.warn("[webhook] Invalid GitHub signature");
+                    return res.status(401).json({ error: "invalid_signature" });
+                }
+            } catch (e) {
+                console.error("[webhook] Signature verification error:", e);
+                return res.status(401).json({ error: "invalid_signature" });
+            }
         }
 
         try {
@@ -91,7 +134,8 @@ export function src(app: any) {
                 res.json({ ok: true, skipped: true, reason: "no content" });
             }
         } catch (e: any) {
-            res.status(500).json({ error: e.message });
+            console.error("[webhook] github processing failed:", e);
+            res.status(500).json({ error: "webhook_processing_failed" });
         }
     });
 

@@ -158,18 +158,19 @@ function server(config = {}) {
     };
     use((req, res, next) => {
         if (req.headers['content-type']?.includes('application/json')) {
-            let d = '';
+            let rawBody = '';
             let max = config.max_payload_size || 1_000_000;
-            req.on('data', e => {
-                d += e;
-                if (d.length > max) {
+            req.on('data', chunk => {
+                rawBody += chunk;
+                if (rawBody.length > max) {
                     res.status(413).end('Payload Too Large');
                     req.destroy();
                 }
             });
             req.on('end', () => {
                 try {
-                    req.body = JSON.parse(d);
+                    req.rawBody = rawBody;  // Preserve raw body for webhook signature verification
+                    req.body = JSON.parse(rawBody);
                 }
                 catch {
                     req.body = null;

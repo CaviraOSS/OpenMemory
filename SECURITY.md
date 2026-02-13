@@ -48,19 +48,23 @@ We aim to respond to security reports within the following timeframes:
 
 #### Server Security
 
-- **Authentication**: Always use authentication in production
+- **Authentication**: Always use authentication in production by setting `OM_API_KEY` environment variable
 - **HTTPS**: Use HTTPS/TLS for all communications
 - **Network isolation**: Run OpenMemory behind a firewall
 - **Regular updates**: Keep OpenMemory updated to the latest version
 - **Environment variables**: Store sensitive configuration in environment variables
 - **Access control**: Limit access to the OpenMemory server
+- **Request size limits**: The default payload size limit is 1MB. Adjust `OM_MAX_PAYLOAD_SIZE` if needed
+- **Webhook security**: Configure `GITHUB_WEBHOOK_SECRET` to verify webhook signatures
 
 #### API Key Security
 
 - **Secure storage**: Store embedding provider API keys securely
+- **OpenMemory API Key**: Set `OM_API_KEY` to protect write endpoints (add, update, delete operations)
 - **Rotation**: Rotate API keys regularly
 - **Least privilege**: Use API keys with minimal required permissions
 - **Monitoring**: Monitor API key usage for anomalies
+- **Rate limiting**: Enable rate limiting with `OM_RATE_LIMIT_ENABLED=true`
 
 #### Data Protection
 
@@ -68,6 +72,7 @@ We aim to respond to security reports within the following timeframes:
 - **Sensitive data**: Avoid storing sensitive personal information
 - **Backup security**: Secure database backups
 - **Audit logging**: Enable audit logging for security events
+- **Error messages**: Production deployments hide internal error details from API responses
 
 ### For Developers
 

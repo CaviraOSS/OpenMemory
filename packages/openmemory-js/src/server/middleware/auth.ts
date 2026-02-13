@@ -87,7 +87,10 @@ export function authenticate_api_request(req: any, res: any, next: any) {
     const path = req.path || req.url;
     if (is_public_endpoint(path)) return next();
     if (!auth_config.api_key || auth_config.api_key === "") {
-        console.warn("[AUTH] No API key configured");
+        console.warn("[AUTH] No API key configured - authentication is DISABLED");
+        console.warn("[AUTH] Set OM_API_KEY environment variable to enable authentication");
+        // In production, you may want to require authentication:
+        // return res.status(503).json({ error: "service_unavailable", message: "Authentication not configured" });
         return next();
     }
     const provided = extract_api_key(req);
