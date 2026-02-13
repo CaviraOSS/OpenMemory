@@ -1,0 +1,90 @@
+# GitHub Copilot Agent Configuration
+# This file configures how GitHub Copilot agents interact with the OpenMemory repository
+
+name: OpenMemory Agent
+description: AI agent configuration for the OpenMemory cognitive memory engine project
+
+# Repository context
+repository:
+  type: monorepo
+  primary_languages:
+    - TypeScript
+    - JavaScript
+    - Python
+  frameworks:
+    - Node.js
+    - Express
+    - React
+    - SQLite
+    - PostgreSQL
+
+# Project structure
+structure:
+  backend: packages/openmemory-js
+  python_sdk: packages/openmemory-py
+  dashboard: dashboard
+  examples: examples
+  documentation: docs
+  tools: tools
+
+# Key concepts agents should understand
+concepts:
+  - Multi-sector memory (episodic, semantic, procedural, emotional, reflective)
+  - Temporal knowledge graph with valid_from/valid_to
+  - Composite scoring (salience + recency + coactivation)
+  - Decay engine for adaptive forgetting
+  - Waypoint graph for associative links
+  - Self-hosted and local-first architecture
+  - MCP (Model Context Protocol) server integration
+  - Vector embeddings with multiple providers (OpenAI, Gemini, Ollama, AWS)
+
+# Development guidelines
+development:
+  testing:
+    - Run omnibus tests for comprehensive parity checks
+    - Test both Python and Node.js SDKs
+    - Ensure temporal graph operations work correctly
+  building:
+    - Use npm for Node.js packages
+    - Use pip for Python packages
+    - Docker Compose for full stack development
+  linting:
+    - Follow existing code style
+    - Use Prettier for JavaScript/TypeScript
+    - Use Black/isort for Python
+
+# Important files agents should reference
+key_files:
+  - ARCHITECTURE.md: Detailed system architecture
+  - README.md: Project overview and quick start
+  - CONTRIBUTING.md: Development setup and guidelines
+  - SECURITY.md: Security policies and procedures
+  - packages/openmemory-js/README.md: Node.js SDK documentation
+  - packages/openmemory-py/README.md: Python SDK documentation
+
+# Areas requiring special attention
+attention_areas:
+  security:
+    - Always validate input parameters
+    - Follow security guidelines in SECURITY.md
+    - Check for SQL injection vulnerabilities
+    - Validate embedding provider API keys
+  memory_management:
+    - Be mindful of SQLite/Postgres connection handling
+    - Properly manage vector embeddings
+    - Handle temporal graph operations with care
+  api_compatibility:
+    - Maintain parity between Python and Node.js SDKs
+    - Ensure backward compatibility
+    - Document breaking changes
+
+# Common tasks
+common_tasks:
+  - Adding new memory sector types
+  - Implementing new embedding providers
+  - Creating new data source connectors
+  - Enhancing the MCP server capabilities
+  - Improving the dashboard UI
+  - Adding temporal knowledge graph features
+  - Optimizing vector search performance
+  - Writing integration tests
