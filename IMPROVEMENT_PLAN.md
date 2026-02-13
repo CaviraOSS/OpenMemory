@@ -3,6 +3,31 @@
 > **Purpose**: Convert the feature/improvement ideas already captured in this repository into a concrete, execution-ready plan tied to the current codebase.
 >
 > **Date**: 2026-02-13
+> **Last Review**: 2026-02-13 (Phase 0 + Phase 1 deep review)
+
+---
+
+## Implementation Review Summary
+
+### Phase 0 + Phase 1 Status: COMPLETE with REMEDIATION ITEMS
+
+**Overall Assessment**: The implementation is **solid and production-ready** with a few polish items identified during deep review. The committer demonstrated good security practices (timing-safe comparisons, proper CORS handling, signature verification) and addressed the core performance bottlenecks effectively.
+
+#### Code Quality Score: **B+ (Good)**
+
+**Strengths:**
+- ✅ Security implementations use correct cryptographic primitives (`crypto.timingSafeEqual`)
+- ✅ Regex optimisations properly hoisted to class-level constants
+- ✅ N+1 fix correctly removes async/await from synchronous operations
+- ✅ Error responses consistently sanitised across all route files
+- ✅ Connection pool configuration is comprehensive with sensible defaults
+- ✅ Backward compatibility maintained throughout
+
+**Areas for Improvement:**
+- ⚠️ Minor code duplication (duplicate index creation statements)
+- ⚠️ Noisy logging pattern (warnings repeat per-request instead of once at startup)
+- ⚠️ Rate-limit eviction uses O(n) scan (acceptable but could be optimised)
+- ⚠️ Missing input validation on pool configuration env vars
 
 ---
 
@@ -327,9 +352,180 @@ The program is complete when:
 
 ## 11) Tracking Checklist
 
-- [ ] Phase 0 complete
-- [ ] Phase 1 complete
+- [x] Phase 0 complete (2026-02-13) — see Review Findings below
+- [x] Phase 1 complete (2026-02-13) — see Review Findings below
+- [ ] Phase 0/1 Remediation items (new)
 - [ ] Phase 2 complete
 - [ ] Phase 3 complete
 - [ ] Phase 4 complete
 - [ ] Final parity/security/perf sign-off complete
+
+---
+
+## 12) Phase 0 + Phase 1 Review Findings (2026-02-13)
+
+### 12.1 Phase 0 — Security Hardening
+
+#### A1. Strict Authentication Mode ✅ COMPLETE
+
+**Implementation Quality**: Good
+
+**Review Findings**:
+- ✅ Uses `crypto.timingSafeEqual` for constant-time API key comparison — correct security practice
+- ✅ Strict mode (`OM_REQUIRE_AUTH=true`) returns 503 when key not configured
+- ✅ Non-strict mode preserves backward compatibility with warnings
+- ⚠️ **REMEDIATION NEEDED**: Warning logs fire on every request when auth is disabled, causing log noise
+
+**Remediation Item A1.1**:
+- **Issue**: Lines 121-125 in `auth.ts` log warnings per-request
+- **Fix**: Move warnings to a startup-only log (use a `has_warned` flag or log in `cfg.ts`)
+- **Priority**: Low (cosmetic, not functional)
+
+#### A2. CORS Hardening ✅ COMPLETE
+
+**Implementation Quality**: Good
+
+**Review Findings**:
+- ✅ Allowlist-based CORS with `OM_CORS_ALLOWED_ORIGINS` env var
+- ✅ Backward-compatible wildcard fallback when not configured
+- ✅ Correctly omits CORS headers for non-allowlisted origins
+
+**No remediation needed.**
+
+#### A3. Rate-Limit Store Memory Cap ✅ COMPLETE
+
+**Implementation Quality**: Acceptable
+
+**Review Findings**:
+- ✅ `MAX_RATE_LIMIT_ENTRIES = 10,000` cap prevents unbounded memory growth
+- ✅ Oldest-entry eviction logic is correct
+- ⚠️ **MINOR**: O(n) linear scan to find oldest entry (acceptable for 10k entries)
+
+**Remediation Item A3.1** (Optional):
+- **Issue**: Linear scan at line 61-73 could be slow under extreme load
+- **Fix**: Use a min-heap or maintain an insertion-order linked list
+- **Priority**: Very Low (only matters if rate-limit store churns at >1000 req/s)
+
+#### A4. Error Response Consistency ✅ COMPLETE
+
+**Implementation Quality**: Excellent
+
+**Review Findings**:
+- ✅ All 500 responses across `sources.ts`, `compression.ts`, `dashboard.ts`, `users.ts` now return generic error codes
+- ✅ Server-side logging preserved with `console.error()`
+- ✅ No stack traces or provider internals leaked
+
+**No remediation needed.**
+
+### 12.2 Phase 1 — Performance Improvements
+
+#### B1. Remove N+1 Tag Lookups ✅ COMPLETE
+
+**Implementation Quality**: Excellent
+
+**Review Findings**:
+- ✅ `compute_tag_match_score()` now accepts memory object directly (no DB call)
+- ✅ Function is no longer async — correctly reflects synchronous operation
+- ✅ Applied to both TypeScript (`hsg.ts`) and Python (`hsg.py`)
+- ✅ `parse_json_field()` helper added to avoid repeated JSON parsing
+
+**No remediation needed.**
+
+#### B2. Index Coverage ✅ COMPLETE
+
+**Implementation Quality**: Good with minor issue
+
+**Review Findings**:
+- ✅ Indexes added: `salience`, `created_at`, `last_seen_at`, composite `(user_id, created_at)`
+- ✅ Both Postgres and SQLite implementations updated
+- ⚠️ **BUG**: Duplicate index creation statements
+
+**Remediation Item B2.1**:
+- **Issue**: Line 263 in `db.ts` creates `openmemory_stats_type_idx` twice (Postgres)
+- **Issue**: Lines 594-598 in `db.ts` create `idx_edges_validity` twice (SQLite)
+- **Fix**: Remove duplicate `CREATE INDEX` statements
+- **Priority**: Low (no functional impact, just wasted cycles on startup)
+
+#### B3. Hot-Path Regex Optimisations ✅ COMPLETE
+
+**Implementation Quality**: Excellent
+
+**Review Findings**:
+- ✅ 46+ regex patterns hoisted to class-level constants in `compress.ts`
+- ✅ Clean organisation: `SEM_FILTERS`, `SEM_REPLACEMENTS`, `SYN_CONTRACTIONS`, `AGG_ABBREVIATIONS`
+- ✅ Patterns compiled once at class instantiation
+- ✅ `parse_json_field()` helper in `hsg.ts` reduces redundant parsing
+
+**No remediation needed.**
+
+#### B4. Postgres Connection Pool ✅ COMPLETE
+
+**Implementation Quality**: Good
+
+**Review Findings**:
+- ✅ 4 env vars: `OM_PG_POOL_MAX`, `OM_PG_POOL_MIN`, `OM_PG_POOL_IDLE_TIMEOUT`, `OM_PG_POOL_CONNECTION_TIMEOUT`
+- ✅ Sensible defaults (max=20, min=0, idle=30s, conn=10s)
+- ✅ Pool config logged on startup
+- ⚠️ **MINOR**: No validation that pool values are positive integers
+
+**Remediation Item B4.1** (Optional):
+- **Issue**: Negative or zero pool values would cause undefined behaviour
+- **Fix**: Add validation in `cfg.ts` with `Math.max(1, num(...))` for pool max
+- **Priority**: Very Low (unlikely misconfiguration)
+
+### 12.3 Phase 1 Incomplete Items
+
+#### C3. Background-task Observability ❌ NOT STARTED
+
+**Status**: Listed in Phase 1 scope but not implemented in PR #5.
+
+**Recommendation**: Move to Phase 0/1 Remediation or Phase 2.
+
+#### D5. Audit Trail System ❌ NOT STARTED
+
+**Status**: Listed in Phase 1 scope but not implemented in PR #5.
+
+**Recommendation**: Move to Phase 2 (document intelligence phase).
+
+### 12.4 Additional Observations
+
+#### Webhook Signature Verification (sources.ts)
+
+**Implementation Quality**: Excellent
+
+- ✅ Uses `crypto.timingSafeEqual` for constant-time comparison
+- ✅ Properly checks signature length before comparison (prevents timing leak)
+- ✅ Requires raw body for HMAC verification
+- ✅ Clear error messages without leaking internals
+
+#### Python Parity
+
+**Status**: Partial
+
+- ✅ `hsg.py` updated with N+1 fix
+- ⚠️ Need to verify: Python compression engine regex hoisting not confirmed
+- ⚠️ Need to verify: Python auth middleware parity with TS changes
+
+---
+
+## 13) Remediation Workstream (Post Phase 0/1)
+
+### Priority Matrix
+
+| Item | Priority | Effort | Impact |
+|------|----------|--------|--------|
+| A1.1 Startup-only auth warnings | Low | 15 min | Log cleanliness |
+| B2.1 Remove duplicate indexes | Low | 5 min | Startup performance |
+| C3 Background observability | Medium | 2-4 hrs | Operability |
+| Python parity verification | Medium | 1-2 hrs | Consistency |
+| B4.1 Pool value validation | Very Low | 10 min | Edge case safety |
+| A3.1 Rate-limit LRU optimisation | Very Low | 1-2 hrs | Extreme scale only |
+
+### Recommended Remediation Order
+
+1. **B2.1** — Quick fix, removes code smell
+2. **A1.1** — Quick fix, improves log hygiene
+3. **C3** — Should have been in Phase 1, important for operations
+4. **Python parity** — Verify or implement missing changes
+
+---

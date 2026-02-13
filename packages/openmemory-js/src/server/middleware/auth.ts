@@ -7,6 +7,9 @@ const rate_limit_store = new Map<
 >();
 const MAX_RATE_LIMIT_ENTRIES = 10000; // Cap to prevent unbounded growth
 
+// Track if auth warnings have been logged (startup-only, not per-request)
+let auth_warning_logged = false;
+
 const auth_config = {
     api_key: env.api_key,
     require_auth: env.require_auth,
@@ -117,11 +120,14 @@ export function authenticate_api_request(req: any, res: any, next: any) {
         });
     }
     
-    // Non-strict mode: authentication is not configured, proceed with warning
+    // Non-strict mode: authentication is not configured, proceed with warning (once only)
     if (!auth_config.api_key || auth_config.api_key === "") {
-        console.warn("[AUTH] No API key configured - authentication is DISABLED");
-        console.warn("[AUTH] Set OM_API_KEY environment variable to enable authentication");
-        console.warn("[AUTH] Set OM_REQUIRE_AUTH=true to enforce authentication in production");
+        if (!auth_warning_logged) {
+            console.warn("[AUTH] No API key configured - authentication is DISABLED");
+            console.warn("[AUTH] Set OM_API_KEY environment variable to enable authentication");
+            console.warn("[AUTH] Set OM_REQUIRE_AUTH=true to enforce authentication in production");
+            auth_warning_logged = true;
+        }
         return next();
     }
     

@@ -259,9 +259,6 @@ if (is_pg) {
         await pg.query(
             `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
         );
-        await pg.query(
-            `create index if not exists openmemory_stats_type_idx on "${sc}"."stats"(type)`,
-        );
         ready = true;
 
 
@@ -590,9 +587,6 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_edges_target on temporal_edges(target_id)",
-        );
-        db.run(
-            "create index if not exists idx_edges_validity on temporal_edges(valid_from,valid_to)",
         );
         db.run(
             "create index if not exists idx_edges_validity on temporal_edges(valid_from,valid_to)",
