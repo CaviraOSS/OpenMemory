@@ -219,6 +219,18 @@ if (is_pg) {
             `create index if not exists openmemory_memories_user_idx on ${m}(user_id)`,
         );
         await pg.query(
+            `create index if not exists openmemory_memories_salience_idx on ${m}(salience)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_created_at_idx on ${m}(created_at)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_last_seen_at_idx on ${m}(last_seen_at)`,
+        );
+        await pg.query(
+            `create index if not exists openmemory_memories_user_created_idx on ${m}(user_id, created_at)`,
+        );
+        await pg.query(
             `create index if not exists openmemory_vectors_user_idx on ${v}(user_id)`,
         );
         await pg.query(
@@ -520,6 +532,15 @@ if (is_pg) {
         );
         db.run(
             "create index if not exists idx_memories_user on memories(user_id)",
+        );
+        db.run(
+            "create index if not exists idx_memories_salience on memories(salience)",
+        );
+        db.run(
+            "create index if not exists idx_memories_created_at on memories(created_at)",
+        );
+        db.run(
+            "create index if not exists idx_memories_user_created on memories(user_id, created_at)",
         );
         db.run(
             `create index if not exists idx_vectors_user on ${sqlite_vector_table}(user_id)`,
