@@ -16,6 +16,10 @@ import {
     generate_change_summary,
 } from "../../core/versioning";
 import { audit_log } from "../../core/audit";
+import {
+    generate_redline,
+    generate_change_narrative,
+} from "../../core/redline";
 
 export function versioning(app: any) {
     /**
@@ -248,6 +252,128 @@ export function versioning(app: any) {
         } catch (e: any) {
             console.error("[versioning] current diff failed:", e);
             res.status(500).json({ err: "diff_failed" });
+        }
+    });
+
+    /**
+     * GET /memory/:id/redline/:version_a/:version_b (D4)
+     *
+     * Get classified redline diff between two versions.
+     * Returns word-level changes categorized by type (financial, date, party, legal_term, general).
+     */
+    app.get(
+        "/memory/:id/redline/:version_a/:version_b",
+        async (req: any, res: any) => {
+            try {
+                const { id, version_a, version_b } = req.params;
+                const va = parseInt(version_a, 10);
+                const vb = parseInt(version_b, 10);
+
+                if (isNaN(va) || isNaN(vb)) {
+                    return res.status(400).json({ err: "invalid_version_numbers" });
+                }
+
+                const [ver_a, ver_b] = await Promise.all([
+                    get_version(id, va),
+                    get_version(id, vb),
+                ]);
+
+                if (!ver_a || !ver_b) {
+                    return res.status(404).json({ err: "versions_not_found" });
+                }
+
+                const redline = generate_redline(ver_a.content, ver_b.content);
+                const narrative = generate_change_narrative(redline);
+
+                res.json({
+                    memory_id: id,
+                    version_a: va,
+                    version_b: vb,
+                    summary: redline.summary,
+                    classified_changes: redline.classified_changes,
+                    narrative,
+                    redline_html: redline.redline_html,
+                });
+            } catch (e: any) {
+                console.error("[versioning] redline failed:", e);
+                res.status(500).json({ err: "redline_failed" });
+            }
+        }
+    );
+
+    /**
+     * GET /memory/:id/redline/current/:version (D4)
+     *
+     * Get classified redline diff between current state and a version.
+     */
+    app.get(
+        "/memory/:id/redline/current/:version",
+        async (req: any, res: any) => {
+            try {
+                const { id, version } = req.params;
+                const version_number = parseInt(version, 10);
+
+                if (isNaN(version_number)) {
+                    return res.status(400).json({ err: "invalid_version_number" });
+                }
+
+                const [mem, ver] = await Promise.all([
+                    q.get_mem.get(id),
+                    get_version(id, version_number),
+                ]);
+
+                if (!mem) {
+                    return res.status(404).json({ err: "memory_not_found" });
+                }
+                if (!ver) {
+                    return res.status(404).json({ err: "version_not_found" });
+                }
+
+                const redline = generate_redline(ver.content, mem.content);
+                const narrative = generate_change_narrative(redline);
+
+                res.json({
+                    memory_id: id,
+                    current_version: mem.version,
+                    compared_version: version_number,
+                    summary: redline.summary,
+                    classified_changes: redline.classified_changes,
+                    narrative,
+                    redline_html: redline.redline_html,
+                });
+            } catch (e: any) {
+                console.error("[versioning] current redline failed:", e);
+                res.status(500).json({ err: "redline_failed" });
+            }
+        }
+    );
+
+    /**
+     * POST /redline/compare (D4)
+     *
+     * Compare two arbitrary text strings and return classified redline.
+     * Useful for comparing documents without storing them.
+     */
+    app.post("/redline/compare", async (req: any, res: any) => {
+        try {
+            const { old_text, new_text } = req.body || {};
+
+            if (!old_text || !new_text) {
+                return res.status(400).json({ err: "missing_text" });
+            }
+
+            const redline = generate_redline(old_text, new_text);
+            const narrative = generate_change_narrative(redline);
+
+            res.json({
+                summary: redline.summary,
+                classified_changes: redline.classified_changes,
+                narrative,
+                redline_html: redline.redline_html,
+            });
+        } catch (e: any) {
+            console.error("[redline] compare failed:", e);
+            res.status(500).json({ err: "redline_failed" });
         }
     });
 }
