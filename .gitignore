@@ -24,3 +24,7 @@ test
 *.db
 hits.json
 debug_*.log
+
+# Auto-generated claude-mem context files (but not root CLAUDE.md)
+**/CLAUDE.md
+!CLAUDE.md
