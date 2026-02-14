@@ -651,6 +651,24 @@ export const bufferToVector = (b: Buffer) => {
 export const embed = (t: string) => embedForSector(t, "semantic");
 export const getEmbeddingProvider = () => env.emb_kind;
 
+/**
+ * Batch embed multiple texts for a given sector.
+ * Used by clause_similarity for efficient embedding of multiple clauses.
+ */
+export async function embed_advanced(
+    texts: string[],
+    sector: string,
+    user_id?: string
+): Promise<number[][]> {
+    if (texts.length === 0) return [];
+    const results: number[][] = [];
+    for (const text of texts) {
+        const vec = await embedForSector(text, sector);
+        results.push(vec);
+    }
+    return results;
+}
+
 export const getEmbeddingInfo = () => {
     const i: Record<string, any> = {
         provider: env.emb_kind,

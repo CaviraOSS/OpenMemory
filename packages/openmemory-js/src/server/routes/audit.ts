@@ -86,7 +86,7 @@ export function audit(app: any) {
                 ? Math.min(100, parseInt(req.query.limit, 10))
                 : 50;
 
-            if (!["memory", "waypoint", "fact", "user"].includes(type)) {
+            if (!["memory", "waypoint", "fact", "user", "compliance_rule", "rule_set", "template"].includes(type)) {
                 return res.status(400).json({ err: "invalid_resource_type" });
             }
 

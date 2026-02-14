@@ -279,7 +279,9 @@ function extractBaseMetadata(text: string): Partial<BaseMetadata> {
  */
 function extractAgreementMetadata(text: string): Partial<AgreementMetadata> {
     const base = extractBaseMetadata(text);
-    const metadata: Partial<AgreementMetadata> = { ...base };
+    // Exclude doc_type from base to avoid type conflict when spreading
+    const { doc_type: _, ...baseWithoutDocType } = base;
+    const metadata: Partial<AgreementMetadata> = { ...baseWithoutDocType };
     const sample = text.slice(0, 10000);
 
     // Parties

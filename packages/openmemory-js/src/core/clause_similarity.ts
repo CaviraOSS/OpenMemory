@@ -254,12 +254,12 @@ export async function store_clauses(clauses: Clause[], user_id?: string): Promis
         if (vectors && vectors.length > 0) {
             // Store each embedding with its corresponding clause ID
             for (let i = 0; i < clauses.length && i < vectors.length; i++) {
-                await vector_store.store(
+                await vector_store.storeVector(
                     clauses[i].id,
                     "semantic",
-                    user_id || "",
                     vectors[i],
-                    vectors[i].length
+                    vectors[i].length,
+                    user_id
                 );
             }
         }
@@ -301,7 +301,7 @@ export async function find_similar_clauses(
     }
 
     // Search for similar vectors
-    const similar = await vector_store.search("semantic", vectors[0], k * 2, user_id);
+    const similar = await vector_store.searchSimilar("semantic", vectors[0], k * 2, user_id);
 
     // Fetch clause details for matches
     const results: ClauseSimilarity[] = [];

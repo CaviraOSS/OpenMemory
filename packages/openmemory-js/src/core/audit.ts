@@ -27,7 +27,7 @@ export type AuditAction =
 
 export interface AuditEntry {
     id: string;
-    resource_type: "memory" | "waypoint" | "fact" | "user";
+    resource_type: "memory" | "waypoint" | "fact" | "user" | "compliance_rule" | "rule_set" | "template";
     resource_id: string;
     action: AuditAction;
     actor_id: string | null;

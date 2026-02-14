@@ -16,7 +16,7 @@ import {
     get_template_categories,
     clone_template,
 } from "../../core/templates";
-import { add_memory } from "../../memory/hsg";
+import { add_hsg_memory as add_memory } from "../../memory/hsg";
 import { audit_log } from "../../core/audit";
 
 export function templates(app: any) {
@@ -347,18 +347,16 @@ export function templates(app: any) {
             const instance = instantiate_template(template, variables || {});
 
             // Create memory entry
-            const memory = await add_memory(instance.content, {
-                tags: [...template.tags, ...(extra_tags || [])],
-                metadata: {
-                    template_id: template.id,
-                    template_name: template.name,
-                    template_version: template.version,
-                    instantiated_at: instance.created_at,
-                    variables_used: variables,
-                    ...(extra_meta || {}),
-                },
-                user_id,
-            });
+            const tags_str = [...template.tags, ...(extra_tags || [])].join(",");
+            const memory_metadata = {
+                template_id: template.id,
+                template_name: template.name,
+                template_version: template.version,
+                instantiated_at: instance.created_at,
+                variables_used: variables,
+                ...(extra_meta || {}),
+            };
+            const memory = await add_memory(instance.content, tags_str, memory_metadata, user_id);
 
             res.json({
                 ok: true,
