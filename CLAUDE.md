@@ -172,6 +172,32 @@ interface EmbeddingProvider {
 ### Vector Operations
 Use utilities from `src/utils/index.ts`: `cos_sim`, `buf_to_vec`, `vec_to_buf`
 
+### UUID Generation
+Use `rid()` from `src/utils/index.ts` for all UUID generation. This wraps the native `crypto.randomUUID()` for consistency across the codebase.
+
+### Safe Regex for User Input
+When accepting regex patterns from user input (templates, compliance rules), use the safe regex utilities from `src/utils/regex.ts`:
+```typescript
+import { create_safe_regex, safe_regex_test, safe_regex_match_all } from "../utils";
+
+// Validate and create a safe regex (returns null if dangerous)
+const regex = create_safe_regex(user_pattern, flags);
+if (!regex) {
+  // Handle invalid/unsafe pattern
+}
+
+// Execute with protection against ReDoS
+const result = safe_regex_test(regex, content);
+const matches = safe_regex_match_all(regex, content, { max_matches: 100 });
+```
+
+### Version History Pruning
+Document versioning (D1) auto-prunes old versions to prevent unbounded growth:
+- Default limit: 50 versions per memory
+- Configurable via `OM_MAX_VERSIONS_PER_MEMORY` env var
+- Pruning runs asynchronously after each `save_version()` call
+- Use `prune_all_versions()` for batch maintenance
+
 ## Testing
 
 The project uses **omnibus tests** for SDK parity checking:

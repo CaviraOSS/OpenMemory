@@ -265,8 +265,8 @@ function extractBaseMetadata(text: string): Partial<BaseMetadata> {
     // Try to extract title from first line or header
     const first_line = text.split(/\n/)[0]?.trim();
     if (first_line && first_line.length < 200 && first_line.length > 3) {
-        // If it looks like a title (short, not a sentence)
-        if (!first_line.endsWith(".") && first_line === first_line.toUpperCase() || /^[A-Z]/.test(first_line)) {
+        // If it looks like a title (short, not a sentence, all caps or starts with uppercase)
+        if ((!first_line.endsWith(".") && first_line === first_line.toUpperCase()) || /^[A-Z]/.test(first_line)) {
             metadata.title = first_line;
         }
     }

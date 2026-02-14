@@ -1,6 +1,6 @@
 import { run_async, get_async, all_async } from '../core/db'
 import { TemporalFact, TemporalEdge } from './types'
-import { randomUUID } from 'crypto'
+import { rid } from '../utils'
 
 export const insert_fact = async (
     subject: string,
@@ -11,7 +11,7 @@ export const insert_fact = async (
     metadata?: Record<string, any>,
     user_id?: string
 ): Promise<string> => {
-    const id = randomUUID()
+    const id = rid()
     const now = Date.now()
     const valid_from_ts = valid_from.getTime()
 
@@ -80,7 +80,7 @@ export const insert_edge = async (
     weight: number = 1.0,
     metadata?: Record<string, any>
 ): Promise<string> => {
-    const id = randomUUID()
+    const id = rid()
     const valid_from_ts = valid_from.getTime()
 
     await run_async(`

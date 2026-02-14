@@ -1,5 +1,6 @@
 export const now = (): number => Date.now();
 export const rid = (): string => crypto.randomUUID();
+export * from "./regex";
 export const cos_sim = (a: Float32Array, b: Float32Array): number => {
     let dot = 0,
         na = 0,

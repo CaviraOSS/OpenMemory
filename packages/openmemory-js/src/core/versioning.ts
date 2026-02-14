@@ -14,6 +14,12 @@ import { rid, now, j } from "../utils";
 const is_pg = env.metadata_backend === "postgres";
 const sc = process.env.OM_PG_SCHEMA || "public";
 
+/**
+ * Maximum number of versions to keep per memory (configurable via env)
+ * Default: 50 versions per memory
+ */
+const MAX_VERSIONS_PER_MEMORY = parseInt(process.env.OM_MAX_VERSIONS_PER_MEMORY || "50", 10);
+
 export interface VersionEntry {
     id: string;
     memory_id: string;
@@ -122,6 +128,12 @@ export async function save_version(
         ts,
         created_by || null,
     ]);
+
+    // Auto-prune old versions to prevent unbounded growth
+    // Run async without blocking the return
+    prune_versions(memory_id).catch(e =>
+        console.error(`[versioning] Failed to prune versions for ${memory_id}:`, e)
+    );
 
     return id;
 }
@@ -361,4 +373,102 @@ export async function count_versions(memory_id: string): Promise<number> {
     const result = await get_async(sql, [memory_id]);
 
     return Number(result?.count || 0);
+}
+
+/**
+ * Prune old versions for a memory, keeping only the most recent N versions.
+ * This prevents unbounded version history growth.
+ *
+ * @param memory_id The memory to prune versions for
+ * @param max_versions Maximum versions to keep (defaults to OM_MAX_VERSIONS_PER_MEMORY)
+ * @returns Number of versions deleted
+ */
+export async function prune_versions(
+    memory_id: string,
+    max_versions: number = MAX_VERSIONS_PER_MEMORY
+): Promise<number> {
+    const table = is_pg
+        ? `"${sc}"."openmemory_version_history"`
+        : "version_history";
+
+    // Get count of existing versions
+    const count = await count_versions(memory_id);
+    if (count <= max_versions) {
+        return 0;
+    }
+
+    // Get IDs of versions to delete (oldest ones beyond the limit)
+    const versions_to_delete = count - max_versions;
+
+    if (is_pg) {
+        // PostgreSQL: Delete oldest versions keeping max_versions most recent
+        const delete_sql = `
+            DELETE FROM ${table}
+            WHERE id IN (
+                SELECT id FROM ${table}
+                WHERE memory_id = $1
+                ORDER BY version_number ASC
+                LIMIT $2
+            )
+        `;
+        await run_async(delete_sql, [memory_id, versions_to_delete]);
+    } else {
+        // SQLite: Need to get IDs first, then delete
+        const select_sql = `
+            SELECT id FROM ${table}
+            WHERE memory_id = ?
+            ORDER BY version_number ASC
+            LIMIT ?
+        `;
+        const rows = await all_async(select_sql, [memory_id, versions_to_delete]);
+
+        if (rows.length > 0) {
+            const ids = rows.map((r: any) => r.id);
+            const placeholders = ids.map(() => "?").join(",");
+            const delete_sql = `DELETE FROM ${table} WHERE id IN (${placeholders})`;
+            await run_async(delete_sql, ids);
+        }
+    }
+
+    return versions_to_delete;
+}
+
+/**
+ * Prune versions for all memories that exceed the limit.
+ * Useful for periodic maintenance.
+ *
+ * @param max_versions Maximum versions to keep per memory
+ * @returns Total number of versions deleted across all memories
+ */
+export async function prune_all_versions(
+    max_versions: number = MAX_VERSIONS_PER_MEMORY
+): Promise<{ memories_pruned: number; versions_deleted: number }> {
+    const table = is_pg
+        ? `"${sc}"."openmemory_version_history"`
+        : "version_history";
+
+    // Find memories with more than max_versions
+    const sql = is_pg
+        ? `SELECT memory_id, COUNT(*) as count FROM ${table} GROUP BY memory_id HAVING COUNT(*) > $1`
+        : `SELECT memory_id, COUNT(*) as count FROM ${table} GROUP BY memory_id HAVING COUNT(*) > ?`;
+
+    const rows = await all_async(sql, [max_versions]);
+
+    let total_deleted = 0;
+    for (const row of rows) {
+        const deleted = await prune_versions(row.memory_id, max_versions);
+        total_deleted += deleted;
+    }
+
+    return {
+        memories_pruned: rows.length,
+        versions_deleted: total_deleted,
+    };
+}
+
+/**
+ * Get current max versions setting
+ */
+export function get_max_versions(): number {
+    return MAX_VERSIONS_PER_MEMORY;
 }

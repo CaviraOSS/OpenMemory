@@ -10,8 +10,8 @@
  * All checks are reproducible and deterministic (no LLM involvement).
  */
 
-import { randomUUID } from "crypto";
 import { run_async, get_async, all_async } from "./db";
+import { rid, create_safe_regex, safe_regex_test, safe_regex_match_all } from "../utils";
 
 export type RuleType =
     | "required_clause"
@@ -125,7 +125,7 @@ export async function create_rule(
         enabled?: boolean;
     } = {}
 ): Promise<ComplianceRule> {
-    const id = randomUUID();
+    const id = rid();
     const now = Date.now();
 
     const rule: ComplianceRule = {
@@ -330,8 +330,18 @@ export function evaluate_rule(
     switch (rule.type) {
         case "required_clause": {
             for (const pattern of cfg.required_patterns || []) {
-                const regex = new RegExp(pattern, flags);
-                if (!regex.test(content)) {
+                const regex = create_safe_regex(pattern, flags);
+                if (!regex) {
+                    violations.push({
+                        rule_id: rule.id,
+                        rule_name: rule.name,
+                        rule_type: rule.type,
+                        severity: "warning",
+                        message: `Invalid or unsafe pattern: "${pattern}"`,
+                    });
+                    continue;
+                }
+                if (!safe_regex_test(regex, content)) {
                     violations.push({
                         rule_id: rule.id,
                         rule_name: rule.name,
@@ -346,9 +356,19 @@ export function evaluate_rule(
 
         case "prohibited_term": {
             for (const pattern of cfg.prohibited_patterns || []) {
-                const regex = new RegExp(pattern, flags);
-                const match = regex.exec(content);
-                if (match) {
+                const regex = create_safe_regex(pattern, flags);
+                if (!regex) {
+                    violations.push({
+                        rule_id: rule.id,
+                        rule_name: rule.name,
+                        rule_type: rule.type,
+                        severity: "warning",
+                        message: `Invalid or unsafe pattern: "${pattern}"`,
+                    });
+                    continue;
+                }
+                const matches = safe_regex_match_all(regex, content);
+                for (const match of matches) {
                     violations.push({
                         rule_id: rule.id,
                         rule_name: rule.name,
@@ -387,8 +407,18 @@ export function evaluate_rule(
 
         case "pattern_match": {
             if (cfg.pattern) {
-                const regex = new RegExp(cfg.pattern, cfg.pattern_flags || flags);
-                const matches = regex.test(content);
+                const regex = create_safe_regex(cfg.pattern, cfg.pattern_flags || flags);
+                if (!regex) {
+                    violations.push({
+                        rule_id: rule.id,
+                        rule_name: rule.name,
+                        rule_type: rule.type,
+                        severity: "warning",
+                        message: `Invalid or unsafe pattern: "${cfg.pattern}"`,
+                    });
+                    break;
+                }
+                const matches = safe_regex_test(regex, content);
 
                 if (cfg.must_match && !matches) {
                     violations.push({
@@ -416,8 +446,18 @@ export function evaluate_rule(
             if (cfg.field_name && cfg.format_pattern) {
                 const value = metadata?.[cfg.field_name];
                 if (value !== undefined && value !== null) {
-                    const regex = new RegExp(cfg.format_pattern);
-                    if (!regex.test(String(value))) {
+                    const regex = create_safe_regex(cfg.format_pattern);
+                    if (!regex) {
+                        violations.push({
+                            rule_id: rule.id,
+                            rule_name: rule.name,
+                            rule_type: rule.type,
+                            severity: "warning",
+                            message: `Invalid or unsafe format pattern: "${cfg.format_pattern}"`,
+                        });
+                        break;
+                    }
+                    if (!safe_regex_test(regex, String(value))) {
                         violations.push({
                             rule_id: rule.id,
                             rule_name: rule.name,
@@ -540,7 +580,7 @@ export async function check_compliance(
     const info_count = violations.filter(v => v.severity === "info").length;
 
     const report: ComplianceReport = {
-        id: randomUUID(),
+        id: rid(),
         memory_id: options.memory_id,
         content_hash,
         rules_checked: rules.length,
@@ -567,7 +607,7 @@ export async function create_rule_set(
         category?: string;
     } = {}
 ): Promise<RuleSet> {
-    const id = randomUUID();
+    const id = rid();
     const now = Date.now();
 
     const ruleSet: RuleSet = {

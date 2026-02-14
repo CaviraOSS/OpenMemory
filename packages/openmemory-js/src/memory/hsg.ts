@@ -1,8 +1,7 @@
-import crypto from "node:crypto";
 import { canonical_token_set } from "../utils/text";
 import { inc_q, dec_q, on_query_hit } from "./decay";
 import { env, tier } from "../core/cfg";
-import { cos_sim, buf_to_vec, vec_to_buf } from "../utils/index";
+import { cos_sim, buf_to_vec, vec_to_buf, rid } from "../utils/index";
 export interface sector_cfg {
     model: string;
     decay_lambda: number;
@@ -1073,7 +1072,7 @@ export async function add_hsg_memory(
             deduplicated: true,
         };
     }
-    const id = crypto.randomUUID();
+    const id = rid();
     const now = Date.now();
 
 

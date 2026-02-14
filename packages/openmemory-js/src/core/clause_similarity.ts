@@ -5,9 +5,9 @@
  * similarity search across clauses from different documents.
  */
 
-import { v4 as uuid } from "uuid";
 import { run_async, get_async, all_async, vector_store } from "./db";
 import { embed_advanced } from "../memory/embed";
+import { rid } from "../utils";
 
 export interface Clause {
     id: string;
@@ -100,7 +100,7 @@ export function segment_into_clauses(text: string, memory_id: string): Clause[] 
                 const content = current_content.join("\n").trim();
                 if (content.length > 20) {  // Minimum clause length
                     clauses.push({
-                        id: uuid(),
+                        id: rid(),
                         memory_id,
                         clause_number,
                         clause_type: detect_clause_type(content, current_clause.heading),
@@ -141,7 +141,7 @@ export function segment_into_clauses(text: string, memory_id: string): Clause[] 
         const content = current_content.join("\n").trim();
         if (content.length > 20) {
             clauses.push({
-                id: uuid(),
+                id: rid(),
                 memory_id,
                 clause_number,
                 clause_type: detect_clause_type(content, current_clause.heading),
@@ -218,8 +218,10 @@ const sc = process.env.OM_PG_SCHEMA || "public";
  * Store clauses and their embeddings
  */
 export async function store_clauses(clauses: Clause[], user_id?: string): Promise<void> {
+    if (clauses.length === 0) return;
+
+    // Store all clause metadata first
     for (const clause of clauses) {
-        // Store clause metadata
         const sql = is_pg
             ? `INSERT INTO "${sc}"."openmemory_clauses"(id, memory_id, clause_number, clause_type, heading, content, start_position, end_position, word_count, created_at)
                VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -239,19 +241,30 @@ export async function store_clauses(clauses: Clause[], user_id?: string): Promis
             clause.word_count,
             clause.created_at,
         ]);
+    }
 
-        // Compute and store embedding for similarity search
-        // Use a truncated version for embedding (first 1000 chars)
-        const embed_text = (clause.heading ? clause.heading + ": " : "") + clause.content.substring(0, 1000);
+    // Batch compute embeddings for all clauses at once
+    // Use truncated version for embedding (first 1000 chars)
+    const embed_texts = clauses.map(clause =>
+        (clause.heading ? clause.heading + ": " : "") + clause.content.substring(0, 1000)
+    );
 
-        try {
-            const vectors = await embed_advanced([embed_text], "semantic", user_id);
-            if (vectors && vectors.length > 0) {
-                await vector_store.store(clause.id, "semantic", user_id || "", vectors[0], vectors[0].length);
+    try {
+        const vectors = await embed_advanced(embed_texts, "semantic", user_id);
+        if (vectors && vectors.length > 0) {
+            // Store each embedding with its corresponding clause ID
+            for (let i = 0; i < clauses.length && i < vectors.length; i++) {
+                await vector_store.store(
+                    clauses[i].id,
+                    "semantic",
+                    user_id || "",
+                    vectors[i],
+                    vectors[i].length
+                );
             }
-        } catch (e) {
-            console.error("[clause_similarity] embedding failed for clause:", clause.id, e);
         }
+    } catch (e) {
+        console.error("[clause_similarity] batch embedding failed:", e);
     }
 }
 

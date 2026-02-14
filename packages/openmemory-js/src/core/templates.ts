@@ -5,8 +5,8 @@
  * and instantiation to memory entries.
  */
 
-import { v4 as uuid } from "uuid";
 import { run_async, get_async, all_async } from "./db";
+import { rid, create_safe_regex, safe_regex_test } from "../utils";
 
 export interface TemplateVariable {
     name: string;
@@ -58,7 +58,7 @@ export async function create_template(
         created_by?: string;
     } = {}
 ): Promise<Template> {
-    const id = uuid();
+    const id = rid();
     const now = Date.now();
 
     // Auto-detect variables from content if not provided
@@ -331,8 +331,10 @@ export function validate_variables(
 
             case "string":
                 if (variable.validation) {
-                    const regex = new RegExp(variable.validation);
-                    if (!regex.test(String(value))) {
+                    const regex = create_safe_regex(variable.validation);
+                    if (!regex) {
+                        errors.push(`Variable '${variable.name}' has invalid or unsafe validation pattern`);
+                    } else if (!safe_regex_test(regex, String(value))) {
                         errors.push(`Variable '${variable.name}' does not match required pattern`);
                     }
                 }

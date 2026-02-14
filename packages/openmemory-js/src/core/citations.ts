@@ -8,8 +8,8 @@
  * - Internal cross-references
  */
 
-import { v4 as uuid } from "uuid";
 import { run_async, get_async, all_async } from "./db";
+import { rid } from "../utils";
 
 export type CitationType =
     | "case_law"      // Court cases
@@ -155,7 +155,7 @@ export function extract_citations(text: string, source_id?: string): Citation[] 
                 const metadata = extract(match);
 
                 citations.push({
-                    id: uuid(),
+                    id: rid(),
                     raw_text,
                     normalized,
                     citation_type: type,
@@ -262,7 +262,7 @@ export async function store_citations(
                VALUES(?, ?, ?, ?, ?, ?)`;
 
         await run_async(edge_sql, [
-            uuid(),
+            rid(),
             memory_id,
             citation.id,
             position,
