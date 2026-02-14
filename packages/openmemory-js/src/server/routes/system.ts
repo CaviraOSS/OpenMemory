@@ -1,4 +1,4 @@
-import { all_async } from "../../core/db";
+import { all_async, memories_table } from "../../core/db";
 import { sector_configs } from "../../memory/hsg";
 import { getEmbeddingInfo } from "../../memory/embed";
 import { tier, env } from "../../core/cfg";
@@ -52,7 +52,7 @@ export function sys(app: any) {
             try {
                 const database_sector_statistics_rows = await all_async(`
                 select primary_sector as sector, count(*) as count, avg(salience) as avg_salience
-                from memories
+                from ${memories_table}
                 group by primary_sector
             `);
                 outgoing_http_response.json({

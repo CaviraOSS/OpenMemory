@@ -241,7 +241,7 @@ export const apply_decay = async () => {
     for (const seg of segments) {
         const segment = seg.segment;
         const rows = await all_async(
-            "select id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,coactivations from memories where segment=?",
+            `select id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,coactivations from ${memories_table} where segment=?`,
             [segment],
         );
 
@@ -323,7 +323,7 @@ export const apply_decay = async () => {
 
                                 if (new_summary !== (m.summary || "")) {
                                     await run_async(
-                                        "update memories set summary=? where id=?",
+                                        `update ${memories_table} set summary=? where id=?`,
                                         [new_summary, m.id],
                                     );
                                 }
@@ -342,7 +342,7 @@ export const apply_decay = async () => {
                             fp.vector.length,
                         );
                         await run_async(
-                            "update memories set summary=? where id=?",
+                            `update ${memories_table} set summary=? where id=?`,
                             [fp.summary, m.id],
                         );
                         fingerprinted = true;
