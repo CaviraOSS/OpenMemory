@@ -65,6 +65,13 @@ export const env = {
         process.env.OLLAMA_URL || process.env.OM_OLLAMA_URL,
         "http://localhost:11434",
     ),
+    voyage_key:
+        process.env.VOYAGE_API_KEY || process.env.OM_VOYAGE_API_KEY || "",
+    voyage_model: str(process.env.OM_VOYAGE_MODEL, "voyage-3"),
+    voyage_base_url: str(
+        process.env.OM_VOYAGE_BASE_URL,
+        "https://api.voyageai.com/v1",
+    ),
     local_model_path:
         process.env.LOCAL_MODEL_PATH || process.env.OM_LOCAL_MODEL_PATH || "",
     vec_dim: num(process.env.OM_VEC_DIM, tier_dims[tier]),

@@ -133,13 +133,15 @@ OM_API_KEY=                     # Optional bearer token
 OM_DB_PATH=./data/openmemory.sqlite
 
 # Embeddings
-OM_EMBEDDINGS=openai            # openai|gemini|aws|ollama|synthetic
+OM_EMBEDDINGS=voyage            # voyage|openai|gemini|aws|ollama|synthetic
 OM_EMBED_MODE=simple            # simple|advanced
-OM_VEC_DIM=768
+OM_VEC_DIM=1024                 # 1024 for voyage, 1536 for openai
 
 # Provider keys
 OPENAI_API_KEY=sk-...
 GEMINI_API_KEY=...
+VOYAGE_API_KEY=pa-...           # Voyage AI (recommended, 7.55% better than OpenAI)
+OM_VOYAGE_MODEL=voyage-3        # voyage-3|voyage-3-large|voyage-law-2
 
 # Database backend
 OM_METADATA_BACKEND=sqlite      # sqlite|postgres

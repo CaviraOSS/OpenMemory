@@ -53,6 +53,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        voyage: "voyage-3",
         local: "all-MiniLM-L6-v2",
     },
     semantic: {
@@ -60,6 +61,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        voyage: "voyage-3",
         local: "all-MiniLM-L6-v2",
     },
     procedural: {
@@ -67,6 +69,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        voyage: "voyage-3",
         local: "all-MiniLM-L6-v2",
     },
     emotional: {
@@ -74,6 +77,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        voyage: "voyage-3",
         local: "all-MiniLM-L6-v2",
     },
     reflective: {
@@ -81,6 +85,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-large",
         gemini: "models/embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        voyage: "voyage-3-large",
         local: "all-mpnet-base-v2",
     },
 });
@@ -92,6 +97,9 @@ export const get_model = (sector: string, provider: string): string => {
     }
     if (provider === "openai" && process.env.OM_OPENAI_MODEL) {
         return process.env.OM_OPENAI_MODEL;
+    }
+    if (provider === "voyage" && process.env.OM_VOYAGE_MODEL) {
+        return process.env.OM_VOYAGE_MODEL;
     }
 
     const cfg = load_models();

@@ -93,7 +93,7 @@ OM_DB_PATH=./data/om.db              # sqlite file path (default: ./data/openmem
 OM_DB_URL=sqlite://:memory:          # or use in-memory db
 
 # embeddings
-OM_EMBEDDINGS=ollama                 # synthetic | openai | gemini | ollama
+OM_EMBEDDINGS=voyage                 # synthetic | openai | gemini | ollama | voyage | aws
 OM_OLLAMA_URL=http://localhost:11434
 OM_OLLAMA_MODEL=embeddinggemma       # or nomic-embed-text, mxbai-embed-large
 
@@ -103,6 +103,10 @@ OM_OPENAI_MODEL=text-embedding-3-small
 
 # gemini
 GEMINI_API_KEY=AIza...
+
+# voyage ai (recommended - 7.55% better than OpenAI across domains)
+VOYAGE_API_KEY=pa-...
+OM_VOYAGE_MODEL=voyage-3             # voyage-3 | voyage-3-large | voyage-law-2
 
 # performance tier
 OM_TIER=deep                         # fast | smart | deep | hybrid

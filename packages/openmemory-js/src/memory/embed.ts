@@ -3,6 +3,7 @@ import { get_model } from "../core/models";
 import { sector_configs } from "./hsg";
 import { q } from "../core/db";
 import { canonical_tokens_from_text, add_synonym_tokens } from "../utils/text";
+import { record_embedding } from "../core/metrics";
 import {
     BedrockRuntimeClient,
     InvokeModelCommand,
@@ -129,21 +130,39 @@ async function embed_with_provider(
     t: string,
     s: string,
 ): Promise<number[]> {
-    switch (provider) {
-        case "openai":
-            return await emb_openai(t, s);
-        case "gemini":
-            return (await emb_gemini({ [s]: t }))[s];
-        case "ollama":
-            return await emb_ollama(t, s);
-        case "aws":
-            return await emb_aws(t, s);
-        case "local":
-            return await emb_local(t, s);
-        case "synthetic":
-            return gen_syn_emb(t, s);
-        default:
-            throw new Error(`Unknown embedding provider: ${provider}`);
+    const start = Date.now();
+    try {
+        let result: number[];
+        switch (provider) {
+            case "openai":
+                result = await emb_openai(t, s);
+                break;
+            case "gemini":
+                result = (await emb_gemini({ [s]: t }))[s];
+                break;
+            case "ollama":
+                result = await emb_ollama(t, s);
+                break;
+            case "aws":
+                result = await emb_aws(t, s);
+                break;
+            case "voyage":
+                result = await emb_voyage(t, s);
+                break;
+            case "local":
+                result = await emb_local(t, s);
+                break;
+            case "synthetic":
+                result = gen_syn_emb(t, s);
+                break;
+            default:
+                throw new Error(`Unknown embedding provider: ${provider}`);
+        }
+        record_embedding(provider, true, Date.now() - start);
+        return result;
+    } catch (e) {
+        record_embedding(provider, false, Date.now() - start);
+        throw e;
     }
 }
 
@@ -199,6 +218,9 @@ async function emb_batch_with_fallback(
                     break;
                 case "openai":
                     result = await emb_batch_openai(txts);
+                    break;
+                case "voyage":
+                    result = await emb_batch_voyage(txts);
                     break;
                 default:
 
@@ -289,6 +311,68 @@ async function emb_batch_openai(
     const d = (await r.json()) as any,
         out: Record<string, number[]> = {};
     secs.forEach((s, i) => (out[s] = d.data[i].embedding));
+    return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Voyage AI Provider
+// Voyage API is OpenAI-compatible but uses different base URL and model names.
+// voyage-3 offers 7.55% better performance than OpenAI v3 large across domains.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function emb_voyage(t: string, s: string): Promise<number[]> {
+    if (!env.voyage_key) throw new Error("Voyage API key missing");
+    const m = get_model(s, "voyage");
+    const r = await fetchWithTimeout(
+        `${env.voyage_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.voyage_key}`,
+            },
+            body: JSON.stringify({
+                input: t,
+                model: env.voyage_model || m,
+            }),
+        },
+    );
+    if (!r.ok) {
+        const errBody = await r.text().catch(() => "");
+        throw new Error(`Voyage: ${r.status} ${errBody}`);
+    }
+    const data = (await r.json()) as any;
+    // Voyage returns vectors without dimension control, resize if needed
+    return resize_vec(data.data[0].embedding, env.vec_dim);
+}
+
+async function emb_batch_voyage(
+    txts: Record<string, string>,
+): Promise<Record<string, number[]>> {
+    if (!env.voyage_key) throw new Error("Voyage API key missing");
+    const secs = Object.keys(txts);
+    const m = get_model("semantic", "voyage");
+    const r = await fetchWithTimeout(
+        `${env.voyage_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.voyage_key}`,
+            },
+            body: JSON.stringify({
+                input: Object.values(txts),
+                model: env.voyage_model || m,
+            }),
+        },
+    );
+    if (!r.ok) {
+        const errBody = await r.text().catch(() => "");
+        throw new Error(`Voyage batch: ${r.status} ${errBody}`);
+    }
+    const d = (await r.json()) as any,
+        out: Record<string, number[]> = {};
+    secs.forEach((s, i) => (out[s] = resize_vec(d.data[i].embedding, env.vec_dim)));
     return out;
 }
 
@@ -677,7 +761,7 @@ export const getEmbeddingInfo = () => {
         mode: env.embed_mode,
         batch_support:
             env.embed_mode === "simple" &&
-            (env.emb_kind === "gemini" || env.emb_kind === "openai"),
+            (env.emb_kind === "gemini" || env.emb_kind === "openai" || env.emb_kind === "voyage"),
         advanced_parallel: env.adv_embed_parallel,
         embed_delay_ms: env.embed_delay_ms,
     };
@@ -713,6 +797,18 @@ export const getEmbeddingInfo = () => {
             procedural: get_model("procedural", "ollama"),
             emotional: get_model("emotional", "ollama"),
             reflective: get_model("reflective", "ollama"),
+        };
+    } else if (env.emb_kind === "voyage") {
+        i.configured = !!env.voyage_key;
+        i.base_url = env.voyage_base_url;
+        i.model_override = env.voyage_model || null;
+        i.batch_api = env.embed_mode === "simple";
+        i.models = {
+            episodic: get_model("episodic", "voyage"),
+            semantic: get_model("semantic", "voyage"),
+            procedural: get_model("procedural", "voyage"),
+            emotional: get_model("emotional", "voyage"),
+            reflective: get_model("reflective", "voyage"),
         };
     } else if (env.emb_kind === "local") {
         i.configured = !!env.local_model_path;
