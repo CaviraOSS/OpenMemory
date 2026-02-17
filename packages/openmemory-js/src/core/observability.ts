@@ -7,8 +7,10 @@
  * - Reflection/consolidation
  * - User summary updates
  *
- * Metrics are exposed via /api/system/stats endpoint for monitoring.
+ * Metrics are exposed via /api/system/stats and /metrics endpoints.
  */
+
+import { record_task_success, record_task_failure } from "./metrics";
 
 export interface TaskMetrics {
     task_name: string;
@@ -113,6 +115,9 @@ export function task_success(
     metrics.last_error = null;
     metrics.last_result = result || null;
 
+    // Update Prometheus metrics
+    record_task_success(task_name, duration_ms);
+
     log_task(task_name, "info", "Completed successfully", {
         duration_ms,
         ...result,
@@ -138,6 +143,9 @@ export function task_failure(
     metrics.last_duration_ms = duration_ms;
     metrics.last_error = error_message;
     metrics.last_result = null;
+
+    // Update Prometheus metrics
+    record_task_failure(task_name, duration_ms);
 
     log_task(task_name, "error", "Failed", {
         duration_ms,

@@ -16,8 +16,10 @@ import { extraction } from "./extraction";
 import { clauses } from "./clauses";
 import { templates } from "./templates";
 import { compliance } from "./compliance";
+import { metrics } from "./metrics";
 
 export function routes(app: any) {
+    metrics(app);  // Register first - public endpoint for Prometheus scraping
     sys(app);
     mem(app);
     dynroutes(app);

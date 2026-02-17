@@ -124,6 +124,16 @@ export async function embedQueryForAllSectors(
     return result;
 }
 
+// Store last usage for cost metrics tracking (captured by embed_with_provider)
+type EmbedUsage = { tokens: number; model: string };
+let last_voyage_usage: EmbedUsage | null = null;
+let last_openai_usage: EmbedUsage | null = null;
+
+function getLastUsage(provider: string): EmbedUsage | null {
+    if (provider === "voyage") return last_voyage_usage;
+    if (provider === "openai") return last_openai_usage;
+    return null;
+}
 
 async function embed_with_provider(
     provider: string,
@@ -131,6 +141,10 @@ async function embed_with_provider(
     s: string,
 ): Promise<number[]> {
     const start = Date.now();
+    // Reset usage tracking before call
+    last_voyage_usage = null;
+    last_openai_usage = null;
+
     try {
         let result: number[];
         switch (provider) {
@@ -158,7 +172,13 @@ async function embed_with_provider(
             default:
                 throw new Error(`Unknown embedding provider: ${provider}`);
         }
-        record_embedding(provider, true, Date.now() - start);
+
+        // Capture usage data for cost metrics
+        const usage = getLastUsage(provider);
+        record_embedding(provider, true, Date.now() - start, {
+            model: usage?.model,
+            tokens: usage?.tokens,
+        });
         return result;
     } catch (e) {
         record_embedding(provider, false, Date.now() - start);
@@ -266,7 +286,7 @@ async function emb_batch_with_fallback(
 
 async function emb_openai(t: string, s: string): Promise<number[]> {
     if (!env.openai_key) throw new Error("OpenAI key missing");
-    const m = get_model(s, "openai");
+    const m = env.openai_model || get_model(s, "openai");
     const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
@@ -277,21 +297,31 @@ async function emb_openai(t: string, s: string): Promise<number[]> {
             },
             body: JSON.stringify({
                 input: t,
-                model: env.openai_model || m,
+                model: m,
                 dimensions: env.vec_dim,
             }),
         },
     );
     if (!r.ok) throw new Error(`OpenAI: ${r.status}`);
-    return ((await r.json()) as any).data[0].embedding;
+    const data = (await r.json()) as any;
+
+    // Track token usage for cost metrics
+    if (data.usage?.total_tokens) {
+        last_openai_usage = {
+            tokens: data.usage.total_tokens,
+            model: m,
+        };
+    }
+
+    return data.data[0].embedding;
 }
 
 async function emb_batch_openai(
     txts: Record<string, string>,
 ): Promise<Record<string, number[]>> {
     if (!env.openai_key) throw new Error("OpenAI key missing");
-    const secs = Object.keys(txts),
-        m = get_model("semantic", "openai");
+    const secs = Object.keys(txts);
+    const m = env.openai_model || get_model("semantic", "openai");
     const r = await fetchWithTimeout(
         `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
         {
@@ -302,7 +332,7 @@ async function emb_batch_openai(
             },
             body: JSON.stringify({
                 input: Object.values(txts),
-                model: env.openai_model || m,
+                model: m,
                 dimensions: env.vec_dim,
             }),
         },
@@ -311,6 +341,15 @@ async function emb_batch_openai(
     const d = (await r.json()) as any,
         out: Record<string, number[]> = {};
     secs.forEach((s, i) => (out[s] = d.data[i].embedding));
+
+    // Track token usage for cost metrics
+    if (d.usage?.total_tokens) {
+        last_openai_usage = {
+            tokens: d.usage.total_tokens,
+            model: m,
+        };
+    }
+
     return out;
 }
 
@@ -322,7 +361,7 @@ async function emb_batch_openai(
 
 async function emb_voyage(t: string, s: string): Promise<number[]> {
     if (!env.voyage_key) throw new Error("Voyage API key missing");
-    const m = get_model(s, "voyage");
+    const m = env.voyage_model || get_model(s, "voyage");
     const r = await fetchWithTimeout(
         `${env.voyage_base_url.replace(/\/$/, "")}/embeddings`,
         {
@@ -333,7 +372,7 @@ async function emb_voyage(t: string, s: string): Promise<number[]> {
             },
             body: JSON.stringify({
                 input: t,
-                model: env.voyage_model || m,
+                model: m,
             }),
         },
     );
@@ -342,6 +381,15 @@ async function emb_voyage(t: string, s: string): Promise<number[]> {
         throw new Error(`Voyage: ${r.status} ${errBody}`);
     }
     const data = (await r.json()) as any;
+
+    // Track token usage for cost metrics
+    if (data.usage?.total_tokens) {
+        last_voyage_usage = {
+            tokens: data.usage.total_tokens,
+            model: m,
+        };
+    }
+
     // Voyage returns vectors without dimension control, resize if needed
     return resize_vec(data.data[0].embedding, env.vec_dim);
 }
@@ -351,7 +399,7 @@ async function emb_batch_voyage(
 ): Promise<Record<string, number[]>> {
     if (!env.voyage_key) throw new Error("Voyage API key missing");
     const secs = Object.keys(txts);
-    const m = get_model("semantic", "voyage");
+    const m = env.voyage_model || get_model("semantic", "voyage");
     const r = await fetchWithTimeout(
         `${env.voyage_base_url.replace(/\/$/, "")}/embeddings`,
         {
@@ -362,7 +410,7 @@ async function emb_batch_voyage(
             },
             body: JSON.stringify({
                 input: Object.values(txts),
-                model: env.voyage_model || m,
+                model: m,
             }),
         },
     );
@@ -373,6 +421,15 @@ async function emb_batch_voyage(
     const d = (await r.json()) as any,
         out: Record<string, number[]> = {};
     secs.forEach((s, i) => (out[s] = resize_vec(d.data[i].embedding, env.vec_dim)));
+
+    // Track token usage for cost metrics
+    if (d.usage?.total_tokens) {
+        last_voyage_usage = {
+            tokens: d.usage.total_tokens,
+            model: m,
+        };
+    }
+
     return out;
 }
 

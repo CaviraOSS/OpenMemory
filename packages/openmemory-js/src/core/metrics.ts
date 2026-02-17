@@ -12,9 +12,11 @@ import { env, tier } from "./cfg";
 export const registry = new client.Registry();
 
 // Collect default Node.js metrics with custom prefix
+// Note: collectDefaultMetrics adds 'nodejs_' prefix to its metrics,
+// so we use 'openmemory_' to get final names like 'openmemory_nodejs_heap_size_used_bytes'
 client.collectDefaultMetrics({
     register: registry,
-    prefix: "openmemory_nodejs_",
+    prefix: "openmemory_",
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -105,6 +107,48 @@ export const embedding_duration_seconds = new client.Histogram({
     registers: [registry],
 });
 
+export const embedding_tokens_total = new client.Counter({
+    name: "openmemory_embedding_tokens_total",
+    help: "Total number of tokens processed for embeddings",
+    labelNames: ["provider", "model"] as const,
+    registers: [registry],
+});
+
+export const embedding_cost_dollars_total = new client.Counter({
+    name: "openmemory_embedding_cost_dollars_total",
+    help: "Cumulative embedding cost in USD",
+    labelNames: ["provider", "model"] as const,
+    registers: [registry],
+});
+
+// Cost per million tokens for embedding providers (USD)
+// Updated: 2025-02 - verify at provider pricing pages
+export const EMBEDDING_COSTS_PER_MILLION: Record<string, Record<string, number>> = {
+    voyage: {
+        "voyage-3": 0.06,
+        "voyage-3-lite": 0.02,
+        "voyage-code-3": 0.18,
+        "voyage-finance-2": 0.12,
+        "voyage-law-2": 0.12,
+        "voyage-multilingual-2": 0.12,
+    },
+    openai: {
+        "text-embedding-3-small": 0.02,
+        "text-embedding-3-large": 0.13,
+        "text-embedding-ada-002": 0.10,
+    },
+    gemini: {
+        "text-embedding-004": 0.00, // Free tier
+        "embedding-001": 0.00,
+    },
+    aws: {
+        "amazon.titan-embed-text-v2:0": 0.02,
+    },
+    ollama: {}, // Self-hosted, no cost
+    synthetic: {}, // No cost
+    local: {}, // No cost
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Vector Storage Metrics (populated by /metrics route)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,11 +238,30 @@ export function record_task_failure(task_name: string, duration_ms: number): voi
 }
 
 /**
- * Record an embedding request
+ * Record an embedding request with optional token/cost tracking
  */
-export function record_embedding(provider: string, success: boolean, duration_ms: number): void {
+export function record_embedding(
+    provider: string,
+    success: boolean,
+    duration_ms: number,
+    options?: { model?: string; tokens?: number }
+): void {
     embedding_requests_total.inc({ provider, status: success ? "success" : "failure" });
     if (success) {
         embedding_duration_seconds.observe({ provider }, duration_ms / 1000);
+
+        // Track tokens and cost if provided
+        if (options?.tokens && options.tokens > 0) {
+            const model = options.model || "unknown";
+            embedding_tokens_total.inc({ provider, model }, options.tokens);
+
+            // Calculate and record cost
+            const providerCosts = EMBEDDING_COSTS_PER_MILLION[provider] || {};
+            const costPerMillion = providerCosts[model] ?? providerCosts["default"] ?? 0;
+            if (costPerMillion > 0) {
+                const cost = (options.tokens / 1_000_000) * costPerMillion;
+                embedding_cost_dollars_total.inc({ provider, model }, cost);
+            }
+        }
     }
 }

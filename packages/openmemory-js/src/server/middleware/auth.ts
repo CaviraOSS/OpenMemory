@@ -19,6 +19,7 @@ const auth_config = {
     rate_limit_max_requests: env.rate_limit_max_requests,
     public_endpoints: [
         "/health",
+        "/metrics",
         "/api/system/health",
         "/api/system/stats",
         "/dashboard/health",

@@ -17,6 +17,11 @@ import {
     task_success,
     task_failure,
 } from "../core/observability";
+import {
+    http_requests_total,
+    http_request_duration_seconds,
+    normalise_path,
+} from "../core/metrics";
 
 const ASC = `   ____                   __  __
   / __ \\                 |  \\/  |
@@ -48,7 +53,7 @@ app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
     const origin = req.headers.origin;
-    
+
     // If CORS allowlist is configured, check if origin is allowed
     if (env.cors_allowed_origins && env.cors_allowed_origins.length > 0) {
         if (origin && env.cors_allowed_origins.includes(origin)) {
@@ -59,7 +64,7 @@ app.use((req: any, res: any, next: any) => {
         // No allowlist configured, use wildcard (backward compatible)
         res.setHeader("Access-Control-Allow-Origin", "*");
     }
-    
+
     res.setHeader(
         "Access-Control-Allow-Methods",
         "GET,POST,PUT,PATCH,DELETE,OPTIONS",
@@ -72,6 +77,38 @@ app.use((req: any, res: any, next: any) => {
         res.status(200).end();
         return;
     }
+    next();
+});
+
+// Prometheus request metrics middleware
+app.use((req: any, res: any, next: any) => {
+    const path = req.path || req.url;
+
+    // Skip metrics and health endpoints to avoid self-referential noise
+    if (path === "/metrics" || path === "/health") {
+        return next();
+    }
+
+    const start = process.hrtime.bigint();
+    const method = req.method;
+    const normalised_path = normalise_path(path);
+
+    res.on("finish", () => {
+        const duration_ns = process.hrtime.bigint() - start;
+        const duration_s = Number(duration_ns) / 1e9;
+
+        http_requests_total.inc({
+            method,
+            path: normalised_path,
+            status_code: res.statusCode.toString(),
+        });
+
+        http_request_duration_seconds.observe(
+            { method, path: normalised_path },
+            duration_s
+        );
+    });
+
     next();
 });
 
