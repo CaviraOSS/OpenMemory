@@ -98,7 +98,7 @@ export default function memories() {
                     content: m.content,
                     primary_sector: m.primary_sector,
                     tags: [],
-                    created_at: m.last_seen_at || Date.now(),
+                    created_at: Number(m.last_seen_at) || Date.now(),
                     salience: m.salience,
                 }))
             )
@@ -304,7 +304,7 @@ export default function memories() {
                                                         Salience: {(mem.salience * 100).toFixed(0)}%
                                                     </span>
                                                     <span className="text-xs text-stone-500">
-                                                        {new Date(mem.created_at).toLocaleDateString()}
+                                                        {new Date(Number(mem.created_at)).toLocaleDateString()}
                                                     </span>
                                                     {mem.tags?.map(tag => (
                                                         <span key={tag} className="bg-stone-800 rounded px-2 py-0.5 text-xs text-stone-400">
