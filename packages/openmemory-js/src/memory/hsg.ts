@@ -1077,10 +1077,13 @@ export async function add_hsg_memory(
         const now = Date.now();
         const boosted_sal = Math.min(1, existing.salience + 0.15);
         await q.upd_seen.run(existing.id, now, boosted_sal, now);
+        // Fetch actual stored sectors rather than assuming only primary
+        const vecs = await vector_store.getVectorsById(existing.id);
+        const actual_sectors = vecs.map((v: any) => v.sector);
         return {
             id: existing.id,
             primary_sector: existing.primary_sector,
-            sectors: [existing.primary_sector],
+            sectors: actual_sectors.length > 0 ? actual_sectors : [existing.primary_sector],
             deduplicated: true,
         };
     }

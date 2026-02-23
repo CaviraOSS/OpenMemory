@@ -164,6 +164,7 @@ export const create_mcp_srv = () => {
             min_salience,
             user_id,
         }) => {
+            const _t0 = Date.now();
             const u = uid(user_id);
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
@@ -262,7 +263,7 @@ export const create_mcp_srv = () => {
                 }
             }
 
-            return {
+            const _result = {
                 content: [
                     { type: "text", text: summ },
                     {
@@ -271,6 +272,8 @@ export const create_mcp_srv = () => {
                     },
                 ],
             };
+            console.error(`[MCP] tool=openmemory_query dur=${Date.now() - _t0}ms in=${query.length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
 
@@ -337,6 +340,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ content, type = "contextual", facts, tags, metadata, user_id, upsert_key }) => {
+            const _t0 = Date.now();
             const u = uid(user_id);
             const results: any = { type };
 
@@ -422,7 +426,7 @@ export const create_mcp_srv = () => {
                 txt = `Stored ${results.temporal.length} temporal fact(s)${u ? ` [user=${u}]` : ""}`;
             }
 
-            return {
+            const _result = {
                 content: [
                     { type: "text", text: txt },
                     {
@@ -435,6 +439,8 @@ export const create_mcp_srv = () => {
                     },
                 ],
             };
+            console.error(`[MCP] tool=openmemory_store dur=${Date.now() - _t0}ms in=${content.length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
 
@@ -451,8 +457,9 @@ export const create_mcp_srv = () => {
                 .describe("Salience boost amount (default 0.1)"),
         },
         async ({ id, boost }) => {
+            const _t0 = Date.now();
             await reinforce_memory(id, boost);
-            return {
+            const _result = {
                 content: [
                     {
                         type: "text",
@@ -460,6 +467,8 @@ export const create_mcp_srv = () => {
                     },
                 ],
             };
+            console.error(`[MCP] tool=openmemory_reinforce dur=${Date.now() - _t0}ms in=${id.length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
 
@@ -471,6 +480,7 @@ export const create_mcp_srv = () => {
             user_id: z.string().trim().min(1).optional().describe("Validate ownership"),
         },
         async ({ id, user_id }) => {
+            const _t0 = Date.now();
             const u = uid(user_id);
             if (u) {
                 // Pre-check ownership if user_id provided
@@ -482,15 +492,19 @@ export const create_mcp_srv = () => {
 
             const success = await delete_memory(id);
             if (!success) {
-                return {
+                const _result = {
                     content: [{ type: "text", text: `Memory ${id} not found or could not be deleted.` }],
                     isError: true
                 };
+                console.error(`[MCP] tool=openmemory_delete dur=${Date.now() - _t0}ms in=${id.length}b out=${JSON.stringify(_result).length}b`);
+                return _result;
             }
 
-            return {
+            const _result = {
                 content: [{ type: "text", text: `Memory ${id} successfully deleted.` }],
             };
+            console.error(`[MCP] tool=openmemory_delete dur=${Date.now() - _t0}ms in=${id.length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
 
@@ -514,6 +528,7 @@ export const create_mcp_srv = () => {
                 .describe("Restrict results to a specific user identifier"),
         },
         async ({ limit, sector, user_id }) => {
+            const _t0 = Date.now();
             const u = uid(user_id);
             let rows: mem_row[];
             if (u) {
@@ -535,7 +550,7 @@ export const create_mcp_srv = () => {
                 (item, idx) =>
                     `${idx + 1}. [${item.primary_sector}] salience=${item.salience} id=${item.id}${item.tags.length ? ` tags=${item.tags.join(", ")}` : ""}${item.user_id ? ` user=${item.user_id}` : ""}\n${item.content_preview}`,
             );
-            return {
+            const _result = {
                 content: [
                     {
                         type: "text",
@@ -544,6 +559,8 @@ export const create_mcp_srv = () => {
                     { type: "text", text: JSON.stringify({ items }, null, 2) },
                 ],
             };
+            console.error(`[MCP] tool=openmemory_list dur=${Date.now() - _t0}ms in=${String(limit).length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
 
@@ -566,6 +583,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ id, include_vectors, user_id }) => {
+            const _t0 = Date.now();
             const u = uid(user_id);
             const mem = await q.get_mem.get(id);
             if (!mem)
@@ -602,9 +620,11 @@ export const create_mcp_srv = () => {
                     ? vecs.map((v) => v.sector)
                     : undefined,
             };
-            return {
+            const _result = {
                 content: [{ type: "text", text: JSON.stringify(pay, null, 2) }],
             };
+            console.error(`[MCP] tool=openmemory_get dur=${Date.now() - _t0}ms in=${id.length}b out=${JSON.stringify(_result).length}b`);
+            return _result;
         },
     );
     registry.apply(srv);

@@ -261,7 +261,28 @@ export async function extractText(
     contentType: string,
     data: string | Buffer,
 ): Promise<ExtractionResult> {
-    const type = contentType.toLowerCase();
+    let type = contentType.toLowerCase();
+
+    // OM-8: MIME whitelist validation (before normalisation)
+    const SUPPORTED_TYPES = new Set(['pdf', 'docx', 'doc', 'html', 'htm', 'md', 'txt', 'audio', 'video', 'markdown', 'text',
+        'mp3', 'wav', 'm4a', 'webm', 'ogg', 'mp4', 'avi', 'mov',
+        'text/plain', 'text/markdown', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav', 'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/webm', 'audio/ogg',
+        'video/mp4', 'video/webm', 'video/mpeg', 'video/avi', 'video/quicktime']);
+    if (!SUPPORTED_TYPES.has(type)) {
+        throw new Error(`Unsupported content_type "${contentType}". Supported: pdf, docx, html, md, txt, audio, video`);
+    }
+
+    // OM-6: Canonical content_type normalisation
+    const CONTENT_TYPE_CANONICAL: Record<string, string> = {
+        markdown: 'md',
+        text: 'txt',
+        'text/plain': 'txt',
+        'text/markdown': 'md',
+        'application/pdf': 'pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    };
+    type = CONTENT_TYPE_CANONICAL[type] ?? type;
 
 
     if (
