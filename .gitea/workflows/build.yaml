@@ -1,0 +1,156 @@
+name: Build OpenMemory images
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - packages/openmemory-js/**
+      - dashboard/**
+      - .gitea/workflows/build.yaml
+
+jobs:
+  build-api:
+    runs-on: self-hosted
+    steps:
+      - name: Setup
+        run: |
+          buildah --version
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+          AUTH_URL=$(echo "$REPO_URL" | sed "s|https://|https://token:${DEPLOY_TOKEN}@|")
+          rm -rf checkout && git clone --depth=1 "$AUTH_URL" checkout
+
+      - name: Login to registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          buildah login -u rbrenner -p "${REGISTRY_TOKEN}" git.itsa.house
+
+      - name: Build API image
+        run: |
+          cd checkout/packages/openmemory-js
+          buildah bud --isolation=chroot \
+            -t git.itsa.house/homelab/openmemory-api:latest \
+            -t git.itsa.house/homelab/openmemory-api:${SHORT_SHA} \
+            -f Dockerfile .
+
+      - name: Push API image
+        run: |
+          push_retry() {
+            local img=$1 attempt=0
+            while [ $attempt -lt 3 ]; do
+              attempt=$((attempt + 1))
+              echo "Push attempt $attempt/3: $img"
+              if buildah push "$img"; then return 0; fi
+              echo "Attempt $attempt failed, retrying in 15s..."
+              sleep 15
+            done
+            echo "Push failed after 3 attempts: $img"
+            return 1
+          }
+          push_retry git.itsa.house/homelab/openmemory-api:latest
+          push_retry git.itsa.house/homelab/openmemory-api:${SHORT_SHA}
+
+      - name: Validate API image
+        run: |
+          buildah pull git.itsa.house/homelab/openmemory-api:${SHORT_SHA}
+          buildah inspect git.itsa.house/homelab/openmemory-api:${SHORT_SHA} | jq -r '.OCIv1.config.Entrypoint'
+          echo "VALIDATED: openmemory-api:${SHORT_SHA}"
+
+      - name: Notify success
+        if: success()
+        env:
+          WEBHOOK_URL: ${{ secrets.MATTERMOST_AGENT_WEBHOOK }}
+        run: |
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"**[ci]** Built openmemory-api :${SHORT_SHA} (buildah)\", \"username\": \"Gitea CI\"}" || true
+
+      - name: Notify failure
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.MATTERMOST_ALERTS_WEBHOOK }}
+        run: |
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"**[ci] FAILED** :rotating_light: openmemory-api build\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"username\": \"Gitea CI\"}" || true
+
+  build-dashboard:
+    runs-on: self-hosted
+    steps:
+      - name: Setup
+        run: |
+          buildah --version
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "SHORT_SHA=${SHORT_SHA}" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        env:
+          DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
+        run: |
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+          AUTH_URL=$(echo "$REPO_URL" | sed "s|https://|https://token:${DEPLOY_TOKEN}@|")
+          rm -rf checkout && git clone --depth=1 "$AUTH_URL" checkout
+
+      - name: Login to registry
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          buildah login -u rbrenner -p "${REGISTRY_TOKEN}" git.itsa.house
+
+      - name: Build dashboard image
+        run: |
+          cd checkout/dashboard
+          buildah bud --isolation=chroot \
+            -t git.itsa.house/homelab/openmemory-dashboard:latest \
+            -t git.itsa.house/homelab/openmemory-dashboard:${SHORT_SHA} \
+            -f Dockerfile .
+
+      - name: Push dashboard image
+        run: |
+          push_retry() {
+            local img=$1 attempt=0
+            while [ $attempt -lt 3 ]; do
+              attempt=$((attempt + 1))
+              echo "Push attempt $attempt/3: $img"
+              if buildah push "$img"; then return 0; fi
+              echo "Attempt $attempt failed, retrying in 15s..."
+              sleep 15
+            done
+            echo "Push failed after 3 attempts: $img"
+            return 1
+          }
+          push_retry git.itsa.house/homelab/openmemory-dashboard:latest
+          push_retry git.itsa.house/homelab/openmemory-dashboard:${SHORT_SHA}
+
+      - name: Validate dashboard image
+        run: |
+          buildah pull git.itsa.house/homelab/openmemory-dashboard:${SHORT_SHA}
+          buildah inspect git.itsa.house/homelab/openmemory-dashboard:${SHORT_SHA} | jq -r '.OCIv1.config.Cmd'
+          echo "VALIDATED: openmemory-dashboard:${SHORT_SHA}"
+
+      - name: Notify success
+        if: success()
+        env:
+          WEBHOOK_URL: ${{ secrets.MATTERMOST_AGENT_WEBHOOK }}
+        run: |
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"**[ci]** Built openmemory-dashboard :${SHORT_SHA} (buildah)\", \"username\": \"Gitea CI\"}" || true
+
+      - name: Notify failure
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.MATTERMOST_ALERTS_WEBHOOK }}
+        run: |
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -d "{\"text\": \"**[ci] FAILED** :rotating_light: openmemory-dashboard build\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\", \"username\": \"Gitea CI\"}" || true
