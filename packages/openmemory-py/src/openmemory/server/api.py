@@ -5,11 +5,13 @@ import time
 import logging
 from ..core.config import env
 from .routes import memory, health, sources
+from .middleware import authenticate_api_request
 
 logger = logging.getLogger("server")
 
 def create_app() -> FastAPI:
     app = FastAPI(title="OpenMemory API", version="1.2.2")
+    authenticate_api_request(app)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],

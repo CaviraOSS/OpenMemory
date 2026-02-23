@@ -3,6 +3,78 @@ import time
 import hashlib
 from typing import Dict, Any, List, Optional
 
+# --- Module-level compiled regex constants ---
+
+_WHITESPACE_RE = re.compile(r"\s+")
+_SENTENCE_SPLIT_RE = re.compile(r"[.!?]+\s+")
+
+_FILLER_RES = [
+    re.compile(r"\b(just|really|very|quite|rather|somewhat|somehow)\b", re.IGNORECASE),
+    re.compile(r"\b(actually|basically|essentially|literally)\b", re.IGNORECASE),
+    re.compile(r"\b(I think that|I believe that|It seems that|It appears that)\b", re.IGNORECASE),
+    re.compile(r"\b(in order to)\b", re.IGNORECASE),
+]
+
+_REPLACEMENT_RES = [
+    (re.compile(r"\bat this point in time\b", re.IGNORECASE), "now"),
+    (re.compile(r"\bdue to the fact that\b", re.IGNORECASE), "because"),
+    (re.compile(r"\bin the event that\b", re.IGNORECASE), "if"),
+    (re.compile(r"\bfor the purpose of\b", re.IGNORECASE), "to"),
+    (re.compile(r"\bin the near future\b", re.IGNORECASE), "soon"),
+    (re.compile(r"\ba number of\b", re.IGNORECASE), "several"),
+    (re.compile(r"\bprior to\b", re.IGNORECASE), "before"),
+    (re.compile(r"\bsubsequent to\b", re.IGNORECASE), "after"),
+]
+
+_CONTRACTION_RES = [
+    (re.compile(r"\bdo not\b", re.IGNORECASE), "don't"),
+    (re.compile(r"\bcannot\b", re.IGNORECASE), "can't"),
+    (re.compile(r"\bwill not\b", re.IGNORECASE), "won't"),
+    (re.compile(r"\bshould not\b", re.IGNORECASE), "shouldn't"),
+    (re.compile(r"\bwould not\b", re.IGNORECASE), "wouldn't"),
+    (re.compile(r"\bit is\b", re.IGNORECASE), "it's"),
+    (re.compile(r"\bthat is\b", re.IGNORECASE), "that's"),
+    (re.compile(r"\bwhat is\b", re.IGNORECASE), "what's"),
+    (re.compile(r"\bwho is\b", re.IGNORECASE), "who's"),
+    (re.compile(r"\bthere is\b", re.IGNORECASE), "there's"),
+    (re.compile(r"\bhas been\b", re.IGNORECASE), "been"),
+    (re.compile(r"\bhave been\b", re.IGNORECASE), "been"),
+]
+
+_ARTICLE_STRIP_RE = re.compile(r"\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+", re.IGNORECASE)
+_BRACE_OPEN_RE = re.compile(r"\s*{\s*")
+_BRACE_CLOSE_RE = re.compile(r"\s*}\s*")
+_PAREN_OPEN_RE = re.compile(r"\s*\(\s*")
+_PAREN_CLOSE_RE = re.compile(r"\s*\)\s*")
+_SEMICOLON_RE = re.compile(r"\s*;\s*")
+
+_MARKDOWN_RE = re.compile(r"[*_~`#]")
+_URL_RE = re.compile(r"https?://(www\.)?([^\/\s]+)(/[^\s]*)?", re.IGNORECASE)
+
+_ABBREV_RES = [
+    (re.compile(r"\bJavaScript\b", re.IGNORECASE), "JS"),
+    (re.compile(r"\bTypeScript\b", re.IGNORECASE), "TS"),
+    (re.compile(r"\bPython\b", re.IGNORECASE), "Py"),
+    (re.compile(r"\bapplication\b", re.IGNORECASE), "app"),
+    (re.compile(r"\bfunction\b", re.IGNORECASE), "fn"),
+    (re.compile(r"\bparameter\b", re.IGNORECASE), "param"),
+    (re.compile(r"\bargument\b", re.IGNORECASE), "arg"),
+    (re.compile(r"\breturn\b", re.IGNORECASE), "ret"),
+    (re.compile(r"\bvariable\b", re.IGNORECASE), "var"),
+    (re.compile(r"\bconstant\b", re.IGNORECASE), "const"),
+    (re.compile(r"\bdatabase\b", re.IGNORECASE), "db"),
+    (re.compile(r"\brepository\b", re.IGNORECASE), "repo"),
+    (re.compile(r"\benvironment\b", re.IGNORECASE), "env"),
+    (re.compile(r"\bconfiguration\b", re.IGNORECASE), "config"),
+    (re.compile(r"\bdocumentation\b", re.IGNORECASE), "docs"),
+]
+
+_MULTI_NEWLINE_RE = re.compile(r"\n{3,}")
+_CODE_DETECT_RE = re.compile(r"\b(function|const|let|var|def|class|import|export)\b")
+_URL_DETECT_RE = re.compile(r"https?://")
+
+# --- Engine ---
+
 class MemoryCompressionEngine:
     def __init__(self):
         self.stats = {
@@ -21,14 +93,14 @@ class MemoryCompressionEngine:
 
     def tok(self, t: str) -> int:
         if not t: return 0
-        w = len(re.split(r"\s+", t.strip()))
+        w = len(_WHITESPACE_RE.split(t.strip()))
         c = len(t)
         return int(c / 4 + w / 2) + 1
 
     def sem(self, t: str) -> str:
         if not t or len(t) < 50: return t
         c = t
-        s = re.split(r"[.!?]+\s+", c)
+        s = _SENTENCE_SPLIT_RE.split(c)
         u = []
         for i, x in enumerate(s):
             if i == 0:
@@ -39,88 +111,41 @@ class MemoryCompressionEngine:
             if n != p: u.append(x)
 
         c = ". ".join(u).strip()
-        fillers = [
-            r"\b(just|really|very|quite|rather|somewhat|somehow)\b",
-            r"\b(actually|basically|essentially|literally)\b",
-            r"\b(I think that|I believe that|It seems that|It appears that)\b",
-            r"\b(in order to)\b"
-        ]
-        for p in fillers:
-            c = re.sub(p, "", c, flags=re.IGNORECASE)
+        for pat in _FILLER_RES:
+            c = pat.sub("", c)
 
-        c = re.sub(r"\s+", " ", c).strip()
+        c = _WHITESPACE_RE.sub(" ", c).strip()
 
-        replacements = [
-            (r"\bat this point in time\b", "now"),
-            (r"\bdue to the fact that\b", "because"),
-            (r"\bin the event that\b", "if"),
-            (r"\bfor the purpose of\b", "to"),
-            (r"\bin the near future\b", "soon"),
-            (r"\ba number of\b", "several"),
-            (r"\bprior to\b", "before"),
-            (r"\bsubsequent to\b", "after")
-        ]
-        for p, x in replacements:
-            c = re.sub(p, x, c, flags=re.IGNORECASE)
+        for pat, repl in _REPLACEMENT_RES:
+            c = pat.sub(repl, c)
 
         return c
 
     def syn(self, t: str) -> str:
         if not t or len(t) < 30: return t
         c = t
-        ct = [
-            (r"\bdo not\b", "don't"),
-            (r"\bcannot\b", "can't"),
-            (r"\bwill not\b", "won't"),
-            (r"\bshould not\b", "shouldn't"),
-            (r"\bwould not\b", "wouldn't"),
-            (r"\bit is\b", "it's"),
-            (r"\bthat is\b", "that's"),
-            (r"\bwhat is\b", "what's"),
-            (r"\bwho is\b", "who's"),
-            (r"\bthere is\b", "there's"),
-            (r"\bhas been\b", "been"),
-            (r"\bhave been\b", "been")
-        ]
-        for p, x in ct:
-            c = re.sub(p, x, c, flags=re.IGNORECASE)
+        for pat, repl in _CONTRACTION_RES:
+            c = pat.sub(repl, c)
 
-        c = re.sub(r"\b(the|a|an)\s+(\w+),\s+(the|a|an)\s+", r"\2, ", c, flags=re.IGNORECASE)
-        c = re.sub(r"\s*{\s*", "{", c)
-        c = re.sub(r"\s*}\s*", "}", c)
-        c = re.sub(r"\s*\(\s*", "(", c)
-        c = re.sub(r"\s*\)\s*", ")", c)
-        c = re.sub(r"\s*;\s*", ";", c)
+        c = _ARTICLE_STRIP_RE.sub(r"\2, ", c)
+        c = _BRACE_OPEN_RE.sub("{", c)
+        c = _BRACE_CLOSE_RE.sub("}", c)
+        c = _PAREN_OPEN_RE.sub("(", c)
+        c = _PAREN_CLOSE_RE.sub(")", c)
+        c = _SEMICOLON_RE.sub(";", c)
         return c
 
     def agg(self, t: str) -> str:
         if not t: return t
         c = self.sem(t)
         c = self.syn(c)
-        c = re.sub(r"[*_~`#]", "", c)
-        c = re.sub(r"https?://(www\.)?([^\/\s]+)(/[^\s]*)?", r"\2", c, flags=re.IGNORECASE)
+        c = _MARKDOWN_RE.sub("", c)
+        c = _URL_RE.sub(r"\2", c)
 
-        abbr = [
-            (r"\bJavaScript\b", "JS"),
-            (r"\bTypeScript\b", "TS"),
-            (r"\bPython\b", "Py"),
-            (r"\bapplication\b", "app"),
-            (r"\bfunction\b", "fn"),
-            (r"\bparameter\b", "param"),
-            (r"\bargument\b", "arg"),
-            (r"\breturn\b", "ret"),
-            (r"\bvariable\b", "var"),
-            (r"\bconstant\b", "const"),
-            (r"\bdatabase\b", "db"),
-            (r"\brepository\b", "repo"),
-            (r"\benvironment\b", "env"),
-            (r"\bconfiguration\b", "config"),
-            (r"\bdocumentation\b", "docs")
-        ]
-        for p, x in abbr:
-             c = re.sub(p, x, c, flags=re.IGNORECASE)
+        for pat, repl in _ABBREV_RES:
+            c = pat.sub(repl, c)
 
-        c = re.sub(r"\n{3,}", "\n\n", c)
+        c = _MULTI_NEWLINE_RE.sub("\n\n", c)
         c = "\n".join([l.strip() for l in c.split("\n")])
         return c.strip()
 
@@ -163,8 +188,8 @@ class MemoryCompressionEngine:
 
     def auto(self, t: str) -> Dict[str, Any]:
         if not t or len(t) < 50: return self.compress(t, "semantic")
-        code = bool(re.search(r"\b(function|const|let|var|def|class|import|export)\b", t))
-        urls = bool(re.search(r"https?://", t))
+        code = bool(_CODE_DETECT_RE.search(t))
+        urls = bool(_URL_DETECT_RE.search(t))
         verb = len(t.split()) > 100
 
         if code or urls: a = "aggressive"
