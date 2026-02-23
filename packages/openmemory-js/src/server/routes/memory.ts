@@ -101,8 +101,9 @@ export function mem(app: any) {
     });
 
     app.post("/memory/query", async (req: any, res: any) => {
-        const b = req.body as q_req;
+        const b = req.body as q_req & { metadata_only?: boolean };
         const k = b.k || 8;
+        const metadata_only = b.metadata_only === true;
         try {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
@@ -114,16 +115,21 @@ export function mem(app: any) {
             const m = await hsg_query(b.query, k, f);
             res.json({
                 query: b.query,
-                matches: m.map((x: any) => ({
-                    id: x.id,
-                    content: x.content,
-                    score: x.score,
-                    sectors: x.sectors,
-                    primary_sector: x.primary_sector,
-                    path: x.path,
-                    salience: x.salience,
-                    last_seen_at: x.last_seen_at,
-                })),
+                matches: m.map((x: any) => {
+                    const base = {
+                        id: x.id,
+                        score: x.score,
+                        sectors: x.sectors,
+                        primary_sector: x.primary_sector,
+                        path: x.path,
+                        salience: x.salience,
+                        last_seen_at: x.last_seen_at,
+                    };
+                    if (metadata_only) {
+                        return { ...base, content_length: x.content?.length ?? 0 };
+                    }
+                    return { ...base, content: x.content };
+                }),
             });
         } catch (e: any) {
             res.json({ query: b.query, matches: [] });
@@ -255,6 +261,9 @@ export function mem(app: any) {
                 decay_lambda: m.decay_lambda,
                 version: m.version,
                 user_id: m.user_id,
+                dedup_count: m.dedup_count ?? 0,
+                dedup_last_at: m.dedup_last_at ?? null,
+                upsert_key: m.upsert_key ?? null,
             });
         } catch (e: any) {
             res.status(500).json({ err: "internal" });

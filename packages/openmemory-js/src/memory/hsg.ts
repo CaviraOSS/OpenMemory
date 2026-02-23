@@ -1065,7 +1065,7 @@ export async function add_hsg_memory(
 }> {
     // Named upsert: if upsert_key matches an existing memory, update in-place
     if (upsert_key) {
-        const existing_uk = await q.get_mem_by_upsert_key.get(upsert_key, user_id ?? null, user_id ?? null);
+        const existing_uk = await q.get_mem_by_upsert_key.get(upsert_key);
         if (existing_uk) {
             const now = Date.now();
             await q.upd_mem.run(content, tags ?? null, JSON.stringify(metadata ?? {}), now, existing_uk.id);

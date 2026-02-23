@@ -18,7 +18,7 @@ type q_type = {
     del_mem: { run: (...p: any[]) => Promise<void> };
     get_mem: { get: (id: string) => Promise<any> };
     get_mem_by_simhash: { get: (simhash: string) => Promise<any> };
-    get_mem_by_upsert_key: { get: (upsert_key: string, user_id: string | null, user_id2: string | null) => Promise<any> };
+    get_mem_by_upsert_key: { get: (upsert_key: string) => Promise<any> };
     all_mem: { all: (limit: number, offset: number) => Promise<any[]> };
     all_mem_by_sector: {
         all: (sector: string, limit: number, offset: number) => Promise<any[]>;
@@ -427,10 +427,10 @@ if (is_pg) {
                 ),
         },
         get_mem_by_upsert_key: {
-            get: (upsert_key, user_id, user_id2) =>
+            get: (upsert_key) =>
                 get_async(
-                    `select * from ${m} where upsert_key=$1 and (user_id=$2 or (user_id is null and $3 is null)) limit 1`,
-                    [upsert_key, user_id, user_id2],
+                    `select * from ${m} where upsert_key=$1 limit 1`,
+                    [upsert_key],
                 ),
         },
         all_mem: {
@@ -911,10 +911,10 @@ if (is_pg) {
                 ),
         },
         get_mem_by_upsert_key: {
-            get: (upsert_key, user_id, user_id2) =>
+            get: (upsert_key) =>
                 one(
-                    "select * from memories where upsert_key=? and (user_id=? or (user_id is null and ? is null)) limit 1",
-                    [upsert_key, user_id, user_id2],
+                    "select * from memories where upsert_key=? limit 1",
+                    [upsert_key],
                 ),
         },
         all_mem: {
