@@ -21,7 +21,12 @@ import {
     http_requests_total,
     http_request_duration_seconds,
     normalise_path,
+    maintenance_pruned_embed_logs,
+    maintenance_expired_memories,
+    orphan_memories,
+    memories_growth_7d,
 } from "../core/metrics";
+import { all_async, run_async, memories_table } from "../core/db";
 
 const ASC = `   ____                   __  __
   / __ \\                 |  \\/  |
@@ -155,6 +160,59 @@ setInterval(
     },
     7 * 24 * 60 * 60 * 1000,
 );
+
+// Maintenance scheduler: runs every 24h after decay
+const run_maintenance = async () => {
+    const start = task_start(TASK_NAMES.MAINTENANCE);
+    try {
+        const results: Record<string, unknown> = {};
+
+        // 1. Prune old embed_logs
+        const log_cutoff = Date.now() - env.embed_log_retention_days * 24 * 60 * 60 * 1000;
+        const log_del = await run_async(`DELETE FROM embed_logs WHERE created_at < ?`, [log_cutoff]);
+        results.pruned_embed_logs = (log_del as any)?.changes ?? 0;
+        maintenance_pruned_embed_logs.set(results.pruned_embed_logs as number);
+
+        // 2. Expire dead memories (low salience + no waypoints + old)
+        const age_cutoff = Date.now() - env.dead_memory_max_age_days * 24 * 60 * 60 * 1000;
+        const expired = await all_async(
+            `SELECT id FROM ${memories_table} WHERE salience < ? AND last_seen_at < ? AND COALESCE(json_extract(meta, '$.decay_disabled'), 'false') != 'true' AND NOT EXISTS (SELECT 1 FROM waypoints w WHERE w.src_id = ${memories_table}.id OR w.dst_id = ${memories_table}.id)`,
+            [env.dead_memory_min_salience, age_cutoff],
+        );
+        for (const row of expired) {
+            await run_async(`DELETE FROM ${memories_table} WHERE id = ?`, [row.id]);
+        }
+        results.expired_memories = expired.length;
+        maintenance_expired_memories.set(expired.length);
+
+        // 3. Update operational gauges
+        const [orphan_row] = await all_async(
+            `SELECT COUNT(*) as cnt FROM ${memories_table} m WHERE NOT EXISTS (SELECT 1 FROM waypoints w WHERE w.src_id = m.id OR w.dst_id = m.id)`,
+            [],
+        );
+        orphan_memories.set(orphan_row?.cnt ?? 0);
+
+        const seven_days_ago = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        const [growth_row] = await all_async(
+            `SELECT COUNT(*) as cnt FROM ${memories_table} WHERE created_at > ?`,
+            [seven_days_ago],
+        );
+        memories_growth_7d.set(growth_row?.cnt ?? 0);
+
+        // 4. SQLite VACUUM (only for sqlite backend)
+        if (env.metadata_backend === "sqlite") {
+            await run_async("VACUUM", []);
+            results.vacuumed = true;
+        }
+
+        task_success(TASK_NAMES.MAINTENANCE, start, results);
+    } catch (error) {
+        task_failure(TASK_NAMES.MAINTENANCE, start, error);
+    }
+};
+
+// Run maintenance on the same interval as decay (after each decay cycle)
+setInterval(run_maintenance, decayIntervalMs);
 
 setTimeout(() => {
     const start = task_start(TASK_NAMES.DECAY);

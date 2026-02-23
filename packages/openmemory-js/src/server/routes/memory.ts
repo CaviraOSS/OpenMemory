@@ -10,6 +10,14 @@ import { ingestDocument, ingestURL } from "../../ops/ingest";
 import { env } from "../../core/cfg";
 import { update_user_summary } from "../../memory/user_summary";
 import { audit_log } from "../../core/audit";
+import { background_task_runs_total } from "../../core/metrics";
+
+/** OM-14: Contextual error handler for fire-and-forget async ops */
+const bg_err = (op: string, id: string) => (e: unknown) => {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[bg:${op}] id=${id} error=${msg}`);
+    background_task_runs_total.inc({ task_name: `bg_${op}`, status: "failure" });
+};
 import type {
     add_req,
     q_req,
@@ -35,12 +43,10 @@ export function mem(app: any) {
             audit_log("memory", m.id, "create", {
                 actor_id: b.user_id,
                 metadata: { tags: b.tags, sector: m.primary_sector },
-            }).catch((e) => console.error("[audit] log failed:", e));
+            }).catch(bg_err("audit_create", m.id));
 
             if (b.user_id) {
-                update_user_summary(b.user_id).catch((e) =>
-                    console.error("[mem] user summary update failed:", e),
-                );
+                update_user_summary(b.user_id).catch(bg_err("user_summary", m.id));
             }
         } catch (e: any) {
             console.error("[mem] add failed:", e);
@@ -75,7 +81,7 @@ export function mem(app: any) {
                     strategy: r.strategy,
                     child_count: r.child_count,
                 },
-            }).catch((e) => console.error("[audit] log failed:", e));
+            }).catch(bg_err("audit_ingest", r.root_memory_id));
         } catch (e: any) {
             console.error("[mem] ingest failed:", e);
             res.status(500).json({ err: "ingest_failed" });
@@ -135,7 +141,7 @@ export function mem(app: any) {
             audit_log("memory", b.id, "reinforce", {
                 actor_id: b.user_id,
                 changes: { boost: b.boost || 0.1 },
-            }).catch((e) => console.error("[audit] log failed:", e));
+            }).catch(bg_err("audit_reinforce", b.id));
         } catch (e: any) {
             res.status(404).json({ err: "nf" });
         }
@@ -172,7 +178,7 @@ export function mem(app: any) {
                 actor_id: b.user_id || m.user_id,
                 changes,
                 metadata: { old_version: m.version, new_version: r.version },
-            }).catch((e) => console.error("[audit] log failed:", e));
+            }).catch(bg_err("audit_update", id));
         } catch (e: any) {
             if (e.message.includes("not found")) {
                 res.status(404).json({ err: "nf" });
@@ -276,7 +282,7 @@ export function mem(app: any) {
             audit_log("memory", id, "delete", {
                 actor_id: user_id || m.user_id,
                 metadata: { sector: m.primary_sector, version: m.version },
-            }).catch((e) => console.error("[audit] log failed:", e));
+            }).catch(bg_err("audit_delete", id));
         } catch (e: any) {
             res.status(500).json({ err: "internal" });
         }

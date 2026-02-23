@@ -41,6 +41,7 @@ export const TASK_NAMES = {
     PRUNE: "prune_waypoints",
     REFLECT: "reflect",
     USER_SUMMARY: "user_summary",
+    MAINTENANCE: "maintenance",
 } as const;
 
 type TaskName = (typeof TASK_NAMES)[keyof typeof TASK_NAMES];

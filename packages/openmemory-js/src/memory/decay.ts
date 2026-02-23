@@ -241,7 +241,7 @@ export const apply_decay = async () => {
     for (const seg of segments) {
         const segment = seg.segment;
         const rows = await all_async(
-            `select id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,coactivations from ${memories_table} where segment=?`,
+            `select id,content,summary,salience,decay_lambda,last_seen_at,updated_at,primary_sector,coactivations,meta from ${memories_table} where segment=?`,
             [segment],
         );
 
@@ -257,6 +257,16 @@ export const apply_decay = async () => {
         await Promise.all(
             parts.map(async (part) => {
                 for (const m of part) {
+                    // OM-15: Skip decay for pinned memories
+                    try {
+                        const meta = JSON.parse(m.meta || "{}");
+                        if (meta.decay_disabled) {
+                            tot_proc++;
+                            await tick();
+                            continue;
+                        }
+                    } catch { /* invalid JSON, proceed with decay */ }
+
                     const tier = pick_tier(m, now_ts);
                     tier_counts[tier]++;
 

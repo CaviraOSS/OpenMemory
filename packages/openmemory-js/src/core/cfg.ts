@@ -119,4 +119,7 @@ export const env = {
     keyword_boost: num(process.env.OM_KEYWORD_BOOST, 2.5),
     keyword_min_length: num(process.env.OM_KEYWORD_MIN_LENGTH, 3),
     max_ingest_bytes: num(process.env.OM_MAX_INGEST_BYTES, 50 * 1024 * 1024), // 50MB default
+    embed_log_retention_days: num(process.env.OM_EMBED_LOG_RETENTION_DAYS, 30),
+    dead_memory_min_salience: num(process.env.OM_DEAD_MEMORY_MIN_SALIENCE, 0.05),
+    dead_memory_max_age_days: num(process.env.OM_DEAD_MEMORY_MAX_AGE_DAYS, 90),
 };

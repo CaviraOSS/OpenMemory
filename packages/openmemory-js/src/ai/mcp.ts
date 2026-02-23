@@ -285,7 +285,7 @@ export const create_mcp_srv = () => {
 
     registry.tool(
         "openmemory_store",
-        "Persist new content into OpenMemory (HSG contextual memory and/or temporal facts)",
+        "Persist new content into OpenMemory (HSG contextual memory and/or temporal facts). Set metadata.decay_disabled=true to pin a memory (prevents salience decay and auto-expiry)",
         {
             content: z.string().min(1).describe("Raw memory text to store"),
             type: z
