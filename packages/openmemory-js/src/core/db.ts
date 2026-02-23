@@ -173,10 +173,12 @@ if (is_pg) {
         await pg.query(`create extension if not exists vector`);
         console.error("[DB] pgvector extension enabled");
         await pg.query(
-            `create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0,upsert_key text)`,
+            `create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0,upsert_key text,dedup_count integer default 0,dedup_last_at bigint)`,
         );
-        // Migration guard: add upsert_key column if missing on existing databases
+        // Migration guards: add columns if missing on existing databases
         await pg.query(`ALTER TABLE ${m} ADD COLUMN IF NOT EXISTS upsert_key text`).catch(() => {});
+        await pg.query(`ALTER TABLE ${m} ADD COLUMN IF NOT EXISTS dedup_count integer default 0`).catch(() => {});
+        await pg.query(`ALTER TABLE ${m} ADD COLUMN IF NOT EXISTS dedup_last_at bigint`).catch(() => {});
         await pg.query(
             `create table if not exists ${v}(id uuid,sector text,user_id text,v vector,dim integer not null,primary key(id,sector))`,
         );
@@ -594,10 +596,12 @@ if (is_pg) {
         db.run("PRAGMA locking_mode=NORMAL");
         db.run("PRAGMA busy_timeout=5000");
         db.run(
-            `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0,upsert_key text)`,
+            `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0,upsert_key text,dedup_count integer default 0,dedup_last_at integer)`,
         );
-        // Migration guard: add upsert_key column if missing on existing databases
+        // Migration guards: add columns if missing on existing databases
         db.run(`ALTER TABLE memories ADD COLUMN upsert_key text`, () => {});
+        db.run(`ALTER TABLE memories ADD COLUMN dedup_count integer default 0`, () => {});
+        db.run(`ALTER TABLE memories ADD COLUMN dedup_last_at integer`, () => {});
         db.run(
             `create table if not exists ${sqlite_vector_table}(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
         );

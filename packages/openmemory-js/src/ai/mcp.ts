@@ -147,6 +147,11 @@ export const create_mcp_srv = () => {
                 .max(1)
                 .optional()
                 .describe("Minimum salience threshold (for HSG queries)"),
+            metadata_only: z
+                .boolean()
+                .optional()
+                .default(false)
+                .describe("Return only metadata (id, score, sector) without content. Useful for lightweight lookups"),
             user_id: z
                 .string()
                 .trim()
@@ -162,6 +167,7 @@ export const create_mcp_srv = () => {
             k,
             sector,
             min_salience,
+            metadata_only,
             user_id,
         }) => {
             const _t0 = Date.now();
@@ -192,7 +198,7 @@ export const create_mcp_srv = () => {
                     salience: Number(m.salience.toFixed(4)),
                     last_seen_at: m.last_seen_at,
                     path: m.path,
-                    content: m.content,
+                    ...(metadata_only ? {} : { content: m.content }),
                 }));
             }
 
@@ -216,7 +222,7 @@ export const create_mcp_srv = () => {
                     valid_from: f.valid_from,
                     valid_to: f.valid_to,
                     confidence: Number(f.confidence.toFixed(4)),
-                    content: `${f.subject} ${f.predicate} ${f.object}`,
+                    ...(metadata_only ? {} : { content: `${f.subject} ${f.predicate} ${f.object}` }),
                 }));
             }
 
@@ -614,6 +620,8 @@ export const create_mcp_srv = () => {
                 updated_at: mem.updated_at,
                 last_seen_at: mem.last_seen_at,
                 user_id: mem.user_id,
+                dedup_count: mem.dedup_count ?? 0,
+                dedup_last_at: mem.dedup_last_at ?? null,
                 tags: p(mem.tags || "[]"),
                 metadata: p(mem.meta || "{}"),
                 sectors: include_vectors
@@ -627,6 +635,68 @@ export const create_mcp_srv = () => {
             return _result;
         },
     );
+    registry.tool(
+        "openmemory_stats",
+        "Return aggregate statistics about the OpenMemory instance (memory counts, sector distribution, dedup stats, growth)",
+        {
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Restrict stats to a specific user identifier"),
+        },
+        async ({ user_id }) => {
+            const _t0 = Date.now();
+            const u = uid(user_id);
+            const where = u ? `WHERE user_id = ?` : "";
+            const params = u ? [u] : [];
+
+            const [total_row] = await all_async(
+                `SELECT COUNT(*) as total FROM ${memories_table} ${where}`,
+                params,
+            );
+            const sector_rows = await all_async(
+                `SELECT primary_sector, COUNT(*) as count, ROUND(AVG(salience), 4) as avg_salience FROM ${memories_table} ${where} GROUP BY primary_sector`,
+                params,
+            );
+            const [dedup_row] = await all_async(
+                `SELECT COALESCE(SUM(dedup_count), 0) as total_dedup, COUNT(CASE WHEN dedup_count > 0 THEN 1 END) as deduped_memories FROM ${memories_table} ${where}`,
+                params,
+            );
+            const seven_days_ago = Date.now() - 7 * 24 * 60 * 60 * 1000;
+            const [growth_row] = await all_async(
+                `SELECT COUNT(*) as new_7d FROM ${memories_table} ${where ? where + ' AND' : 'WHERE'} created_at > ?`,
+                [...params, seven_days_ago],
+            );
+            const [orphan_row] = await all_async(
+                `SELECT COUNT(*) as orphans FROM ${memories_table} m ${where ? where + ' AND' : 'WHERE'} NOT EXISTS (SELECT 1 FROM waypoints w WHERE w.src_id = m.id OR w.dst_id = m.id)`,
+                params,
+            );
+
+            const stats = {
+                total_memories: total_row?.total ?? 0,
+                sectors: sector_rows.map((r: any) => ({
+                    sector: r.primary_sector,
+                    count: r.count,
+                    avg_salience: r.avg_salience,
+                })),
+                dedup: {
+                    total_dedup_events: dedup_row?.total_dedup ?? 0,
+                    memories_with_dedup: dedup_row?.deduped_memories ?? 0,
+                },
+                growth_7d: growth_row?.new_7d ?? 0,
+                orphan_memories: orphan_row?.orphans ?? 0,
+            };
+
+            const _result = {
+                content: [{ type: "text", text: JSON.stringify(stats, null, 2) }],
+            };
+            console.error(`[MCP] tool=openmemory_stats dur=${Date.now() - _t0}ms out=${JSON.stringify(_result).length}b`);
+            return _result;
+        },
+    );
+
     registry.apply(srv);
 
     srv.resource(

@@ -454,6 +454,7 @@ import {
     run_async,
     transaction,
     log_maint_op,
+    memories_table,
 } from "../core/db";
 export async function create_cross_sector_waypoints(
     prim_id: string,
@@ -663,6 +664,7 @@ import {
     EmbeddingResult,
 } from "./embed";
 import { chunk_text } from "../utils/chunking";
+import { memory_dedup_total, memory_dedup_hamming } from "../core/metrics";
 import { j } from "../utils";
 import { keyword_filter_memories, extract_keywords } from "../utils/keyword";
 import { save_version, compute_diff, generate_change_summary } from "../core/versioning";
@@ -1074,9 +1076,18 @@ export async function add_hsg_memory(
     const simhash = compute_simhash(content);
     const existing = await q.get_mem_by_simhash.get(simhash);
     if (existing && hamming_dist(simhash, existing.simhash) <= 3) {
+        const dist = hamming_dist(simhash, existing.simhash);
         const now = Date.now();
         const boosted_sal = Math.min(1, existing.salience + 0.15);
         await q.upd_seen.run(existing.id, now, boosted_sal, now);
+        // Increment dedup tracking counters
+        await run_async(
+            `UPDATE ${memories_table} SET dedup_count = COALESCE(dedup_count, 0) + 1, dedup_last_at = ? WHERE id = ?`,
+            [now, existing.id],
+        );
+        // Record dedup metrics
+        memory_dedup_total.inc({ sector: existing.primary_sector });
+        memory_dedup_hamming.observe(dist);
         // Fetch actual stored sectors rather than assuming only primary
         const vecs = await vector_store.getVectorsById(existing.id);
         const actual_sectors = vecs.map((v: any) => v.sector);

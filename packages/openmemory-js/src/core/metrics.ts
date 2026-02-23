@@ -203,6 +203,52 @@ info_gauge.set(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Dedup Metrics (OM-10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const memory_dedup_total = new client.Counter({
+    name: "openmemory_memory_dedup_total",
+    help: "Total number of deduplicated memory operations",
+    labelNames: ["sector"] as const,
+    registers: [registry],
+});
+
+export const memory_dedup_hamming = new client.Histogram({
+    name: "openmemory_memory_dedup_hamming",
+    help: "Hamming distance distribution of dedup matches",
+    buckets: [0, 1, 2, 3],
+    registers: [registry],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Operational Gauges (OM-12)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const orphan_memories = new client.Gauge({
+    name: "openmemory_orphan_memories",
+    help: "Number of memories with no waypoint links",
+    registers: [registry],
+});
+
+export const memories_growth_7d = new client.Gauge({
+    name: "openmemory_memories_growth_7d",
+    help: "Net memory growth over the last 7 days",
+    registers: [registry],
+});
+
+export const maintenance_pruned_embed_logs = new client.Gauge({
+    name: "openmemory_maintenance_pruned_embed_logs",
+    help: "Embed log rows pruned in last maintenance run",
+    registers: [registry],
+});
+
+export const maintenance_expired_memories = new client.Gauge({
+    name: "openmemory_maintenance_expired_memories",
+    help: "Expired memories cleaned in last maintenance run",
+    registers: [registry],
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Helper Functions
 // ─────────────────────────────────────────────────────────────────────────────
 

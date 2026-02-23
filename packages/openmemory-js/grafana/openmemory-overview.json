@@ -1,0 +1,213 @@
+{
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "",
+      "type": "datasource",
+      "pluginId": "prometheus"
+    }
+  ],
+  "title": "OpenMemory Overview",
+  "uid": "openmemory-overview",
+  "tags": ["openmemory"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Total Memories",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(openmemory_memories_total)",
+          "legendFormat": "total"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Dedup Events (total)",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(openmemory_memory_dedup_total)",
+          "legendFormat": "dedup"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Orphan Memories",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "expr": "openmemory_orphan_memories",
+          "legendFormat": "orphans"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "7-day Growth",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "openmemory_memories_growth_7d",
+          "legendFormat": "new"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Database Size",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      },
+      "targets": [
+        {
+          "expr": "openmemory_database_size_bytes",
+          "legendFormat": "size"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Embedding Cost (USD)",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "fieldConfig": {
+        "defaults": { "unit": "currencyUSD", "decimals": 4 }
+      },
+      "targets": [
+        {
+          "expr": "sum(openmemory_embedding_cost_dollars_total)",
+          "legendFormat": "cost"
+        }
+      ]
+    },
+    {
+      "type": "piechart",
+      "title": "Memories by Sector",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "expr": "openmemory_memories_total",
+          "legendFormat": "{{sector}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Dedup Rate (per minute)",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(openmemory_memory_dedup_total[5m])) * 60",
+          "legendFormat": "dedup/min"
+        }
+      ]
+    },
+    {
+      "type": "histogram",
+      "title": "Dedup Hamming Distance Distribution",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(openmemory_memory_dedup_hamming_bucket[5m])) by (le)",
+          "legendFormat": "{{le}}",
+          "format": "heatmap"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Rate (per second)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum(rate(openmemory_http_requests_total[5m])) by (method)",
+          "legendFormat": "{{method}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Request Duration (p50, p95, p99)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(openmemory_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(openmemory_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(openmemory_http_request_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Embedding Requests",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "sum(rate(openmemory_embedding_requests_total[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Embedding Duration (p50, p95)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(openmemory_embedding_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(openmemory_embedding_duration_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Background Task Duration",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "targets": [
+        {
+          "expr": "openmemory_background_task_duration_seconds",
+          "legendFormat": "{{task_name}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Maintenance: Pruned Embed Logs",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 28 },
+      "targets": [
+        {
+          "expr": "openmemory_maintenance_pruned_embed_logs",
+          "legendFormat": "pruned"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Maintenance: Expired Memories",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 28 },
+      "targets": [
+        {
+          "expr": "openmemory_maintenance_expired_memories",
+          "legendFormat": "expired"
+        }
+      ]
+    }
+  ]
+}
