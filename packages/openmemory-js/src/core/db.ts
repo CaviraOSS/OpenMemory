@@ -18,6 +18,7 @@ type q_type = {
     del_mem: { run: (...p: any[]) => Promise<void> };
     get_mem: { get: (id: string) => Promise<any> };
     get_mem_by_simhash: { get: (simhash: string) => Promise<any> };
+    get_mem_by_upsert_key: { get: (upsert_key: string, user_id: string | null, user_id2: string | null) => Promise<any> };
     all_mem: { all: (limit: number, offset: number) => Promise<any[]> };
     all_mem_by_sector: {
         all: (sector: string, limit: number, offset: number) => Promise<any[]>;
@@ -172,8 +173,10 @@ if (is_pg) {
         await pg.query(`create extension if not exists vector`);
         console.error("[DB] pgvector extension enabled");
         await pg.query(
-            `create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0)`,
+            `create table if not exists ${m}(id uuid primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at bigint,updated_at bigint,last_seen_at bigint,salience double precision,decay_lambda double precision,version integer default 1,mean_dim integer,mean_vec bytea,compressed_vec bytea,feedback_score double precision default 0,upsert_key text)`,
         );
+        // Migration guard: add upsert_key column if missing on existing databases
+        await pg.query(`ALTER TABLE ${m} ADD COLUMN IF NOT EXISTS upsert_key text`).catch(() => {});
         await pg.query(
             `create table if not exists ${v}(id uuid,sector text,user_id text,v vector,dim integer not null,primary key(id,sector))`,
         );
@@ -368,7 +371,7 @@ if (is_pg) {
         ins_mem: {
             run: (...p) =>
                 run_async(
-                    `insert into ${m}(id,user_id,segment,content,simhash,primary_sector,tags,meta,created_at,updated_at,last_seen_at,salience,decay_lambda,version,mean_dim,mean_vec,compressed_vec,feedback_score) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) on conflict(id) do update set user_id=excluded.user_id,segment=excluded.segment,content=excluded.content,simhash=excluded.simhash,primary_sector=excluded.primary_sector,tags=excluded.tags,meta=excluded.meta,created_at=excluded.created_at,updated_at=excluded.updated_at,last_seen_at=excluded.last_seen_at,salience=excluded.salience,decay_lambda=excluded.decay_lambda,version=excluded.version,mean_dim=excluded.mean_dim,mean_vec=excluded.mean_vec,compressed_vec=excluded.compressed_vec,feedback_score=excluded.feedback_score`,
+                    `insert into ${m}(id,user_id,segment,content,simhash,primary_sector,tags,meta,created_at,updated_at,last_seen_at,salience,decay_lambda,version,mean_dim,mean_vec,compressed_vec,feedback_score,upsert_key) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) on conflict(id) do update set user_id=excluded.user_id,segment=excluded.segment,content=excluded.content,simhash=excluded.simhash,primary_sector=excluded.primary_sector,tags=excluded.tags,meta=excluded.meta,created_at=excluded.created_at,updated_at=excluded.updated_at,last_seen_at=excluded.last_seen_at,salience=excluded.salience,decay_lambda=excluded.decay_lambda,version=excluded.version,mean_dim=excluded.mean_dim,mean_vec=excluded.mean_vec,compressed_vec=excluded.compressed_vec,feedback_score=excluded.feedback_score,upsert_key=excluded.upsert_key`,
                     p,
                 ),
         },
@@ -419,6 +422,13 @@ if (is_pg) {
                 get_async(
                     `select * from ${m} where simhash=$1 order by salience desc limit 1`,
                     [simhash],
+                ),
+        },
+        get_mem_by_upsert_key: {
+            get: (upsert_key, user_id, user_id2) =>
+                get_async(
+                    `select * from ${m} where upsert_key=$1 and (user_id=$2 or (user_id is null and $3 is null)) limit 1`,
+                    [upsert_key, user_id, user_id2],
                 ),
         },
         all_mem: {
@@ -584,8 +594,10 @@ if (is_pg) {
         db.run("PRAGMA locking_mode=NORMAL");
         db.run("PRAGMA busy_timeout=5000");
         db.run(
-            `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0)`,
+            `create table if not exists memories(id text primary key,user_id text,segment integer default 0,content text not null,simhash text,primary_sector text not null,tags text,meta text,created_at integer,updated_at integer,last_seen_at integer,salience real,decay_lambda real,version integer default 1,mean_dim integer,mean_vec blob,compressed_vec blob,feedback_score real default 0,upsert_key text)`,
         );
+        // Migration guard: add upsert_key column if missing on existing databases
+        db.run(`ALTER TABLE memories ADD COLUMN upsert_key text`, () => {});
         db.run(
             `create table if not exists ${sqlite_vector_table}(id text not null,sector text not null,user_id text,v blob not null,dim integer not null,primary key(id,sector))`,
         );
@@ -841,7 +853,7 @@ if (is_pg) {
         ins_mem: {
             run: (...p) =>
                 exec(
-                    "insert into memories(id,user_id,segment,content,simhash,primary_sector,tags,meta,created_at,updated_at,last_seen_at,salience,decay_lambda,version,mean_dim,mean_vec,compressed_vec,feedback_score) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "insert into memories(id,user_id,segment,content,simhash,primary_sector,tags,meta,created_at,updated_at,last_seen_at,salience,decay_lambda,version,mean_dim,mean_vec,compressed_vec,feedback_score,upsert_key) values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     p,
                 ),
         },
@@ -892,6 +904,13 @@ if (is_pg) {
                 one(
                     "select * from memories where simhash=? order by salience desc limit 1",
                     [simhash],
+                ),
+        },
+        get_mem_by_upsert_key: {
+            get: (upsert_key, user_id, user_id2) =>
+                one(
+                    "select * from memories where upsert_key=? and (user_id=? or (user_id is null and ? is null)) limit 1",
+                    [upsert_key, user_id, user_id2],
                 ),
         },
         all_mem: {

@@ -2,7 +2,7 @@ import { add_hsg_memory } from "../memory/hsg";
 import { q, transaction } from "../core/db";
 import { rid, now, j } from "../utils";
 import { extractText, ExtractionResult } from "./extract";
-import { enrichDocumentMetadata } from "./document_metadata";
+import { enrichDocumentMetadata, parse_frontmatter, split_by_sections } from "./document_metadata";
 
 const LG = 8000,
     SEC = 3000;
@@ -11,6 +11,7 @@ export interface ingestion_cfg {
     force_root?: boolean;
     sec_sz?: number;
     lg_thresh?: number;
+    section_strategy?: 'single' | 'by_section';
 }
 export interface IngestionResult {
     root_memory_id: string;
@@ -133,6 +134,37 @@ export async function ingestDocument(
     const ex = await extractText(t, data);
     const { text, metadata: exMeta } = ex;
     const enrichedMeta = enrichDocumentMetadata(text, meta);
+
+    // Section-aware ingestion for markdown documents
+    if (cfg?.section_strategy === 'by_section' && (t === 'md' || t === 'markdown')) {
+        const { meta: fm_meta, body } = parse_frontmatter(text);
+        const sections = split_by_sections(body);
+        // Create root memory for the document
+        const root_res = await add_hsg_memory(
+            (meta?.title as string) || 'Document root',
+            j([]),
+            { ...fm_meta, ...enrichedMeta, ...exMeta, is_root: true, ingestion_strategy: 'by_section', ingested_at: now() },
+            user_id || undefined,
+        );
+        // Create child memories per section
+        for (const sec of sections) {
+            const sec_content = `## ${sec.heading}\n${sec.body}`;
+            await add_hsg_memory(
+                sec_content,
+                j([]),
+                { ...fm_meta, ...enrichedMeta, section: sec.heading },
+                user_id || undefined,
+            );
+        }
+        return {
+            root_memory_id: root_res.id,
+            child_count: sections.length,
+            total_tokens: exMeta.estimated_tokens,
+            strategy: 'root-child' as const,
+            extraction: exMeta,
+        };
+    }
+
     const useRC = cfg?.force_root || exMeta.estimated_tokens > th;
 
     if (!useRC) {

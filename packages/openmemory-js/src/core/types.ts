@@ -5,6 +5,7 @@ export type add_req = {
     salience?: number;
     decay_lambda?: number;
     user_id?: string;
+    upsert_key?: string;
 };
 export type q_req = {
     query: string;
@@ -48,14 +49,14 @@ export type ingest_req = {
     content_type: "pdf" | "docx" | "html" | "md" | "txt" | "audio";
     data: string;
     metadata?: Record<string, unknown>;
-    config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number };
+    config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number; section_strategy?: 'single' | 'by_section' };
     user_id?: string;
 };
 
 export type ingest_url_req = {
     url: string;
     metadata?: Record<string, unknown>;
-    config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number };
+    config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number; section_strategy?: 'single' | 'by_section' };
     user_id?: string;
 };
 

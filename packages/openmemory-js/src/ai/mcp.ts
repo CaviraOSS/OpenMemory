@@ -329,8 +329,14 @@ export const create_mcp_srv = () => {
                 .describe(
                     "Associate the memory with a specific user identifier",
                 ),
+            upsert_key: z
+                .string()
+                .optional()
+                .describe(
+                    "Stable key for update-in-place semantics (e.g. 'handoff:homelab'). If a memory with this key already exists, its content is replaced rather than a new memory being created.",
+                ),
         },
-        async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
+        async ({ content, type = "contextual", facts, tags, metadata, user_id, upsert_key }) => {
             const u = uid(user_id);
             const results: any = { type };
 
@@ -351,11 +357,14 @@ export const create_mcp_srv = () => {
                     j(tags || []),
                     metadata,
                     u,
+                    upsert_key,
                 );
                 results.hsg = {
                     id: res.id,
                     primary_sector: res.primary_sector,
                     sectors: res.sectors,
+                    deduplicated: res.deduplicated ?? false,
+                    upserted: res.upserted ?? false,
                 };
 
                 if (u) {
@@ -398,12 +407,19 @@ export const create_mcp_srv = () => {
 
 
             let txt = "";
-            if (type === "contextual") {
-                txt = `Stored memory ${results.hsg.id} (primary=${results.hsg.primary_sector}) across sectors: ${results.hsg.sectors.join(", ")}${u ? ` [user=${u}]` : ""}`;
+            if (type === "contextual" || type === "both") {
+                if (results.hsg.deduplicated) {
+                    txt = `Near-duplicate detected \u2014 reinforced existing memory ${results.hsg.id} (salience boosted). No new memory created.`;
+                } else if (results.hsg.upserted) {
+                    txt = `Updated existing memory ${results.hsg.id} in-place (upsert_key=${upsert_key}).`;
+                } else if (type === "contextual") {
+                    txt = `Stored memory ${results.hsg.id} (primary=${results.hsg.primary_sector}) across sectors: ${results.hsg.sectors.join(", ")}`;
+                } else {
+                    txt = `Stored in both systems: HSG memory ${results.hsg.id} + ${results.temporal.length} temporal fact(s)`;
+                }
+                if (u) txt += ` [user=${u}]`;
             } else if (type === "factual") {
                 txt = `Stored ${results.temporal.length} temporal fact(s)${u ? ` [user=${u}]` : ""}`;
-            } else {
-                txt = `Stored in both systems: HSG memory ${results.hsg.id} + ${results.temporal.length} temporal fact(s)${u ? ` [user=${u}]` : ""}`;
             }
 
             return {

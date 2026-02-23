@@ -27,6 +27,7 @@ export function mem(app: any) {
                 j(b.tags || []),
                 b.metadata,
                 b.user_id,
+                b.upsert_key,
             );
             res.json(m);
 
@@ -51,6 +52,11 @@ export function mem(app: any) {
         const b = req.body as ingest_req;
         if (!b?.content_type || !b?.data)
             return res.status(400).json({ err: "missing" });
+        // Pre-decode payload size validation
+        const decoded_size = (b.data.length * 3) / 4;
+        if (decoded_size > env.max_ingest_bytes) {
+            return res.status(413).json({ err: 'payload_too_large', max_bytes: env.max_ingest_bytes, received_approx: decoded_size });
+        }
         try {
             const r = await ingestDocument(
                 b.content_type,

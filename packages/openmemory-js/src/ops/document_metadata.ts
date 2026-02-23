@@ -28,6 +28,40 @@ function inferDocType(text: string): string | undefined {
     return undefined;
 }
 
+export function parse_frontmatter(content: string): { meta: Record<string, unknown>; body: string } {
+    const fm_re = /^---\n([\s\S]*?)\n---\n/;
+    const match = content.match(fm_re);
+    if (!match) return { meta: {}, body: content };
+    const body = content.slice(match[0].length);
+    const meta: Record<string, unknown> = {};
+    for (const line of match[1].split('\n')) {
+        const idx = line.indexOf(':');
+        if (idx > 0) {
+            meta[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+        }
+    }
+    return { meta, body };
+}
+
+export function split_by_sections(content: string): Array<{ heading: string; body: string }> {
+    const sections: Array<{ heading: string; body: string }> = [];
+    const heading_re = /^#{1,3} (.+)$/gm;
+    let last_idx = 0;
+    let last_heading = '__root__';
+    let match: RegExpExecArray | null;
+    while ((match = heading_re.exec(content)) !== null) {
+        if (match.index > last_idx) {
+            sections.push({ heading: last_heading, body: content.slice(last_idx, match.index).trim() });
+        }
+        last_heading = match[1];
+        last_idx = match.index + match[0].length + 1;
+    }
+    if (last_idx < content.length) {
+        sections.push({ heading: last_heading, body: content.slice(last_idx).trim() });
+    }
+    return sections.filter(s => s.body.length > 0);
+}
+
 export function enrichDocumentMetadata(
     text: string,
     metadata?: Record<string, unknown>,

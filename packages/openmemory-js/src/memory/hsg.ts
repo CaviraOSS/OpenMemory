@@ -1052,13 +1052,25 @@ export async function add_hsg_memory(
     tags?: string,
     metadata?: any,
     user_id?: string,
+    upsert_key?: string,
 ): Promise<{
     id: string;
     primary_sector: string;
     sectors: string[];
     chunks?: number;
     deduplicated?: boolean;
+    upserted?: boolean;
 }> {
+    // Named upsert: if upsert_key matches an existing memory, update in-place
+    if (upsert_key) {
+        const existing_uk = await q.get_mem_by_upsert_key.get(upsert_key, user_id ?? null, user_id ?? null);
+        if (existing_uk) {
+            const now = Date.now();
+            await q.upd_mem.run(content, tags ?? null, JSON.stringify(metadata ?? {}), now, existing_uk.id);
+            return { id: existing_uk.id, primary_sector: existing_uk.primary_sector, sectors: [existing_uk.primary_sector], upserted: true };
+        }
+    }
+
     const simhash = compute_simhash(content);
     const existing = await q.get_mem_by_simhash.get(simhash);
     if (existing && hamming_dist(simhash, existing.simhash) <= 3) {
@@ -1126,6 +1138,7 @@ export async function add_hsg_memory(
             null,
             null,
             0,
+            upsert_key || null,
         );
         const emb_res = await embedMultiSector(
             id,

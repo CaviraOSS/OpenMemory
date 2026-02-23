@@ -118,4 +118,5 @@ export const env = {
     summary_layers: num(process.env.OM_SUMMARY_LAYERS, 3),
     keyword_boost: num(process.env.OM_KEYWORD_BOOST, 2.5),
     keyword_min_length: num(process.env.OM_KEYWORD_MIN_LENGTH, 3),
+    max_ingest_bytes: num(process.env.OM_MAX_INGEST_BYTES, 50 * 1024 * 1024), // 50MB default
 };
