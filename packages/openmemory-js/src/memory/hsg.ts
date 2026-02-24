@@ -1049,6 +1049,22 @@ async function ensure_user_exists(user_id: string): Promise<void> {
     }
 }
 
+/**
+ * Strip raw Claude API content blocks from memory content before storage.
+ * Thinking blocks, tool_use blocks, and tool_result blocks are internal
+ * artefacts that should never be persisted verbatim.
+ */
+function sanitise_content(raw: string): string {
+    // Match JSON objects with "type": "<block_type>" — handles whitespace variants
+    const block_types = ["thinking", "tool_use", "tool_result"];
+    let out = raw;
+    for (const t of block_types) {
+        // Non-greedy match of { ... } containing the type discriminant
+        out = out.replace(new RegExp(`\\{[^{}]*"type"\\s*:\\s*"${t}"[\\s\\S]*?\\}`, "g"), "");
+    }
+    return out.trim();
+}
+
 export async function add_hsg_memory(
     content: string,
     tags?: string,
@@ -1063,6 +1079,12 @@ export async function add_hsg_memory(
     deduplicated?: boolean;
     upserted?: boolean;
 }> {
+    // Strip raw API content blocks (thinking, tool_use, tool_result) before storage
+    content = sanitise_content(content);
+    if (content.length < 20) {
+        throw new Error("memory_content_empty_after_sanitise");
+    }
+
     // Named upsert: if upsert_key matches an existing memory, update in-place
     if (upsert_key) {
         const existing_uk = await q.get_mem_by_upsert_key.get(upsert_key);
