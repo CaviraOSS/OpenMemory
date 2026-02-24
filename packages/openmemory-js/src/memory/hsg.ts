@@ -1080,8 +1080,9 @@ export async function add_hsg_memory(
     upserted?: boolean;
 }> {
     // Strip raw API content blocks (thinking, tool_use, tool_result) before storage
+    const raw_len = content.length;
     content = sanitise_content(content);
-    if (content.length < 20) {
+    if (content.trim().length === 0 && raw_len > 0) {
         throw new Error("memory_content_empty_after_sanitise");
     }
 
