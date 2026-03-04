@@ -1,6 +1,8 @@
-[![Cavira](/.github/siray.png)](https://www.siray.ai?ytag=affiliate_website_caviraoss_0212)
+# 🚧 This project is currently being fully rewritten.
 
-# OpenMemory
+Expect breaking changes and potential bugs.  
+If you find an issue, please open a GitHub issue with details so it can be tracked and resolved.
+## OpenMemory
 
 > **Real long-term memory for AI agents. Not RAG. Not a vector DB. Self-hosted, Python + Node.**
 
