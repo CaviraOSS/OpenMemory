@@ -809,4 +809,4 @@ Query `embed_logs` table for:
 - [Why.md](./Why.md) - Architectural rationale
 - [CONTRIBUTING.md](./CONTRIBUTING.md) - Development guide
 - [SECURITY.md](./SECURITY.md) - Security policy
-- [API Documentation](./docs/api.md) - Endpoint details
+- [API Documentation](./docs/api-server.md) - Endpoint details
