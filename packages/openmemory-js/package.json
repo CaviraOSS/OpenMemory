@@ -18,7 +18,7 @@
     "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "^3.932.0",
         "@azure/msal-node": "^2.0.0",
-        "@modelcontextprotocol/sdk": "^1.22.0",
+        "@modelcontextprotocol/sdk": "^1.27.1",
         "@notionhq/client": "^2.2.0",
         "@octokit/rest": "^21.0.0",
         "cheerio": "^1.0.0",
