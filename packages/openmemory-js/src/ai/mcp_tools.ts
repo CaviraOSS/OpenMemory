@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema, McpError, ErrorCode } from "@modelcontextprotocol/sdk/types.js";
@@ -35,7 +35,7 @@ export class ToolRegistry {
                 tools: Array.from(this.tools.values()).map(t => {
                     const jsonSchema = zodToJsonSchema(t.inputSchema, {
                         target: "jsonSchema2019-09"
-                    }) as any;
+                    }) as Record<string, unknown>;
 
 
                     if (jsonSchema && typeof jsonSchema === 'object') {
