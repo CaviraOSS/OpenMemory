@@ -172,6 +172,16 @@ embeddings={
 }
 ```
 
+#### minimax
+```python
+embeddings={
+    'provider': 'minimax',
+    'apiKey': os.getenv('MINIMAX_API_KEY')
+}
+```
+
+> uses MiniMax's `embo-01` model (1536 dimensions). for chat completions, MiniMax supports `MiniMax-M2.7` and `MiniMax-M2.5-highspeed` via OpenAI-compatible API.
+
 #### aws bedrock
 ```python
 embeddings={
