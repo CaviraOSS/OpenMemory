@@ -5,5 +5,6 @@ from .gemini import GeminiAdapter
 from .aws import AwsAdapter
 from .synthetic import SyntheticAdapter
 from .siray import SirayAdapter
+from .minimax import MiniMaxAdapter
 
-__all__ = ["AIAdapter", "OpenAIAdapter", "OllamaAdapter", "GeminiAdapter", "AwsAdapter", "SyntheticAdapter", "SirayAdapter"]
+__all__ = ["AIAdapter", "OpenAIAdapter", "OllamaAdapter", "GeminiAdapter", "AwsAdapter", "SyntheticAdapter", "SirayAdapter", "MiniMaxAdapter"]

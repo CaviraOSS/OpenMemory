@@ -63,6 +63,11 @@ class EnvConfig:
         self.siray_base_url = get("ai", "siray_base", "OM_SIRAY_BASE_URL", "https://api.siray.ai/v1")
         self.siray_model = get("ai", "siray_model", "OM_SIRAY_MODEL", None)
 
+        self.minimax_key = get("ai", "minimax_key", "MINIMAX_API_KEY", "") or os.getenv("OM_MINIMAX_API_KEY")
+        self.minimax_base_url = get("ai", "minimax_base", "OM_MINIMAX_BASE_URL", "https://api.minimax.io/v1")
+        self.minimax_model = get("ai", "minimax_model", "OM_MINIMAX_MODEL", None)
+        self.minimax_embedding_model = os.getenv("OM_MINIMAX_EMBEDDING_MODEL")
+
         self.vec_dim = int(num(os.getenv("OM_VEC_DIM"), 1536))
         self.min_score = num(os.getenv("OM_MIN_SCORE"), 0.3)
         self.keyword_boost = num(os.getenv("OM_KEYWORD_BOOST"), 2.5)

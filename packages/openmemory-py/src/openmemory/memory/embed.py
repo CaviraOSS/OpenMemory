@@ -19,6 +19,7 @@ from ..ai.ollama import OllamaAdapter
 from ..ai.gemini import GeminiAdapter
 from ..ai.aws import AwsAdapter
 from ..ai.synthetic import SyntheticAdapter
+from ..ai.minimax import MiniMaxAdapter
 
 async def emb_dispatch(provider: str, t: str, s: str) -> List[float]:
     if provider == "synthetic":
@@ -31,6 +32,8 @@ async def emb_dispatch(provider: str, t: str, s: str) -> List[float]:
         return await GeminiAdapter().embed(t, model=env.gemini_embedding_model)
     if provider == "aws":
         return await AwsAdapter().embed(t, model=env.aws_embedding_model)
+    if provider == "minimax":
+        return await MiniMaxAdapter().embed(t, model=env.minimax_embedding_model)
 
     return await SyntheticAdapter(env.vec_dim or 768).embed(t, model=s)
 
