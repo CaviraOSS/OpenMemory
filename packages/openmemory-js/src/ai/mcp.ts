@@ -662,24 +662,8 @@ const extract_pay = async (req: IncomingMessage & { body?: any }) => {
 };
 
 export const mcp = (app: any) => {
-    const srv = create_mcp_srv();
-    const trans = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-        enableJsonResponse: true,
-    });
-    const srv_ready = srv
-        .connect(trans)
-        .then(() => {
-            console.error("[MCP] Server started and transport connected");
-        })
-        .catch((error) => {
-            console.error("[MCP] Failed to initialize transport:", error);
-            throw error;
-        });
-
     const handle_req = async (req: any, res: any) => {
         try {
-            await srv_ready;
             const pay = await extract_pay(req);
             if (!pay || typeof pay !== "object") {
                 send_err(res, -32600, "Request body must be a JSON object");
@@ -687,6 +671,16 @@ export const mcp = (app: any) => {
             }
             console.error("[MCP] Incoming request:", JSON.stringify(pay));
             set_hdrs(res);
+
+            // Create a fresh transport + server per request to support
+            // multiple clients (MCP SDK 1.27 rejects re-initialization
+            // on a single transport instance).
+            const srv = create_mcp_srv();
+            const trans = new StreamableHTTPServerTransport({
+                sessionIdGenerator: undefined,
+                enableJsonResponse: true,
+            });
+            await srv.connect(trans);
             await trans.handleRequest(req, res, pay);
         } catch (error) {
             console.error("[MCP] Error handling request:", error);
