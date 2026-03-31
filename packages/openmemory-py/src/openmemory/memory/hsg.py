@@ -12,7 +12,7 @@ from ..core.db import q, db, transaction
 from ..core.config import env
 from ..core.constants import SECTOR_CONFIGS
 from ..core.vector_store import vector_store as store
-from ..utils.text import canonical_token_set, canonical_tokens_from_text
+from ..utils.text import canonical_token_set, canonical_tokens_from_text, stable_text_fallback_hash
 from ..utils.chunking import chunk_text
 from ..utils.keyword import keyword_filter_memories, compute_keyword_overlap
 from ..utils.vectors import buf_to_vec, vec_to_buf, cos_sim
@@ -164,6 +164,8 @@ def boosted_sim(s: float) -> float:
 
 def compute_simhash(text: str) -> str:
     tokens = canonical_token_set(text)
+    if not tokens:
+        return stable_text_fallback_hash(text)
     hashes = []
     for t in tokens:
         h = 0
