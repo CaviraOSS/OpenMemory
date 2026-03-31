@@ -1,4 +1,5 @@
 import re
+import hashlib
 from typing import List, Set, Dict
 
 SYN_GRPS = [
@@ -35,10 +36,24 @@ STEM_RULES = [
     (r"s$", ""),
 ]
 
-TOK_PAT = re.compile(r"[a-z0-9]+")
+CJK_PAT = r"\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af"
+TOK_PAT = re.compile(rf"[a-z0-9]+|[{CJK_PAT}]+", re.I)
+
+
+def _expand_cjk_token(tok: str) -> List[str]:
+    if len(tok) <= 1:
+        return [tok]
+    return [tok[i : i + 2] for i in range(len(tok) - 1)]
 
 def tokenize(text: str) -> List[str]:
-    return [m.lower() for m in TOK_PAT.findall(text)]
+    res: List[str] = []
+    for tok in TOK_PAT.findall(text):
+        low = tok.lower()
+        if re.fullmatch(rf"[{CJK_PAT}]+", tok):
+            res.extend(_expand_cjk_token(tok))
+        else:
+            res.append(low)
+    return res
 
 def stem(tok: str) -> str:
     if len(tok) <= 3: return tok
@@ -85,3 +100,7 @@ def build_fts_query(text: str) -> str:
 
 def canonical_token_set(text: str) -> Set[str]:
     return set(canonical_tokens_from_text(text))
+
+
+def stable_text_fallback_hash(text: str) -> str:
+    return hashlib.blake2b(text.encode("utf-8"), digest_size=8).hexdigest()
