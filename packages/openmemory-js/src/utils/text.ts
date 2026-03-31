@@ -1,3 +1,5 @@
+import crypto from "node:crypto";
+
 const syn_grps = [
     ["prefer", "like", "love", "enjoy", "favor"],
     ["theme", "mode", "style", "layout"],
@@ -32,13 +34,28 @@ const stem_rules: Array<[RegExp, string]> = [
     [/ed$/, ""],
     [/s$/, ""],
 ];
-const tok_pat = /[a-z0-9]+/gi;
+const cjk_pat = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/u;
+const tok_pat = /[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/giu;
+
+const expand_cjk_token = (tok: string): string[] => {
+    if (tok.length <= 1) return [tok];
+    const expanded: string[] = [];
+    for (let i = 0; i < tok.length - 1; i++) {
+        expanded.push(tok.slice(i, i + 2));
+    }
+    return expanded;
+};
 
 export const tokenize = (text: string): string[] => {
     const toks: string[] = [];
     let m: RegExpExecArray | null;
     while ((m = tok_pat.exec(text))) {
-        toks.push(m[0].toLowerCase());
+        const tok = m[0];
+        if (cjk_pat.test(tok)) {
+            toks.push(...expand_cjk_token(tok));
+            continue;
+        }
+        toks.push(tok.toLowerCase());
     }
     return toks;
 };
@@ -100,6 +117,10 @@ export const build_fts_query = (text: string): string => {
 
 export const canonical_token_set = (text: string): Set<string> => {
     return new Set(canonical_tokens_from_text(text));
+};
+
+export const stable_text_fallback_hash = (text: string): string => {
+    return crypto.createHash("blake2b512").update(text, "utf8").digest("hex").slice(0, 16);
 };
 
 export const add_synonym_tokens = (toks: Iterable<string>): Set<string> => {
