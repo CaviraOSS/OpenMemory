@@ -31,7 +31,6 @@ Your model stays stateless. **Your app stops being amnesiac.**
 
 Spin up a shared OpenMemory backend (HTTP API + MCP + dashboard):
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/YOUR_TEMPLATE_ID)
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/CaviraOSS/OpenMemory)
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CaviraOSS/OpenMemory)
 
