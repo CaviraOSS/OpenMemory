@@ -6,7 +6,7 @@ OpenMemory provides a drop-in, SQL-native long-term memory layer for your AI age
 
 ### Python
 ```bash
-pip install openmemory
+pip install openmemory-py
 ```
 
 ### Node.js
