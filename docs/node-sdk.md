@@ -1,6 +1,6 @@
 # Node SDK Reference
 
-The `openmemory-node` package provides a TypeScript/JavaScript interface.
+The `openmemory-js` package provides a TypeScript/JavaScript interface.
 
 ## Installation
 
