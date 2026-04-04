@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { canonical_token_set } from "../utils/text";
+import { canonical_token_set, stable_text_fallback_hash } from "../utils/text";
 import { inc_q, dec_q, on_query_hit } from "./decay";
 import { env, tier } from "../core/cfg";
 import { cos_sim, buf_to_vec, vec_to_buf } from "../utils/index";
@@ -295,6 +295,9 @@ export function boosted_sim(s: number): number {
 }
 export function compute_simhash(text: string): string {
     const tokens = canonical_token_set(text);
+    if (!tokens.size) {
+        return stable_text_fallback_hash(text);
+    }
     const hashes = Array.from(tokens).map((t) => {
         let h = 0;
         for (let i = 0; i < t.length; i++) {
