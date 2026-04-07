@@ -27,17 +27,6 @@ Your model stays stateless. **Your app stops being amnesiac.**
 
 ---
 
-## ☁️ One‑click Deploy
-
-Spin up a shared OpenMemory backend (HTTP API + MCP + dashboard):
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/CaviraOSS/OpenMemory)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/CaviraOSS/OpenMemory)
-
-> Use the SDKs when you want **embedded local memory**. Use the server when you want **multi‑user org‑wide memory**.
-
----
-
 ## 1. TL;DR – Use It in 10 Seconds
 
 ### 🐍 Python (local-first)
