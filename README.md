@@ -7,7 +7,7 @@ If you find an issue, please open a GitHub issue with details so it can be track
 > **Real long-term memory for AI agents. Not RAG. Not a vector DB. Self-hosted, Python + Node.**
 
 [![VS Code Extension](https://img.shields.io/badge/VS%20Code-Extension-007ACC?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=Nullure.openmemory-vscode)
-[![Discord](https://img.shields.io/discord/1300368230320697404?label=Discord)](https://discord.gg/P7HaRayqTh)
+[![Discord](https://img.shields.io/discord/1300368230320697404?label=Discord)](https://discord.gg/93M9XSuEj6)
 [![PyPI](https://img.shields.io/pypi/v/openmemory-py.svg)](https://pypi.org/project/openmemory-py/)
 [![npm](https://img.shields.io/npm/v/openmemory-js.svg)](https://www.npmjs.com/package/openmemory-js)
 [![License](https://img.shields.io/github/license/CaviraOSS/OpenMemory)](LICENSE)
