@@ -30,7 +30,8 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
 
 # Install only production dependencies
-COPY package*.json ./
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/package-lock.json ./package-lock.json
 RUN npm install --omit=dev
 
 # Copy built assets from builder

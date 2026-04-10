@@ -3,7 +3,7 @@ services:
     name: openmemory
     env: node
     rootDir: packages/openmemory-js
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     plan: free
     autoDeploy: true
