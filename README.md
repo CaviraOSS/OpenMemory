@@ -179,7 +179,7 @@ git clone https://github.com/CaviraOSS/OpenMemory.git
 cd OpenMemory
 cp .env.example .env
 
-cd backend
+cd packages/openmemory-js
 npm install
 npm run dev   # default :8080
 ```
