@@ -9,6 +9,8 @@ export type add_req = {
 export type q_req = {
     query: string;
     k?: number;
+    startTime?: number;
+    endTime?: number;
     filters?: {
         tags?: string[];
         min_score?: number;

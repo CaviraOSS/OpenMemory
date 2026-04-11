@@ -41,7 +41,19 @@ if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
 app.use(req_tracker_mw());
 
 app.use((req: any, res: any, next: any) => {
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    const origin = req.headers.origin;
+    const isIdeRoute = (req.path || req.url || "").startsWith("/api/ide/");
+    const allowIdeOrigin =
+        env.ide_mode &&
+        typeof origin === "string" &&
+        env.ide_allowed_origins.includes(origin);
+
+    if (isIdeRoute && allowIdeOrigin) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Vary", "Origin");
+    } else {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+    }
     res.setHeader(
         "Access-Control-Allow-Methods",
         "GET,POST,PUT,PATCH,DELETE,OPTIONS",

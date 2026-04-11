@@ -17,7 +17,7 @@ The chat interface is now connected to the OpenMemory backend and can query memo
 First, make sure the OpenMemory backend is running:
 
 ```bash
-cd backend
+cd packages/openmemory-js
 npm install
 npm run dev
 ```
