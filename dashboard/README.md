@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenMemory Dashboard
 
-## Getting Started
+This app is the optional OpenMemory dashboard UI.
 
-First, run the development server:
+## What it is
+
+- a separate Next.js app in `dashboard/`
+- designed to talk to an OpenMemory backend over HTTP
+- not bundled into the bare `packages/openmemory-js` npm install
+
+If you are running OpenMemory without the dashboard, you only need the backend in `packages/openmemory-js`.
+
+## Backend requirement
+
+Start the backend first:
 
 ```bash
+cd packages/openmemory-js
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+By default the dashboard expects the backend at `http://localhost:8080`.
+If you use a different backend URL, configure it in `.env.local` as described in `CHAT_SETUP.md`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Run the dashboard locally
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+cd dashboard
+npm install
+npm run dev
+```
 
-## Learn More
+Then open <http://localhost:3000>.
 
-To learn more about Next.js, take a look at the following resources:
+## Docker
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+If you want the full local stack, you can also run OpenMemory with Docker and enable the dashboard/UI profile from the repository root.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Related docs
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `README.md` — top-level project overview
+- `dashboard/CHAT_SETUP.md` — dashboard-to-backend setup details
+- `packages/openmemory-js/README.md` — backend / SDK docs
