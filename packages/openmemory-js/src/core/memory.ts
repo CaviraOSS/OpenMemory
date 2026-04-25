@@ -17,38 +17,57 @@ export class Memory {
         this.default_user = user_id || null;
     }
 
+    /**
+     * Store new content in the Hybrid Sector Graph (HSG).
+     * Automatically handles sector routing and embedding.
+     * 
+     * @param content Raw text to store
+     * @param opts Options including user_id, project_id, and tags
+     */
     async add(content: string, opts?: MemoryOptions) {
         const uid = opts?.user_id || this.default_user;
+        const proj = opts?.project_id || null;
         const tags = opts?.tags || [];
+        
+        // Clean metadata by removing handled fields
         const meta = { ...opts };
         delete meta.user_id;
+        delete meta.project_id;
         delete meta.tags;
-
-
-
-
-
 
         const tags_str = JSON.stringify(tags);
 
-
-
-        const res = await add_hsg_memory(content, tags_str, meta, uid ?? undefined);
+        // Store with project isolation if proj is provided
+        const res = await add_hsg_memory(content, tags_str, meta, uid ?? undefined, proj ?? undefined);
         return res;
     }
 
+    /**
+     * Retrieve a memory by its unique ID.
+     */
     async get(id: string) {
         return await q.get_mem.get(id);
     }
 
-    async search(query: string, opts?: { user_id?: string, limit?: number, sectors?: string[] }) {
-
+    /**
+     * Perform a hybrid semantic search across all brain sectors.
+     * Results are automatically filtered by user_id and project_id if provided.
+     * 
+     * @param query Search query text
+     * @param opts Options including limit, project_id, and sector filters
+     */
+    async search(query: string, opts?: { user_id?: string, project_id?: string, limit?: number, sectors?: string[] }) {
         const k = opts?.limit || 10;
         const uid = opts?.user_id || this.default_user;
+        const proj = opts?.project_id || null;
         const f: any = {};
+        
+        // Apply filters
         if (uid) f.user_id = uid;
+        if (proj) f.project_id = proj;
         if (opts?.sectors) f.sectors = opts.sectors;
 
+        // Perform hybrid search across sectors
         return await hsg_query(query, k, f);
     }
 

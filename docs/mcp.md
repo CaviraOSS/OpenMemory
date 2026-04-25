@@ -71,6 +71,7 @@ Store content in contextual memory, temporal facts, or both.
 | `tags` | string[] | No | - | Tags for contextual storage |
 | `metadata` | object | No | - | Additional metadata |
 | `user_id` | string | No | - | User identifier |
+| `project_id` | string | No | "system_global" | Project identifier for isolation |
 
 #### Facts Array Schema
 
@@ -124,6 +125,24 @@ Store content in contextual memory, temporal facts, or both.
 }
 ```
 
+### openmemory_store_project
+
+Store content in contextual memory or temporal facts, SCOPED to a specific PROJECT. Use this for project-specific designs, local variables, or scoped knowledge that should not bleed into other projects.
+
+#### Parameters
+
+Identical to `openmemory_store`, but `project_id` is RECOMMENDED to ensure proper isolation.
+
+#### Example
+
+```json
+{
+  "content": "Project uses Tailwind CSS for styling",
+  "project_id": "my_web_app",
+  "user_id": "user_123"
+}
+```
+
 ### openmemory_query
 
 Query contextual memories, temporal facts, or both.
@@ -140,6 +159,7 @@ Query contextual memories, temporal facts, or both.
 | `sector` | enum | No | - | Filter by sector (episodic, semantic, procedural, emotional, reflective) |
 | `min_salience` | number | No | - | Minimum salience threshold (0-1) |
 | `user_id` | string | No | - | User identifier |
+| `project_id` | string | No | - | Project isolation filter |
 
 #### Fact Pattern Schema
 
@@ -210,6 +230,7 @@ List recent memories.
 | `limit` | number | No | 10 | Number of memories to return (max 50) |
 | `sector` | enum | No | - | Filter by sector |
 | `user_id` | string | No | - | User identifier |
+| `project_id` | string | No | - | Project isolation filter |
 
 #### Example
 
@@ -232,6 +253,7 @@ Fetch a single memory by ID.
 | `id` | string | Yes | - | Memory identifier |
 | `include_vectors` | boolean | No | false | Include sector vector metadata |
 | `user_id` | string | No | - | User identifier |
+| `project_id` | string | No | - | Project isolation filter |
 
 #### Example
 

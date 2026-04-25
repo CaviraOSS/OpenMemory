@@ -16,17 +16,19 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const [projects, setProjects] = useState<string[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
-    // Load from localStorage on mount
+    // Load the last selected project from localStorage on mount
     useEffect(() => {
         const saved = localStorage.getItem("openmemory_current_project")
         if (saved && saved !== "null") {
             setCurrentProjectState(saved)
         }
+        // Fetch the list of available projects from the backend
         fetchProjects()
     }, [])
 
     const setCurrentProject = (id: string | null) => {
         setCurrentProjectState(id)
+        // Persist selection to localStorage
         if (id) {
             localStorage.setItem("openmemory_current_project", id)
         } else {

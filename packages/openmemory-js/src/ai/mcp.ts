@@ -379,8 +379,10 @@ export const create_mcp_srv = () => {
         },
     );
 
+    // PROPOSAL: Consider renaming this tool to openmemory_store_global in the future to distinguish from project-specific storage.
+    // The current name 'openmemory_store' is kept for architectural compatibility.
     registry.tool(
-        "openmemory_store_global",
+        "openmemory_store",
         "Persist new content as GLOBAL KNOWLEDGE. Use this for general coding best practices, common library knowledge, or universal system concepts. If unsure if the content is global vs project-specific, YOU MUST ASK THE USER for clarification.",
         {
             content: z.string().min(1).describe("Raw memory text to store"),
@@ -406,15 +408,18 @@ export const create_mcp_srv = () => {
         },
         async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
             const u = uid(user_id);
+            // Force global scope for this tool
             const proj = "system_global";
             const results: any = { type };
 
             if (type === "contextual" || type === "both") {
+                // Add to contextual memory system (HSG)
                 const res = await add_hsg_memory(content, j(tags || []), metadata, u, proj);
                 results.hsg = { id: res.id, primary_sector: res.primary_sector, sectors: res.sectors };
             }
 
             if ((type === "factual" || type === "both") && facts) {
+                // Add to factual graph system (Temporal)
                 const temporal_results = [];
                 for (const fact of facts) {
                     const valid_from = fact.valid_from ? new Date(fact.valid_from) : new Date();
@@ -651,7 +656,7 @@ export const create_mcp_srv = () => {
                 available_tools: [
                     "openmemory_query",
                     "openmemory_store_project",
-                    "openmemory_store_global",
+                    "openmemory_store",
                     "openmemory_reinforce",
                     "openmemory_list",
                     "openmemory_get",

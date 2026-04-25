@@ -53,6 +53,7 @@ export default function memories() {
             const offset = (page - 1) * limit
             let url = `${API_BASE_URL}/memory/all?l=${limit}&u=${offset}`
             if (filt !== "all") url += `&sector=${filt}`
+            // Append project_id to the query if a project is selected
             if (currentProject) url += `&project_id=${currentProject}`
             
             const res = await fetch(url, { headers: getHeaders() })
@@ -115,6 +116,7 @@ export default function memories() {
                     content,
                     tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
                     metadata: { primary_sector: sector },
+                    // Explicitly set project_id based on user selected scope
                     project_id: scope === 'project' ? currentProject : 'system_global'
                 }),
             })

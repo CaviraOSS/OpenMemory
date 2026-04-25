@@ -48,6 +48,7 @@ export default function Dashboard() {
 
     const fetchDashboardData = async () => {
         try {
+            // Apply project isolation to all dashboard requests
             const projId = currentProject
             const projParam = projId ? `&project_id=${projId}` : ""
 
