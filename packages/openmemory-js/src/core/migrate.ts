@@ -61,6 +61,30 @@ const migrations: Migration[] = [
       )`,
         ],
     },
+    {
+        version: "1.3.0",
+        desc: "Project-level isolation support",
+        sqlite: [
+            `ALTER TABLE memories ADD COLUMN project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id)`,
+            `ALTER TABLE vectors ADD COLUMN project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_vectors_project ON vectors(project_id)`,
+            `ALTER TABLE waypoints ADD COLUMN project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_waypoints_project ON waypoints(project_id)`,
+            `ALTER TABLE temporal_facts ADD COLUMN project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_temporal_project ON temporal_facts(project_id)`,
+        ],
+        postgres: [
+            `ALTER TABLE {m} ADD COLUMN IF NOT EXISTS project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS openmemory_memories_project_idx ON {m}(project_id)`,
+            `ALTER TABLE {v} ADD COLUMN IF NOT EXISTS project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS openmemory_vectors_project_idx ON {v}(project_id)`,
+            `ALTER TABLE {w} ADD COLUMN IF NOT EXISTS project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS openmemory_waypoints_project_idx ON {w}(project_id)`,
+            `ALTER TABLE temporal_facts ADD COLUMN IF NOT EXISTS project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS temporal_facts_project_idx ON temporal_facts(project_id)`,
+        ],
+    },
 ];
 
 async function get_db_version_sqlite(
