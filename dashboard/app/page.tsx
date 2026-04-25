@@ -15,11 +15,13 @@ import { API_BASE_URL, getHeaders } from "@/lib/api"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { HealthMetric } from "@/components/dashboard/HealthMetric"
 import { getStatusColor, sectorColors } from "@/lib/colors"
+import { useProject } from "@/lib/project-context"
 
 // Register Chart.js components
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 export default function Dashboard() {
+    const { currentProject } = useProject()
     const [loading, setLoading] = useState(true)
     const [qpsData, setQpsData] = useState<any[]>([])
     const [healthMetrics, setHealthMetrics] = useState<any>({})
@@ -42,12 +44,15 @@ export default function Dashboard() {
             clearInterval(dataInterval)
             clearInterval(healthInterval)
         }
-    }, [queryLoadPeriod])
+    }, [queryLoadPeriod, currentProject])
 
     const fetchDashboardData = async () => {
         try {
+            const projId = currentProject
+            const projParam = projId ? `&project_id=${projId}` : ""
+
             // Fetch dashboard stats
-            const statsRes = await fetch(`${API_BASE_URL}/dashboard/stats`, {
+            const statsRes = await fetch(`${API_BASE_URL}/dashboard/stats?${projParam.slice(1)}`, {
                 headers: getHeaders()
             })
             if (statsRes.ok) {
@@ -81,7 +86,7 @@ export default function Dashboard() {
             }
 
             // Fetch activity logs
-            const activityRes = await fetch(`${API_BASE_URL}/dashboard/activity?limit=20`, {
+            const activityRes = await fetch(`${API_BASE_URL}/dashboard/activity?limit=20${projParam}`, {
                 headers: getHeaders()
             })
             if (activityRes.ok) {
@@ -101,7 +106,7 @@ export default function Dashboard() {
             }
 
             // Fetch sector timeline
-            const timelineRes = await fetch(`${API_BASE_URL}/dashboard/sectors/timeline?hours=${queryLoadPeriod}`, {
+            const timelineRes = await fetch(`${API_BASE_URL}/dashboard/sectors/timeline?hours=${queryLoadPeriod}${projParam}`, {
                 headers: getHeaders()
             })
             if (timelineRes.ok) {

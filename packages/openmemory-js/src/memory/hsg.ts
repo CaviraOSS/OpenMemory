@@ -453,6 +453,7 @@ export async function create_cross_sector_waypoints(
     prim_sec: string,
     add_secs: string[],
     user_id?: string | null,
+    project_id?: string | null,
 ): Promise<void> {
     const now = Date.now();
     const wt = 0.5;
@@ -461,6 +462,7 @@ export async function create_cross_sector_waypoints(
             prim_id,
             `${prim_id}:${sec}`,
             user_id || "anonymous",
+            project_id || null,
             wt,
             now,
             now,
@@ -469,6 +471,7 @@ export async function create_cross_sector_waypoints(
             `${prim_id}:${sec}`,
             prim_id,
             user_id || "anonymous",
+            project_id || null,
             wt,
             now,
             now,
@@ -507,6 +510,7 @@ export async function create_single_waypoint(
     new_mean: number[],
     ts: number,
     user_id?: string | null,
+    project_id?: string | null,
 ): Promise<void> {
     const thresh = 0.75;
     const mems = user_id
@@ -526,12 +530,13 @@ export async function create_single_waypoint(
             new_id,
             best.id,
             user_id || "anonymous",
+            project_id || null,
             best.similarity,
             ts,
             ts,
         );
     } else {
-        await q.ins_waypoint.run(new_id, new_id, user_id || "anonymous", 1.0, ts, ts);
+        await q.ins_waypoint.run(new_id, new_id, user_id || "anonymous", project_id || null, 1.0, ts, ts);
     }
 }
 export async function create_inter_mem_waypoints(
@@ -540,6 +545,7 @@ export async function create_inter_mem_waypoints(
     new_vec: number[],
     ts: number,
     user_id?: string | null,
+    project_id?: string | null,
 ): Promise<void> {
     const thresh = 0.75;
     const wt = 0.5;
@@ -553,6 +559,7 @@ export async function create_inter_mem_waypoints(
                 new_id,
                 vr.id,
                 user_id || "anonymous",
+                project_id || null,
                 wt,
                 ts,
                 ts,
@@ -561,6 +568,7 @@ export async function create_inter_mem_waypoints(
                 vr.id,
                 new_id,
                 user_id || "anonymous",
+                project_id || null,
                 wt,
                 ts,
                 ts,
@@ -573,6 +581,7 @@ export async function create_contextual_waypoints(
     rel_ids: string[],
     base_wt: number = 0.3,
     user_id?: string | null,
+    project_id?: string | null,
 ): Promise<void> {
     const now = Date.now();
     for (const rel_id of rel_ids) {
@@ -586,6 +595,7 @@ export async function create_contextual_waypoints(
                 mem_id,
                 rel_id,
                 user_id || "anonymous",
+                project_id || null,
                 base_wt,
                 now,
                 now,
@@ -737,8 +747,9 @@ setInterval(async () => {
                 1,
                 cur_wt + hybrid_params.eta * (1 - cur_wt) * temp_fact,
             );
-            const user_id = wp?.user_id || memA?.user_id || memB?.user_id || "anonymous";
-            await q.ins_waypoint.run(a, b, user_id, new_wt, wp?.created_at || now, now);
+            const project_id = memA?.project_id || memB?.project_id || wp?.project_id || null;
+            const uid = memA?.user_id || memB?.user_id || wp?.user_id || "anonymous";
+            await q.ins_waypoint.run(a, b, uid, project_id, new_wt, wp?.created_at || now, now);
         } catch (e) { }
     }
 }, 1000);
@@ -753,12 +764,15 @@ const get_sal = async (id: string, def_sal: number): Promise<number> => {
 export async function hsg_query(
     qt: string,
     k = 10,
-    f?: { sectors?: string[]; minSalience?: number; user_id?: string; startTime?: number; endTime?: number },
+    f?: {
+        sectors?: string[];
+        minSalience?: number;
+        user_id?: string;
+        project_id?: string;
+        startTime?: number;
+        endTime?: number
+    },
 ): Promise<hsg_q_result[]> {
-
-
-
-
     if (active_queries >= env.max_active) {
         throw new Error(
             `Rate limit: ${active_queries} active queries (max ${env.max_active})`,
@@ -803,7 +817,7 @@ export async function hsg_query(
         > = {};
         for (const s of ss) {
             const qv = qe[s];
-            const results = await vector_store.searchSimilar(s, qv, k * 3, f?.user_id);
+            const results = await vector_store.searchSimilar(s, qv, k * 3, f?.user_id, f?.project_id);
             sr[s] = results.map(r => ({ id: r.id, similarity: r.score }));
         }
         const all_sims = Object.values(sr).flatMap((r) =>
@@ -846,6 +860,13 @@ export async function hsg_query(
             const m = await q.get_mem.get(mid);
             if (!m || (f?.minSalience && m.salience < f.minSalience)) continue;
             if (f?.user_id && m.user_id !== f.user_id) continue;
+
+            // Project isolation check: match current project or system_global or legacy null
+            if (f?.project_id) {
+                const isMatch = m.project_id === f.project_id || m.project_id === 'system_global' || m.project_id === null;
+                if (!isMatch) continue;
+            }
+
             if (f?.startTime && m.created_at < f.startTime) continue;
             if (f?.endTime && m.created_at > f.endTime) continue;
             const mvf = await calc_multi_vec_fusion_score(mid, qe, w);
@@ -890,7 +911,7 @@ export async function hsg_query(
                 tier === "hybrid"
                     ? (keyword_scores.get(mid) || 0) * env.keyword_boost
                     : 0;
-            const fs = compute_hybrid_score(
+            let fs = compute_hybrid_score(
                 adjusted_sim,
                 tok_ov,
                 ww,
@@ -898,6 +919,11 @@ export async function hsg_query(
                 keyword_boost,
                 tag_match,
             );
+
+            // Project Boost: 1.2x scoring multiplier for matching project_id
+            if (f?.project_id && m.project_id === f.project_id) {
+                fs = sigmoid(Math.log(fs / (1 - fs)) + 0.2); // Small logit boost
+            }
             const msec = await vector_store.getVectorsById(mid);
             const sl = msec.map((v) => v.sector);
             res.push({
@@ -1044,6 +1070,7 @@ export async function add_hsg_memory(
     tags?: string,
     metadata?: any,
     user_id?: string,
+    project_id?: string,
 ): Promise<{
     id: string;
     primary_sector: string;
@@ -1102,6 +1129,7 @@ export async function add_hsg_memory(
         await q.ins_mem.run(
             id,
             user_id || "anonymous",
+            project_id || null,
             cur_seg,
             stored_content,
             simhash,
@@ -1132,6 +1160,7 @@ export async function add_hsg_memory(
                 result.vector,
                 result.dim,
                 user_id || "anonymous",
+                project_id || undefined,
             );
         }
         const mean_vec = calc_mean_vec(emb_res, all_sectors);
@@ -1145,7 +1174,7 @@ export async function add_hsg_memory(
             await q.upd_compressed_vec.run(comp_buf, id);
         }
 
-        await create_single_waypoint(id, mean_vec, now, user_id);
+        await create_single_waypoint(id, mean_vec, now, user_id, project_id);
         await transaction.commit();
         return {
             id,
