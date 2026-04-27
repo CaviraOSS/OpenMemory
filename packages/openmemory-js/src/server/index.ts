@@ -11,6 +11,18 @@ import { start_reflection } from "../memory/reflect";
 import { start_user_summary_reflection } from "../memory/user_summary";
 import { sendTelemetry } from "../core/telemetry";
 import { req_tracker_mw } from "./routes/dashboard";
+import { DbInitError } from "../core/identifiers";
+
+// DB init now throws DbInitError instead of process.exit(1) (see src/core/db.ts).
+// At the server boundary, surface that as a clean fatal exit so operators get a
+// readable signal instead of an unhandled-rejection stack.
+process.on("unhandledRejection", (err: unknown) => {
+    if (err instanceof DbInitError) {
+        console.error("[FATAL] DB init failed:", err.message);
+        process.exit(1);
+    }
+    throw err;
+});
 
 const ASC = `   ____                   __  __
   / __ \\                 |  \\/  |
