@@ -40,7 +40,6 @@ export function track_req(success: boolean) {
         reqz.qps_hist.push(qps);
         if (reqz.qps_hist.length > 5) reqz.qps_hist.shift();
 
-
         log_metric("qps", qps).catch(console.error);
         if (!success) log_metric("error", 1).catch(console.error);
 
@@ -95,10 +94,10 @@ export function dash(app: any) {
         try {
             const mem_table = get_mem_table();
             const projs = await all_async(
-                `SELECT DISTINCT project_id FROM ${mem_table} WHERE project_id IS NOT NULL AND project_id != 'system_global'`
+                `SELECT DISTINCT project_id FROM ${mem_table} WHERE project_id IS NOT NULL AND project_id != 'system_global'`,
             );
             res.json({
-                projects: projs.map((p: any) => p.project_id)
+                projects: projs.map((p: any) => p.project_id),
             });
         } catch (e: any) {
             res.status(500).json({ err: "internal", message: e.message });
@@ -109,12 +108,12 @@ export function dash(app: any) {
         try {
             const mem_table = get_mem_table();
             const project_id = req.query.project_id;
-            
+
             let where_clause = "";
             let params: any[] = [];
-            
+
             if (project_id) {
-                where_clause = is_pg 
+                where_clause = is_pg
                     ? " WHERE (project_id = $1 OR project_id = 'system_global' OR project_id IS NULL)"
                     : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
                 params = [project_id];
@@ -122,38 +121,44 @@ export function dash(app: any) {
 
             const totmem = await all_async(
                 `SELECT COUNT(*) as count FROM ${mem_table}${where_clause}`,
-                params
+                params,
             );
-            const sectcnt = await all_async(`
+            const sectcnt = await all_async(
+                `
                 SELECT primary_sector, COUNT(*) as count
                 FROM ${mem_table}${where_clause}
                 GROUP BY primary_sector
-            `, params);
+            `,
+                params,
+            );
             const dayago = Date.now() - 24 * 60 * 60 * 1000;
-            
-            const recent_where = where_clause 
-                ? where_clause + (is_pg ? " AND created_at > $2" : " AND created_at > ?")
+
+            const recent_where = where_clause
+                ? where_clause +
+                  (is_pg ? " AND created_at > $2" : " AND created_at > ?")
                 : " WHERE created_at > " + (is_pg ? "$1" : "?");
             const recent_params = [...params, dayago];
 
             const recmem = await all_async(
                 `SELECT COUNT(*) as count FROM ${mem_table}${recent_where}`,
-                recent_params
+                recent_params,
             );
             const avgsal = await all_async(
                 `SELECT AVG(salience) as avg FROM ${mem_table}${where_clause}`,
-                params
+                params,
             );
-            const decst = await all_async(`
+            const decst = await all_async(
+                `
                 SELECT
                     COUNT(*) as total,
                     AVG(decay_lambda) as avg_lambda,
                     MIN(salience) as min_salience,
                     MAX(salience) as max_salience
                 FROM ${mem_table}${where_clause}
-            `, params);
+            `,
+                params,
+            );
             const upt = process.uptime();
-
 
             const hour_ago = Date.now() - 60 * 60 * 1000;
             const sc = process.env.OM_PG_SCHEMA || "public";
@@ -282,12 +287,12 @@ export function dash(app: any) {
             const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "50");
             const project_id = req.query.project_id;
-            
+
             let where_clause = "";
             let params: any[] = [lim];
-            
+
             if (project_id) {
-                where_clause = is_pg 
+                where_clause = is_pg
                     ? " WHERE (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
                     : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
                 params = [lim, project_id];
@@ -320,11 +325,13 @@ export function dash(app: any) {
             const strt = Date.now() - hrs * 60 * 60 * 1000;
             const project_id = req.query.project_id;
 
-            let where_clause = is_pg ? " WHERE created_at > $1" : " WHERE created_at > ?";
+            let where_clause = is_pg
+                ? " WHERE created_at > $1"
+                : " WHERE created_at > ?";
             let params: any[] = [strt];
 
             if (project_id) {
-                where_clause += is_pg 
+                where_clause += is_pg
                     ? " AND (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
                     : " AND (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
                 params.push(project_id);
@@ -334,7 +341,6 @@ export function dash(app: any) {
             let sortFormat: string;
             let timeKey: string;
             if (hrs <= 24) {
-
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'HH24:00')"
                     : "strftime('%H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
@@ -343,7 +349,6 @@ export function dash(app: any) {
                     : "strftime('%Y-%m-%d %H:00', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "hour";
             } else if (hrs <= 168) {
-
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
                     : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
@@ -352,7 +357,6 @@ export function dash(app: any) {
                     : "strftime('%Y-%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
                 timeKey = "day";
             } else {
-
                 displayFormat = is_pg
                     ? "to_char(to_timestamp(created_at/1000), 'MM-DD')"
                     : "strftime('%m-%d', datetime(created_at/1000, 'unixepoch', 'localtime'))";
@@ -381,12 +385,12 @@ export function dash(app: any) {
             const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "10");
             const project_id = req.query.project_id;
-            
+
             let where_clause = "";
             let params: any[] = [lim];
-            
+
             if (project_id) {
-                where_clause = is_pg 
+                where_clause = is_pg
                     ? " WHERE (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
                     : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
                 params = [lim, project_id];

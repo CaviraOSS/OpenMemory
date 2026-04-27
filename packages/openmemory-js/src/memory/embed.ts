@@ -11,9 +11,11 @@ import {
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
 
-
 const EMBED_TIMEOUT_MS = Number(process.env.OM_EMBED_TIMEOUT_MS) || 30000;
-async function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+async function fetchWithTimeout(
+    url: string,
+    options: RequestInit,
+): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
     try {
@@ -77,7 +79,9 @@ const fuse_vecs = (syn: number[], sem: number[]): number[] => {
 };
 
 export async function embedForSector(t: string, s: string): Promise<number[]> {
-    console.error(`[EMBED] Provider: ${env.emb_kind}, Tier: ${tier}, Sector: ${s}`);
+    console.error(
+        `[EMBED] Provider: ${env.emb_kind}, Tier: ${tier}, Sector: ${s}`,
+    );
     if (!sector_configs[s]) throw new Error(`Unknown sector: ${s}`);
     if (tier === "hybrid") return gen_syn_emb(t, s);
     if (tier === "smart" && env.emb_kind !== "synthetic") {
@@ -99,13 +103,11 @@ export async function embedQueryForAllSectors(
     query: string,
     sectors: string[],
 ): Promise<Record<string, number[]>> {
-
     if (tier === "hybrid" || tier === "fast") {
         const result: Record<string, number[]> = {};
         for (const s of sectors) result[s] = gen_syn_emb(query, s);
         return result;
     }
-
 
     if (env.emb_kind === "gemini" && env.gemini_key) {
         try {
@@ -113,16 +115,16 @@ export async function embedQueryForAllSectors(
             for (const s of sectors) txts[s] = query;
             return await emb_gemini(txts);
         } catch (e) {
-            console.error(`[EMBED] Gemini batch failed, falling back to sequential: ${e}`);
+            console.error(
+                `[EMBED] Gemini batch failed, falling back to sequential: ${e}`,
+            );
         }
     }
-
 
     const result: Record<string, number[]> = {};
     for (const s of sectors) result[s] = await embedForSector(query, s);
     return result;
 }
-
 
 async function embed_with_provider(
     provider: string,
@@ -149,9 +151,7 @@ async function embed_with_provider(
     }
 }
 
-
 async function get_sem_emb(t: string, s: string): Promise<number[]> {
-
     const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
 
     for (let i = 0; i < providers.length; i++) {
@@ -184,8 +184,6 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
     return gen_syn_emb(t, s);
 }
 
-
-
 async function emb_batch_with_fallback(
     txts: Record<string, string>,
 ): Promise<Record<string, number[]>> {
@@ -203,7 +201,6 @@ async function emb_batch_with_fallback(
                     result = await emb_batch_openai(txts);
                     break;
                 default:
-
                     result = {};
                     for (const [s, t] of Object.entries(txts)) {
                         result[s] = await embed_with_provider(provider, t, s);
@@ -324,7 +321,7 @@ async function emb_gemini(
                     if (r.status === 429) {
                         const d = Math.min(
                             parseInt(r.headers.get("retry-after") || "2") *
-                            1000,
+                                1000,
                             1000 * Math.pow(2, a),
                         );
                         console.error(
@@ -358,7 +355,7 @@ async function emb_gemini(
         }
         throw new Error("Gemini: exhausted retries");
     });
-    gem_q = prom.catch(() => { });
+    gem_q = prom.catch(() => {});
     return prom;
 }
 
@@ -435,8 +432,8 @@ async function emb_local(t: string, s: string): Promise<number[]> {
     try {
         const { createHash } = await import("crypto");
         const h = createHash("sha256")
-            .update(t + s)
-            .digest(),
+                .update(t + s)
+                .digest(),
             e: number[] = [];
         for (let i = 0; i < env.vec_dim; i++) {
             const b1 = h[i % h.length],

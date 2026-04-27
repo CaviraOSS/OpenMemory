@@ -118,7 +118,6 @@ export async function extractAudio(
         );
     }
 
-
     const maxSize = 25 * 1024 * 1024;
     if (buffer.length > maxSize) {
         throw new Error(
@@ -126,18 +125,14 @@ export async function extractAudio(
         );
     }
 
-
     const tempDir = os.tmpdir();
     const ext = getAudioExtension(mimeType);
     const tempFilePath = path.join(tempDir, `audio-${Date.now()}${ext}`);
 
     try {
-
         fs.writeFileSync(tempFilePath, buffer);
 
-
         const openai = new OpenAI({ apiKey });
-
 
         const transcription = await openai.audio.transcriptions.create({
             file: fs.createReadStream(tempFilePath),
@@ -165,7 +160,6 @@ export async function extractAudio(
         console.error("[EXTRACT] Audio transcription failed:", error);
         throw new Error(`Audio transcription failed: ${error.message}`);
     } finally {
-
         try {
             if (fs.existsSync(tempFilePath)) {
                 fs.unlinkSync(tempFilePath);
@@ -176,24 +170,13 @@ export async function extractAudio(
     }
 }
 
-export async function extractVideo(
-    buffer: Buffer,
-): Promise<ExtractionResult> {
-
+export async function extractVideo(buffer: Buffer): Promise<ExtractionResult> {
     const tempDir = os.tmpdir();
-    const videoPath = path.join(
-        tempDir,
-        `video-${Date.now()}.mp4`,
-    );
-    const audioPath = path.join(
-        tempDir,
-        `audio-${Date.now()}.mp3`,
-    );
+    const videoPath = path.join(tempDir, `video-${Date.now()}.mp4`);
+    const audioPath = path.join(tempDir, `audio-${Date.now()}.mp3`);
 
     try {
-
         fs.writeFileSync(videoPath, buffer);
-
 
         await new Promise<void>((resolve, reject) => {
             ffmpeg(videoPath)
@@ -205,12 +188,9 @@ export async function extractVideo(
                 .run();
         });
 
-
         const audioBuffer = fs.readFileSync(audioPath);
 
-
         const result = await extractAudio(audioBuffer, "audio/mpeg");
-
 
         result.metadata.content_type = "video";
         result.metadata.extraction_method = "ffmpeg+whisper";
@@ -231,7 +211,6 @@ export async function extractVideo(
         console.error("[EXTRACT] Video processing failed:", error);
         throw new Error(`Video processing failed: ${error.message}`);
     } finally {
-
         try {
             if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
             if (fs.existsSync(audioPath)) fs.unlinkSync(audioPath);
@@ -263,7 +242,6 @@ export async function extractText(
 ): Promise<ExtractionResult> {
     const type = contentType.toLowerCase();
 
-
     if (
         type === "mp3" ||
         type === "audio" ||
@@ -285,9 +263,11 @@ export async function extractText(
         const buffer = Buffer.isBuffer(data)
             ? data
             : Buffer.from(data as string, "base64");
-        return extractAudio(buffer, type.startsWith("audio/") ? type : `audio/${type}`);
+        return extractAudio(
+            buffer,
+            type.startsWith("audio/") ? type : `audio/${type}`,
+        );
     }
-
 
     if (
         type === "mp4" ||

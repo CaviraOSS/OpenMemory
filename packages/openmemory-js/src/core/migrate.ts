@@ -1,15 +1,27 @@
 import { env } from "./cfg";
 import sqlite3 from "sqlite3";
 import { Pool } from "pg";
+import {
+    assertSafeIdentifier,
+    DEFAULT_VECTOR_TABLE,
+    LEGACY_ORPHAN_TENANT,
+} from "./identifiers";
+import { resolvePgSsl } from "./pg_ssl";
 
 const is_pg = env.metadata_backend === "postgres";
 
 const log = (msg: string) => console.log(`[MIGRATE] ${msg}`);
 
+// SQLite vector table: prefer explicit env var (validated), then the
+// canonical default, with a fallback to the legacy `vectors` name when
+// only the legacy table exists on disk. The fallback is resolved at
+// runtime (see `resolveSqliteVectorTable`).
+const LEGACY_SQLITE_VECTOR_TABLE = "vectors";
+
 interface Migration {
     version: string;
     desc: string;
-    sqlite: string[];
+    sqlite: (vectorTable: string) => string[];
     postgres: string[];
 }
 
@@ -17,11 +29,11 @@ const migrations: Migration[] = [
     {
         version: "1.2.0",
         desc: "Multi-user tenant support",
-        sqlite: [
+        sqlite: (vectorTable: string) => [
             `ALTER TABLE memories ADD COLUMN user_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`,
-            `ALTER TABLE vectors ADD COLUMN user_id TEXT`,
-            `CREATE INDEX IF NOT EXISTS idx_vectors_user ON vectors(user_id)`,
+            `ALTER TABLE ${vectorTable} ADD COLUMN user_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_vectors_user ON ${vectorTable}(user_id)`,
             `CREATE TABLE IF NOT EXISTS waypoints_new (
         src_id TEXT, dst_id TEXT NOT NULL, user_id TEXT,
         weight REAL NOT NULL, created_at INTEGER, updated_at INTEGER,
@@ -64,11 +76,11 @@ const migrations: Migration[] = [
     {
         version: "1.3.0",
         desc: "Project-level isolation support",
-        sqlite: [
+        sqlite: (vectorTable: string) => [
             `ALTER TABLE memories ADD COLUMN project_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id)`,
-            `ALTER TABLE vectors ADD COLUMN project_id TEXT`,
-            `CREATE INDEX IF NOT EXISTS idx_vectors_project ON vectors(project_id)`,
+            `ALTER TABLE ${vectorTable} ADD COLUMN project_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_vectors_project ON ${vectorTable}(project_id)`,
             `ALTER TABLE waypoints ADD COLUMN project_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_waypoints_project ON waypoints(project_id)`,
             `ALTER TABLE temporal_facts ADD COLUMN project_id TEXT`,
@@ -145,6 +157,36 @@ async function check_column_exists_sqlite(
     });
 }
 
+/**
+ * Resolve which vector table this SQLite database actually uses.
+ * Priority:
+ *   1. OM_VECTOR_TABLE if set (validated as a safe identifier).
+ *   2. The legacy `vectors` table if present on disk (back-compat).
+ *   3. The canonical `openmemory_vectors` default.
+ */
+async function resolveSqliteVectorTable(db: sqlite3.Database): Promise<string> {
+    const explicit = process.env.OM_VECTOR_TABLE;
+    if (explicit) return assertSafeIdentifier(explicit, "OM_VECTOR_TABLE");
+
+    const tableExists = (name: string) =>
+        new Promise<boolean>((ok, no) => {
+            db.get(
+                `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+                [name],
+                (err, row: any) => (err ? no(err) : ok(!!row)),
+            );
+        });
+
+    if (await tableExists(LEGACY_SQLITE_VECTOR_TABLE)) {
+        log(
+            `Detected legacy "${LEGACY_SQLITE_VECTOR_TABLE}" table; migration will target it. ` +
+                `Consider renaming to "${DEFAULT_VECTOR_TABLE}" once safe.`,
+        );
+        return LEGACY_SQLITE_VECTOR_TABLE;
+    }
+    return DEFAULT_VECTOR_TABLE;
+}
+
 async function run_sqlite_migration(
     db: sqlite3.Database,
     m: Migration,
@@ -164,7 +206,10 @@ async function run_sqlite_migration(
         return;
     }
 
-    for (const sql of m.sqlite) {
+    const vectorTable = await resolveSqliteVectorTable(db);
+    const stmts = m.sqlite(vectorTable);
+
+    for (const sql of stmts) {
         await new Promise<void>((ok, no) => {
             db.run(sql, (err) => {
                 if (err && !err.message.includes("duplicate column")) {
@@ -180,9 +225,16 @@ async function run_sqlite_migration(
     log(`Migration ${m.version} completed successfully`);
 }
 
+function pgSchema(): string {
+    return assertSafeIdentifier(
+        process.env.OM_PG_SCHEMA || "public",
+        "OM_PG_SCHEMA",
+    );
+}
+
 async function get_db_version_pg(pool: Pool): Promise<string | null> {
     try {
-        const sc = process.env.OM_PG_SCHEMA || "public";
+        const sc = pgSchema();
         const check = await pool.query(
             `SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -202,7 +254,7 @@ async function get_db_version_pg(pool: Pool): Promise<string | null> {
 }
 
 async function set_db_version_pg(pool: Pool, version: string): Promise<void> {
-    const sc = process.env.OM_PG_SCHEMA || "public";
+    const sc = pgSchema();
     await pool.query(
         `CREATE TABLE IF NOT EXISTS "${sc}"."schema_version" (
       version TEXT PRIMARY KEY, applied_at BIGINT
@@ -220,7 +272,7 @@ async function check_column_exists_pg(
     table: string,
     column: string,
 ): Promise<boolean> {
-    const sc = process.env.OM_PG_SCHEMA || "public";
+    const sc = pgSchema();
     const tbl = table.replace(/"/g, "").split(".").pop() || table;
     const res = await pool.query(
         `SELECT EXISTS (
@@ -235,8 +287,15 @@ async function check_column_exists_pg(
 async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
     log(`Running migration: ${m.version} - ${m.desc}`);
 
-    const sc = process.env.OM_PG_SCHEMA || "public";
-    const mt = process.env.OM_PG_TABLE || "openmemory_memories";
+    const sc = pgSchema();
+    const mt = assertSafeIdentifier(
+        process.env.OM_PG_TABLE || "openmemory_memories",
+        "OM_PG_TABLE",
+    );
+    const vt = assertSafeIdentifier(
+        process.env.OM_VECTOR_TABLE || DEFAULT_VECTOR_TABLE,
+        "OM_VECTOR_TABLE",
+    );
     const has_user_id = await check_column_exists_pg(pool, mt, "user_id");
 
     if (has_user_id) {
@@ -249,7 +308,7 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
 
     const replacements: Record<string, string> = {
         "{m}": `"${sc}"."${mt}"`,
-        "{v}": `"${sc}"."${process.env.OM_VECTOR_TABLE || "openmemory_vectors"}"`,
+        "{v}": `"${sc}"."${vt}"`,
         "{w}": `"${sc}"."openmemory_waypoints"`,
         "{u}": `"${sc}"."openmemory_users"`,
     };
@@ -276,21 +335,77 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
     log(`Migration ${m.version} completed successfully`);
 }
 
+/**
+ * One-shot data hygiene step: quarantine any pre-existing temporal_facts
+ * rows whose user_id was NULL (i.e. were inserted before per-tenant
+ * filtering became mandatory) under the synthetic LEGACY_ORPHAN_TENANT
+ * id. This is idempotent: once stamped, the WHERE clause matches no rows
+ * on subsequent runs. We do this outside the schema-version-tracked
+ * migrations because temporal_facts is created lazily by db.ts on first
+ * use rather than via a versioned migration step.
+ */
+async function quarantine_orphan_temporal_facts_sqlite(
+    db: sqlite3.Database,
+): Promise<void> {
+    const tableExists = await new Promise<boolean>((ok, no) => {
+        db.get(
+            `SELECT name FROM sqlite_master WHERE type='table' AND name='temporal_facts'`,
+            (err, row: any) => (err ? no(err) : ok(!!row)),
+        );
+    });
+    if (!tableExists) return;
+    await new Promise<void>((ok, no) => {
+        db.run(
+            `UPDATE temporal_facts SET user_id = ? WHERE user_id IS NULL`,
+            [LEGACY_ORPHAN_TENANT],
+            function (err) {
+                if (err) return no(err);
+                if (this.changes > 0) {
+                    log(
+                        `Quarantined ${this.changes} orphan temporal_facts rows under ${LEGACY_ORPHAN_TENANT}`,
+                    );
+                }
+                ok();
+            },
+        );
+    });
+}
+
+async function quarantine_orphan_temporal_facts_pg(pool: Pool): Promise<void> {
+    const sc = pgSchema();
+    const check = await pool.query(
+        `SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_schema = $1 AND table_name = 'temporal_facts'
+        )`,
+        [sc],
+    );
+    if (!check.rows[0].exists) return;
+    const res = await pool.query(
+        `UPDATE "${sc}"."temporal_facts" SET user_id = $1 WHERE user_id IS NULL`,
+        [LEGACY_ORPHAN_TENANT],
+    );
+    if (res.rowCount && res.rowCount > 0) {
+        log(
+            `Quarantined ${res.rowCount} orphan temporal_facts rows under ${LEGACY_ORPHAN_TENANT}`,
+        );
+    }
+}
+
 export async function run_migrations() {
     log("Checking for pending migrations...");
 
     if (is_pg) {
-        const ssl =
-            process.env.OM_PG_SSL === "require"
-                ? { rejectUnauthorized: false }
-                : process.env.OM_PG_SSL === "disable"
-                  ? false
-                  : undefined;
+        const ssl = resolvePgSsl(process.env);
+        const db_name = assertSafeIdentifier(
+            process.env.OM_PG_DB || "openmemory",
+            "OM_PG_DB",
+        );
 
         const pool = new Pool({
             host: process.env.OM_PG_HOST,
             port: process.env.OM_PG_PORT ? +process.env.OM_PG_PORT : undefined,
-            database: process.env.OM_PG_DB || "openmemory",
+            database: db_name,
             user: process.env.OM_PG_USER,
             password: process.env.OM_PG_PASSWORD,
             ssl,
@@ -305,6 +420,8 @@ export async function run_migrations() {
             }
         }
 
+        await quarantine_orphan_temporal_facts_pg(pool);
+
         await pool.end();
     } else {
         const db_path = process.env.OM_DB_PATH || "./data/openmemory.sqlite";
@@ -318,6 +435,8 @@ export async function run_migrations() {
                 await run_sqlite_migration(db, m);
             }
         }
+
+        await quarantine_orphan_temporal_facts_sqlite(db);
 
         await new Promise<void>((ok) => db.close(() => ok()));
     }

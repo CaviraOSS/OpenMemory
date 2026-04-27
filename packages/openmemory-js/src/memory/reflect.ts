@@ -4,9 +4,18 @@ import { env } from "../core/cfg";
 import { j } from "../utils";
 
 const sim = (t1: string, t2: string): number => {
-
-    const s1 = new Set(t1.toLowerCase().split(/\s+/).filter(x => x.length > 0));
-    const s2 = new Set(t2.toLowerCase().split(/\s+/).filter(x => x.length > 0));
+    const s1 = new Set(
+        t1
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((x) => x.length > 0),
+    );
+    const s2 = new Set(
+        t2
+            .toLowerCase()
+            .split(/\s+/)
+            .filter((x) => x.length > 0),
+    );
     if (s1.size === 0 || s2.size === 0) return 0;
 
     let inter = 0;
