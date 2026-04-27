@@ -158,21 +158,42 @@ function server(config = {}) {
     };
     use((req, res, next) => {
         if (req.headers['content-type']?.includes('application/json')) {
-            let d = '';
+            const chunks = [];
+            let total = 0;
             let max = config.max_payload_size || 1_000_000;
+            let aborted = false;
             req.on('data', e => {
-                d += e;
-                if (d.length > max) {
+                if (aborted) return;
+                const buf = Buffer.isBuffer(e) ? e : Buffer.from(e);
+                total += buf.length;
+                if (total > max) {
+                    aborted = true;
                     res.status(413).end('Payload Too Large');
                     req.destroy();
+                    return;
                 }
+                chunks.push(buf);
             });
             req.on('end', () => {
+                if (aborted) return;
+                const raw = Buffer.concat(chunks);
+                // Expose raw bytes for HMAC webhook verification.
+                req.rawBody = raw;
+                const text = raw.toString('utf8');
+                if (text.length === 0) {
+                    req.body = {};
+                    return next();
+                }
                 try {
-                    req.body = JSON.parse(d);
+                    req.body = JSON.parse(text);
                 }
                 catch {
-                    req.body = null;
+                    // SECURITY: previously we silently set req.body = null which
+                    // forced every downstream handler to second-guess client input.
+                    // Now we 400 here — invalid JSON is a client error.
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'invalid_json' }));
+                    return;
                 }
                 next();
             });
