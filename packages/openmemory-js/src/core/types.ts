@@ -5,6 +5,7 @@ export type add_req = {
     salience?: number;
     decay_lambda?: number;
     user_id?: string;
+    project_id?: string;
 };
 export type q_req = {
     query: string;
@@ -16,10 +17,12 @@ export type q_req = {
         min_score?: number;
         sector?: string;
         user_id?: string;
+        project_id?: string;
         startTime?: number;
         endTime?: number;
     };
     user_id?: string;
+    project_id?: string;
 };
 export type sector_type =
     | "episodic"
@@ -35,6 +38,7 @@ export type mem_row = {
     tags: string | null;
     meta: string | null;
     user_id: string | null;
+    project_id: string | null;
     created_at: number;
     updated_at: number;
     last_seen_at: number;
@@ -52,6 +56,7 @@ export type ingest_req = {
     metadata?: Record<string, unknown>;
     config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number };
     user_id?: string;
+    project_id?: string;
 };
 
 export type ingest_url_req = {
@@ -59,6 +64,7 @@ export type ingest_url_req = {
     metadata?: Record<string, unknown>;
     config?: { force_root?: boolean; sec_sz?: number; lg_thresh?: number };
     user_id?: string;
+    project_id?: string;
 };
 
 export type lgm_store_req = {
@@ -70,6 +76,7 @@ export type lgm_store_req = {
     graph_id?: string;
     reflective?: boolean;
     user_id?: string;
+    project_id?: string;
 };
 
 export type lgm_retrieve_req = {
@@ -79,12 +86,14 @@ export type lgm_retrieve_req = {
     graph_id?: string;
     limit?: number;
     include_metadata?: boolean;
+    project_id?: string;
 };
 
 export type lgm_context_req = {
     graph_id?: string;
     namespace?: string;
     limit?: number;
+    project_id?: string;
 };
 
 export type lgm_reflection_req = {
@@ -93,6 +102,7 @@ export type lgm_reflection_req = {
     namespace?: string;
     content?: string;
     context_ids?: string[];
+    project_id?: string;
 };
 
 export type ide_event_req = {
@@ -127,6 +137,12 @@ export type ide_context_query_req = {
     file_filter?: string;
     include_patterns?: boolean;
     include_knowledge?: boolean;
+    project_id?: string;
 };
 
-export type ide_session_req = { user?: string; project?: string; ide?: string };
+export type ide_session_req = {
+    user?: string;
+    project?: string;
+    ide?: string;
+    project_id?: string;
+};

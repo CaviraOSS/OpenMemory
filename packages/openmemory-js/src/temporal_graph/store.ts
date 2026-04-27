@@ -13,6 +13,7 @@ export interface InsertFactOptions {
     confidence?: number;
     metadata?: Record<string, any>;
     user_id?: string;
+    project_id?: string;
 }
 
 export async function insert_fact(opts: InsertFactOptions): Promise<string>;
@@ -24,6 +25,7 @@ export async function insert_fact(
     confidence?: number,
     metadata?: Record<string, any>,
     user_id?: string,
+    project_id?: string,
 ): Promise<string>;
 export async function insert_fact(
     subject_or_opts: string | InsertFactOptions,
@@ -33,6 +35,7 @@ export async function insert_fact(
     confidence?: number,
     metadata?: Record<string, any>,
     user_id?: string,
+    project_id?: string,
 ): Promise<string> {
     // Normalize options-bag form to the positional locals used by the
     // existing implementation.
@@ -46,6 +49,7 @@ export async function insert_fact(
             opts.confidence ?? 1.0,
             opts.metadata,
             opts.user_id,
+            opts.project_id,
         );
     }
     return _insert_fact_impl(
@@ -56,6 +60,7 @@ export async function insert_fact(
         confidence ?? 1.0,
         metadata,
         user_id,
+        project_id,
     );
 }
 
@@ -67,6 +72,7 @@ const _insert_fact_impl = async (
     confidence: number = 1.0,
     metadata?: Record<string, any>,
     user_id?: string,
+    project_id?: string,
 ): Promise<string> => {
     const id = randomUUID();
     const now = Date.now();
@@ -75,10 +81,15 @@ const _insert_fact_impl = async (
     const existing = await all_async(
         `
         SELECT id, valid_from FROM temporal_facts
-        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? " AND user_id = ?" : ""}
+        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? " AND user_id = ?" : ""}${project_id ? " AND (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)" : ""}
         ORDER BY valid_from DESC
     `,
-        user_id ? [subject, predicate, user_id] : [subject, predicate],
+        [
+            subject,
+            predicate,
+            ...(user_id ? [user_id] : []),
+            ...(project_id ? [project_id] : []),
+        ],
     );
 
     for (const old of existing) {
@@ -95,12 +106,13 @@ const _insert_fact_impl = async (
 
     await run_async(
         `
-        INSERT INTO temporal_facts (id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata)
-        VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
+        INSERT INTO temporal_facts (id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata)
+        VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)
     `,
         [
             id,
             user_id || null,
+            project_id || null,
             subject,
             predicate,
             object,
@@ -112,7 +124,7 @@ const _insert_fact_impl = async (
     );
 
     console.error(
-        `[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence}${user_id ? `, user=${user_id}` : ""})`,
+        `[TEMPORAL] Inserted fact: ${subject} ${predicate} ${object} (from ${valid_from.toISOString()}, confidence=${confidence}${user_id ? `, user=${user_id}` : ""}${project_id ? `, project=${project_id}` : ""})`,
     );
     return id;
 };
@@ -219,8 +231,10 @@ export const batch_insert_facts = async (
         valid_from?: Date;
         confidence?: number;
         metadata?: Record<string, any>;
+        project_id?: string;
     }>,
     user_id?: string,
+    project_id?: string,
 ): Promise<string[]> => {
     const ids: string[] = [];
 
@@ -235,6 +249,7 @@ export const batch_insert_facts = async (
                 fact.confidence,
                 fact.metadata,
                 user_id,
+                fact.project_id || project_id,
             );
             ids.push(id);
         }
@@ -312,16 +327,24 @@ export const get_total_facts_count = async (): Promise<number> => {
 export const get_fact_by_id_for_user = async (
     id: string,
     user_id: string,
+    project_id?: string,
 ): Promise<TemporalFact | null> => {
-    const row = await get_async(
-        `SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
-         FROM temporal_facts WHERE id = ? AND user_id = ? LIMIT 1`,
-        [id, user_id],
-    );
+    const params: any[] = [id, user_id];
+    let sql = `SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+         FROM temporal_facts WHERE id = ? AND user_id = ?`;
+    if (project_id) {
+        sql +=
+            " AND (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
+        params.push(project_id);
+    }
+    sql += " LIMIT 1";
+
+    const row = await get_async(sql, params);
     if (!row) return null;
     return {
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Sidebar from "@/components/sidebar";
 import Navbar from "@/components/navbar";
+import { ProjectProvider } from "@/lib/project-context";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -33,11 +34,13 @@ export default function RootLayout({
                 className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black text-stone-300`}
                 suppressHydrationWarning
             >
-                <Sidebar />
-                <Navbar />
-                <main className="ml-20 mt-20 p-4 min-h-screen transition-all duration-300">
-                    {children}
-                </main>
+                <ProjectProvider>
+                    <Sidebar />
+                    <Navbar />
+                    <main className="ml-20 mt-20 p-4 min-h-screen transition-all duration-300">
+                        {children}
+                    </main>
+                </ProjectProvider>
             </body>
         </html>
     );

@@ -90,35 +90,74 @@ const get_db_sz = async (): Promise<number> => {
 };
 
 export function dash(app: any) {
-    app.get("/dashboard/stats", async (_req: any, res: any) => {
+    app.get("/dashboard/projects", async (_req: any, res: any) => {
         try {
             const mem_table = get_mem_table();
-            const totmem = await all_async(
-                `SELECT COUNT(*) as count FROM ${mem_table}`,
+            const projs = await all_async(
+                `SELECT DISTINCT project_id FROM ${mem_table} WHERE project_id IS NOT NULL AND project_id != 'system_global'`,
             );
-            const sectcnt = await all_async(`
+            res.json({
+                projects: projs.map((p: any) => p.project_id),
+            });
+        } catch (e: any) {
+            res.status(500).json({ err: "internal", message: e.message });
+        }
+    });
+
+    app.get("/dashboard/stats", async (req: any, res: any) => {
+        try {
+            const mem_table = get_mem_table();
+            const project_id = req.query.project_id;
+
+            let where_clause = "";
+            let params: any[] = [];
+
+            if (project_id) {
+                where_clause = is_pg
+                    ? " WHERE (project_id = $1 OR project_id = 'system_global' OR project_id IS NULL)"
+                    : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
+                params = [project_id];
+            }
+
+            const totmem = await all_async(
+                `SELECT COUNT(*) as count FROM ${mem_table}${where_clause}`,
+                params,
+            );
+            const sectcnt = await all_async(
+                `
                 SELECT primary_sector, COUNT(*) as count
-                FROM ${mem_table}
+                FROM ${mem_table}${where_clause}
                 GROUP BY primary_sector
-            `);
+            `,
+                params,
+            );
             const dayago = Date.now() - 24 * 60 * 60 * 1000;
+
+            const recent_where = where_clause
+                ? where_clause +
+                  (is_pg ? " AND created_at > $2" : " AND created_at > ?")
+                : " WHERE created_at > " + (is_pg ? "$1" : "?");
+            const recent_params = [...params, dayago];
+
             const recmem = await all_async(
-                is_pg
-                    ? `SELECT COUNT(*) as count FROM ${mem_table} WHERE created_at > $1`
-                    : `SELECT COUNT(*) as count FROM ${mem_table} WHERE created_at > ?`,
-                [dayago],
+                `SELECT COUNT(*) as count FROM ${mem_table}${recent_where}`,
+                recent_params,
             );
             const avgsal = await all_async(
-                `SELECT AVG(salience) as avg FROM ${mem_table}`,
+                `SELECT AVG(salience) as avg FROM ${mem_table}${where_clause}`,
+                params,
             );
-            const decst = await all_async(`
+            const decst = await all_async(
+                `
                 SELECT
                     COUNT(*) as total,
                     AVG(decay_lambda) as avg_lambda,
                     MIN(salience) as min_salience,
                     MAX(salience) as max_salience
-                FROM ${mem_table}
-            `);
+                FROM ${mem_table}${where_clause}
+            `,
+                params,
+            );
             const upt = process.uptime();
 
             const hour_ago = Date.now() - 60 * 60 * 1000;
@@ -247,13 +286,22 @@ export function dash(app: any) {
         try {
             const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "50");
+            const project_id = req.query.project_id;
+
+            let where_clause = "";
+            let params: any[] = [lim];
+
+            if (project_id) {
+                where_clause = is_pg
+                    ? " WHERE (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
+                    : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
+                params = [lim, project_id];
+            }
+
             const recmem = await all_async(
-                is_pg
-                    ? `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
-                       FROM ${mem_table} ORDER BY updated_at DESC LIMIT $1`
-                    : `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
-                       FROM ${mem_table} ORDER BY updated_at DESC LIMIT ?`,
-                [lim],
+                `SELECT id, content, primary_sector, salience, created_at, updated_at, last_seen_at
+                 FROM ${mem_table}${where_clause} ORDER BY updated_at DESC LIMIT ${is_pg ? "$1" : "?"}`,
+                params,
             );
             res.json({
                 activities: recmem.map((m: any) => ({
@@ -275,6 +323,19 @@ export function dash(app: any) {
             const mem_table = get_mem_table();
             const hrs = parseInt(req.query.hours || "24");
             const strt = Date.now() - hrs * 60 * 60 * 1000;
+            const project_id = req.query.project_id;
+
+            let where_clause = is_pg
+                ? " WHERE created_at > $1"
+                : " WHERE created_at > ?";
+            let params: any[] = [strt];
+
+            if (project_id) {
+                where_clause += is_pg
+                    ? " AND (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
+                    : " AND (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
+                params.push(project_id);
+            }
 
             let displayFormat: string;
             let sortFormat: string;
@@ -306,12 +367,9 @@ export function dash(app: any) {
             }
 
             const tl = await all_async(
-                is_pg
-                    ? `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > $1 GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`
-                    : `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
-                       FROM ${mem_table} WHERE created_at > ? GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`,
-                [strt],
+                `SELECT primary_sector, ${displayFormat} as label, ${sortFormat} as sort_key, COUNT(*) as count
+                 FROM ${mem_table}${where_clause} GROUP BY primary_sector, ${sortFormat} ORDER BY sort_key`,
+                params,
             );
             res.json({
                 timeline: tl.map((row: any) => ({ ...row, hour: row.label })),
@@ -326,13 +384,22 @@ export function dash(app: any) {
         try {
             const mem_table = get_mem_table();
             const lim = parseInt(req.query.limit || "10");
+            const project_id = req.query.project_id;
+
+            let where_clause = "";
+            let params: any[] = [lim];
+
+            if (project_id) {
+                where_clause = is_pg
+                    ? " WHERE (project_id = $2 OR project_id = 'system_global' OR project_id IS NULL)"
+                    : " WHERE (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)";
+                params = [lim, project_id];
+            }
+
             const topm = await all_async(
-                is_pg
-                    ? `SELECT id, content, primary_sector, salience, last_seen_at
-                       FROM ${mem_table} ORDER BY salience DESC LIMIT $1`
-                    : `SELECT id, content, primary_sector, salience, last_seen_at
-                       FROM ${mem_table} ORDER BY salience DESC LIMIT ?`,
-                [lim],
+                `SELECT id, content, primary_sector, salience, last_seen_at
+                 FROM ${mem_table}${where_clause} ORDER BY salience DESC LIMIT ${is_pg ? "$1" : "?"}`,
+                params,
             );
             res.json({
                 memories: topm.map((m: any) => ({
@@ -365,8 +432,8 @@ export function dash(app: any) {
 
             const totals = await all_async(
                 is_pg
-                    ? `SELECT type, SUM(count) as total FROM "${sc}"."stats" WHERE ts > $1 GROUP BY type`
-                    : `SELECT type, SUM(count) as total FROM stats WHERE ts > ? GROUP BY type`,
+                    ? `SELECT type, SUM(count) as total FROM "${sc}"."stats" WHERE type=$1 AND ts > $2 GROUP BY type`
+                    : `SELECT type, SUM(count) as total FROM stats WHERE type=? AND ts > ? GROUP BY type`,
                 [strt],
             );
 

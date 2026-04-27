@@ -90,6 +90,66 @@ describe("temporal_graph per-tenant isolation", () => {
         expect(bobCannot).toBeNull();
     });
 
+    it("project_id filter narrows to the requested project, system_global, and untagged", async () => {
+        const T = "tenant-proj";
+        const PA = "proj-alpha";
+        const PB = "proj-beta";
+        await run_async(`DELETE FROM temporal_facts WHERE user_id = ?`, [T]);
+
+        // Tagged for project alpha
+        await insert_fact({
+            subject: "Sproj",
+            predicate: "P",
+            object: "OA",
+            user_id: T,
+            project_id: PA,
+            confidence: 1,
+        });
+        // Tagged for project beta
+        await insert_fact({
+            subject: "Sproj",
+            predicate: "P",
+            object: "OB",
+            user_id: T,
+            project_id: PB,
+            confidence: 1,
+        });
+        // Global (system_global must show through any project filter)
+        await insert_fact({
+            subject: "Sproj",
+            predicate: "P",
+            object: "OG",
+            user_id: T,
+            project_id: "system_global",
+            confidence: 1,
+        });
+        // Untagged (NULL project must show through any project filter)
+        await insert_fact({
+            subject: "Sproj",
+            predicate: "P",
+            object: "ON",
+            user_id: T,
+            confidence: 1,
+        });
+
+        // Filtering by alpha: alpha + global + null, NOT beta
+        const alphaScope = await get_facts_by_subject("Sproj", {
+            user_id: T,
+            project_id: PA,
+            include_historical: true,
+        });
+        const alphaObjs = alphaScope.map((f: any) => f.object).sort();
+        expect(alphaObjs).toEqual(["OA", "OG", "ON"]);
+        expect(alphaObjs.includes("OB")).toBe(false);
+
+        // No project filter: returns ALL of tenant's rows across projects
+        const noFilter = await get_facts_by_subject("Sproj", {
+            user_id: T,
+            include_historical: true,
+        });
+        expect(noFilter.length).toBe(4);
+    });
+
     it("migrate quarantines NULL user_id rows once and is idempotent", async () => {
         const { LEGACY_ORPHAN_TENANT } = await import(
             "../src/core/identifiers"

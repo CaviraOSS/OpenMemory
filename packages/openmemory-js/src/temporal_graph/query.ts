@@ -1,14 +1,24 @@
 import { get_async, all_async } from "../core/db";
 import { TemporalFact, TemporalQuery, TimelineEntry } from "./types";
 
-export const query_facts_at_time = async (
-    subject?: string,
-    predicate?: string,
-    object?: string,
-    at: Date = new Date(),
-    min_confidence: number = 0.1,
-    user_id?: string,
-): Promise<TemporalFact[]> => {
+export const query_facts_at_time = async (opts: {
+    user_id: string;
+    project_id?: string;
+    subject?: string;
+    predicate?: string;
+    object?: string;
+    at?: Date;
+    min_confidence?: number;
+}): Promise<TemporalFact[]> => {
+    const {
+        user_id,
+        project_id,
+        subject,
+        predicate,
+        object,
+        at = new Date(),
+        min_confidence = 0.1,
+    } = opts;
     const timestamp = at.getTime();
     const conditions: string[] = [];
     const params: any[] = [];
@@ -18,9 +28,14 @@ export const query_facts_at_time = async (
     );
     params.push(timestamp, timestamp);
 
-    if (user_id) {
-        conditions.push("user_id = ?");
-        params.push(user_id);
+    conditions.push("user_id = ?");
+    params.push(user_id);
+
+    if (project_id) {
+        conditions.push(
+            "(project_id = ? OR project_id = 'system_global' OR project_id IS NULL)",
+        );
+        params.push(project_id);
     }
 
     if (subject) {
@@ -44,7 +59,7 @@ export const query_facts_at_time = async (
     }
 
     const sql = `
-        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
         WHERE ${conditions.join(" AND ")}
         ORDER BY confidence DESC, valid_from DESC
@@ -54,6 +69,7 @@ export const query_facts_at_time = async (
     return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -69,18 +85,22 @@ export const get_current_fact = async (
     subject: string,
     predicate: string,
     user_id?: string,
+    project_id?: string,
 ): Promise<TemporalFact | null> => {
-    const now = Date.now();
-
     const row = await get_async(
         `
-        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
-        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? " AND user_id = ?" : ""}
+        WHERE subject = ? AND predicate = ? AND valid_to IS NULL${user_id ? " AND user_id = ?" : ""}${project_id ? " AND (project_id = ? OR project_id = 'system_global' OR project_id IS NULL)" : ""}
         ORDER BY valid_from DESC
         LIMIT 1
     `,
-        user_id ? [subject, predicate, user_id] : [subject, predicate],
+        [
+            subject,
+            predicate,
+            ...(user_id ? [user_id] : []),
+            ...(project_id ? [project_id] : []),
+        ],
     );
 
     if (!row) return null;
@@ -88,6 +108,7 @@ export const get_current_fact = async (
     return {
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -101,6 +122,7 @@ export const get_current_fact = async (
 
 export const query_facts_in_range = async (opts: {
     user_id: string;
+    project_id?: string;
     subject?: string;
     predicate?: string;
     from?: Date;
@@ -109,6 +131,7 @@ export const query_facts_in_range = async (opts: {
 }): Promise<TemporalFact[]> => {
     const {
         user_id,
+        project_id,
         subject,
         predicate,
         from,
@@ -136,6 +159,13 @@ export const query_facts_in_range = async (opts: {
     conditions.push("user_id = ?");
     params.push(user_id);
 
+    if (project_id) {
+        conditions.push(
+            "(project_id = ? OR project_id = 'system_global' OR project_id IS NULL)",
+        );
+        params.push(project_id);
+    }
+
     if (subject) {
         conditions.push("subject = ?");
         params.push(subject);
@@ -154,7 +184,7 @@ export const query_facts_in_range = async (opts: {
     const where =
         conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const sql = `
-        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
         ${where}
         ORDER BY valid_from DESC
@@ -164,6 +194,7 @@ export const query_facts_in_range = async (opts: {
     return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -177,27 +208,42 @@ export const query_facts_in_range = async (opts: {
 
 export const find_conflicting_facts = async (opts: {
     user_id: string;
+    project_id?: string;
     subject: string;
     predicate: string;
     at?: Date;
 }): Promise<TemporalFact[]> => {
-    const { user_id, subject, predicate, at } = opts;
+    const { user_id, project_id, subject, predicate, at } = opts;
     const timestamp = at ? at.getTime() : Date.now();
 
-    const rows = await all_async(
-        `
-        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+    const conditions: string[] = [
+        "subject = ?",
+        "predicate = ?",
+        "user_id = ?",
+        "(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))",
+    ];
+    const params: any[] = [subject, predicate, user_id, timestamp, timestamp];
+
+    if (project_id) {
+        conditions.push(
+            "(project_id = ? OR project_id = 'system_global' OR project_id IS NULL)",
+        );
+        params.push(project_id);
+    }
+
+    const sql = `
+        SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
-        WHERE subject = ? AND predicate = ? AND user_id = ?
-        AND (valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))
+        WHERE ${conditions.join(" AND ")}
         ORDER BY confidence DESC
-    `,
-        [subject, predicate, user_id, timestamp, timestamp],
-    );
+    `;
+
+    const rows = await all_async(sql, params);
 
     return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -211,36 +257,51 @@ export const find_conflicting_facts = async (opts: {
 
 export const get_facts_by_subject = async (
     subject: string,
-    opts: { user_id: string; at?: Date; include_historical?: boolean },
+    opts: {
+        user_id: string;
+        project_id?: string;
+        at?: Date;
+        include_historical?: boolean;
+    },
 ): Promise<TemporalFact[]> => {
-    const { user_id, at, include_historical = false } = opts;
-    let sql: string;
-    let params: any[];
+    const { user_id, project_id, at, include_historical = false } = opts;
+    const conditions: string[] = ["subject = ?", "user_id = ?"];
+    const params: any[] = [subject, user_id];
 
-    if (include_historical) {
-        sql = `
-            SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
-            FROM temporal_facts
-            WHERE subject = ? AND user_id = ?
-            ORDER BY predicate ASC, valid_from DESC
-        `;
-        params = [subject, user_id];
-    } else {
+    if (!include_historical) {
         const timestamp = at ? at.getTime() : Date.now();
-        sql = `
-            SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        conditions.push(
+            "(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))",
+        );
+        params.push(timestamp, timestamp);
+    }
+
+    if (project_id) {
+        conditions.push(
+            "(project_id = ? OR project_id = 'system_global' OR project_id IS NULL)",
+        );
+        params.push(project_id);
+    }
+
+    const sql = include_historical
+        ? `
+            SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
             FROM temporal_facts
-            WHERE subject = ? AND user_id = ?
-            AND (valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))
+            WHERE ${conditions.join(" AND ")}
+            ORDER BY predicate ASC, valid_from DESC
+        `
+        : `
+            SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+            FROM temporal_facts
+            WHERE ${conditions.join(" AND ")}
             ORDER BY predicate ASC, confidence DESC
         `;
-        params = [subject, user_id, timestamp, timestamp];
-    }
 
     const rows = await all_async(sql, params);
     return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -256,32 +317,42 @@ export const search_facts = async (
     pattern: string,
     opts: {
         user_id: string;
+        project_id?: string;
         field?: "subject" | "predicate" | "object";
         at?: Date;
     },
 ): Promise<TemporalFact[]> => {
-    const { user_id, field = "subject", at } = opts;
+    const { user_id, project_id, field = "subject", at } = opts;
     const timestamp = at ? at.getTime() : Date.now();
     const search_pattern = `%${pattern}%`;
 
+    const conditions: string[] = [
+        `${field} LIKE ?`,
+        "user_id = ?",
+        "(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))",
+    ];
+    const params: any[] = [search_pattern, user_id, timestamp, timestamp];
+
+    if (project_id) {
+        conditions.push(
+            "(project_id = ? OR project_id = 'system_global' OR project_id IS NULL)",
+        );
+        params.push(project_id);
+    }
+
     const sql = `
-        SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+        SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
-        WHERE ${field} LIKE ? AND user_id = ?
-        AND (valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))
+        WHERE ${conditions.join(" AND ")}
         ORDER BY confidence DESC, valid_from DESC
         LIMIT 100
     `;
 
-    const rows = await all_async(sql, [
-        search_pattern,
-        user_id,
-        timestamp,
-        timestamp,
-    ]);
+    const rows = await all_async(sql, params);
     return rows.map((row) => ({
         id: row.id,
         user_id: row.user_id,
+        project_id: row.project_id,
         subject: row.subject,
         predicate: row.predicate,
         object: row.object,
@@ -295,9 +366,14 @@ export const search_facts = async (
 
 export const get_related_facts = async (
     fact_id: string,
-    opts: { user_id: string; relation_type?: string; at?: Date },
+    opts: {
+        user_id: string;
+        project_id?: string;
+        relation_type?: string;
+        at?: Date;
+    },
 ): Promise<Array<{ fact: TemporalFact; relation: string; weight: number }>> => {
-    const { user_id, relation_type, at } = opts;
+    const { user_id, project_id, relation_type, at } = opts;
     const timestamp = at ? at.getTime() : Date.now();
     const conditions = [
         "(e.valid_from <= ? AND (e.valid_to IS NULL OR e.valid_to >= ?))",
@@ -307,6 +383,13 @@ export const get_related_facts = async (
     if (relation_type) {
         conditions.push("e.relation_type = ?");
         params.push(relation_type);
+    }
+
+    if (project_id) {
+        conditions.push(
+            "(f.project_id = ? OR f.project_id = 'system_global' OR f.project_id IS NULL)",
+        );
+        params.push(project_id);
     }
 
     // Tenant-scope BOTH the source fact (via JOIN to source_id) and the
@@ -337,6 +420,7 @@ export const get_related_facts = async (
         fact: {
             id: row.id,
             user_id: row.user_id,
+            project_id: row.project_id,
             subject: row.subject,
             predicate: row.predicate,
             object: row.object,

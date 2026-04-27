@@ -23,6 +23,26 @@ import { require_tenant, reject_tenant_mismatch } from "../middleware/tenant";
 import { parse_or_400, schema } from "../middleware/validate";
 
 /**
+ * Read the optional project scope from the request. Uses an explicit
+ * `x-project-id` header (or `project_id` query/body field), and trims
+ * empty strings to undefined. Project scoping is orthogonal to tenant
+ * isolation: when omitted, the helper returns all of the caller's
+ * facts across projects.
+ */
+function read_project(req: any): string | undefined {
+    const candidates = [
+        req?.project_id,
+        req?.headers?.["x-project-id"],
+        req?.query?.project_id,
+        req?.body?.project_id,
+    ];
+    for (const c of candidates) {
+        if (typeof c === "string" && c.trim()) return c.trim();
+    }
+    return undefined;
+}
+
+/**
  * Validate-then-coerce a date input from req.body or req.query. Rejects
  * malformed strings rather than silently producing `Invalid Date`.
  */
@@ -90,16 +110,19 @@ export const create_temporal_fact = async (req: any, res: any) => {
             ? Math.max(0, Math.min(1, b.confidence))
             : 1.0;
 
+    const project_id = read_project(req);
+
     try {
-        const id = await insert_fact(
-            b.subject,
-            b.predicate,
-            b.object,
-            valid_from_date,
-            conf,
-            b.metadata,
-            tenant,
-        );
+        const id = await insert_fact({
+            subject: b.subject,
+            predicate: b.predicate,
+            object: b.object,
+            valid_from: valid_from_date,
+            confidence: conf,
+            metadata: b.metadata,
+            user_id: tenant,
+            project_id,
+        });
         res.json({
             id,
             subject: b.subject,
@@ -108,6 +131,7 @@ export const create_temporal_fact = async (req: any, res: any) => {
             valid_from: valid_from_date.toISOString(),
             confidence: conf,
             user_id: tenant,
+            project_id: project_id ?? null,
             message: "Fact created successfully",
         });
     } catch (error) {
@@ -155,14 +179,16 @@ export const get_temporal_fact = async (req: any, res: any) => {
             min_conf = n;
         }
 
-        const facts = await query_facts_at_time(
+        const project_id = read_project(req);
+        const facts = await query_facts_at_time({
+            user_id: tenant,
+            project_id,
             subject,
             predicate,
             object,
-            at_date,
-            min_conf,
-            tenant,
-        );
+            at: at_date,
+            min_confidence: min_conf,
+        });
         res.json({
             facts,
             query: {
@@ -172,6 +198,7 @@ export const get_temporal_fact = async (req: any, res: any) => {
                 at: at_date.toISOString(),
                 min_confidence: min_conf,
                 user_id: tenant,
+                project_id: project_id ?? null,
             },
             count: facts.length,
         });
@@ -376,8 +403,10 @@ export const get_subject_facts = async (req: any, res: any) => {
         if (!at_p.ok) return res.status(400).json({ error: "invalid at date" });
         const include_hist = req.query.include_historical === "true";
 
+        const project_id = read_project(req);
         const facts = await get_facts_by_subject(subject, {
             user_id: tenant,
+            project_id,
             at: at_p.date,
             include_historical: include_hist,
         });
@@ -420,8 +449,10 @@ export const search_temporal_facts = async (req: any, res: any) => {
         }
         if (!at_p.ok) return res.status(400).json({ error: "invalid at date" });
 
+        const project_id = read_project(req);
         const facts = await search_facts(pattern, {
             user_id: tenant,
+            project_id,
             field: field as any,
             at: at_p.date,
         });

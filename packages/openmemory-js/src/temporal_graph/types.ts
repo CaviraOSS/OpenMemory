@@ -1,6 +1,7 @@
 export interface TemporalFact {
     id: string;
     user_id?: string;
+    project_id?: string;
     subject: string;
     predicate: string;
     object: string;

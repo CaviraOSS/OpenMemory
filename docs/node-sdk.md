@@ -24,11 +24,13 @@ Stores a memory.
 
 - `content` (string): The text to memorize.
 - `options.user_id` (string): The owner of the memory.
+- `options.project_id` (string): Optional project identifier for isolation.
 - `options.tags` (string[]): Optional tags.
 
 ```javascript
 await mem.add("User likes spicy food", { 
   user_id: "user_1", 
+  project_id: "my_app_dev",
   tags: ["food", "preference"] 
 });
 ```
@@ -38,11 +40,15 @@ await mem.add("User likes spicy food", {
 Retrieves relevant context.
 
 - `query` (string): The question or topic.
-- `options.user_id` (string): Required.
+- `options.user_id` (string): Optional user filter.
+- `options.project_id` (string): Optional project isolation filter.
 - `options.limit` (number): Max results (default 5).
 
 ```javascript
-const results = await mem.search("What food to order?", { user_id: "user_1" });
+const results = await mem.search("What food to order?", { 
+  user_id: "user_1",
+  project_id: "my_app_dev"
+});
 console.log(results[0].content); 
 // "User likes spicy food"
 ```

@@ -5,6 +5,7 @@ export interface VectorStore {
         vector: number[],
         dim: number,
         user_id?: string,
+        project_id?: string,
     ): Promise<void>;
     deleteVector(id: string, sector: string): Promise<void>;
     deleteVectors(id: string): Promise<void>;
@@ -13,6 +14,7 @@ export interface VectorStore {
         queryVec: number[],
         topK: number,
         user_id?: string,
+        project_id?: string,
     ): Promise<Array<{ id: string; score: number }>>;
     getVector(
         id: string,
