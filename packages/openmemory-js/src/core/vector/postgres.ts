@@ -1,5 +1,6 @@
 import { VectorStore } from "../vector_store";
 import { bufferToVector, vectorToBuffer, cosineSimilarity } from "../../memory/embed";
+import { assertSafeIdentifier, DEFAULT_VECTOR_TABLE } from "../identifiers";
 
 export interface DbOps {
     run_async: (sql: string, params?: any[]) => Promise<void>;
@@ -11,8 +12,16 @@ export class PostgresVectorStore implements VectorStore {
     private table: string;
     private usePgVector: boolean;
 
-    constructor(private db: DbOps, tableName: string = "vectors", usePgVector: boolean = false) {
-        this.table = tableName;
+    constructor(private db: DbOps, tableName: string = DEFAULT_VECTOR_TABLE, usePgVector: boolean = false) {
+        // Accept either a bare identifier (validated here) or an
+        // already-quoted, schema-qualified form like `"public"."openmemory_vectors"`
+        // that the db.ts initializer assembles after its own validation.
+        // We detect the quoted form by the presence of a leading double quote.
+        if (tableName.startsWith('"')) {
+            this.table = tableName;
+        } else {
+            this.table = assertSafeIdentifier(tableName, "OM_VECTOR_TABLE");
+        }
         this.usePgVector = usePgVector;
         console.error(`[PostgresVectorStore] mode: ${usePgVector ? 'pgvector (native)' : 'sqlite (compat)'}`);
     }

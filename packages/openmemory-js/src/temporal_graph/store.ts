@@ -1,6 +1,9 @@
 import { run_async, get_async, all_async } from '../core/db'
+import { env } from '../core/cfg'
 import { TemporalFact, TemporalEdge } from './types'
 import { randomUUID } from 'crypto'
+
+const is_pg = env.metadata_backend === "postgres"
 
 export const insert_fact = async (
     subject: string,
@@ -135,14 +138,30 @@ export const apply_confidence_decay = async (decay_rate: number = 0.01): Promise
     const now = Date.now()
     const one_day = 86400000
 
-    await run_async(`
-        UPDATE temporal_facts
-        SET confidence = MAX(0.1, confidence * (1 - ? * ((? - valid_from) / ?)))
-        WHERE valid_to IS NULL AND confidence > 0.1
-    `, [decay_rate, now, one_day])
+    // Postgres: use RETURNING 1 and count the rows of the result, since
+    // SQLite's connection-scoped `changes()` is unavailable.
+    // SQLite: run the UPDATE then read `changes()` from the same connection.
+    let changes = 0
 
-    const result = await get_async(`SELECT changes() as changes`) as any
-    const changes = result?.changes || 0
+    if (is_pg) {
+        // GREATEST is the Postgres analogue of SQLite's MAX(scalar, scalar).
+        const rows = await all_async(`
+            UPDATE temporal_facts
+            SET confidence = GREATEST(0.1, confidence * (1 - ? * ((? - valid_from) / ?)))
+            WHERE valid_to IS NULL AND confidence > 0.1
+            RETURNING 1
+        `, [decay_rate, now, one_day])
+        changes = Array.isArray(rows) ? rows.length : 0
+    } else {
+        await run_async(`
+            UPDATE temporal_facts
+            SET confidence = MAX(0.1, confidence * (1 - ? * ((? - valid_from) / ?)))
+            WHERE valid_to IS NULL AND confidence > 0.1
+        `, [decay_rate, now, one_day])
+        const result = await get_async(`SELECT changes() as changes`) as any
+        changes = result?.changes || 0
+    }
+
     console.log(`[TEMPORAL] Applied confidence decay to ${changes} facts`)
     return changes
 }

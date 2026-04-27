@@ -1,15 +1,23 @@
 import { env } from "./cfg";
 import sqlite3 from "sqlite3";
 import { Pool } from "pg";
+import { assertSafeIdentifier, DEFAULT_VECTOR_TABLE } from "./identifiers";
+import { resolvePgSsl } from "./pg_ssl";
 
 const is_pg = env.metadata_backend === "postgres";
 
 const log = (msg: string) => console.log(`[MIGRATE] ${msg}`);
 
+// SQLite vector table: prefer explicit env var (validated), then the
+// canonical default, with a fallback to the legacy `vectors` name when
+// only the legacy table exists on disk. The fallback is resolved at
+// runtime (see `resolveSqliteVectorTable`).
+const LEGACY_SQLITE_VECTOR_TABLE = "vectors";
+
 interface Migration {
     version: string;
     desc: string;
-    sqlite: string[];
+    sqlite: (vectorTable: string) => string[];
     postgres: string[];
 }
 
@@ -17,11 +25,11 @@ const migrations: Migration[] = [
     {
         version: "1.2.0",
         desc: "Multi-user tenant support",
-        sqlite: [
+        sqlite: (vectorTable: string) => [
             `ALTER TABLE memories ADD COLUMN user_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`,
-            `ALTER TABLE vectors ADD COLUMN user_id TEXT`,
-            `CREATE INDEX IF NOT EXISTS idx_vectors_user ON vectors(user_id)`,
+            `ALTER TABLE ${vectorTable} ADD COLUMN user_id TEXT`,
+            `CREATE INDEX IF NOT EXISTS idx_vectors_user ON ${vectorTable}(user_id)`,
             `CREATE TABLE IF NOT EXISTS waypoints_new (
         src_id TEXT, dst_id TEXT NOT NULL, user_id TEXT,
         weight REAL NOT NULL, created_at INTEGER, updated_at INTEGER,
@@ -121,6 +129,36 @@ async function check_column_exists_sqlite(
     });
 }
 
+/**
+ * Resolve which vector table this SQLite database actually uses.
+ * Priority:
+ *   1. OM_VECTOR_TABLE if set (validated as a safe identifier).
+ *   2. The legacy `vectors` table if present on disk (back-compat).
+ *   3. The canonical `openmemory_vectors` default.
+ */
+async function resolveSqliteVectorTable(db: sqlite3.Database): Promise<string> {
+    const explicit = process.env.OM_VECTOR_TABLE;
+    if (explicit) return assertSafeIdentifier(explicit, "OM_VECTOR_TABLE");
+
+    const tableExists = (name: string) =>
+        new Promise<boolean>((ok, no) => {
+            db.get(
+                `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+                [name],
+                (err, row: any) => (err ? no(err) : ok(!!row)),
+            );
+        });
+
+    if (await tableExists(LEGACY_SQLITE_VECTOR_TABLE)) {
+        log(
+            `Detected legacy "${LEGACY_SQLITE_VECTOR_TABLE}" table; migration will target it. ` +
+            `Consider renaming to "${DEFAULT_VECTOR_TABLE}" once safe.`,
+        );
+        return LEGACY_SQLITE_VECTOR_TABLE;
+    }
+    return DEFAULT_VECTOR_TABLE;
+}
+
 async function run_sqlite_migration(
     db: sqlite3.Database,
     m: Migration,
@@ -140,7 +178,10 @@ async function run_sqlite_migration(
         return;
     }
 
-    for (const sql of m.sqlite) {
+    const vectorTable = await resolveSqliteVectorTable(db);
+    const stmts = m.sqlite(vectorTable);
+
+    for (const sql of stmts) {
         await new Promise<void>((ok, no) => {
             db.run(sql, (err) => {
                 if (err && !err.message.includes("duplicate column")) {
@@ -156,9 +197,16 @@ async function run_sqlite_migration(
     log(`Migration ${m.version} completed successfully`);
 }
 
+function pgSchema(): string {
+    return assertSafeIdentifier(
+        process.env.OM_PG_SCHEMA || "public",
+        "OM_PG_SCHEMA",
+    );
+}
+
 async function get_db_version_pg(pool: Pool): Promise<string | null> {
     try {
-        const sc = process.env.OM_PG_SCHEMA || "public";
+        const sc = pgSchema();
         const check = await pool.query(
             `SELECT EXISTS (
         SELECT FROM information_schema.tables
@@ -178,7 +226,7 @@ async function get_db_version_pg(pool: Pool): Promise<string | null> {
 }
 
 async function set_db_version_pg(pool: Pool, version: string): Promise<void> {
-    const sc = process.env.OM_PG_SCHEMA || "public";
+    const sc = pgSchema();
     await pool.query(
         `CREATE TABLE IF NOT EXISTS "${sc}"."schema_version" (
       version TEXT PRIMARY KEY, applied_at BIGINT
@@ -196,7 +244,7 @@ async function check_column_exists_pg(
     table: string,
     column: string,
 ): Promise<boolean> {
-    const sc = process.env.OM_PG_SCHEMA || "public";
+    const sc = pgSchema();
     const tbl = table.replace(/"/g, "").split(".").pop() || table;
     const res = await pool.query(
         `SELECT EXISTS (
@@ -211,8 +259,15 @@ async function check_column_exists_pg(
 async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
     log(`Running migration: ${m.version} - ${m.desc}`);
 
-    const sc = process.env.OM_PG_SCHEMA || "public";
-    const mt = process.env.OM_PG_TABLE || "openmemory_memories";
+    const sc = pgSchema();
+    const mt = assertSafeIdentifier(
+        process.env.OM_PG_TABLE || "openmemory_memories",
+        "OM_PG_TABLE",
+    );
+    const vt = assertSafeIdentifier(
+        process.env.OM_VECTOR_TABLE || DEFAULT_VECTOR_TABLE,
+        "OM_VECTOR_TABLE",
+    );
     const has_user_id = await check_column_exists_pg(pool, mt, "user_id");
 
     if (has_user_id) {
@@ -225,7 +280,7 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
 
     const replacements: Record<string, string> = {
         "{m}": `"${sc}"."${mt}"`,
-        "{v}": `"${sc}"."${process.env.OM_VECTOR_TABLE || "openmemory_vectors"}"`,
+        "{v}": `"${sc}"."${vt}"`,
         "{w}": `"${sc}"."openmemory_waypoints"`,
         "{u}": `"${sc}"."openmemory_users"`,
     };
@@ -256,17 +311,16 @@ export async function run_migrations() {
     log("Checking for pending migrations...");
 
     if (is_pg) {
-        const ssl =
-            process.env.OM_PG_SSL === "require"
-                ? { rejectUnauthorized: false }
-                : process.env.OM_PG_SSL === "disable"
-                  ? false
-                  : undefined;
+        const ssl = resolvePgSsl(process.env);
+        const db_name = assertSafeIdentifier(
+            process.env.OM_PG_DB || "openmemory",
+            "OM_PG_DB",
+        );
 
         const pool = new Pool({
             host: process.env.OM_PG_HOST,
             port: process.env.OM_PG_PORT ? +process.env.OM_PG_PORT : undefined,
-            database: process.env.OM_PG_DB || "openmemory",
+            database: db_name,
             user: process.env.OM_PG_USER,
             password: process.env.OM_PG_PASSWORD,
             ssl,
