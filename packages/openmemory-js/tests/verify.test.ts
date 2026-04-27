@@ -1,89 +1,52 @@
-// Force synthetic embeddings BEFORE importing anything that loads cfg/db.
 process.env.OM_EMBEDDINGS = "synthetic";
 process.env.OM_EMBEDDING_FALLBACK = "synthetic";
 process.env.OM_METADATA_BACKEND = process.env.OM_METADATA_BACKEND || "sqlite";
 process.env.OM_VECTOR_BACKEND = process.env.OM_VECTOR_BACKEND || "sqlite";
 
-import { describe, it } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import { Memory } from "../src/core/memory";
 import { env } from "../src/core/cfg";
-import { q, run_async } from "../src/core/db";
+import { all_async, run_async } from "../src/core/db";
 
-// TODO(verify): The original tests/verify.ts was a tsx-only smoke script that:
-//   1. Asserted hard-coded `primary_sector` classifications for 5 hand-crafted
-//      sentences (episodic / emotional / procedural / reflective / semantic).
-//   2. Called `q.conn.run(...)` for cleanup, which is not part of the current
-//      `src/core/db.ts` API surface (the real exports are `run_async`, `q.*`,
-//      `transaction`, etc.).
-//   3. Required real OpenAI embeddings to populate `mean_vec` with the
-//      production 1536-dim vector — it hung indefinitely without
-//      OPENAI_API_KEY.
-//
-// The cleanup-API and OPENAI-dependency issues are easy to fix (use
-// `run_async` and force `OM_EMBEDDINGS=synthetic`). However, the sector
-// classification expectations are tightly coupled to the exact heuristics in
-// `src/memory/...` and produce flaky / incorrect verdicts under synthetic
-// embeddings. Re-asserting them here would either require:
-//   (a) freezing the classifier behavior with a snapshot test, or
-//   (b) re-deriving expected labels from the actual classifier — which would
-//       make the test trivially tautological.
-// Both are out of scope for the P2 "test infrastructure" pass. Quarantining
-// this spec via .skip until the classifier itself gets a dedicated test
-// suite. The fixed-up cleanup + ingest body is left below for the future
-// implementer.
-describe.skip("verify: sector & vector dimensions", () => {
-    it("ingests typed samples and assigns the expected sector + 1536-dim vector", async () => {
-        const uid = "js_sector_tester_v1";
+const SAMPLES = [
+    { type: "episodic", text: "Yesterday I went to the park at 4:00 PM and saw a dog." },
+    { type: "emotional", text: "I am genuinely thrilled about how this project is shaping up." },
+    { type: "procedural", text: "To deploy: run npm run build, then npm start, then health-check." },
+    { type: "reflective", text: "I learn best when I write things down and revisit them later." },
+    { type: "semantic", text: "The capital of France is Paris." },
+];
+
+describe("verify: classifier behaviour snapshot", () => {
+    const uid = "js_sector_tester_v1";
+    let rows: Array<{ text: string; primary_sector: string; vec_dim: number }> = [];
+
+    beforeAll(async () => {
         await run_async("DELETE FROM memories WHERE user_id = ?", [uid]);
-
         const mem = new Memory(uid);
+        for (const s of SAMPLES) {
+            await mem.add(s.text, { user_id: uid });
+        }
+        const raw: any[] = await all_async(
+            "SELECT content, primary_sector, mean_vec FROM memories WHERE user_id = ? ORDER BY created_at",
+            [uid],
+        );
+        rows = raw.map((r) => ({
+            text: r.content,
+            primary_sector: r.primary_sector,
+            vec_dim: r.mean_vec ? r.mean_vec.length / 4 : 0,
+        }));
+    });
 
-        const testCases = [
-            {
-                type: "episodic",
-                text: "Yesterday I went to the park at 4:00 PM and saw a dog.",
-                expected: "episodic",
-            },
-            {
-                type: "emotional",
-                text: "I feel absolutely amazing and excited about this new project! Wow!",
-                expected: "emotional",
-            },
-            {
-                type: "procedural",
-                text: "To install the package, first run npm install, then configure the settings.",
-                expected: "procedural",
-            },
-            {
-                type: "reflective",
-                text: "I realized that the pattern of failure was due to my own lack of patience.",
-                expected: "reflective",
-            },
-            {
-                type: "semantic",
-                text: "Python is a high-level programming language known for its readability.",
-                expected: "semantic",
-            },
-        ];
+    it("matches the classifier sector snapshot", () => {
+        // Snapshot freezes current classifier behaviour. If this fails, the
+        // classifier changed: review the diff and update with `vitest -u`
+        // only if the new labels are intentional.
+        expect(rows.map((r) => ({ text: r.text, sector: r.primary_sector }))).toMatchSnapshot();
+    });
 
-        for (const c of testCases) {
-            const res = await mem.add(c.text);
-            await new Promise((r) => setTimeout(r, 500));
-            const row = await q.get_mem.get(res.id);
-            if (!row) throw new Error(`Memory ${res.id} not found`);
-            if (row.primary_sector !== c.expected) {
-                throw new Error(
-                    `Sector mismatch for ${c.type}: got ${row.primary_sector}, expected ${c.expected}`,
-                );
-            }
-            const vecBuf = row.mean_vec;
-            if (!vecBuf) throw new Error("No vector generated");
-            const dim = vecBuf.length / 4;
-            if (dim !== env.vec_dim) {
-                throw new Error(
-                    `Vector dim mismatch: got ${dim}, expected ${env.vec_dim}`,
-                );
-            }
+    it("emits the configured vector dimension for every sample", () => {
+        for (const r of rows) {
+            expect(r.vec_dim).toBe(env.vec_dim);
         }
     });
 });
