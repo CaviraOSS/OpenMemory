@@ -67,3 +67,11 @@ export class DbInitError extends Error {
         this.cause = cause;
     }
 }
+
+/**
+ * Tenant id assigned to legacy temporal_facts rows whose user_id was NULL
+ * before per-tenant filtering became mandatory. No real API key ever maps
+ * to this value, so quarantined rows stay invisible to every real tenant
+ * while preserving the data for forensic recovery.
+ */
+export const LEGACY_ORPHAN_TENANT = "__legacy_orphan__";

@@ -5,7 +5,61 @@ import { randomUUID } from "crypto";
 
 const is_pg = env.metadata_backend === "postgres";
 
-export const insert_fact = async (
+export interface InsertFactOptions {
+    subject: string;
+    predicate: string;
+    object: string;
+    valid_from?: Date;
+    confidence?: number;
+    metadata?: Record<string, any>;
+    user_id?: string;
+}
+
+export async function insert_fact(opts: InsertFactOptions): Promise<string>;
+export async function insert_fact(
+    subject: string,
+    predicate: string,
+    object: string,
+    valid_from?: Date,
+    confidence?: number,
+    metadata?: Record<string, any>,
+    user_id?: string,
+): Promise<string>;
+export async function insert_fact(
+    subject_or_opts: string | InsertFactOptions,
+    predicate?: string,
+    object?: string,
+    valid_from?: Date,
+    confidence?: number,
+    metadata?: Record<string, any>,
+    user_id?: string,
+): Promise<string> {
+    // Normalize options-bag form to the positional locals used by the
+    // existing implementation.
+    if (typeof subject_or_opts === "object" && subject_or_opts !== null) {
+        const opts = subject_or_opts;
+        return _insert_fact_impl(
+            opts.subject,
+            opts.predicate,
+            opts.object,
+            opts.valid_from ?? new Date(),
+            opts.confidence ?? 1.0,
+            opts.metadata,
+            opts.user_id,
+        );
+    }
+    return _insert_fact_impl(
+        subject_or_opts,
+        predicate as string,
+        object as string,
+        valid_from ?? new Date(),
+        confidence ?? 1.0,
+        metadata,
+        user_id,
+    );
+}
+
+const _insert_fact_impl = async (
     subject: string,
     predicate: string,
     object: string,
@@ -246,4 +300,35 @@ export const get_total_facts_count = async (): Promise<number> => {
         `SELECT COUNT(*) as count FROM temporal_facts`,
     )) as any;
     return result?.count || 0;
+};
+
+/**
+ * Authenticated point-lookup for a single fact. Returns null if the fact
+ * either does not exist or belongs to a different tenant. This is the
+ * preferred way for route handlers to confirm ownership before mutating
+ * a fact, replacing the old `query_facts_at_time(...).find(id)` pattern
+ * which fetched the caller's entire history just to authorize one row.
+ */
+export const get_fact_by_id_for_user = async (
+    id: string,
+    user_id: string,
+): Promise<TemporalFact | null> => {
+    const row = await get_async(
+        `SELECT id, user_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
+         FROM temporal_facts WHERE id = ? AND user_id = ? LIMIT 1`,
+        [id, user_id],
+    );
+    if (!row) return null;
+    return {
+        id: row.id,
+        user_id: row.user_id,
+        subject: row.subject,
+        predicate: row.predicate,
+        object: row.object,
+        valid_from: new Date(row.valid_from),
+        valid_to: row.valid_to ? new Date(row.valid_to) : null,
+        confidence: row.confidence,
+        last_updated: new Date(row.last_updated),
+        metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+    };
 };
