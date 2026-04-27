@@ -23,4 +23,3 @@ export function routes(app: any) {
     vercel(app);
     src(app);
 }
-

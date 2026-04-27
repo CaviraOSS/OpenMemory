@@ -22,9 +22,12 @@ export type PgSslConfig = false | { rejectUnauthorized: boolean; ca?: string };
 
 let warnedRequire = false;
 
-export function resolvePgSsl(env: NodeJS.ProcessEnv = process.env): PgSslConfig {
+export function resolvePgSsl(
+    env: NodeJS.ProcessEnv = process.env,
+): PgSslConfig {
     const raw = (env.OM_PG_SSL ?? "").trim().toLowerCase();
-    const mode = raw || (env.NODE_ENV === "production" ? "verify-full" : "disable");
+    const mode =
+        raw || (env.NODE_ENV === "production" ? "verify-full" : "disable");
 
     if (mode === "disable") {
         return false;
@@ -34,7 +37,7 @@ export function resolvePgSsl(env: NodeJS.ProcessEnv = process.env): PgSslConfig 
         if (!warnedRequire) {
             console.warn(
                 "[OpenMemory][PG][SSL] OM_PG_SSL=require: TLS enabled WITHOUT certificate verification. " +
-                "Use OM_PG_SSL=verify-full for production deployments.",
+                    "Use OM_PG_SSL=verify-full for production deployments.",
             );
             warnedRequire = true;
         }
@@ -59,6 +62,6 @@ export function resolvePgSsl(env: NodeJS.ProcessEnv = process.env): PgSslConfig 
 
     throw new Error(
         `[OpenMemory][PG][SSL] Unknown OM_PG_SSL value: ${JSON.stringify(raw)}. ` +
-        `Expected one of: verify-full, require, disable.`,
+            `Expected one of: verify-full, require, disable.`,
     );
 }

@@ -39,11 +39,31 @@ describe.skip("verify: sector & vector dimensions", () => {
         const mem = new Memory(uid);
 
         const testCases = [
-            { type: "episodic", text: "Yesterday I went to the park at 4:00 PM and saw a dog.", expected: "episodic" },
-            { type: "emotional", text: "I feel absolutely amazing and excited about this new project! Wow!", expected: "emotional" },
-            { type: "procedural", text: "To install the package, first run npm install, then configure the settings.", expected: "procedural" },
-            { type: "reflective", text: "I realized that the pattern of failure was due to my own lack of patience.", expected: "reflective" },
-            { type: "semantic", text: "Python is a high-level programming language known for its readability.", expected: "semantic" },
+            {
+                type: "episodic",
+                text: "Yesterday I went to the park at 4:00 PM and saw a dog.",
+                expected: "episodic",
+            },
+            {
+                type: "emotional",
+                text: "I feel absolutely amazing and excited about this new project! Wow!",
+                expected: "emotional",
+            },
+            {
+                type: "procedural",
+                text: "To install the package, first run npm install, then configure the settings.",
+                expected: "procedural",
+            },
+            {
+                type: "reflective",
+                text: "I realized that the pattern of failure was due to my own lack of patience.",
+                expected: "reflective",
+            },
+            {
+                type: "semantic",
+                text: "Python is a high-level programming language known for its readability.",
+                expected: "semantic",
+            },
         ];
 
         for (const c of testCases) {
@@ -52,13 +72,17 @@ describe.skip("verify: sector & vector dimensions", () => {
             const row = await q.get_mem.get(res.id);
             if (!row) throw new Error(`Memory ${res.id} not found`);
             if (row.primary_sector !== c.expected) {
-                throw new Error(`Sector mismatch for ${c.type}: got ${row.primary_sector}, expected ${c.expected}`);
+                throw new Error(
+                    `Sector mismatch for ${c.type}: got ${row.primary_sector}, expected ${c.expected}`,
+                );
             }
             const vecBuf = row.mean_vec;
             if (!vecBuf) throw new Error("No vector generated");
             const dim = vecBuf.length / 4;
             if (dim !== env.vec_dim) {
-                throw new Error(`Vector dim mismatch: got ${dim}, expected ${env.vec_dim}`);
+                throw new Error(
+                    `Vector dim mismatch: got ${dim}, expected ${env.vec_dim}`,
+                );
             }
         }
     });

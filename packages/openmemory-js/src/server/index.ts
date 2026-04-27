@@ -40,13 +40,12 @@ console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
 console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
 console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
-
 if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
     console.warn(
         `[CONFIG] ⚠️  WARNING: Embedding configuration mismatch detected!\n` +
-        `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
-        `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
-        `         This causes semantic search to fail. Set OM_TIER=deep to fix.`
+            `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
+            `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
+            `         This causes semantic search to fail. Set OM_TIER=deep to fix.`,
     );
 }
 
@@ -141,6 +140,9 @@ app.listen(env.port, () => {
     sendTelemetry().catch((err: any) => {
         // Telemetry must never crash the server. Surface the failure
         // to operators so silent breakage doesn't accumulate.
-        console.error("[TELEMETRY] sendTelemetry failed:", err && err.stack ? err.stack : err);
+        console.error(
+            "[TELEMETRY] sendTelemetry failed:",
+            err && err.stack ? err.stack : err,
+        );
     });
 });

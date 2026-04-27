@@ -32,7 +32,7 @@ export class UnsafeIdentifierError extends Error {
     constructor(name: string, kind: string) {
         super(
             `[OpenMemory] Refusing to use unsafe SQL identifier for ${kind}: ${JSON.stringify(name)}. ` +
-            `Identifiers must match /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.`,
+                `Identifiers must match /^[A-Za-z_][A-Za-z0-9_]{0,62}$/.`,
         );
         this.name = "UnsafeIdentifierError";
     }
@@ -44,7 +44,10 @@ export class UnsafeIdentifierError extends Error {
  *
  *   const t = assertSafeIdentifier(process.env.OM_PG_TABLE || "openmemory_memories", "OM_PG_TABLE");
  */
-export function assertSafeIdentifier(name: string, kind: string = "identifier"): string {
+export function assertSafeIdentifier(
+    name: string,
+    kind: string = "identifier",
+): string {
     if (typeof name !== "string" || !IDENTIFIER_RE.test(name)) {
         throw new UnsafeIdentifierError(name, kind);
     }

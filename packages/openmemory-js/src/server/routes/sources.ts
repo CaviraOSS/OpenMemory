@@ -143,7 +143,11 @@ export function src(app: any) {
             }
 
             if (content) {
-                const result = await ingestDocument("text" as any, content, meta);
+                const result = await ingestDocument(
+                    "text" as any,
+                    content,
+                    meta,
+                );
                 res.json({
                     ok: true,
                     memory_id: result.root_memory_id,

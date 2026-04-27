@@ -111,15 +111,21 @@ export const create_mcp_srv = () => {
                     subject: z
                         .string()
                         .optional()
-                        .describe("Subject pattern (entity) - use undefined for wildcard"),
+                        .describe(
+                            "Subject pattern (entity) - use undefined for wildcard",
+                        ),
                     predicate: z
                         .string()
                         .optional()
-                        .describe("Predicate pattern (relationship) - use undefined for wildcard"),
+                        .describe(
+                            "Predicate pattern (relationship) - use undefined for wildcard",
+                        ),
                     object: z
                         .string()
                         .optional()
-                        .describe("Object pattern (value) - use undefined for wildcard"),
+                        .describe(
+                            "Object pattern (value) - use undefined for wildcard",
+                        ),
                 })
                 .optional()
                 .describe(
@@ -140,7 +146,9 @@ export const create_mcp_srv = () => {
                 .describe("Maximum results to return (for HSG queries)"),
             sector: sec_enum
                 .optional()
-                .describe("Restrict search to a specific sector (for HSG queries)"),
+                .describe(
+                    "Restrict search to a specific sector (for HSG queries)",
+                ),
             min_salience: z
                 .number()
                 .min(0)
@@ -168,17 +176,18 @@ export const create_mcp_srv = () => {
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
 
-
             if (type === "contextual" || type === "unified") {
                 const flt =
                     sector || min_salience !== undefined || u
                         ? {
-                            ...(sector ? { sectors: [sector as sector_type] } : {}),
-                            ...(min_salience !== undefined
-                                ? { minSalience: min_salience }
-                                : {}),
-                            ...(u ? { user_id: u } : {}),
-                        }
+                              ...(sector
+                                  ? { sectors: [sector as sector_type] }
+                                  : {}),
+                              ...(min_salience !== undefined
+                                  ? { minSalience: min_salience }
+                                  : {}),
+                              ...(u ? { user_id: u } : {}),
+                          }
                         : undefined;
 
                 const matches = await hsg_query(query, k ?? 8, flt);
@@ -194,7 +203,6 @@ export const create_mcp_srv = () => {
                     content: m.content,
                 }));
             }
-
 
             if (type === "factual" || type === "unified") {
                 const facts = await query_facts_at_time(
@@ -219,7 +227,6 @@ export const create_mcp_srv = () => {
                 }));
             }
 
-
             let summ = "";
             if (type === "contextual") {
                 summ = results.contextual.length
@@ -237,7 +244,6 @@ export const create_mcp_srv = () => {
                         .join("\n\n");
                 }
             } else {
-
                 const ctx_count = results.contextual?.length || 0;
                 const fact_count = results.factual?.length || 0;
                 summ = `Found ${ctx_count} contextual memories and ${fact_count} temporal facts.\n\n`;
@@ -289,12 +295,18 @@ export const create_mcp_srv = () => {
             facts: z
                 .array(
                     z.object({
-                        subject: z.string().min(1).describe("Fact subject (entity)"),
+                        subject: z
+                            .string()
+                            .min(1)
+                            .describe("Fact subject (entity)"),
                         predicate: z
                             .string()
                             .min(1)
                             .describe("Fact predicate (relationship)"),
-                        object: z.string().min(1).describe("Fact object (value)"),
+                        object: z
+                            .string()
+                            .min(1)
+                            .describe("Fact object (value)"),
                         confidence: z
                             .number()
                             .min(0)
@@ -330,10 +342,16 @@ export const create_mcp_srv = () => {
                     "Associate the memory with a specific user identifier",
                 ),
         },
-        async ({ content, type = "contextual", facts, tags, metadata, user_id }) => {
+        async ({
+            content,
+            type = "contextual",
+            facts,
+            tags,
+            metadata,
+            user_id,
+        }) => {
             const u = uid(user_id);
             const results: any = { type };
-
 
             if (
                 (type === "factual" || type === "both") &&
@@ -343,7 +361,6 @@ export const create_mcp_srv = () => {
                     `Facts array is required when type is '${type}'. Please provide at least one fact.`,
                 );
             }
-
 
             if (type === "contextual" || type === "both") {
                 const res = await add_hsg_memory(
@@ -364,7 +381,6 @@ export const create_mcp_srv = () => {
                     );
                 }
             }
-
 
             if ((type === "factual" || type === "both") && facts) {
                 const temporal_results = [];
@@ -395,7 +411,6 @@ export const create_mcp_srv = () => {
                 }
                 results.temporal = temporal_results;
             }
-
 
             let txt = "";
             if (type === "contextual") {
@@ -452,7 +467,12 @@ export const create_mcp_srv = () => {
         "Delete a memory by identifier",
         {
             id: z.string().min(1).describe("Memory identifier to delete"),
-            user_id: z.string().trim().min(1).optional().describe("Validate ownership"),
+            user_id: z
+                .string()
+                .trim()
+                .min(1)
+                .optional()
+                .describe("Validate ownership"),
         },
         async ({ id, user_id }) => {
             const u = uid(user_id);
@@ -467,13 +487,23 @@ export const create_mcp_srv = () => {
             const success = await delete_memory(id);
             if (!success) {
                 return {
-                    content: [{ type: "text", text: `Memory ${id} not found or could not be deleted.` }],
-                    isError: true
+                    content: [
+                        {
+                            type: "text",
+                            text: `Memory ${id} not found or could not be deleted.`,
+                        },
+                    ],
+                    isError: true,
                 };
             }
 
             return {
-                content: [{ type: "text", text: `Memory ${id} successfully deleted.` }],
+                content: [
+                    {
+                        type: "text",
+                        text: `Memory ${id} successfully deleted.`,
+                    },
+                ],
             };
         },
     );
@@ -489,7 +519,9 @@ export const create_mcp_srv = () => {
                 .max(50)
                 .default(10)
                 .describe("Number of memories to return"),
-            sector: sec_enum.optional().describe("Optionally limit to a sector"),
+            sector: sec_enum
+                .optional()
+                .describe("Optionally limit to a sector"),
             user_id: z
                 .string()
                 .trim()
@@ -631,7 +663,6 @@ export const create_mcp_srv = () => {
     );
 
     srv.server.oninitialized = () => {
-
         console.error(
             "[MCP] initialization completed with client:",
             srv.server.getClientVersion(),
@@ -726,7 +757,6 @@ export const start_mcp_stdio = async () => {
     const srv = create_mcp_srv();
     const trans = new StdioServerTransport();
     await srv.connect(trans);
-
 };
 
 if (typeof require !== "undefined" && require.main === module) {

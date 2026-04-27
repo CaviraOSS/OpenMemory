@@ -184,8 +184,7 @@ export function authenticate_api_request(req: any, res: any, next: any) {
 
 export function log_authenticated_request(req: any, res: any, next: any) {
     const tenant = (req as any).tenant;
-    if (tenant)
-        console.log(`[AUTH] ${req.method} ${req.path} [${tenant}]`);
+    if (tenant) console.log(`[AUTH] ${req.method} ${req.path} [${tenant}]`);
     next();
 }
 

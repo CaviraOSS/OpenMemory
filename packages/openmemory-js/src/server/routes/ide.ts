@@ -66,7 +66,8 @@ export function ide(app: any) {
             } else if (event_type === "close") {
                 memory_content = `Closed file: ${file_path}`;
             } else {
-                memory_content = `[${event_type}] ${file_path}\n${content}`.trim();
+                memory_content =
+                    `[${event_type}] ${file_path}\n${content}`.trim();
             }
 
             const full_metadata = {
@@ -192,10 +193,18 @@ export function ide(app: any) {
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(content, undefined, metadata, tenant);
+            const result = await add_hsg_memory(
+                content,
+                undefined,
+                metadata,
+                tenant,
+            );
 
             update_user_summary(tenant).catch((err) =>
-                console.error("[IDE] Failed to update summary on session start:", err),
+                console.error(
+                    "[IDE] Failed to update summary on session start:",
+                    err,
+                ),
             );
 
             res.json({
@@ -244,7 +253,8 @@ export function ide(app: any) {
             const files = new Set<string>();
 
             for (const m of session_memories) {
-                sectors[m.primary_sector] = (sectors[m.primary_sector] || 0) + 1;
+                sectors[m.primary_sector] =
+                    (sectors[m.primary_sector] || 0) + 1;
                 try {
                     const meta = p(m.meta);
                     if (
@@ -254,7 +264,7 @@ export function ide(app: any) {
                     ) {
                         files.add(meta.ide_file_path);
                     }
-                } catch { }
+                } catch {}
             }
 
             const summary = `Session ${session_id} ended. Events: ${total_events}, Files: ${files.size}, Sectors: ${j(sectors)}`;
@@ -268,10 +278,18 @@ export function ide(app: any) {
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(summary, undefined, metadata, tenant);
+            const result = await add_hsg_memory(
+                summary,
+                undefined,
+                metadata,
+                tenant,
+            );
 
             update_user_summary(tenant).catch((err) =>
-                console.error("[IDE] Failed to update summary on session end:", err),
+                console.error(
+                    "[IDE] Failed to update summary on session end:",
+                    err,
+                ),
             );
 
             res.json({

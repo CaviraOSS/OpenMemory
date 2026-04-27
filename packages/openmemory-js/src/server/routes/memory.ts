@@ -12,7 +12,12 @@ import { require_tenant, reject_tenant_mismatch } from "../middleware/tenant";
 import { parse_or_400, schema } from "../middleware/validate";
 
 const add_schema: schema = {
-    content: { type: "string", required: true, min_length: 1, max_length: 200_000 },
+    content: {
+        type: "string",
+        required: true,
+        min_length: 1,
+        max_length: 200_000,
+    },
     tags: {
         type: "array",
         items: { type: "string", max_length: 256 },
@@ -162,14 +167,7 @@ export function mem(app: any) {
             user_id?: string;
         }>(res, req.body, query_schema);
         if (!b) return;
-        if (
-            reject_tenant_mismatch(
-                res,
-                tenant,
-                b.user_id,
-                b.filters?.user_id,
-            )
-        )
+        if (reject_tenant_mismatch(res, tenant, b.user_id, b.filters?.user_id))
             return;
 
         const k = b.k || 8;
@@ -261,24 +259,26 @@ export function mem(app: any) {
     app.get("/memory/all", async (req: any, res: any) => {
         const tenant = require_tenant(req, res);
         if (!tenant) return;
-        if (
-            reject_tenant_mismatch(
-                res,
-                tenant,
-                req.query.user_id,
-            )
-        )
-            return;
+        if (reject_tenant_mismatch(res, tenant, req.query.user_id)) return;
         try {
             const u = req.query.u ? parseInt(req.query.u, 10) : 0;
             const l = req.query.l ? parseInt(req.query.l, 10) : 100;
-            if (!Number.isFinite(u) || !Number.isFinite(l) || u < 0 || l < 0 || l > 10_000) {
+            if (
+                !Number.isFinite(u) ||
+                !Number.isFinite(l) ||
+                u < 0 ||
+                l < 0 ||
+                l > 10_000
+            ) {
                 return res.status(400).json({ error: "invalid_pagination" });
             }
             // Always scope to the authenticated tenant — sector filter is
             // applied client-side after the user_id filter.
             const r = await q.all_mem_by_user.all(tenant, l, u);
-            const sector = typeof req.query.sector === "string" ? req.query.sector : undefined;
+            const sector =
+                typeof req.query.sector === "string"
+                    ? req.query.sector
+                    : undefined;
             const filtered = sector
                 ? r.filter((x: any) => x.primary_sector === sector)
                 : r;
@@ -307,14 +307,7 @@ export function mem(app: any) {
     app.get("/memory/:id", async (req: any, res: any) => {
         const tenant = require_tenant(req, res);
         if (!tenant) return;
-        if (
-            reject_tenant_mismatch(
-                res,
-                tenant,
-                req.query.user_id,
-            )
-        )
-            return;
+        if (reject_tenant_mismatch(res, tenant, req.query.user_id)) return;
         try {
             const id = req.params.id;
             const m = await q.get_mem.get(id);

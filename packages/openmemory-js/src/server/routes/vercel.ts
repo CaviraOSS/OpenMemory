@@ -12,7 +12,12 @@ const query_schema: schema = {
 };
 
 const mem_schema: schema = {
-    content: { type: "string", required: true, min_length: 1, max_length: 200_000 },
+    content: {
+        type: "string",
+        required: true,
+        min_length: 1,
+        max_length: 200_000,
+    },
     user_id: { type: "string", max_length: 256 },
     tags: {
         type: "array",
@@ -40,8 +45,10 @@ export function vercel(app: any) {
         try {
             const query = String(b.query).slice(0, 4000);
             const k = Math.max(1, Math.min(32, Number(b.k) || 8));
-            const startTime = b.startTime !== undefined ? Number(b.startTime) : undefined;
-            const endTime = b.endTime !== undefined ? Number(b.endTime) : undefined;
+            const startTime =
+                b.startTime !== undefined ? Number(b.startTime) : undefined;
+            const endTime =
+                b.endTime !== undefined ? Number(b.endTime) : undefined;
             const matches = await hsg_query(query, k, {
                 user_id: tenant,
                 startTime,
@@ -89,7 +96,12 @@ export function vercel(app: any) {
             const content = String(b.content).trim();
             if (!content) return res.status(400).json({ err: "content" });
             const tags = Array.isArray(b.tags) ? b.tags : [];
-            const r = await add_hsg_memory(content, j(tags), b.metadata, tenant);
+            const r = await add_hsg_memory(
+                content,
+                j(tags),
+                b.metadata,
+                tenant,
+            );
             res.json(r);
         } catch (e: any) {
             console.error("[vercel] /memories failed:", e);

@@ -34,8 +34,10 @@ const stem_rules: Array<[RegExp, string]> = [
     [/ed$/, ""],
     [/s$/, ""],
 ];
-const cjk_pat = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/u;
-const tok_pat = /[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/giu;
+const cjk_pat =
+    /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/u;
+const tok_pat =
+    /[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/giu;
 
 const expand_cjk_token = (tok: string): string[] => {
     if (tok.length <= 1) return [tok];
@@ -120,7 +122,11 @@ export const canonical_token_set = (text: string): Set<string> => {
 };
 
 export const stable_text_fallback_hash = (text: string): string => {
-    return crypto.createHash("blake2b512").update(text, "utf8").digest("hex").slice(0, 16);
+    return crypto
+        .createHash("blake2b512")
+        .update(text, "utf8")
+        .digest("hex")
+        .slice(0, 16);
 };
 
 export const add_synonym_tokens = (toks: Iterable<string>): Set<string> => {

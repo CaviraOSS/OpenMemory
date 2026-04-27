@@ -152,7 +152,7 @@ async function resolveSqliteVectorTable(db: sqlite3.Database): Promise<string> {
     if (await tableExists(LEGACY_SQLITE_VECTOR_TABLE)) {
         log(
             `Detected legacy "${LEGACY_SQLITE_VECTOR_TABLE}" table; migration will target it. ` +
-            `Consider renaming to "${DEFAULT_VECTOR_TABLE}" once safe.`,
+                `Consider renaming to "${DEFAULT_VECTOR_TABLE}" once safe.`,
         );
         return LEGACY_SQLITE_VECTOR_TABLE;
     }

@@ -98,9 +98,7 @@ function check_field(
             if (spec.max_length !== undefined && s.length > spec.max_length)
                 errors.push(`${path}: length > ${spec.max_length}`);
             if (spec.one_of && !spec.one_of.includes(s))
-                errors.push(
-                    `${path}: must be one of ${spec.one_of.join(",")}`,
-                );
+                errors.push(`${path}: must be one of ${spec.one_of.join(",")}`);
             return s;
         }
         case "number":
@@ -193,12 +191,7 @@ export function validate<T = Record<string, unknown>>(
         errors.push("body: expected object");
         return { ok: false, data: input as unknown as T, errors };
     }
-    const data = run_schema(
-        "",
-        input as Record<string, unknown>,
-        spec,
-        errors,
-    );
+    const data = run_schema("", input as Record<string, unknown>, spec, errors);
     return { ok: errors.length === 0, data: data as unknown as T, errors };
 }
 

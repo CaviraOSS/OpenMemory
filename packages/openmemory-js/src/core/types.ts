@@ -97,16 +97,16 @@ export type lgm_reflection_req = {
 
 export type ide_event_req = {
     event:
-    | "edit"
-    | "open"
-    | "close"
-    | "save"
-    | "refactor"
-    | "comment"
-    | "pattern_detected"
-    | "api_call"
-    | "definition"
-    | "reflection";
+        | "edit"
+        | "open"
+        | "close"
+        | "save"
+        | "refactor"
+        | "comment"
+        | "pattern_detected"
+        | "api_call"
+        | "definition"
+        | "reflection";
     file?: string;
     snippet?: string;
     comment?: string;

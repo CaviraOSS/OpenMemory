@@ -18,17 +18,28 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function cleanup(_user_id: string) {
     await run_async(`DELETE FROM memories`);
-    try { await run_async(`DELETE FROM vectors`); } catch { }
-    try { await run_async(`DELETE FROM openmemory_vectors`); } catch { }
-    try { await run_async(`DELETE FROM waypoints`); } catch { }
-    try { await run_async(`DELETE FROM users`); } catch { }
+    try {
+        await run_async(`DELETE FROM vectors`);
+    } catch {}
+    try {
+        await run_async(`DELETE FROM openmemory_vectors`);
+    } catch {}
+    try {
+        await run_async(`DELETE FROM waypoints`);
+    } catch {}
+    try {
+        await run_async(`DELETE FROM users`);
+    } catch {}
     if (global.gc) global.gc();
 }
 
 async function check_vec(id: string) {
     const row = await q.get_mem.get(id);
     if (!row) console.error(`[DEBUG] Memory ${id} NOT FOUND in DB`);
-    else console.log(`[DEBUG] Memory ${id} vector length: ${row.mean_vec ? row.mean_vec.length : 'NULL'}`);
+    else
+        console.log(
+            `[DEBUG] Memory ${id} vector length: ${row.mean_vec ? row.mean_vec.length : "NULL"}`,
+        );
 }
 
 describe("omnibus", () => {
@@ -47,8 +58,12 @@ describe("omnibus", () => {
 
         // 1. Genesis
         mockTime = originalNow();
-        const res_pop = await mem.add("I am the Popular Memory", { user_id: uid });
-        const res_unpop = await mem.add("I am the Unpopular Memory", { user_id: uid });
+        const res_pop = await mem.add("I am the Popular Memory", {
+            user_id: uid,
+        });
+        const res_unpop = await mem.add("I am the Unpopular Memory", {
+            user_id: uid,
+        });
         const pid = res_pop.id;
         const uid_mem = res_unpop.id;
 
@@ -82,7 +97,9 @@ describe("omnibus", () => {
         console.log(`    Unpopular Salience: ${s_unpop.toFixed(4)}`);
 
         if (s_pop <= s_unpop) {
-            throw new Error(`FAIL: Popular memory (${s_pop}) should > Unpopular (${s_unpop})`);
+            throw new Error(
+                `FAIL: Popular memory (${s_pop}) should > Unpopular (${s_unpop})`,
+            );
         }
         console.log(" -> PASS: Survival of the fittest confirmed.");
         mockTime = null; // Reset
@@ -97,11 +114,23 @@ describe("omnibus", () => {
         await sleep(500);
 
         // 1. High Priority, Work context
-        await mem.add("Finish Report", { user_id: uid, tags: ["work", "urgent"], priority: 10 });
+        await mem.add("Finish Report", {
+            user_id: uid,
+            tags: ["work", "urgent"],
+            priority: 10,
+        });
         // 2. Low Priority, Work context
-        await mem.add("Clean Desk", { user_id: uid, tags: ["work"], priority: 2 });
+        await mem.add("Clean Desk", {
+            user_id: uid,
+            tags: ["work"],
+            priority: 2,
+        });
         // 3. High Prioriy, Home context
-        const res3 = await mem.add("Pay Bills", { user_id: uid, tags: ["home", "urgent"], priority: 10 });
+        const res3 = await mem.add("Pay Bills", {
+            user_id: uid,
+            tags: ["home", "urgent"],
+            priority: 10,
+        });
 
         // Ensure persistence
         await sleep(1000);
@@ -113,13 +142,19 @@ describe("omnibus", () => {
 
         // Check logic
         const found = hits.some((h: any) => {
-            const tags = typeof h.tags === 'string' ? JSON.parse(h.tags) : h.tags || [];
+            const tags =
+                typeof h.tags === "string" ? JSON.parse(h.tags) : h.tags || [];
             return tags.includes("urgent") && tags.includes("work");
         });
 
         if (!found) {
-            await require('fs/promises').writeFile('hits.json', JSON.stringify(hits, null, 2));
-            throw new Error("FAIL: Did not find item with both tags. Dumped hits to hits.json");
+            await require("fs/promises").writeFile(
+                "hits.json",
+                JSON.stringify(hits, null, 2),
+            );
+            throw new Error(
+                "FAIL: Did not find item with both tags. Dumped hits to hits.json",
+            );
         }
         console.log(" -> PASS: Metadata attributes preserved and queryable.");
     });
@@ -131,16 +166,19 @@ describe("omnibus", () => {
         await sleep(500);
 
         const payloads = {
-            "HTML": "<div><h1>Title</h1><p>Body</p></div>",
-            "JSON": '{"key": "value", "list": [1, 2, 3]}',
-            "Markdown": "| Col1 | Col2 |\n|---|---|\n| Val1 | Val2 |",
+            HTML: "<div><h1>Title</h1><p>Body</p></div>",
+            JSON: '{"key": "value", "list": [1, 2, 3]}',
+            Markdown: "| Col1 | Col2 |\n|---|---|\n| Val1 | Val2 |",
         };
 
         for (const [fmt, content] of Object.entries(payloads)) {
             await mem.add(content, { user_id: uid });
             await sleep(200);
 
-            const hits = await mem.search(content.substring(0, 10), { user_id: uid, limit: 1 });
+            const hits = await mem.search(content.substring(0, 10), {
+                user_id: uid,
+                limit: 1,
+            });
             if (!hits || hits.length === 0) {
                 throw new Error(`FAIL: ${fmt} retrieval returned no results.`);
             }
@@ -148,7 +186,11 @@ describe("omnibus", () => {
             const retrieved = hits[0].content;
 
             // Check containment
-            if (retrieved.includes("Title") || retrieved.includes("key") || retrieved.includes("Col1")) {
+            if (
+                retrieved.includes("Title") ||
+                retrieved.includes("key") ||
+                retrieved.includes("Col1")
+            ) {
                 console.log(` -> ${fmt}: Verified (Key Match)`);
             } else {
                 console.error(`original: ${content}`);

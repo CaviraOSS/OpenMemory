@@ -6,7 +6,11 @@ import path from "node:path";
 import { VectorStore } from "./vector_store";
 import { PostgresVectorStore } from "./vector/postgres";
 import { ValkeyVectorStore } from "./vector/valkey";
-import { assertSafeIdentifier, DbInitError, DEFAULT_VECTOR_TABLE } from "./identifiers";
+import {
+    assertSafeIdentifier,
+    DbInitError,
+    DEFAULT_VECTOR_TABLE,
+} from "./identifiers";
 import { resolvePgSsl } from "./pg_ssl";
 
 const LEGACY_SQLITE_VECTOR_TABLE = "vectors";
@@ -67,7 +71,6 @@ let vector_store: VectorStore;
 let memories_table: string;
 
 const is_pg = env.metadata_backend === "postgres";
-
 
 function convertPlaceholders(sql: string): string {
     if (!is_pg) return sql;
@@ -258,21 +261,28 @@ if (is_pg) {
         );
         ready = true;
 
-
         if (env.vector_backend === "valkey") {
             vector_store = new ValkeyVectorStore();
             console.error("[DB] Using Valkey VectorStore");
         } else {
             // Pass the validated, schema-qualified identifier (with quotes)
             // straight through; PostgresVectorStore interpolates it as-is.
-            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v, true);
+            vector_store = new PostgresVectorStore(
+                { run_async, get_async, all_async },
+                v,
+                true,
+            );
             console.error(`[DB] Using Postgres VectorStore with table: ${v}`);
         }
     };
     init().catch((err) => {
-        initError = err instanceof DbInitError
-            ? err
-            : new DbInitError(`[OpenMemory] Postgres init failed: ${(err && err.message) || err}`, err);
+        initError =
+            err instanceof DbInitError
+                ? err
+                : new DbInitError(
+                      `[OpenMemory] Postgres init failed: ${(err && err.message) || err}`,
+                      err,
+                  );
         console.error("[DB] Init failed:", err);
     });
     const safe_exec = async (sql: string, p: any[] = []) => {
@@ -488,8 +498,7 @@ if (is_pg) {
     };
 } else {
     const db_path =
-        env.db_path ||
-        path.resolve(__dirname, "../../data/openmemory.sqlite");
+        env.db_path || path.resolve(__dirname, "../../data/openmemory.sqlite");
     const dir = path.dirname(db_path);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);
@@ -516,8 +525,8 @@ if (is_pg) {
                 if (row && sqlite_vector_table !== LEGACY_SQLITE_VECTOR_TABLE) {
                     console.warn(
                         `[OpenMemory][DB] Detected legacy SQLite vector table "${LEGACY_SQLITE_VECTOR_TABLE}" but the canonical default is now "${DEFAULT_VECTOR_TABLE}". ` +
-                        `Either set OM_VECTOR_TABLE=${LEGACY_SQLITE_VECTOR_TABLE} to keep using it, or run: ` +
-                        `ALTER TABLE ${LEGACY_SQLITE_VECTOR_TABLE} RENAME TO ${DEFAULT_VECTOR_TABLE};`,
+                            `Either set OM_VECTOR_TABLE=${LEGACY_SQLITE_VECTOR_TABLE} to keep using it, or run: ` +
+                            `ALTER TABLE ${LEGACY_SQLITE_VECTOR_TABLE} RENAME TO ${DEFAULT_VECTOR_TABLE};`,
                     );
                 }
             },
@@ -635,31 +644,24 @@ if (is_pg) {
     get_async = one;
     all_async = many;
 
-
-
-
-
-
-
-
-
-
-
-
     if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
         console.error("[DB] Using Valkey VectorStore");
     } else {
-        vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, sqlite_vector_table);
-        console.error(`[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`);
+        vector_store = new PostgresVectorStore(
+            { run_async, get_async, all_async },
+            sqlite_vector_table,
+        );
+        console.error(
+            `[DB] Using SQLite VectorStore with table: ${sqlite_vector_table}`,
+        );
     }
-
 
     class Mutex {
         private mutex = Promise.resolve();
         lock(): Promise<() => void> {
-            let unlock: (value?: void) => void = () => { };
-            const willUnlock = new Promise<void>(resolve => {
+            let unlock: (value?: void) => void = () => {};
+            const willUnlock = new Promise<void>((resolve) => {
                 unlock = resolve;
             });
             const willAcquire = this.mutex.then(() => unlock);
@@ -717,7 +719,6 @@ if (is_pg) {
         },
         upd_mean_vec: {
             run: (...p) =>
-
                 exec("update memories set mean_dim=?,mean_vec=? where id=?", [
                     p[1],
                     p[2],
@@ -930,4 +931,12 @@ export const log_maint_op = async (
     }
 };
 
-export { q, transaction, all_async, get_async, run_async, memories_table, vector_store };
+export {
+    q,
+    transaction,
+    all_async,
+    get_async,
+    run_async,
+    memories_table,
+    vector_store,
+};

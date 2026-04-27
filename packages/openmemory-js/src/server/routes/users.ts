@@ -72,7 +72,11 @@ export const usr = (app: any) => {
             // explicitly opt-in via OM_ADMIN_REGENERATE_ALL=true.
             if (process.env.OM_ADMIN_REGENERATE_ALL === "true") {
                 const result = await auto_update_user_summaries();
-                return res.json({ ok: true, updated: result.updated, scope: "all" });
+                return res.json({
+                    ok: true,
+                    updated: result.updated,
+                    scope: "all",
+                });
             }
             await update_user_summary(tenant);
             res.json({ ok: true, updated: 1, scope: "self" });
