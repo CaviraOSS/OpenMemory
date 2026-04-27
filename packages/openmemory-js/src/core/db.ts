@@ -6,6 +6,13 @@ import path from "node:path";
 import { VectorStore } from "./vector_store";
 import { PostgresVectorStore } from "./vector/postgres";
 import { ValkeyVectorStore } from "./vector/valkey";
+import { assertSafeIdentifier, DbInitError, DEFAULT_VECTOR_TABLE } from "./identifiers";
+import { resolvePgSsl } from "./pg_ssl";
+
+const LEGACY_SQLITE_VECTOR_TABLE = "vectors";
+
+// Re-export for downstream consumers (e.g. migrate.ts).
+export { DEFAULT_VECTOR_TABLE };
 
 type q_type = {
     ins_mem: { run: (...p: any[]) => Promise<void> };
@@ -69,13 +76,9 @@ function convertPlaceholders(sql: string): string {
 }
 
 if (is_pg) {
-    const ssl =
-        process.env.OM_PG_SSL === "require"
-            ? { rejectUnauthorized: false }
-            : process.env.OM_PG_SSL === "disable"
-                ? false
-                : undefined;
-    const db_name = process.env.OM_PG_DB || "openmemory";
+    const ssl = resolvePgSsl(process.env);
+    const db_name_raw = process.env.OM_PG_DB || "openmemory";
+    const db_name = assertSafeIdentifier(db_name_raw, "OM_PG_DB");
     const pool = (db: string) =>
         new Pool({
             host: process.env.OM_PG_HOST,
@@ -87,10 +90,21 @@ if (is_pg) {
         });
     let pg = pool(db_name);
     let cli: PoolClient | null = null;
-    const sc = process.env.OM_PG_SCHEMA || "public";
-    const m = `"${sc}"."${process.env.OM_PG_TABLE || "openmemory_memories"}"`;
+    const sc = assertSafeIdentifier(
+        process.env.OM_PG_SCHEMA || "public",
+        "OM_PG_SCHEMA",
+    );
+    const memories_name = assertSafeIdentifier(
+        process.env.OM_PG_TABLE || "openmemory_memories",
+        "OM_PG_TABLE",
+    );
+    const vector_name = assertSafeIdentifier(
+        process.env.OM_VECTOR_TABLE || DEFAULT_VECTOR_TABLE,
+        "OM_VECTOR_TABLE",
+    );
+    const m = `"${sc}"."${memories_name}"`;
     memories_table = m;
-    const v = `"${sc}"."${process.env.OM_VECTOR_TABLE || "openmemory_vectors"}"`;
+    const v = `"${sc}"."${vector_name}"`;
     const w = `"${sc}"."openmemory_waypoints"`;
     const l = `"${sc}"."openmemory_embed_logs"`;
     const f = `"${sc}"."openmemory_memories_fts"`;
@@ -129,9 +143,17 @@ if (is_pg) {
         },
     };
     let ready = false;
+    // Captures the first failure from init(); wait_ready and the public
+    // run/get/all wrappers below surface this as a tagged error instead of
+    // letting the package call process.exit() on the host application.
+    let initError: DbInitError | null = null;
     const wait_ready = () =>
-        new Promise<void>((ok) => {
-            const check = () => (ready ? ok() : setTimeout(check, 10));
+        new Promise<void>((ok, no) => {
+            const check = () => {
+                if (initError) return no(initError);
+                if (ready) return ok();
+                setTimeout(check, 10);
+            };
             check();
         });
     const init = async () => {
@@ -141,7 +163,8 @@ if (is_pg) {
             if (err.code === "3D000") {
                 const admin = pool("postgres");
                 try {
-                    await admin.query(`CREATE DATABASE ${db_name}`);
+                    // db_name has already been validated by assertSafeIdentifier above.
+                    await admin.query(`CREATE DATABASE "${db_name}"`);
                     console.error(`[DB] Created ${db_name}`);
                 } catch (e: any) {
                     if (e.code !== "42P04") throw e;
@@ -240,14 +263,17 @@ if (is_pg) {
             vector_store = new ValkeyVectorStore();
             console.error("[DB] Using Valkey VectorStore");
         } else {
-            const vt = process.env.OM_VECTOR_TABLE || "openmemory_vectors";
-            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v.replace(/"/g, ""), true);
+            // Pass the validated, schema-qualified identifier (with quotes)
+            // straight through; PostgresVectorStore interpolates it as-is.
+            vector_store = new PostgresVectorStore({ run_async, get_async, all_async }, v, true);
             console.error(`[DB] Using Postgres VectorStore with table: ${v}`);
         }
     };
     init().catch((err) => {
+        initError = err instanceof DbInitError
+            ? err
+            : new DbInitError(`[OpenMemory] Postgres init failed: ${(err && err.message) || err}`, err);
         console.error("[DB] Init failed:", err);
-        process.exit(1);
     });
     const safe_exec = async (sql: string, p: any[] = []) => {
         await wait_ready();
@@ -468,14 +494,46 @@ if (is_pg) {
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     const db = new sqlite3.Database(db_path);
 
-    const sqlite_vector_table = process.env.OM_VECTOR_TABLE || "vectors";
+    // Default vector table name now matches the Postgres backend
+    // (`openmemory_vectors`). If a deployment sets OM_VECTOR_TABLE
+    // explicitly we honor it, but only after validating it's a safe
+    // SQL identifier — it gets interpolated into raw CREATE/DELETE SQL.
+    const explicit_vector_table = process.env.OM_VECTOR_TABLE;
+    const sqlite_vector_table = assertSafeIdentifier(
+        explicit_vector_table || DEFAULT_VECTOR_TABLE,
+        "OM_VECTOR_TABLE",
+    );
+
+    // Backward-compat warning: pre-1.4 SQLite databases used `vectors`.
+    // We don't auto-rename (data risk) — surface a one-time hint instead
+    // so operators can run the migration manually.
+    if (!explicit_vector_table) {
+        db.get(
+            `SELECT name FROM sqlite_master WHERE type='table' AND name=?`,
+            [LEGACY_SQLITE_VECTOR_TABLE],
+            (err, row: any) => {
+                if (err) return;
+                if (row && sqlite_vector_table !== LEGACY_SQLITE_VECTOR_TABLE) {
+                    console.warn(
+                        `[OpenMemory][DB] Detected legacy SQLite vector table "${LEGACY_SQLITE_VECTOR_TABLE}" but the canonical default is now "${DEFAULT_VECTOR_TABLE}". ` +
+                        `Either set OM_VECTOR_TABLE=${LEGACY_SQLITE_VECTOR_TABLE} to keep using it, or run: ` +
+                        `ALTER TABLE ${LEGACY_SQLITE_VECTOR_TABLE} RENAME TO ${DEFAULT_VECTOR_TABLE};`,
+                    );
+                }
+            },
+        );
+    }
+
     db.serialize(() => {
         db.run("PRAGMA journal_mode=WAL");
         db.run("PRAGMA synchronous=NORMAL");
         db.run("PRAGMA temp_store=MEMORY");
         db.run("PRAGMA cache_size=-8000");
         db.run("PRAGMA mmap_size=134217728");
-        db.run("PRAGMA foreign_keys=OFF");
+        // Foreign keys are required by the temporal_edges -> temporal_facts
+        // relation. SQLite defaults to OFF for backwards compatibility, so
+        // we have to enable it explicitly.
+        db.run("PRAGMA foreign_keys=ON");
         db.run("PRAGMA wal_autocheckpoint=20000");
         db.run("PRAGMA locking_mode=NORMAL");
         db.run("PRAGMA busy_timeout=5000");
@@ -843,8 +901,9 @@ if (is_pg) {
                 await exec("delete from waypoints");
                 await exec("delete from users");
 
-                const vec_table = process.env.OM_VECTOR_TABLE || "vectors";
-                await exec(`delete from ${vec_table}`);
+                // sqlite_vector_table is already validated above and matches
+                // whatever this process actually created CREATE TABLE for.
+                await exec(`delete from ${sqlite_vector_table}`);
             },
         },
     };
@@ -855,9 +914,16 @@ export const log_maint_op = async (
     cnt = 1,
 ) => {
     try {
-        const sql = is_pg
-            ? `insert into "${process.env.OM_PG_SCHEMA || "public"}"."stats"(type,count,ts) values($1,$2,$3)`
-            : "insert into stats(type,count,ts) values(?,?,?)";
+        let sql: string;
+        if (is_pg) {
+            const sc = assertSafeIdentifier(
+                process.env.OM_PG_SCHEMA || "public",
+                "OM_PG_SCHEMA",
+            );
+            sql = `insert into "${sc}"."stats"(type,count,ts) values($1,$2,$3)`;
+        } else {
+            sql = "insert into stats(type,count,ts) values(?,?,?)";
+        }
         await run_async(sql, [type, cnt, Date.now()]);
     } catch (e) {
         console.error("[DB] Maintenance log error:", e);
