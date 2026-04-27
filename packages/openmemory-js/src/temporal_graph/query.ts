@@ -99,17 +99,22 @@ export const get_current_fact = async (
     };
 };
 
-export const query_facts_in_range = async (
-    opts: {
-        user_id: string;
-        subject?: string;
-        predicate?: string;
-        from?: Date;
-        to?: Date;
-        min_confidence?: number;
-    },
-): Promise<TemporalFact[]> => {
-    const { user_id, subject, predicate, from, to, min_confidence = 0.1 } = opts;
+export const query_facts_in_range = async (opts: {
+    user_id: string;
+    subject?: string;
+    predicate?: string;
+    from?: Date;
+    to?: Date;
+    min_confidence?: number;
+}): Promise<TemporalFact[]> => {
+    const {
+        user_id,
+        subject,
+        predicate,
+        from,
+        to,
+        min_confidence = 0.1,
+    } = opts;
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -170,14 +175,12 @@ export const query_facts_in_range = async (
     }));
 };
 
-export const find_conflicting_facts = async (
-    opts: {
-        user_id: string;
-        subject: string;
-        predicate: string;
-        at?: Date;
-    },
-): Promise<TemporalFact[]> => {
+export const find_conflicting_facts = async (opts: {
+    user_id: string;
+    subject: string;
+    predicate: string;
+    at?: Date;
+}): Promise<TemporalFact[]> => {
     const { user_id, subject, predicate, at } = opts;
     const timestamp = at ? at.getTime() : Date.now();
 
