@@ -4,7 +4,7 @@
 "module": "CommonJS",
 "moduleResolution": "node",
 "outDir": "dist",
-"allowJs": true,
+"allowJs": false,
 "checkJs": false,
 "esModuleInterop": true,
 "forceConsistentCasingInFileNames": true,

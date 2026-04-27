@@ -1,4 +1,4 @@
-const server = require("./server.js");
+import { server } from "./server";
 import { env, tier } from "../core/cfg";
 import { run_decay_process, prune_weak_waypoints } from "../memory/hsg";
 import { mcp } from "../ai/mcp";
