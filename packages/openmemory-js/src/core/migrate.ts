@@ -1,7 +1,11 @@
 import { env } from "./cfg";
 import sqlite3 from "sqlite3";
 import { Pool } from "pg";
-import { assertSafeIdentifier, DEFAULT_VECTOR_TABLE } from "./identifiers";
+import {
+    assertSafeIdentifier,
+    DEFAULT_VECTOR_TABLE,
+    LEGACY_ORPHAN_TENANT,
+} from "./identifiers";
 import { resolvePgSsl } from "./pg_ssl";
 
 const is_pg = env.metadata_backend === "postgres";
@@ -307,6 +311,63 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
     log(`Migration ${m.version} completed successfully`);
 }
 
+/**
+ * One-shot data hygiene step: quarantine any pre-existing temporal_facts
+ * rows whose user_id was NULL (i.e. were inserted before per-tenant
+ * filtering became mandatory) under the synthetic LEGACY_ORPHAN_TENANT
+ * id. This is idempotent: once stamped, the WHERE clause matches no rows
+ * on subsequent runs. We do this outside the schema-version-tracked
+ * migrations because temporal_facts is created lazily by db.ts on first
+ * use rather than via a versioned migration step.
+ */
+async function quarantine_orphan_temporal_facts_sqlite(
+    db: sqlite3.Database,
+): Promise<void> {
+    const tableExists = await new Promise<boolean>((ok, no) => {
+        db.get(
+            `SELECT name FROM sqlite_master WHERE type='table' AND name='temporal_facts'`,
+            (err, row: any) => (err ? no(err) : ok(!!row)),
+        );
+    });
+    if (!tableExists) return;
+    await new Promise<void>((ok, no) => {
+        db.run(
+            `UPDATE temporal_facts SET user_id = ? WHERE user_id IS NULL`,
+            [LEGACY_ORPHAN_TENANT],
+            function (err) {
+                if (err) return no(err);
+                if (this.changes > 0) {
+                    log(
+                        `Quarantined ${this.changes} orphan temporal_facts rows under ${LEGACY_ORPHAN_TENANT}`,
+                    );
+                }
+                ok();
+            },
+        );
+    });
+}
+
+async function quarantine_orphan_temporal_facts_pg(pool: Pool): Promise<void> {
+    const sc = pgSchema();
+    const check = await pool.query(
+        `SELECT EXISTS (
+            SELECT FROM information_schema.tables
+            WHERE table_schema = $1 AND table_name = 'temporal_facts'
+        )`,
+        [sc],
+    );
+    if (!check.rows[0].exists) return;
+    const res = await pool.query(
+        `UPDATE "${sc}"."temporal_facts" SET user_id = $1 WHERE user_id IS NULL`,
+        [LEGACY_ORPHAN_TENANT],
+    );
+    if (res.rowCount && res.rowCount > 0) {
+        log(
+            `Quarantined ${res.rowCount} orphan temporal_facts rows under ${LEGACY_ORPHAN_TENANT}`,
+        );
+    }
+}
+
 export async function run_migrations() {
     log("Checking for pending migrations...");
 
@@ -335,6 +396,8 @@ export async function run_migrations() {
             }
         }
 
+        await quarantine_orphan_temporal_facts_pg(pool);
+
         await pool.end();
     } else {
         const db_path = process.env.OM_DB_PATH || "./data/openmemory.sqlite";
@@ -348,6 +411,8 @@ export async function run_migrations() {
                 await run_sqlite_migration(db, m);
             }
         }
+
+        await quarantine_orphan_temporal_facts_sqlite(db);
 
         await new Promise<void>((ok) => db.close(() => ok()));
     }

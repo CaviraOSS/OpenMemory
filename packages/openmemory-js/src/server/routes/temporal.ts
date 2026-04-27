@@ -5,6 +5,7 @@ import {
     apply_confidence_decay,
     get_active_facts_count,
     get_total_facts_count,
+    get_fact_by_id_for_user,
 } from "../../temporal_graph/store";
 import {
     query_facts_at_time,
@@ -306,16 +307,8 @@ export const update_temporal_fact = async (req: any, res: any) => {
     }
 
     try {
-        // Confirm ownership before mutating: use_query helper to scope by tenant.
-        const owned = await query_facts_at_time(
-            undefined,
-            undefined,
-            undefined,
-            new Date(),
-            0,
-            tenant,
-        );
-        const fact = owned.find((f) => f.id === id);
+        // Confirm ownership before mutating via authenticated point-lookup.
+        const fact = await get_fact_by_id_for_user(id, tenant);
         if (!fact) {
             // Either does not exist or belongs to another tenant.
             return res.status(404).json({ error: "fact_not_found" });
@@ -353,15 +346,7 @@ export const invalidate_temporal_fact = async (req: any, res: any) => {
     const valid_to_date = vt.date ?? new Date();
 
     try {
-        const owned = await query_facts_at_time(
-            undefined,
-            undefined,
-            undefined,
-            new Date(),
-            0,
-            tenant,
-        );
-        const fact = owned.find((f) => f.id === id);
+        const fact = await get_fact_by_id_for_user(id, tenant);
         if (!fact) {
             return res.status(404).json({ error: "fact_not_found" });
         }
@@ -391,14 +376,10 @@ export const get_subject_facts = async (req: any, res: any) => {
         if (!at_p.ok) return res.status(400).json({ error: "invalid at date" });
         const include_hist = req.query.include_historical === "true";
 
-        const facts_raw = await get_facts_by_subject(
-            subject,
-            at_p.date,
-            include_hist,
-        );
-        const facts = facts_raw.filter((f: any) => {
-            const u = f.user_id;
-            return u === undefined || u === null || u === tenant;
+        const facts = await get_facts_by_subject(subject, {
+            user_id: tenant,
+            at: at_p.date,
+            include_historical: include_hist,
         });
 
         res.json({
@@ -439,10 +420,10 @@ export const search_temporal_facts = async (req: any, res: any) => {
         }
         if (!at_p.ok) return res.status(400).json({ error: "invalid at date" });
 
-        const facts_raw = await search_facts(pattern, field as any, at_p.date);
-        const facts = facts_raw.filter((f: any) => {
-            const u = f.user_id;
-            return u === undefined || u === null || u === tenant;
+        const facts = await search_facts(pattern, {
+            user_id: tenant,
+            field: field as any,
+            at: at_p.date,
         });
 
         res.json({
