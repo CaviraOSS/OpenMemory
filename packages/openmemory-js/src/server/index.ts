@@ -126,7 +126,9 @@ start_user_summary_reflection();
 console.log(`[SERVER] Starting on port ${env.port}`);
 app.listen(env.port, () => {
     console.log(`[SERVER] Running on http://localhost:${env.port}`);
-    sendTelemetry().catch(() => {
-
+    sendTelemetry().catch((err: any) => {
+        // Telemetry must never crash the server. Surface the failure
+        // to operators so silent breakage doesn't accumulate.
+        console.error("[TELEMETRY] sendTelemetry failed:", err && err.stack ? err.stack : err);
     });
 });
