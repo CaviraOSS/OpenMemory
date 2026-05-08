@@ -4,10 +4,10 @@ services:
       context: ./packages/openmemory-js
       dockerfile: Dockerfile
     ports:
-      - '8080:8080'
+      - '8180:8180'
     environment:
       # Core Configuration
-      - OM_PORT=${OM_PORT:-8080}
+      - OM_PORT=${OM_PORT:-8180}
       - OM_MODE=${OM_MODE:-standard}
       - OM_TIER=${OM_TIER:-hybrid}
       - OM_DB_PATH=${OM_DB_PATH:-/data/openmemory.sqlite}
@@ -125,7 +125,7 @@ services:
           'CMD',
           'node',
           '-e',
-          'require("http").get("http://localhost:8080/health",(res)=>process.exit(res.statusCode===200?0:1)).on("error",()=>process.exit(1))',
+          'require("http").get("http://localhost:8180/health",(res)=>process.exit(res.statusCode===200?0:1)).on("error",()=>process.exit(1))',
         ]
       interval: 30s
       timeout: 10s
@@ -140,12 +140,12 @@ services:
       context: ./dashboard
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8180}
         - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
     ports:
       - '3000:3000'
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8180}
       - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
     depends_on:
       openmemory:

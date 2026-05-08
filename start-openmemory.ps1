@@ -11,7 +11,7 @@ $Stderr = Join-Path $LogDir "openmemory-server.err.log"
 
 function Test-OpenMemoryHealth {
     try {
-        $response = Invoke-RestMethod -Uri "http://127.0.0.1:8080/health" -TimeoutSec 3
+        $response = Invoke-RestMethod -Uri "http://127.0.0.1:8180/health" -TimeoutSec 3
         return [bool]$response.ok
     } catch {
         return $false
@@ -28,8 +28,8 @@ if (-not (Test-Path -LiteralPath $Opm)) {
 
 New-Item -ItemType Directory -Force -Path $DataDir, $LogDir | Out-Null
 
-$env:OPENMEMORY_URL = "http://127.0.0.1:8080"
-$env:OM_PORT = "8080"
+$env:OPENMEMORY_URL = "http://127.0.0.1:8180"
+$env:OM_PORT = "8180"
 $env:OM_DB_PATH = $DbPath
 $env:OM_TIER = "hybrid"
 $env:NO_COLOR = "1"
@@ -50,4 +50,4 @@ while ((Get-Date) -lt $deadline) {
     Start-Sleep -Milliseconds 500
 }
 
-throw "OpenMemory did not become healthy on http://127.0.0.1:8080/health. Check $Stdout and $Stderr."
+throw "OpenMemory did not become healthy on http://127.0.0.1:8180/health. Check $Stdout and $Stderr."
