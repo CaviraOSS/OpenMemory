@@ -307,11 +307,11 @@ async function emb_gemini(
 ): Promise<Record<string, number[]>> {
     if (!env.gemini_key) throw new Error("Gemini key missing");
     const prom = gem_q.then(async () => {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${env.gemini_key}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents?key=${env.gemini_key}`;
         for (let a = 0; a < 3; a++) {
             try {
                 const reqs = Object.entries(txts).map(([s, t]) => ({
-                    model: "models/text-embedding-004",
+                    model: "models/gemini-embedding-001",
                     content: { parts: [{ text: t }] },
                     taskType: task_map[s] || task_map.semantic,
                 }));
@@ -705,7 +705,7 @@ export const getEmbeddingInfo = () => {
     } else if (env.emb_kind === "gemini") {
         i.configured = !!env.gemini_key;
         i.batch_api = env.embed_mode === "simple";
-        i.model = "embedding-001";
+        i.model = "gemini-embedding-001";
     } else if (env.emb_kind === "aws") {
         i.configured =
             !!env.AWS_REGION &&

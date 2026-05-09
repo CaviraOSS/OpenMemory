@@ -51,7 +51,7 @@ const get_defaults = (): model_cfg => ({
     episodic: {
         ollama: "nomic-embed-text",
         openai: "text-embedding-3-small",
-        gemini: "models/embedding-001",
+        gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         siray: "text-embedding-3-small",
         local: "all-MiniLM-L6-v2",
@@ -59,7 +59,7 @@ const get_defaults = (): model_cfg => ({
     semantic: {
         ollama: "nomic-embed-text",
         openai: "text-embedding-3-small",
-        gemini: "models/embedding-001",
+        gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         siray: "text-embedding-3-small",
         local: "all-MiniLM-L6-v2",
@@ -67,21 +67,21 @@ const get_defaults = (): model_cfg => ({
     procedural: {
         ollama: "nomic-embed-text",
         openai: "text-embedding-3-small",
-        gemini: "models/embedding-001",
+        gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         local: "all-MiniLM-L6-v2",
     },
     emotional: {
         ollama: "nomic-embed-text",
         openai: "text-embedding-3-small",
-        gemini: "models/embedding-001",
+        gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         local: "all-MiniLM-L6-v2",
     },
     reflective: {
         ollama: "nomic-embed-text",
         openai: "text-embedding-3-large",
-        gemini: "models/embedding-001",
+        gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         local: "all-mpnet-base-v2",
     },
