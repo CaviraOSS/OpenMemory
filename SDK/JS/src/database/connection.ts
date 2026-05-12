@@ -1,5 +1,5 @@
 import sqlite3 from "sqlite3";
-import { Pool, PoolClient } from "pg";
+import { Pool, PoolClient } from "../../node_modules/@types/pg";
 import { env } from "../configuration/index";
 import fs from "node:fs";
 import path from "node:path";

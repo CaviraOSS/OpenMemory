@@ -1,5 +1,5 @@
 import os from "node:os";
-import { env } from "../configuration/index";
+import { env } from "./index";
 
 const DISABLED = (process.env.OM_TELEMETRY ?? "").toLowerCase() === "false";
 const gatherVersion = (): string => {

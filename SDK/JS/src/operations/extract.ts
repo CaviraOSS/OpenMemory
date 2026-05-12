@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import ffmpeg from "fluent-ffmpeg";
-import OpenAI from "openai";
+import OpenAI from "openai/index.mjs";
 const TurndownService = require("turndown");
 
 const execAsync = promisify(exec);

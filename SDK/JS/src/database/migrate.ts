@@ -1,6 +1,6 @@
 import { env } from "../configuration/index";
 import sqlite3 from "sqlite3";
-import { Pool } from "pg";
+import { Pool } from "../../node_modules/@types/pg";
 
 const is_pg = env.metadata_backend === "postgres";
 
