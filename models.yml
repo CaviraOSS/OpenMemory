@@ -1,0 +1,58 @@
+# OpenMemory Embedding Models Configuration
+# Configure which models to use for each brain sector and provider
+# Provider settings (URLs, API keys, etc.) are in .env
+
+# Sector-specific model mappings
+# Each sector can use different models optimized for that type of memory
+
+episodic:
+  ollama: nomic-embed-text
+  openai: text-embedding-3-small
+  gemini: models/text-embedding-004
+  aws: amazon.titan-embed-text-v2:0
+  local: all-MiniLM-L6-v2
+
+semantic:
+  ollama: nomic-embed-text
+  openai: text-embedding-3-small
+  gemini: models/text-embedding-004
+  aws: amazon.titan-embed-text-v2:0
+  local: all-MiniLM-L6-v2
+
+procedural:
+  ollama: nomic-embed-text
+  openai: text-embedding-3-small
+  gemini: models/text-embedding-004
+  aws: amazon.titan-embed-text-v2:0
+  local: all-MiniLM-L6-v2
+
+emotional:
+  ollama: nomic-embed-text
+  openai: text-embedding-3-small
+  gemini: models/text-embedding-004
+  aws: amazon.titan-embed-text-v2:0
+  local: all-MiniLM-L6-v2
+
+reflective:
+  ollama: nomic-embed-text
+  openai: text-embedding-3-large
+  gemini: models/text-embedding-004
+  aws: amazon.titan-embed-text-v2:0
+  local: all-mpnet-base-v2
+# Available Ollama models (pull with: ollama pull <model>)
+# - nomic-embed-text (768d, recommended)
+# - mxbai-embed-large (1024d)
+# - snowflake-arctic-embed (1024d)
+# - all-minilm (384d, fast)
+
+# OpenAI models:
+# - text-embedding-3-small (1536d)
+# - text-embedding-3-large (3072d)
+
+# Gemini models:
+# - models/text-embedding-004 (768d) - latest
+# - models/embedding-001 (768d) - deprecated
+
+#AWS models:
+# - amazon.titan-embed-text-v2:0 (1024d, 512d, 256)
+
