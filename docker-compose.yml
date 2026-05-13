@@ -1,11 +1,28 @@
 services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${OM_PG_DB:-openmemory}
+      POSTGRES_USER: ${OM_PG_USER:-postgres}
+      POSTGRES_PASSWORD: ${OM_PG_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - openmemory_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OM_PG_USER:-postgres} -d ${OM_PG_DB:-openmemory}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   openmemory:
     build:
       context: ./packages/openmemory-js
       dockerfile: Dockerfile
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
+<<<<<<< Updated upstream
       # Core Configuration
       - OM_PORT=${OM_PORT:-8080}
       - OM_MODE=${OM_MODE:-standard}
@@ -147,37 +164,39 @@ services:
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
       - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
+=======
+      OM_PORT: ${OM_PORT:-8080}
+      OM_MODE: ${OM_MODE:-standard}
+      OM_TIER: ${OM_TIER:-hybrid}
+      OM_METADATA_BACKEND: postgres
+      OM_VECTOR_BACKEND: postgres
+      OM_PG_HOST: postgres
+      OM_PG_PORT: 5432
+      OM_PG_DB: ${OM_PG_DB:-openmemory}
+      OM_PG_USER: ${OM_PG_USER:-postgres}
+      OM_PG_PASSWORD: ${OM_PG_PASSWORD:-postgres}
+      OM_PG_SCHEMA: ${OM_PG_SCHEMA:-public}
+      OM_PG_TABLE: ${OM_PG_TABLE:-openmemory_memories}
+      OM_PG_SSL: disable
+      OM_VECTOR_TABLE: ${OM_VECTOR_TABLE:-openmemory_vectors}
+      OM_API_KEY: ${OM_API_KEY:-}
+      OM_EMBEDDINGS: ${OM_EMBEDDINGS:-synthetic}
+      OM_EMBEDDING_FALLBACK: ${OM_EMBEDDING_FALLBACK:-synthetic}
+      OM_EMBED_MODE: ${OM_EMBED_MODE:-simple}
+      OM_VEC_DIM: ${OM_VEC_DIM:-1536}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://localhost:11434}
+      OM_MAX_PAYLOAD_SIZE: ${OM_MAX_PAYLOAD_SIZE:-1000000}
+>>>>>>> Stashed changes
     depends_on:
-      openmemory:
+      postgres:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ['CMD', 'wget', '--no-verbose', '--tries=1', '--spider', 'http://localhost:3000']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-
-  # Optional: Valkey for high-performance vector storage
-  # Uncomment to use Valkey instead of SQLite/PostgreSQL for vectors
-  # Don't forget to set OM_VECTOR_BACKEND=valkey in your .env
-  # valkey:
-  #   image: valkey/valkey:8.0
-  #   ports:
-  #     - '6379:6379'
-  #   volumes:
-  #     - valkey_data:/data
-  #   restart: unless-stopped
-  #   healthcheck:
-  #     test: ['CMD', 'valkey-cli', 'ping']
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #     start_period: 30s
 
 volumes:
-  openmemory_data:
-    driver: local
-  # Uncomment if using Valkey
-  # valkey_data:
-  #   driver: local
+  openmemory_pg:
+
