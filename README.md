@@ -44,3 +44,16 @@ connector webhook surfaces are deferred.
 ## Status
 
 This repository is in an architectural cleanup phase. Keep new work focused on the JS package and server path until the durable core rewrite is complete.
+
+# Why OpenMemory
+
+OpenMemory exists to give AI applications durable memory that is more structured than a plain vector lookup.
+
+The current rewrite focuses on:
+
+- Durable records with provenance.
+- Temporal correctness.
+- Explainable recall.
+- Contract-aware memory usage.
+- A small JavaScript server package that can be installed and run through npm.
+
