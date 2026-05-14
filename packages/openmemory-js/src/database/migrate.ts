@@ -1,6 +1,10 @@
 import { env } from "../configuration/index";
 import sqlite3 from "sqlite3";
 import { Pool } from "pg";
+import {
+  buildDurableSchemaSql,
+  DURABLE_SCHEMA_VERSION,
+} from "../durable/schema";
 
 const is_pg = env.metadata_backend === "postgres";
 
@@ -272,6 +276,27 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
   log(`Migration ${m.version} completed successfully`);
 }
 
+async function run_durable_schema_migration(pool: Pool): Promise<void> {
+  const schema = process.env.OM_PG_SCHEMA || "public";
+  const vectorDim = process.env.OM_VEC_DIM ? +process.env.OM_VEC_DIM : env.vec_dim;
+  const statements = buildDurableSchemaSql({ schema, vectorDim });
+
+  log(`Running migration: ${DURABLE_SCHEMA_VERSION} - Durable core schema`);
+  await pool.query("BEGIN");
+  try {
+    for (const sql of statements) {
+      await pool.query(sql);
+    }
+    await pool.query("COMMIT");
+  } catch (e) {
+    await pool.query("ROLLBACK");
+    throw e;
+  }
+
+  await set_db_version_pg(pool, DURABLE_SCHEMA_VERSION);
+  log(`Migration ${DURABLE_SCHEMA_VERSION} completed successfully`);
+}
+
 export async function run_migrations() {
   log("Checking for pending migrations...");
 
@@ -301,6 +326,8 @@ export async function run_migrations() {
       }
     }
 
+    await run_durable_schema_migration(pool);
+
     await pool.end();
   } else {
     const db_path = process.env.OM_DB_PATH || "./data/openmemory.sqlite";
@@ -319,4 +346,11 @@ export async function run_migrations() {
   }
 
   log("All migrations completed");
+}
+
+if (require.main === module) {
+  run_migrations().catch((err) => {
+    console.error("[MIGRATE] Failed:", err);
+    process.exit(1);
+  });
 }

@@ -18,3 +18,6 @@
 - Live server cleanup should improve only the default runtime path first; broad splits of `connection.ts` and `hsg.ts` wait for the durable-core rewrite.
 - `TODO.md` is part of the persistent workflow and must be updated on every user prompt.
 - Rewrite Phase 0 root npm workflow is active: root scripts delegate to the `openmemory-js` workspace for dev, build, start, test, and migrate.
+- Durable rewrite now has a Postgres-first schema module under `src/durable/schema.ts`; migration version `2.0.0-durable-core` creates the target durable tables and pgvector index.
+- `/v1/memories`, `/v1/recall`, and `/v1/memories/:id/explain` exist as explicit legacy-HSG adapters until the durable repository/pipeline replaces their internals.
+- `/v1/memories` uses the durable repository when `OM_METADATA_BACKEND=postgres`; SQLite compatibility continues to use legacy HSG until a Postgres test harness exists.
