@@ -1,6 +1,8 @@
-# 🚧 This project is currently being fully rewritten.
+# 🚧 This project is currently being rewritten.
 
-Expect breaking changes and potential bugs.  
+Expect breaking changes and potential bugs.
+### Contributers needed
+To contribute, visit https://github.com/CaviraOSS/OpenMemory/tree/rewrite branch.
 If you find an issue, please open a GitHub issue with details so it can be tracked and resolved.
 ## OpenMemory
 
