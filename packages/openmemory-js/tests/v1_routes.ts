@@ -4,8 +4,15 @@ const routes = createApp().getRoutes();
 
 const expected: Array<[string, string]> = [
   ["POST", "/v1/memories"],
+  ["GET", "/v1/memories"],
+  ["GET", "/v1/memories/:id"],
   ["POST", "/v1/recall"],
   ["GET", "/v1/memories/:id/explain"],
+  ["PATCH", "/v1/memories/:id"],
+  ["POST", "/v1/memories/:id/reinforce"],
+  ["DELETE", "/v1/memories/:id"],
+  ["POST", "/v1/contradictions/:id/resolve"],
+  ["POST", "/v1/consolidations"],
 ];
 
 for (const [method, path] of expected) {

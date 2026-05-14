@@ -16,6 +16,24 @@ async function main() {
     facets: { semantic: true },
     contracts: { strict_recall_requires_source: true },
     metadata: { test: true },
+    entities: [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        type: "person",
+        name: "Ada Lovelace",
+        aliases: ["Ada"],
+        role: "subject",
+        confidence: 0.9,
+      },
+    ],
+    edges: [
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        target_memory_id: "44444444-4444-4444-8444-444444444444",
+        type: "supports",
+        weight: 0.8,
+      },
+    ],
     source: { kind: "test", id: "durable-repository" },
     now: new Date("2026-05-14T00:00:00.000Z"),
   });
@@ -38,11 +56,23 @@ async function main() {
   if (!sqlText.includes('"public"."memories"')) {
     throw new Error("durable write must insert memory row");
   }
+  if (!sqlText.includes('"public"."memory_versions"')) {
+    throw new Error("durable write must insert append-only memory version row");
+  }
   if (!sqlText.includes('"public"."provenance"')) {
     throw new Error("durable write must insert provenance row");
   }
   if (!sqlText.includes('"public"."audit_log"')) {
     throw new Error("durable write must insert audit row");
+  }
+  if (!sqlText.includes('"public"."entities"')) {
+    throw new Error("durable write must insert entity rows");
+  }
+  if (!sqlText.includes('"public"."memory_entities"')) {
+    throw new Error("durable write must link memories to entities");
+  }
+  if (!sqlText.includes('"public"."edges"')) {
+    throw new Error("durable write must insert edge rows");
   }
 
   const auditCall = calls.find((call) => call.sql.includes('"audit_log"'));
