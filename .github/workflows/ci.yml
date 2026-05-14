@@ -8,38 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-<<<<<<< Updated upstream
-  test-python:
-    name: Test Python SDK
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          
-      - name: Install Dependencies
-        run: |
-          cd packages/openmemory-py
-          pip install -e .[dev]
-          pip install pytest
-          pip install pytest-asyncio
-          pip install python-dotenv
-          pip install pyyaml
-          
-      - name: Run Omnibus Test (Deep Verify)
-        run: |
-          cd packages/openmemory-py
-          python -m pytest tests/test_omnibus.py -v
-          
-  test-node:
-    name: Test Node.js SDK
-=======
   test-js:
     name: Test JavaScript package
->>>>>>> Stashed changes
     runs-on: ubuntu-latest
     env:
       OM_TIER: fast
@@ -58,6 +28,8 @@ jobs:
       - name: Build
         run: cd packages/openmemory-js && npm run build
 
-      - name: Run verification test
-        run: cd packages/openmemory-js && npx tsx tests/test_omnibus.ts
+      - name: Import smoke test
+        run: cd packages/openmemory-js && npx tsx tests/import_smoke.ts
 
+      - name: Run omnibus test
+        run: cd packages/openmemory-js && npx tsx tests/omnibus.ts

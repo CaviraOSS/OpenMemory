@@ -1,1 +1,14 @@
-{}
+{
+  "name": "openmemory",
+  "private": true,
+  "workspaces": [
+    "packages/openmemory-js"
+  ],
+  "scripts": {
+    "dev": "npm --workspace openmemory-js run dev",
+    "build": "npm --workspace openmemory-js run build",
+    "start": "npm --workspace openmemory-js run build && npm --workspace openmemory-js run start",
+    "test": "npm --workspace openmemory-js run build && npm --workspace openmemory-js exec -- tsx tests/import_smoke.ts && npm --workspace openmemory-js exec -- tsx tests/omnibus.ts && npm --workspace openmemory-js exec -- tsx tests/project_isolation.ts",
+    "migrate": "npm --workspace openmemory-js run migrate"
+  }
+}

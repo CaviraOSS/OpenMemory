@@ -11,9 +11,9 @@ permissions:
   packages: write
 
 jobs:
-  publish-backend-image:
+  publish-js-server-image:
     runs-on: ubuntu-latest
-    name: Publish backend image to GHCR
+    name: Publish JS server image to GHCR
 
     steps:
       - name: Checkout code
@@ -39,7 +39,7 @@ jobs:
             type=sha,prefix=sha-
             type=raw,value=latest,enable=${{ github.ref_type == 'tag' }}
 
-      - name: Build and push backend image
+      - name: Build and push JS server image
         uses: docker/build-push-action@v5
         with:
           context: ./packages/openmemory-js

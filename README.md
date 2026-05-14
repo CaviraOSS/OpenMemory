@@ -28,8 +28,12 @@ The default server port is `8080`.
 cd packages/openmemory-js
 npm run dev
 npm run build
-npx tsx tests/test_omnibus.ts
+npx tsx tests/omnibus.ts
 ```
+
+The default server registers only the core JS API: `/health`, `/sectors`,
+`/retention/*`, `/users/*`, and MCP. Dashboard, IDE, hosted deploy, and
+connector webhook surfaces are deferred.
 
 ## Documentation
 
@@ -40,4 +44,3 @@ npx tsx tests/test_omnibus.ts
 ## Status
 
 This repository is in an architectural cleanup phase. Keep new work focused on the JS package and server path until the durable core rewrite is complete.
-
