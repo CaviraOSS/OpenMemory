@@ -2,39 +2,39 @@
 
 install() {
     echo "Installing JavaScript SDK dependencies..."
-    (cd SDK/JS && npm install)
+    (cd packages/openmemory-js && npm install)
     echo "All dependencies installed!"
 }
 
 install_dev() {
     echo "Installing development dependencies..."
-    (cd SDK/JS && npm install)
+    (cd packages/openmemory-js && npm install)
     echo "Development dependencies installed!"
 }
 
 build() {
     echo "Building JavaScript SDK..."
-    (cd SDK/JS && npm run build)
+    (cd packages/openmemory-js && npm run build)
     echo "All components built!"
 }
 
 build_js_sdk() {
-    (cd SDK/JS && npm run build)
+    (cd packages/openmemory-js && npm run build)
 }
 
 lint() {
     echo "Running linters..."
-    (cd SDK/JS && npm run lint || echo "JS SDK linting completed")
+    (cd packages/openmemory-js && npm run lint || echo "JS SDK linting completed")
 }
 
 format() {
     echo "Formatting code..."
-    (cd SDK/JS && npm run format || echo "JS SDK formatting completed")
+    (cd packages/openmemory-js && npm run format || echo "JS SDK formatting completed")
 }
 
 type_check() {
     echo "Running type checks..."
-    (cd SDK/JS && npx tsc --noEmit)
+    (cd packages/openmemory-js && npx tsc --noEmit)
 }
 
 docker_build() {
@@ -59,15 +59,15 @@ docker_stop() {
 
 clean() {
     echo "Cleaning build artifacts..."
-    rm -rf SDK/JS/dist/
-    rm -rf SDK/JS/node_modules/.cache/
+    rm -rf packages/openmemory-js/dist/
+    rm -rf packages/openmemory-js/node_modules/.cache/
     echo "Cleanup complete!"
 }
 
 clean_all() {
     clean
     echo "Deep cleaning..."
-    rm -rf SDK/JS/node_modules/
+    rm -rf packages/openmemory-js/node_modules/
     echo "Deep cleanup complete!"
 }
 

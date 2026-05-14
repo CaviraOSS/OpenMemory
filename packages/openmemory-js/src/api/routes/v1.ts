@@ -1,6 +1,6 @@
-import { q, run_async } from "../../database/connection";
+import { q, run_async, all_async } from "../../database/connection";
 import { env } from "../../configuration";
-import { rememberDurableMemory } from "../../durable/repository";
+import { rememberDurableMemory, recallDurableMemory } from "../../durable/repository";
 import { add_hsg_memory, hsg_query } from "../../retention/hsg";
 import { j, p } from "../../utilities";
 
@@ -105,6 +105,38 @@ export function v1(app: any) {
     const atTime = parseTime(body.at_time);
 
     try {
+      if (env.metadata_backend === "postgres") {
+        const matches = await recallDurableMemory(
+          {
+            query: (sql, params) => run_async(sql, params as any[]),
+            all: (sql, params) => all_async(sql, params as any[]),
+          },
+          {
+            query: body.query,
+            mode,
+            at_time: atTime,
+            limit: body.limit || 10,
+            user_id: body.user_id,
+            project_id: body.project_id,
+          }
+        );
+
+        return res.json({
+          query: body.query,
+          mode,
+          adapter: "durable-postgres",
+          results: matches.map((memory: any) => ({
+            id: memory.id,
+            content: memory.content,
+            score: memory.score,
+            facets: memory.facets,
+            primary_facet: memory.primary_facet,
+            salience: memory.salience,
+            last_seen_at: memory.last_seen_at,
+          })),
+        });
+      }
+
       const matches = await hsg_query(body.query, body.limit || 10, {
         user_id: body.user_id,
         project_id: body.project_id,

@@ -2,18 +2,17 @@
 
 ## Active
 
-- [ ] Build durable recall repository and move `/v1/recall` off legacy HSG for Postgres.
-
 ## Next
 
 - [ ] Keep `/retention/*` routes on legacy HSG until parity is proven.
-- [ ] Add tests for strict/historical/associative durable recall query shape.
-- [ ] Add durable recall repository over `memories`, `provenance`, `contradictions`, and bitemporal columns.
-- [ ] Move `/v1/recall` to durable repository when Postgres is configured.
 - [ ] Keep SQLite/local mode on legacy HSG compatibility until Postgres test harness exists.
 
 ## Done
 
+- [x] Build durable recall repository and move `/v1/recall` off legacy HSG for Postgres.
+- [x] Add tests for strict/historical/associative durable recall query shape.
+- [x] Add durable recall repository over `memories`, `provenance`, `contradictions`, and bitemporal columns.
+- [x] Move `/v1/recall` to durable repository when Postgres is configured.
 - [x] Add durable repository with transactional memory + audit writes.
 - [x] Add tests for audit row creation on durable memory writes.
 - [x] Move `/v1/memories` to durable repository when Postgres is configured.

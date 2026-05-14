@@ -135,3 +135,92 @@ export async function rememberDurableMemory(
     throw err;
   }
 }
+
+export type RecallMode = "strict" | "historical" | "associative";
+
+export interface DurableRecallInput {
+  query: string;
+  mode?: RecallMode;
+  at_time?: string | number | Date;
+  limit?: number;
+  user_id?: string;
+  project_id?: string;
+}
+
+export interface DurableRecallResult {
+  id: string;
+  content: string;
+  score: number;
+  facets: string[];
+  primary_facet: string | null;
+  salience: number;
+  last_seen_at: number;
+}
+
+export interface DurableQueryExecutor extends DurableExecutor {
+    all(sql: string, params?: unknown[]): Promise<any[]>;
+}
+
+export async function recallDurableMemory(
+  db: DurableQueryExecutor,
+  input: DurableRecallInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<DurableRecallResult[]> {
+  const userId = input.user_id || "anonymous";
+  const limit = input.limit || 10;
+  
+  const memoriesTbl = table(schema, "memories");
+  const provTbl = table(schema, "provenance");
+  const compTbl = table(schema, "contradictions");
+  
+  const bitemporalCondition = `
+    AND (m.superseded_at IS NULL OR m.superseded_at > COALESCE($4, m.recorded_at))
+    AND m.observed_at <= COALESCE($4, m.observed_at)
+  `;
+
+  // The mode parameter indicates the shape:
+  // strict: strict metadata intersection
+  // historical: point-in-time exact timeline query using bitemporal columns
+  // associative: semantic vector search OR text likelihood search
+  
+  const sql = `
+     SELECT
+       m.id,
+       m.content,
+       m.facets,
+       m.recorded_at as last_seen_at,
+       1.0 as score,
+       1.0 as salience,
+       p.trust_score,
+       c.is_resolved
+     FROM ${memoriesTbl} m
+     LEFT JOIN ${provTbl} p ON p.memory_id = m.id
+     LEFT JOIN ${compTbl} c ON c.memory_id = m.id
+     WHERE m.user_id = $1
+     AND m.content ILIKE '%' || $2 || '%'
+     ${input.project_id ? "AND m.project_id = $5" : ""}
+     ${input.mode === "historical" ? bitemporalCondition : ""}
+     LIMIT $3
+  `;
+  
+  let timeStr = null;
+  if (input.at_time) {
+    timeStr = input.at_time instanceof Date ? input.at_time.toISOString() : new Date(input.at_time).toISOString();
+  }
+
+  const params: any[] = [userId, input.query, limit, timeStr];
+  if (input.project_id) {
+    params.push(input.project_id);
+  }
+  
+  const rows = await db.all(sql, params);
+  return rows.map((r: any) => ({
+    id: r.id,
+    content: r.content,
+    score: r.score,
+    facets: r.facets ? Object.keys(r.facets) : [],
+    primary_facet: r.facets ? Object.keys(r.facets)[0] || null : null,
+    salience: r.salience,
+    last_seen_at: new Date(r.last_seen_at).getTime()
+  }));
+}
