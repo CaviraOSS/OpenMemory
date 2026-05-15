@@ -1,5 +1,5 @@
 import { q, vector_store } from "../../core/db";
-import { now, rid, j, p } from "../../utils";
+import { j, p } from "../../utils";
 import {
     add_hsg_memory,
     hsg_query,
@@ -7,49 +7,122 @@ import {
     update_memory,
 } from "../../memory/hsg";
 import { ingestDocument, ingestURL } from "../../ops/ingest";
-import { env } from "../../core/cfg";
 import { update_user_summary } from "../../memory/user_summary";
-import type {
-    add_req,
-    q_req,
-    ingest_req,
-    ingest_url_req,
-} from "../../core/types";
+import { require_tenant, reject_tenant_mismatch } from "../middleware/tenant";
+import { parse_or_400, schema } from "../middleware/validate";
+
+const add_schema: schema = {
+    content: {
+        type: "string",
+        required: true,
+        min_length: 1,
+        max_length: 200_000,
+    },
+    tags: {
+        type: "array",
+        items: { type: "string", max_length: 256 },
+        max_items: 64,
+    },
+    metadata: { type: "object" },
+    user_id: { type: "string", max_length: 256 },
+};
+
+const ingest_schema: schema = {
+    content_type: { type: "string", required: true, max_length: 64 },
+    data: { type: "string", required: true, max_length: 5_000_000 },
+    metadata: { type: "object" },
+    config: { type: "object" },
+    user_id: { type: "string", max_length: 256 },
+};
+
+const ingest_url_schema: schema = {
+    url: { type: "string", required: true, min_length: 1, max_length: 8192 },
+    metadata: { type: "object" },
+    config: { type: "object" },
+    user_id: { type: "string", max_length: 256 },
+};
+
+const query_schema: schema = {
+    query: { type: "string", required: true, min_length: 1, max_length: 8192 },
+    k: { type: "integer", min: 1, max: 200 },
+    startTime: { type: "number", min: 0 },
+    endTime: { type: "number", min: 0 },
+    filters: {
+        type: "object",
+        fields: {
+            sector: { type: "string", max_length: 64 },
+            min_score: { type: "number", min: 0, max: 1 },
+            user_id: { type: "string", max_length: 256 },
+            startTime: { type: "number", min: 0 },
+            endTime: { type: "number", min: 0 },
+        },
+    },
+    user_id: { type: "string", max_length: 256 },
+};
+
+const reinforce_schema: schema = {
+    id: { type: "string", required: true, min_length: 1, max_length: 256 },
+    boost: { type: "number", min: 0, max: 100 },
+};
+
+const patch_schema: schema = {
+    content: { type: "string", max_length: 200_000 },
+    tags: {
+        type: "array",
+        items: { type: "string", max_length: 256 },
+        max_items: 64,
+    },
+    metadata: { type: "object" },
+    user_id: { type: "string", max_length: 256 },
+};
 
 export function mem(app: any) {
     app.post("/memory/add", async (req: any, res: any) => {
-        const b = req.body as add_req;
-        if (!b?.content) return res.status(400).json({ err: "content" });
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        const b = parse_or_400<{
+            content: string;
+            tags?: string[];
+            metadata?: Record<string, unknown>;
+            user_id?: string;
+        }>(res, req.body, add_schema);
+        if (!b) return;
+        if (reject_tenant_mismatch(res, tenant, b.user_id)) return;
         try {
             const m = await add_hsg_memory(
                 b.content,
                 j(b.tags || []),
                 b.metadata,
-                b.user_id,
+                tenant,
             );
             res.json(m);
-
-            if (b.user_id) {
-                update_user_summary(b.user_id).catch((e) =>
-                    console.error("[mem] user summary update failed:", e),
-                );
-            }
+            update_user_summary(tenant).catch((e) =>
+                console.error("[mem] user summary update failed:", e),
+            );
         } catch (e: any) {
             res.status(500).json({ err: e.message });
         }
     });
 
     app.post("/memory/ingest", async (req: any, res: any) => {
-        const b = req.body as ingest_req;
-        if (!b?.content_type || !b?.data)
-            return res.status(400).json({ err: "missing" });
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        const b = parse_or_400<{
+            content_type: string;
+            data: string;
+            metadata?: Record<string, unknown>;
+            config?: any;
+            user_id?: string;
+        }>(res, req.body, ingest_schema);
+        if (!b) return;
+        if (reject_tenant_mismatch(res, tenant, b.user_id)) return;
         try {
             const r = await ingestDocument(
-                b.content_type,
+                b.content_type as any,
                 b.data,
                 b.metadata,
                 b.config,
-                b.user_id,
+                tenant,
             );
             res.json(r);
         } catch (e: any) {
@@ -58,10 +131,18 @@ export function mem(app: any) {
     });
 
     app.post("/memory/ingest/url", async (req: any, res: any) => {
-        const b = req.body as ingest_url_req;
-        if (!b?.url) return res.status(400).json({ err: "no_url" });
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        const b = parse_or_400<{
+            url: string;
+            metadata?: Record<string, unknown>;
+            config?: any;
+            user_id?: string;
+        }>(res, req.body, ingest_url_schema);
+        if (!b) return;
+        if (reject_tenant_mismatch(res, tenant, b.user_id)) return;
         try {
-            const r = await ingestURL(b.url, b.metadata, b.config, b.user_id);
+            const r = await ingestURL(b.url, b.metadata, b.config, tenant);
             res.json(r);
         } catch (e: any) {
             res.status(500).json({ err: "url_fail", msg: e.message });
@@ -69,13 +150,32 @@ export function mem(app: any) {
     });
 
     app.post("/memory/query", async (req: any, res: any) => {
-        const b = req.body as q_req;
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        const b = parse_or_400<{
+            query: string;
+            k?: number;
+            startTime?: number;
+            endTime?: number;
+            filters?: {
+                sector?: string;
+                min_score?: number;
+                user_id?: string;
+                startTime?: number;
+                endTime?: number;
+            };
+            user_id?: string;
+        }>(res, req.body, query_schema);
+        if (!b) return;
+        if (reject_tenant_mismatch(res, tenant, b.user_id, b.filters?.user_id))
+            return;
+
         const k = b.k || 8;
         try {
             const f = {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
                 minSalience: b.filters?.min_score,
-                user_id: b.filters?.user_id || b.user_id,
+                user_id: tenant,
                 startTime: b.filters?.startTime ?? b.startTime,
                 endTime: b.filters?.endTime ?? b.endTime,
             };
@@ -94,14 +194,31 @@ export function mem(app: any) {
                 })),
             });
         } catch (e: any) {
-            res.json({ query: b.query, matches: [] });
+            // SECURITY: previously this swallowed errors and returned an
+            // empty result set, hiding backend outages from clients and
+            // making silent regressions invisible. Now report 500.
+            console.error("[mem] /memory/query failed:", e);
+            res.status(500).json({
+                error: "query_failed",
+                message: e?.message || "internal",
+            });
         }
     });
 
     app.post("/memory/reinforce", async (req: any, res: any) => {
-        const b = req.body as { id: string; boost?: number };
-        if (!b?.id) return res.status(400).json({ err: "id" });
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        const b = parse_or_400<{ id: string; boost?: number }>(
+            res,
+            req.body,
+            reinforce_schema,
+        );
+        if (!b) return;
         try {
+            const m = await q.get_mem.get(b.id);
+            if (!m) return res.status(404).json({ err: "nf" });
+            if (m.user_id && m.user_id !== tenant)
+                return res.status(403).json({ err: "forbidden" });
             await reinforce_memory(b.id, b.boost);
             res.json({ ok: true });
         } catch (e: any) {
@@ -110,28 +227,28 @@ export function mem(app: any) {
     });
 
     app.patch("/memory/:id", async (req: any, res: any) => {
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
         const id = req.params.id;
-        const b = req.body as {
+        if (!id) return res.status(400).json({ err: "id" });
+        const b = parse_or_400<{
             content?: string;
             tags?: string[];
             metadata?: any;
             user_id?: string;
-        };
-        if (!id) return res.status(400).json({ err: "id" });
+        }>(res, req.body, patch_schema);
+        if (!b) return;
+        if (reject_tenant_mismatch(res, tenant, b.user_id)) return;
         try {
-
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
-
-
-            if (b.user_id && m.user_id !== b.user_id) {
+            if (m.user_id && m.user_id !== tenant) {
                 return res.status(403).json({ err: "forbidden" });
             }
-
             const r = await update_memory(id, b.content, b.tags, b.metadata);
             res.json(r);
         } catch (e: any) {
-            if (e.message.includes("not found")) {
+            if (e.message && e.message.includes("not found")) {
                 res.status(404).json({ err: "nf" });
             } else {
                 res.status(500).json({ err: "internal" });
@@ -140,25 +257,33 @@ export function mem(app: any) {
     });
 
     app.get("/memory/all", async (req: any, res: any) => {
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        if (reject_tenant_mismatch(res, tenant, req.query.user_id)) return;
         try {
-            const u = req.query.u ? parseInt(req.query.u) : 0;
-            const l = req.query.l ? parseInt(req.query.l) : 100;
-            const s = req.query.sector;
-            const user_id = req.query.user_id;
-
-            let r;
-            if (user_id) {
-
-                r = await q.all_mem_by_user.all(user_id, l, u);
-            } else if (s) {
-
-                r = await q.all_mem_by_sector.all(s, l, u);
-            } else {
-
-                r = await q.all_mem.all(l, u);
+            const u = req.query.u ? parseInt(req.query.u, 10) : 0;
+            const l = req.query.l ? parseInt(req.query.l, 10) : 100;
+            if (
+                !Number.isFinite(u) ||
+                !Number.isFinite(l) ||
+                u < 0 ||
+                l < 0 ||
+                l > 10_000
+            ) {
+                return res.status(400).json({ error: "invalid_pagination" });
             }
+            // Always scope to the authenticated tenant — sector filter is
+            // applied client-side after the user_id filter.
+            const r = await q.all_mem_by_user.all(tenant, l, u);
+            const sector =
+                typeof req.query.sector === "string"
+                    ? req.query.sector
+                    : undefined;
+            const filtered = sector
+                ? r.filter((x: any) => x.primary_sector === sector)
+                : r;
 
-            const i = r.map((x: any) => ({
+            const i = filtered.map((x: any) => ({
                 id: x.id,
                 content: x.content,
                 tags: p(x.tags),
@@ -174,22 +299,22 @@ export function mem(app: any) {
             }));
             res.json({ items: i });
         } catch (e: any) {
+            console.error("[mem] /memory/all failed:", e);
             res.status(500).json({ err: "internal" });
         }
     });
 
     app.get("/memory/:id", async (req: any, res: any) => {
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        if (reject_tenant_mismatch(res, tenant, req.query.user_id)) return;
         try {
             const id = req.params.id;
-            const user_id = req.query.user_id;
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
-
-
-            if (user_id && m.user_id !== user_id) {
+            if (m.user_id && m.user_id !== tenant) {
                 return res.status(403).json({ err: "forbidden" });
             }
-
             const v = await vector_store.getVectorsById(id);
             const sec = v.map((x: any) => x.sector);
             res.json({
@@ -208,27 +333,36 @@ export function mem(app: any) {
                 user_id: m.user_id,
             });
         } catch (e: any) {
+            console.error("[mem] /memory/:id failed:", e);
             res.status(500).json({ err: "internal" });
         }
     });
 
     app.delete("/memory/:id", async (req: any, res: any) => {
+        const tenant = require_tenant(req, res);
+        if (!tenant) return;
+        if (
+            reject_tenant_mismatch(
+                res,
+                tenant,
+                req.query.user_id,
+                req.body?.user_id,
+            )
+        )
+            return;
         try {
             const id = req.params.id;
-            const user_id = req.query.user_id || req.body?.user_id;
             const m = await q.get_mem.get(id);
             if (!m) return res.status(404).json({ err: "nf" });
-
-
-            if (user_id && m.user_id !== user_id) {
+            if (m.user_id && m.user_id !== tenant) {
                 return res.status(403).json({ err: "forbidden" });
             }
-
             await q.del_mem.run(id);
             await vector_store.deleteVectors(id);
             await q.del_waypoints.run(id, id);
             res.json({ ok: true });
         } catch (e: any) {
+            console.error("[mem] /memory/:id delete failed:", e);
             res.status(500).json({ err: "internal" });
         }
     });

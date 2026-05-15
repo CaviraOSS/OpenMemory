@@ -1,0 +1,26 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`verify: classifier behaviour snapshot > matches the classifier sector snapshot 1`] = `
+[
+  {
+    "sector": "episodic",
+    "text": "Yesterday I went to the park at 4:00 PM and saw a dog.",
+  },
+  {
+    "sector": "semantic",
+    "text": "I am genuinely thrilled about how this project is shaping up.",
+  },
+  {
+    "sector": "procedural",
+    "text": "To deploy: run npm run build, then npm start, then health-check.",
+  },
+  {
+    "sector": "episodic",
+    "text": "I learn best when I write things down and revisit them later.",
+  },
+  {
+    "sector": "semantic",
+    "text": "The capital of France is Paris.",
+  },
+]
+`;

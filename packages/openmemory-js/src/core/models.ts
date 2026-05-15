@@ -88,7 +88,6 @@ const get_defaults = (): model_cfg => ({
 });
 
 export const get_model = (sector: string, provider: string): string => {
-
     if (provider === "ollama" && process.env.OM_OLLAMA_MODEL) {
         return process.env.OM_OLLAMA_MODEL;
     }

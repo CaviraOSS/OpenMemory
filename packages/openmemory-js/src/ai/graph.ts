@@ -295,9 +295,9 @@ export async function get_graph_ctx(p: lgm_context_req) {
     );
     const summ = flat.length
         ? flat
-            .slice(0, lim)
-            .map((ln) => `- [${ln.node}] ${ln.content}`)
-            .join("\n")
+              .slice(0, lim)
+              .map((ln) => `- [${ln.node}] ${ln.content}`)
+              .join("\n")
         : "";
     return {
         namespace: ns,

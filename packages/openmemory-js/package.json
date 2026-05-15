@@ -13,7 +13,11 @@
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server/index.js",
-        "migrate": "tsx src/migrate.ts"
+        "migrate": "tsx src/core/migrate.ts",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:coverage": "vitest run --coverage",
+        "typecheck": "tsc --noEmit -p tsconfig.json"
     },
     "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "^3.932.0",
@@ -40,8 +44,10 @@
         "@types/fluent-ffmpeg": "^2.1.26",
         "@types/node": "^20.19.25",
         "@types/pg": "^8.15.6",
+        "@vitest/coverage-v8": "^2.1.9",
         "prettier": "^3.6.2",
         "tsx": "^4.20.6",
-        "typescript": "^5.9.3"
+        "typescript": "^5.9.3",
+        "vitest": "^2.1.9"
     }
 }

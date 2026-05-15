@@ -14,7 +14,8 @@ const cos = (a: number[], b: number[]): number => {
 };
 
 const gen_user_summary = (mems: any[]): string => {
-    if (!mems.length) return "User profile initializing... (No memories recorded yet)";
+    if (!mems.length)
+        return "User profile initializing... (No memories recorded yet)";
 
     const recent = mems.slice(0, 10);
     const projects = new Set<string>();
@@ -27,21 +28,29 @@ const gen_user_summary = (mems: any[]): string => {
     for (const m of mems) {
         if (m.meta) {
             try {
-                const meta = typeof m.meta === 'string' ? JSON.parse(m.meta) : m.meta;
+                const meta =
+                    typeof m.meta === "string" ? JSON.parse(m.meta) : m.meta;
                 if (meta.ide_project_name) projects.add(meta.ide_project_name);
                 if (meta.language) languages.add(meta.language);
-                if (meta.ide_file_path) files.add(meta.ide_file_path.split(/[\\/]/).pop());
-                if (meta.ide_event_type === 'save') saves++;
-            } catch (e) { /* ignore */ }
+                if (meta.ide_file_path)
+                    files.add(meta.ide_file_path.split(/[\\/]/).pop());
+                if (meta.ide_event_type === "save") saves++;
+            } catch (e) {
+                /* ignore */
+            }
         }
         events++;
     }
 
-    const project_str = projects.size > 0 ? Array.from(projects).join(", ") : "Unknown Project";
-    const lang_str = languages.size > 0 ? Array.from(languages).join(", ") : "General";
+    const project_str =
+        projects.size > 0 ? Array.from(projects).join(", ") : "Unknown Project";
+    const lang_str =
+        languages.size > 0 ? Array.from(languages).join(", ") : "General";
     const recent_files = Array.from(files).slice(0, 3).join(", ");
 
-    const last_active = mems[0].created_at ? new Date(mems[0].created_at).toLocaleString() : "Recently";
+    const last_active = mems[0].created_at
+        ? new Date(mems[0].created_at).toLocaleString()
+        : "Recently";
 
     return `Active in ${project_str} using ${lang_str}. Focused on ${recent_files || "various files"}. (${mems.length} memories, ${saves} saves). Last active: ${last_active}.`;
 };

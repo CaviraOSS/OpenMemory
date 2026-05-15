@@ -1,4 +1,10 @@
-import { all_async, run_async, q, vector_store, memories_table } from "../core/db";
+import {
+    all_async,
+    run_async,
+    q,
+    vector_store,
+    memories_table,
+} from "../core/db";
 import { now } from "../utils";
 import { env } from "../core/cfg";
 
@@ -264,12 +270,12 @@ export const apply_decay = async () => {
                         tier === "hot"
                             ? cfg.lambda_hot
                             : tier === "warm"
-                                ? cfg.lambda_warm
-                                : cfg.lambda_cold;
+                              ? cfg.lambda_warm
+                              : cfg.lambda_cold;
                     const dt = Math.max(
                         0,
                         (now_ts - (m.last_seen_at || m.updated_at)) /
-                        cfg.time_unit_ms,
+                            cfg.time_unit_ms,
                     );
                     const act = Math.max(0, m.coactivations || 0);
                     const sal = clamp_f(
@@ -286,7 +292,10 @@ export const apply_decay = async () => {
 
                     if (f < 0.7) {
                         const sector = m.primary_sector || "semantic";
-                        const vec_row = await vector_store.getVector(m.id, sector);
+                        const vec_row = await vector_store.getVector(
+                            m.id,
+                            sector,
+                        );
 
                         if (vec_row && vec_row.vector) {
                             const vec =
@@ -406,7 +415,7 @@ export const on_query_hit = async (
                         new_vec.length,
                     );
                     updated = true;
-                } catch (e) { }
+                } catch (e) {}
             }
         }
     }
@@ -421,7 +430,6 @@ export const on_query_hit = async (
     }
 
     if (updated) {
-
         console.error(`[decay-2.0] regenerated/reinforced memory ${mem_id}`);
     }
 };

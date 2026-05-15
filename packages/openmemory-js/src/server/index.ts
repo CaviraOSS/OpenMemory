@@ -1,4 +1,4 @@
-const server = require("./server.js");
+import { server } from "./server";
 import { env, tier } from "../core/cfg";
 import { run_decay_process, prune_weak_waypoints } from "../memory/hsg";
 import { mcp } from "../ai/mcp";
@@ -11,6 +11,18 @@ import { start_reflection } from "../memory/reflect";
 import { start_user_summary_reflection } from "../memory/user_summary";
 import { sendTelemetry } from "../core/telemetry";
 import { req_tracker_mw } from "./routes/dashboard";
+import { DbInitError } from "../core/identifiers";
+
+// DB init now throws DbInitError instead of process.exit(1) (see src/core/db.ts).
+// At the server boundary, surface that as a clean fatal exit so operators get a
+// readable signal instead of an unhandled-rejection stack.
+process.on("unhandledRejection", (err: unknown) => {
+    if (err instanceof DbInitError) {
+        console.error("[FATAL] DB init failed:", err.message);
+        process.exit(1);
+    }
+    throw err;
+});
 
 const ASC = `   ____                   __  __
   / __ \\                 |  \\/  |
@@ -28,13 +40,12 @@ console.log(`[CONFIG] Vector Dimension: ${env.vec_dim}`);
 console.log(`[CONFIG] Cache Segments: ${env.cache_segments}`);
 console.log(`[CONFIG] Max Active Queries: ${env.max_active}`);
 
-
 if (env.emb_kind !== "synthetic" && (tier === "hybrid" || tier === "fast")) {
     console.warn(
         `[CONFIG] ⚠️  WARNING: Embedding configuration mismatch detected!\n` +
-        `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
-        `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
-        `         This causes semantic search to fail. Set OM_TIER=deep to fix.`
+            `         OM_EMBEDDINGS=${env.emb_kind} but OM_TIER=${tier}\n` +
+            `         Storage will use ${env.emb_kind} embeddings, but queries will use synthetic embeddings.\n` +
+            `         This causes semantic search to fail. Set OM_TIER=deep to fix.`,
     );
 }
 
@@ -126,7 +137,12 @@ start_user_summary_reflection();
 console.log(`[SERVER] Starting on port ${env.port}`);
 app.listen(env.port, () => {
     console.log(`[SERVER] Running on http://localhost:${env.port}`);
-    sendTelemetry().catch(() => {
-
+    sendTelemetry().catch((err: any) => {
+        // Telemetry must never crash the server. Surface the failure
+        // to operators so silent breakage doesn't accumulate.
+        console.error(
+            "[TELEMETRY] sendTelemetry failed:",
+            err && err.stack ? err.stack : err,
+        );
     });
 });
