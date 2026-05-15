@@ -52,6 +52,20 @@ async function main() {
     limit: 3,
   });
 
+  let invalidModeRejected = false;
+  try {
+    await recallDurableMemories(db, {
+      query: "durable recall",
+      mode: "magic" as any,
+      limit: 3,
+    });
+  } catch (err: any) {
+    invalidModeRejected = err.message.includes("mode must be strict, historical, or associative");
+  }
+  if (!invalidModeRejected) {
+    throw new Error("durable recall must reject invalid mode");
+  }
+
   const sqlText = calls.map((call) => call.sql).join("\n").toLowerCase();
   if (!sqlText.includes('"public"."memories"')) {
     throw new Error("recall must query durable memories");

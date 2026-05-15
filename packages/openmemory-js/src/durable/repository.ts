@@ -112,6 +112,7 @@ export interface DurableExplainResult {
     contract_penalty: number;
     contracts: Record<string, unknown>;
   };
+  reasons: string[];
   provenance: unknown[];
   contradictions: unknown[];
   inference_path: unknown[];
@@ -224,6 +225,74 @@ export interface DurableConsolidationResult {
   status: "pending";
 }
 
+export interface WorkingMemoryEventInput {
+  id?: string;
+  user_id?: string;
+  project_id?: string;
+  source: {
+    kind: "text" | "document" | "url" | "provider_event" | string;
+    uri?: string;
+    id?: string;
+    content_type?: string;
+  };
+  content: string | Buffer;
+  metadata?: Record<string, unknown>;
+  contracts?: Record<string, unknown>;
+  observed_at?: string | Date;
+  now?: Date;
+}
+
+export interface WorkingMemoryEventResult {
+  id: string;
+  status: "pending";
+}
+
+export interface ExtractionCandidateInput {
+  id?: string;
+  event_id: string;
+  user_id?: string;
+  project_id?: string;
+  content: string;
+  facets?: Record<string, unknown>;
+  entities?: DurableEntityInput[];
+  edges?: DurableEdgeInput[];
+  contracts?: Record<string, unknown>;
+  confidence?: number;
+  metadata?: Record<string, unknown>;
+  now?: Date;
+}
+
+export interface ExtractionCandidateResult {
+  id: string;
+  status: "pending";
+}
+
+export interface PromoteExtractionCandidateInput {
+  candidate_id: string;
+  memory_id?: string;
+  source?: DurableSource;
+  now?: Date;
+}
+
+export interface PromoteExtractionCandidateResult {
+  id: string;
+  candidate_id: string;
+  status: "stored";
+}
+
+export interface RejectExtractionCandidateInput {
+  candidate_id: string;
+  reason: string;
+  user_id?: string;
+  now?: Date;
+}
+
+export interface RejectExtractionCandidateResult {
+  id: string;
+  status: "rejected";
+  reason: string;
+}
+
 const ident = (name: string) => `"${name.replace(/"/g, '""')}"`;
 const table = (schema: string, name: string) => `${ident(schema)}.${ident(name)}`;
 
@@ -243,6 +312,23 @@ const recallTime = (value: string | Date | undefined) => {
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? new Date() : date;
 };
+
+const plural = (count: number, singular: string) =>
+  `${count} ${singular}${count === 1 ? "" : "s"}`;
+
+const explainReasons = (input: {
+  confidence: number;
+  provenance: unknown[];
+  contradictions: unknown[];
+  contracts: Record<string, unknown>;
+}) => [
+  `confidence ${input.confidence}`,
+  plural(input.provenance.length, "provenance source"),
+  plural(input.contradictions.length, "open contradiction"),
+  input.contracts.recall_allowed === false
+    ? "recall blocked by contract"
+    : "recall allowed by contract",
+];
 
 const bounded = (value: number | undefined, fallback: number) => {
   if (value === undefined || Number.isNaN(value)) return fallback;
@@ -469,6 +555,9 @@ export async function recallDurableMemories(
   }
 
   const mode = input.mode || "associative";
+  if (!["strict", "historical", "associative"].includes(mode)) {
+    throw new Error("mode must be strict, historical, or associative");
+  }
   const atTime = recallTime(input.at_time).toISOString();
   const limit = Math.max(1, Math.min(input.limit || 10, 100));
   const memories = table(schema, "memories");
@@ -705,6 +794,12 @@ export async function explainDurableMemory(
       contract_penalty: contracts.recall_allowed === false ? 1 : 0,
       contracts,
     },
+    reasons: explainReasons({
+      confidence: Number(row.confidence ?? 0),
+      provenance: provenanceRows,
+      contradictions: contradictionRows,
+      contracts,
+    }),
     provenance: provenanceRows,
     contradictions: contradictionRows,
     inference_path: row.inference_path || [],
@@ -1192,6 +1287,442 @@ export async function createDurableConsolidation(
 
     await db.query("COMMIT");
     return { id: row.id, status: "pending" };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+}
+
+export async function createWorkingMemoryEvent(
+  db: DurableExecutor,
+  input: WorkingMemoryEventInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<WorkingMemoryEventResult> {
+  if (!input.source?.kind?.trim()) {
+    throw new Error("source kind is required");
+  }
+  const content =
+    typeof input.content === "string"
+      ? input.content
+      : input.content.toString("utf8");
+  if (!content.trim()) {
+    throw new Error("content is required");
+  }
+
+  const id = input.id || crypto.randomUUID();
+  const userId = input.user_id || "anonymous";
+  const projectId = input.project_id || null;
+  const now = input.now || new Date();
+  const observedAt = isoOrNull(input.observed_at) || now.toISOString();
+  const recordedAt = now.toISOString();
+  const workingMemoryEvents = table(schema, "working_memory_events");
+  const auditLog = table(schema, "audit_log");
+
+  await db.query("BEGIN");
+  try {
+    const result = (await db.query(
+      `insert into ${workingMemoryEvents}
+        (id,user_id,project_id,source,content,metadata,contracts,status,observed_at,recorded_at)
+       values ($1,$2,$3,$4::jsonb,$5,$6::jsonb,$7::jsonb,$8,$9,$10)
+       returning id,status`,
+      [
+        id,
+        userId,
+        projectId,
+        JSON.stringify(input.source),
+        content,
+        asJson(input.metadata),
+        asJson(input.contracts),
+        "pending",
+        observedAt,
+        recordedAt,
+      ],
+    )) as { rows?: any[] };
+    const row = result.rows?.[0] || { id, status: "pending" };
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        userId,
+        projectId,
+        "ingestion.event",
+        "working_memory_events",
+        id,
+        "insert",
+        null,
+        JSON.stringify({
+          id,
+          user_id: userId,
+          project_id: projectId,
+          source: input.source,
+          status: "pending",
+          observed_at: observedAt,
+        }),
+        asJson(input.metadata),
+        recordedAt,
+      ],
+    );
+
+    await db.query("COMMIT");
+    return { id: row.id, status: "pending" };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+}
+
+export async function createExtractionCandidate(
+  db: DurableExecutor,
+  input: ExtractionCandidateInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<ExtractionCandidateResult> {
+  if (!input.event_id?.trim()) {
+    throw new Error("event_id is required");
+  }
+  if (!input.content?.trim()) {
+    throw new Error("content is required");
+  }
+
+  const id = input.id || crypto.randomUUID();
+  const userId = input.user_id || "anonymous";
+  const projectId = input.project_id || null;
+  const now = (input.now || new Date()).toISOString();
+  const extractionCandidates = table(schema, "extraction_candidates");
+  const auditLog = table(schema, "audit_log");
+
+  await db.query("BEGIN");
+  try {
+    const result = (await db.query(
+      `insert into ${extractionCandidates}
+        (id,event_id,user_id,project_id,content,facets,entities,edges,contracts,confidence,status,metadata,created_at)
+       values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8::jsonb,$9::jsonb,$10,$11,$12::jsonb,$13)
+       returning id,status`,
+      [
+        id,
+        input.event_id,
+        userId,
+        projectId,
+        input.content,
+        asJson(input.facets),
+        JSON.stringify(input.entities || []),
+        JSON.stringify(input.edges || []),
+        asJson(input.contracts),
+        bounded(input.confidence, 0.5),
+        "pending",
+        asJson(input.metadata),
+        now,
+      ],
+    )) as { rows?: any[] };
+    const row = result.rows?.[0] || { id, status: "pending" };
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        userId,
+        projectId,
+        "ingestion.candidate",
+        "extraction_candidates",
+        id,
+        "insert",
+        null,
+        JSON.stringify({
+          id,
+          event_id: input.event_id,
+          user_id: userId,
+          project_id: projectId,
+          status: "pending",
+          confidence: bounded(input.confidence, 0.5),
+        }),
+        asJson(input.metadata),
+        now,
+      ],
+    );
+
+    await db.query("COMMIT");
+    return { id: row.id, status: "pending" };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+}
+
+export async function promoteExtractionCandidate(
+  db: DurableExecutor,
+  input: PromoteExtractionCandidateInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<PromoteExtractionCandidateResult | null> {
+  if (!input.candidate_id?.trim()) {
+    throw new Error("candidate_id is required");
+  }
+
+  const memories = table(schema, "memories");
+  const memoryVersions = table(schema, "memory_versions");
+  const provenance = table(schema, "provenance");
+  const entities = table(schema, "entities");
+  const memoryEntities = table(schema, "memory_entities");
+  const edges = table(schema, "edges");
+  const extractionCandidates = table(schema, "extraction_candidates");
+  const auditLog = table(schema, "audit_log");
+  const memoryId = input.memory_id || crypto.randomUUID();
+  const now = input.now || new Date();
+  const recordedAt = now.toISOString();
+
+  await db.query("BEGIN");
+  try {
+    const candidateResult = (await db.query(
+      `select id,event_id,user_id,project_id,content,facets,entities,edges,contracts,confidence,metadata
+       from ${extractionCandidates}
+       where id = $1 and status = 'pending'
+       limit 1`,
+      [input.candidate_id],
+    )) as { rows?: any[] };
+    const candidate = candidateResult.rows?.[0];
+    if (!candidate) {
+      await db.query("ROLLBACK");
+      return null;
+    }
+
+    const candidateEntities = Array.isArray(candidate.entities)
+      ? candidate.entities
+      : [];
+    const candidateEdges = Array.isArray(candidate.edges) ? candidate.edges : [];
+    const source: DurableSource = input.source || {
+      kind: "ingestion",
+      id: candidate.event_id,
+    };
+
+    await db.query(
+      `insert into ${memories}
+        (id,user_id,project_id,content,facets,contracts,metadata,confidence,observed_at,recorded_at)
+       values ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8,$9,$10)`,
+      [
+        memoryId,
+        candidate.user_id || "anonymous",
+        candidate.project_id || null,
+        candidate.content,
+        JSON.stringify(candidate.facets || {}),
+        JSON.stringify(candidate.contracts || {}),
+        JSON.stringify(candidate.metadata || {}),
+        bounded(Number(candidate.confidence), 0.5),
+        sourceObservedAt(source, now).toISOString(),
+        recordedAt,
+      ],
+    );
+
+    await db.query(
+      `insert into ${memoryVersions}
+        (id,memory_id,version,content,facets,contracts,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5::jsonb,$6::jsonb,$7::jsonb,$8)`,
+      [
+        crypto.randomUUID(),
+        memoryId,
+        1,
+        candidate.content,
+        JSON.stringify(candidate.facets || {}),
+        JSON.stringify(candidate.contracts || {}),
+        JSON.stringify(candidate.metadata || {}),
+        recordedAt,
+      ],
+    );
+
+    await db.query(
+      `insert into ${provenance}
+        (id,memory_id,source_kind,source_uri,source_id,extraction_method,trust_score,observed_at,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10)`,
+      [
+        crypto.randomUUID(),
+        memoryId,
+        source.kind || "ingestion",
+        source.uri || null,
+        source.id || candidate.event_id,
+        "durable_ingestion",
+        0.5,
+        sourceObservedAt(source, now).toISOString(),
+        JSON.stringify({ candidate_id: candidate.id, event_id: candidate.event_id }),
+        recordedAt,
+      ],
+    );
+
+    for (const entity of candidateEntities) {
+      if (!entity?.name?.trim()) continue;
+      const entityId = entity.id || crypto.randomUUID();
+      await db.query(
+        `insert into ${entities}
+          (id,user_id,project_id,entity_type,canonical_name,aliases,metadata,created_at,updated_at)
+         values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9)
+         on conflict(id) do update set
+          user_id=excluded.user_id,
+          project_id=excluded.project_id,
+          entity_type=excluded.entity_type,
+          canonical_name=excluded.canonical_name,
+          aliases=excluded.aliases,
+          metadata=excluded.metadata,
+          updated_at=excluded.updated_at`,
+        [
+          entityId,
+          candidate.user_id || "anonymous",
+          candidate.project_id || null,
+          entity.type || "unknown",
+          entity.name.trim(),
+          JSON.stringify(entity.aliases || []),
+          asJson(entity.metadata),
+          recordedAt,
+          recordedAt,
+        ],
+      );
+      await db.query(
+        `insert into ${memoryEntities}
+          (memory_id,entity_id,role,confidence)
+         values ($1,$2,$3,$4)
+         on conflict(memory_id, entity_id) do update set
+          role=excluded.role,
+          confidence=excluded.confidence`,
+        [
+          memoryId,
+          entityId,
+          entity.role || null,
+          bounded(entity.confidence, 1),
+        ],
+      );
+    }
+
+    for (const edge of candidateEdges) {
+      if (!edge?.type?.trim()) continue;
+      await db.query(
+        `insert into ${edges}
+          (id,user_id,project_id,source_memory_id,target_memory_id,source_entity_id,target_entity_id,edge_type,weight,metadata,valid_from,valid_to,recorded_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11,$12,$13)`,
+        [
+          edge.id || crypto.randomUUID(),
+          candidate.user_id || "anonymous",
+          candidate.project_id || null,
+          memoryId,
+          edge.target_memory_id || null,
+          edge.source_entity_id || null,
+          edge.target_entity_id || null,
+          edge.type,
+          bounded(edge.weight, 1),
+          asJson(edge.metadata),
+          isoOrNull(edge.valid_from),
+          isoOrNull(edge.valid_to),
+          recordedAt,
+        ],
+      );
+    }
+
+    await db.query(
+      `update ${extractionCandidates}
+       set status = 'accepted'
+       where id = $1`,
+      [input.candidate_id],
+    );
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        candidate.user_id || null,
+        candidate.project_id || null,
+        "ingestion.promote",
+        "memories",
+        memoryId,
+        "insert",
+        null,
+        JSON.stringify({
+          id: memoryId,
+          candidate_id: input.candidate_id,
+          event_id: candidate.event_id,
+          status: "stored",
+        }),
+        JSON.stringify({ candidate_id: input.candidate_id }),
+        recordedAt,
+      ],
+    );
+
+    await db.query("COMMIT");
+    return {
+      id: memoryId,
+      candidate_id: input.candidate_id,
+      status: "stored",
+    };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+}
+
+export async function rejectExtractionCandidate(
+  db: DurableExecutor,
+  input: RejectExtractionCandidateInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<RejectExtractionCandidateResult | null> {
+  if (!input.candidate_id?.trim()) {
+    throw new Error("candidate_id is required");
+  }
+  if (!input.reason?.trim()) {
+    throw new Error("reason is required");
+  }
+
+  const extractionCandidates = table(schema, "extraction_candidates");
+  const auditLog = table(schema, "audit_log");
+  const now = (input.now || new Date()).toISOString();
+  const params: unknown[] = [input.candidate_id, input.reason, now];
+  const userFilter = input.user_id ? " and user_id = $4" : "";
+  if (input.user_id) params.push(input.user_id);
+
+  await db.query("BEGIN");
+  try {
+    const result = (await db.query(
+      `update ${extractionCandidates}
+       set status = 'rejected', rejection_reason = $2
+       where id = $1 and status = 'pending'${userFilter}
+       returning id,event_id,user_id,project_id,status,rejection_reason`,
+      params,
+    )) as { rows?: any[] };
+    const row = result.rows?.[0];
+    if (!row) {
+      await db.query("ROLLBACK");
+      return null;
+    }
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        row.user_id || input.user_id || null,
+        row.project_id || null,
+        "ingestion.reject",
+        "extraction_candidates",
+        input.candidate_id,
+        "reject",
+        null,
+        JSON.stringify({
+          id: row.id,
+          event_id: row.event_id,
+          status: "rejected",
+          rejection_reason: row.rejection_reason,
+        }),
+        JSON.stringify({ reason: input.reason }),
+        now,
+      ],
+    );
+
+    await db.query("COMMIT");
+    return {
+      id: row.id,
+      status: "rejected",
+      reason: row.rejection_reason || input.reason,
+    };
   } catch (err) {
     await db.query("ROLLBACK");
     throw err;

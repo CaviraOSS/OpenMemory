@@ -33,3 +33,26 @@
 - Strict durable recall excludes memories with `contracts.recall_allowed === false`.
 - Durable explain exposes score components directly instead of requiring callers to infer confidence, provenance, contradiction, and contract state from raw arrays.
 - Durable contradiction resolution is explicit through `/v1/contradictions/:id/resolve`; it updates open contradiction rows to resolved and writes `contradiction.resolve` audit.
+
+## 2026-05-15
+- `ATODO.md` is the repository-level architecture rewrite backlog; `TODO.md` tracks the immediate active tranche.
+- Durable consolidation starts as an explicit request API: `POST /v1/consolidations` creates a pending row and audit event in Postgres mode.
+- The consolidation worker, automatic scheduling, and recall-impact evals remain deferred; do not auto-merge memories until evaluation proves behavior.
+- `/retention/*` stays as legacy compatibility after classification; do not silently point it at durable repositories until parity tests account for behavior differences such as hard delete versus durable soft delete.
+- `/v1` validation errors use `{ err: "invalid_request", field, msg }`; validation should run before durable/legacy storage work or unsupported-mode checks.
+- Dependency cleanup should remove only demonstrably unused packages until provider exports are narrowed; `dotenv` is removed because the package has its own `.env` loader and no runtime import.
+- `/v1` memory lifecycle tenant mismatches return `404 not_found` even in legacy-backed local mode; legacy `/retention/*` keeps its existing compatibility status codes.
+- Durable ingestion starts with a persisted input-event design and fixture tests; do not move `/retention/ingest*` until raw event storage, extraction candidates, durable writes, and audit behavior are implemented.
+- `/v1` success responses keep existing top-level fields for compatibility while adding normalized `memory`, `page`, and `deleted` envelopes for new clients.
+- Durable ingestion raw events are stored in `working_memory_events` and audited with `ingestion.event`; extraction candidates stay separate so failed extraction can preserve raw input without partial memory writes.
+- Durable extraction candidates are persisted explicitly before promotion to memories; automatic NLP extraction remains disabled until deterministic fixture tests exist for the promotion path.
+- `/v1/ingest` exists as a Postgres-only raw event endpoint. It does not replace `/retention/ingest*` and does not promote candidates to memories yet.
+- Extraction candidate promotion is repository-level and transactional; route-level accept/reject controls remain separate from raw `/v1/ingest`.
+- Legacy document and URL ingestion remain on `/retention/*` with parity coverage; durable ingestion should not replace them until route-level candidate acceptance and Postgres integration tests exist.
+- Candidate accept/reject controls live under `/v1/ingest/candidates/:id/*` and are Postgres-only until durable ingestion has local-compatible semantics.
+- Real Postgres ingestion verification must assert persisted rows, not only HTTP response shape; the opt-in harness checks `working_memory_events` and `audit_log`.
+- The package root should remain SDK-only and server-safe. Deferred ingestion helpers and provider modules stay internal until those surfaces are intentionally revived.
+- GitHub, Notion, Google, OneDrive, and web crawler SDKs are optional provider installs, not default JS server dependencies.
+- Explain responses should keep a normalized structural schema across durable and legacy adapters so clients do not need adapter-specific field checks.
+- Explain reason text must stay deterministic and factual until recall scoring and provenance policy are evaluated; avoid fake generated narratives.
+- Delete only tests outside the active rewrite safety net. Unreferenced manual or corrupted legacy tests can go; retention parity tests stay until `/retention/*` migration is complete.

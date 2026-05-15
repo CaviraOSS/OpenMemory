@@ -14,6 +14,8 @@ const requiredTables = [
   "provenance",
   "inferences",
   "working_memory",
+  "working_memory_events",
+  "extraction_candidates",
   "consolidations",
   "audit_log",
 ];

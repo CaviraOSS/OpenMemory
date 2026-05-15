@@ -153,6 +153,60 @@ export async function runPostgresV1Integration(connectionString: string) {
       throw new Error(`consolidation failed: ${JSON.stringify(consolidation.body)}`);
     }
 
+    const ingest = await postJson(baseUrl, "/v1/ingest", {
+      user_id: "pg_user",
+      project_id: "pg_project",
+      source: {
+        kind: "text",
+        id: "postgres-ingest",
+        content_type: "text/plain",
+      },
+      content: "Durable ingestion integration event",
+      metadata: { fixture: "postgres-v1" },
+      contracts: { recall_allowed: true },
+    });
+    assertOk(ingest, "ingest event");
+    if (
+      ingest.body.adapter !== "durable-postgres" ||
+      ingest.body.event?.status !== "pending"
+    ) {
+      throw new Error(`ingest did not return durable event: ${JSON.stringify(ingest.body)}`);
+    }
+
+    const ingestEvents = await pool.query(
+      `select id,user_id,project_id,source,content,status,metadata,contracts
+         from "${schema}"."working_memory_events"
+        where id = $1`,
+      [ingest.body.event.id],
+    );
+    if (
+      ingestEvents.rowCount !== 1 ||
+      ingestEvents.rows[0].user_id !== "pg_user" ||
+      ingestEvents.rows[0].project_id !== "pg_project" ||
+      ingestEvents.rows[0].source.kind !== "text" ||
+      ingestEvents.rows[0].content !== "Durable ingestion integration event" ||
+      ingestEvents.rows[0].status !== "pending" ||
+      ingestEvents.rows[0].metadata.fixture !== "postgres-v1" ||
+      ingestEvents.rows[0].contracts.recall_allowed !== true
+    ) {
+      throw new Error(`ingest event was not persisted correctly: ${JSON.stringify(ingestEvents.rows)}`);
+    }
+
+    const ingestAudit = await pool.query(
+      `select event_type,operation,target_table,target_id,after_state
+         from "${schema}"."audit_log"
+        where target_table = 'working_memory_events' and target_id = $1`,
+      [ingest.body.event.id],
+    );
+    if (
+      ingestAudit.rowCount !== 1 ||
+      ingestAudit.rows[0].event_type !== "ingestion.event" ||
+      ingestAudit.rows[0].operation !== "insert" ||
+      ingestAudit.rows[0].after_state.status !== "pending"
+    ) {
+      throw new Error(`ingest audit row was not written correctly: ${JSON.stringify(ingestAudit.rows)}`);
+    }
+
     const recall = await postJson(baseUrl, "/v1/recall", {
       query: "updated durable",
       mode: "strict",

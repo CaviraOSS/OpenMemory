@@ -10,6 +10,8 @@ export const DURABLE_TABLES = [
   "provenance",
   "inferences",
   "working_memory",
+  "working_memory_events",
+  "extraction_candidates",
   "consolidations",
   "audit_log",
 ] as const;
@@ -35,6 +37,8 @@ export function buildDurableSchemaSql(options: DurableSchemaOptions = {}) {
   const provenance = table(schema, "provenance");
   const inferences = table(schema, "inferences");
   const workingMemory = table(schema, "working_memory");
+  const workingMemoryEvents = table(schema, "working_memory_events");
+  const extractionCandidates = table(schema, "extraction_candidates");
   const consolidations = table(schema, "consolidations");
   const auditLog = table(schema, "audit_log");
 
@@ -147,6 +151,36 @@ export function buildDurableSchemaSql(options: DurableSchemaOptions = {}) {
       metadata jsonb not null default '{}'::jsonb,
       created_at timestamptz not null default now()
     )`,
+    `create table if not exists ${workingMemoryEvents} (
+      id uuid primary key,
+      user_id text not null default 'anonymous',
+      project_id text,
+      source jsonb not null default '{}'::jsonb,
+      content text not null,
+      metadata jsonb not null default '{}'::jsonb,
+      contracts jsonb not null default '{}'::jsonb,
+      status text not null default 'pending',
+      observed_at timestamptz,
+      recorded_at timestamptz not null default now(),
+      processed_at timestamptz,
+      error text
+    )`,
+    `create table if not exists ${extractionCandidates} (
+      id uuid primary key,
+      event_id uuid not null references ${workingMemoryEvents}(id) on delete cascade,
+      user_id text not null default 'anonymous',
+      project_id text,
+      content text not null,
+      facets jsonb not null default '{}'::jsonb,
+      entities jsonb not null default '[]'::jsonb,
+      edges jsonb not null default '[]'::jsonb,
+      contracts jsonb not null default '{}'::jsonb,
+      confidence double precision not null default 0.5 check(confidence >= 0 and confidence <= 1),
+      status text not null default 'pending',
+      rejection_reason text,
+      metadata jsonb not null default '{}'::jsonb,
+      created_at timestamptz not null default now()
+    )`,
     `create table if not exists ${consolidations} (
       id uuid primary key,
       user_id text not null default 'anonymous',
@@ -183,6 +217,8 @@ export function buildDurableSchemaSql(options: DurableSchemaOptions = {}) {
     `create index if not exists durable_contradictions_status_idx on ${contradictions}(status)`,
     `create index if not exists durable_provenance_memory_idx on ${provenance}(memory_id)`,
     `create index if not exists durable_working_memory_user_idx on ${workingMemory}(user_id, project_id)`,
+    `create index if not exists durable_working_memory_events_user_idx on ${workingMemoryEvents}(user_id, project_id, status)`,
+    `create index if not exists durable_extraction_candidates_event_idx on ${extractionCandidates}(event_id, status)`,
     `create index if not exists durable_audit_target_idx on ${auditLog}(target_table, target_id)`,
     `create index if not exists durable_audit_recorded_idx on ${auditLog}(recorded_at)`,
   ];

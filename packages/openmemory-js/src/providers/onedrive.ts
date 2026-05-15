@@ -6,6 +6,7 @@
 
 import {
   base_source,
+  import_optional,
   source_config_error,
   source_auth_error,
   source_item,
@@ -25,7 +26,7 @@ export class onedrive_source extends base_source {
 
     let msal: any;
     try {
-      msal = await import("@azure/msal-node");
+      msal = await import_optional("@azure/msal-node");
     } catch {
       throw new source_config_error(
         "missing deps: npm install @azure/msal-node",

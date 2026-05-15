@@ -6,6 +6,7 @@
 
 import {
   base_source,
+  import_optional,
   source_config_error,
   source_item,
   source_content,
@@ -44,7 +45,7 @@ export class webCrawler_source extends base_source {
 
     let cheerio: any;
     try {
-      cheerio = await import("cheerio");
+      cheerio = await import_optional("cheerio");
     } catch {
       throw new source_config_error(
         "missing deps: npm install cheerio",
@@ -124,7 +125,7 @@ export class webCrawler_source extends base_source {
   async _fetch_item(item_id: string): Promise<source_content> {
     let cheerio: any;
     try {
-      cheerio = await import("cheerio");
+      cheerio = await import_optional("cheerio");
     } catch {
       throw new source_config_error(
         "missing deps: npm install cheerio",

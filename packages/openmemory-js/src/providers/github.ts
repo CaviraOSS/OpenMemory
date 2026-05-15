@@ -6,6 +6,7 @@
 
 import {
   base_source,
+  import_optional,
   source_config_error,
   source_item,
   source_content,
@@ -18,7 +19,7 @@ export class github_source extends base_source {
   async _connect(creds: Record<string, any>): Promise<boolean> {
     let Octokit: any;
     try {
-      Octokit = await import("@octokit/rest").then((m) => m.Octokit);
+      Octokit = await import_optional("@octokit/rest").then((m) => m.Octokit);
     } catch {
       throw new source_config_error(
         "missing deps: npm install @octokit/rest",

@@ -6,6 +6,7 @@
 
 import {
   base_source,
+  import_optional,
   source_config_error,
   source_item,
   source_content,
@@ -19,7 +20,7 @@ export class googleSheets_source extends base_source {
   async _connect(creds: Record<string, any>): Promise<boolean> {
     let google: any;
     try {
-      google = await import("googleapis").then((m) => m.google);
+      google = await import_optional("googleapis").then((m) => m.google);
     } catch {
       throw new source_config_error(
         "missing deps: npm install googleapis",

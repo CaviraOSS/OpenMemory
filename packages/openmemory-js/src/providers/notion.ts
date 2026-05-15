@@ -6,6 +6,7 @@
 
 import {
   base_source,
+  import_optional,
   source_config_error,
   source_item,
   source_content,
@@ -18,7 +19,7 @@ export class notion_source extends base_source {
   async _connect(creds: Record<string, any>): Promise<boolean> {
     let Client: any;
     try {
-      Client = await import("@notionhq/client").then((m) => m.Client);
+      Client = await import_optional("@notionhq/client").then((m) => m.Client);
     } catch {
       throw new source_config_error(
         "missing deps: npm install @notionhq/client",

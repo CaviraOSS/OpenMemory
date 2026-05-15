@@ -13,6 +13,9 @@ const expected: Array<[string, string]> = [
   ["DELETE", "/v1/memories/:id"],
   ["POST", "/v1/contradictions/:id/resolve"],
   ["POST", "/v1/consolidations"],
+  ["POST", "/v1/ingest"],
+  ["POST", "/v1/ingest/candidates/:id/accept"],
+  ["POST", "/v1/ingest/candidates/:id/reject"],
 ];
 
 for (const [method, path] of expected) {

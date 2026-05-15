@@ -51,6 +51,9 @@ export class source_fetch_error extends source_error {
   }
 }
 
+export const import_optional = (specifier: string): Promise<any> =>
+  new Function("specifier", "return import(specifier)")(specifier);
+
 export interface source_item {
   id: string;
   name: string;

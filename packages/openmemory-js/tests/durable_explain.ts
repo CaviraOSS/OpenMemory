@@ -71,6 +71,15 @@ async function main() {
   if (!explained.score_components.contracts.recall_allowed) {
     throw new Error("durable explain must expose contract state");
   }
+  if (
+    !Array.isArray((explained as any).reasons) ||
+    !(explained as any).reasons.includes("confidence 0.85") ||
+    !(explained as any).reasons.includes("1 provenance source") ||
+    !(explained as any).reasons.includes("1 open contradiction") ||
+    !(explained as any).reasons.includes("recall allowed by contract")
+  ) {
+    throw new Error(`durable explain must expose factual reasons: ${JSON.stringify(explained)}`);
+  }
 
   const sqlText = calls.map((call) => call.sql).join("\n").toLowerCase();
   for (const table of [
