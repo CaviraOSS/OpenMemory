@@ -42,6 +42,9 @@ jobs:
       OM_VEC_DIM: "1536"
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check models mirror
+        run: node tools/sync-openmemory-models.mjs --check
       
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -57,3 +60,22 @@ jobs:
         run: |
           cd packages/openmemory-js
           npx tsx tests/test_omnibus.ts
+
+  test-graphrag-bridge:
+    name: Test GraphRAG bridge
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build GraphRAG bridge image
+        run: |
+          docker build -t openmemory-graphrag-bridge:latest tools/openmemory-graphrag-bridge
+
+      - name: Run hermetic bridge E2E
+        run: |
+          python tools/openmemory-graphrag-bridge/tests/test_e2e_bridge_stack.py

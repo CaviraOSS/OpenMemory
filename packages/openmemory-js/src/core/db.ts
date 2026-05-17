@@ -469,6 +469,17 @@ if (is_pg) {
     const db = new sqlite3.Database(db_path);
 
     const sqlite_vector_table = process.env.OM_VECTOR_TABLE || "vectors";
+    const add_column_if_missing = (sql: string) => {
+        db.run(sql, (err) => {
+            if (
+                err &&
+                !err.message.includes("duplicate column") &&
+                !err.message.includes("no such table")
+            ) {
+                console.error(`[DB] Schema repair failed: ${err.message}`);
+            }
+        });
+    };
     db.serialize(() => {
         db.run("PRAGMA journal_mode=WAL");
         db.run("PRAGMA synchronous=NORMAL");
@@ -500,6 +511,14 @@ if (is_pg) {
         db.run(
             `create table if not exists temporal_facts(id text primary key,user_id text,project_id text,subject text not null,predicate text not null,object text not null,valid_from integer not null,valid_to integer,confidence real not null check(confidence >= 0 and confidence <= 1),last_updated integer not null,metadata text,unique(subject,predicate,object,valid_from))`,
         );
+        add_column_if_missing("alter table memories add column user_id text");
+        add_column_if_missing("alter table memories add column project_id text");
+        add_column_if_missing(`alter table ${sqlite_vector_table} add column user_id text`);
+        add_column_if_missing(`alter table ${sqlite_vector_table} add column project_id text`);
+        add_column_if_missing("alter table waypoints add column user_id text");
+        add_column_if_missing("alter table waypoints add column project_id text");
+        add_column_if_missing("alter table temporal_facts add column user_id text");
+        add_column_if_missing("alter table temporal_facts add column project_id text");
         db.run(
             "create index if not exists idx_temporal_user on temporal_facts(user_id)",
         );

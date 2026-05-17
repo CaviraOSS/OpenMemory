@@ -1,0 +1,3 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.32,<1
+graphrag-sdk[litellm]==1.1.1

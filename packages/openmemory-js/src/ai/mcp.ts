@@ -19,6 +19,14 @@ import { update_user_summary } from "../memory/user_summary";
 import { insert_fact } from "../temporal_graph/store";
 import { query_facts_at_time } from "../temporal_graph/query";
 import { ToolRegistry } from "./mcp_tools";
+import {
+    deleteGraphRagDocument,
+    getGraphRagStatus,
+    maybeDeleteGraphRagDocument,
+    maybeSyncGraphRagDocument,
+    queryGraphRag,
+    syncGraphRagDocument,
+} from "../graphrag/bridge";
 
 const sec_enum = z.enum([
     "episodic",
@@ -354,6 +362,19 @@ export const create_mcp_srv = () => {
             if (type === "contextual" || type === "both") {
                 const res = await add_hsg_memory(content, j(tags || []), metadata, u, proj);
                 results.hsg = { id: res.id, primary_sector: res.primary_sector, sectors: res.sectors };
+                maybeSyncGraphRagDocument({
+                    id: res.id,
+                    content,
+                    metadata: {
+                        ...(metadata || {}),
+                        source: "openmemory:mcp/openmemory_store_project",
+                        openmemory_id: res.id,
+                        primary_sector: res.primary_sector,
+                        tags: tags || [],
+                    },
+                    user_id: u,
+                    project_id: proj,
+                });
                 if (u) {
                     update_user_summary(u).catch((err) => console.error("[MCP] user summary update failed:", err));
                 }
@@ -416,6 +437,19 @@ export const create_mcp_srv = () => {
                 // Add to contextual memory system (HSG)
                 const res = await add_hsg_memory(content, j(tags || []), metadata, u, proj);
                 results.hsg = { id: res.id, primary_sector: res.primary_sector, sectors: res.sectors };
+                maybeSyncGraphRagDocument({
+                    id: res.id,
+                    content,
+                    metadata: {
+                        ...(metadata || {}),
+                        source: "openmemory:mcp/openmemory_store",
+                        openmemory_id: res.id,
+                        primary_sector: res.primary_sector,
+                        tags: tags || [],
+                    },
+                    user_id: u,
+                    project_id: proj,
+                });
             }
 
             if ((type === "factual" || type === "both") && facts) {
@@ -474,9 +508,10 @@ export const create_mcp_srv = () => {
         async ({ id, user_id, project_id }) => {
             const u = uid(user_id);
             const proj = uid(project_id);
+            let mem: mem_row | undefined;
             if (u || proj) {
                 // Pre-check ownership if user_id/project_id provided
-                const mem = await q.get_mem.get(id);
+                mem = await q.get_mem.get(id);
                 if (mem) {
                     if (u && mem.user_id !== u) throw new Error(`Memory ${id} not found for user ${u}`);
                     if (proj && mem.project_id && mem.project_id !== proj && mem.project_id !== 'system_global') {
@@ -485,12 +520,18 @@ export const create_mcp_srv = () => {
                 }
             }
 
+            mem = mem || await q.get_mem.get(id);
+
             const success = await delete_memory(id);
             if (!success) {
                 return {
                     content: [{ type: "text", text: `Memory ${id} not found or could not be deleted.` }],
                     isError: true
                 };
+            }
+
+            if (mem) {
+                maybeDeleteGraphRagDocument({ id: mem.id });
             }
 
             return {
@@ -633,6 +674,155 @@ export const create_mcp_srv = () => {
             };
         },
     );
+
+    registry.tool(
+        "openmemory_graphrag_status",
+        "Check the optional FalkorDB GraphRAG bridge status",
+        {},
+        async () => {
+            const status = await getGraphRagStatus();
+            return {
+                content: [
+                    { type: "text", text: JSON.stringify(status, null, 2) },
+                ],
+            };
+        },
+    );
+
+    registry.tool(
+        "openmemory_graphrag_query",
+        "Query the optional FalkorDB GraphRAG knowledge graph. Use this for relationship-heavy or multi-hop questions when GraphRAG is enabled.",
+        {
+            query: z.string().min(1).describe("Question to answer from the GraphRAG graph"),
+            k: z.number().int().min(1).max(32).default(8).describe("Context item limit"),
+            user_id: z.string().trim().min(1).optional(),
+            project_id: z.string().trim().min(1).optional(),
+            return_context: z.boolean().default(true),
+        },
+        async ({ query, k, user_id, project_id, return_context }) => {
+            const result = await queryGraphRag({
+                query,
+                k,
+                user_id: uid(user_id),
+                project_id: uid(project_id),
+                return_context,
+            });
+            return {
+                content: [
+                    { type: "text", text: JSON.stringify(result, null, 2) },
+                ],
+            };
+        },
+    );
+
+    registry.tool(
+        "openmemory_graphrag_sync",
+        "Sync one OpenMemory memory or explicit content into the optional FalkorDB GraphRAG graph",
+        {
+            id: z.string().min(1).optional().describe("Existing OpenMemory memory id"),
+            content: z.string().min(1).optional().describe("Explicit content to sync when id is not supplied"),
+            document_id: z.string().min(1).optional().describe("Explicit GraphRAG document id for content sync"),
+            metadata: z.record(z.any()).optional(),
+            user_id: z.string().trim().min(1).optional(),
+            project_id: z.string().trim().min(1).optional(),
+            finalize: z.boolean().default(false).describe("Ask the bridge to finalize indexes after this sync"),
+        },
+        async ({ id, content, document_id, metadata, user_id, project_id, finalize }) => {
+            let sync_id = document_id || id;
+            let sync_content = content;
+            let sync_metadata = metadata || {};
+            let sync_user = uid(user_id);
+            let sync_project = uid(project_id);
+
+            if (id && sync_content) {
+                return {
+                    content: [
+                        { type: "text", text: "Invalid request: id and content are mutually exclusive; use document_id for explicit content sync." },
+                    ],
+                };
+            }
+
+            if (id) {
+                const mem = await q.get_mem.get(id);
+                if (!mem) {
+                    return {
+                        content: [
+                            { type: "text", text: `Memory ${id} not found.` },
+                        ],
+                    };
+                }
+                const mem_user = uid(mem.user_id);
+                const mem_project = uid(mem.project_id);
+                if (mem_user && sync_user !== mem_user) {
+                    return {
+                        content: [
+                            { type: "text", text: "Forbidden: user_id is required and must match the existing memory owner." },
+                        ],
+                    };
+                }
+                if (mem_project && sync_project !== mem_project) {
+                    return {
+                        content: [
+                            { type: "text", text: "Forbidden: project_id is required and must match the existing memory project." },
+                        ],
+                    };
+                }
+                sync_id = mem.id;
+                sync_content = mem.content;
+                sync_user = sync_user || mem_user;
+                sync_project = sync_project || mem_project;
+                sync_metadata = {
+                    ...p(mem.meta || "{}"),
+                    ...sync_metadata,
+                    openmemory_id: mem.id,
+                    primary_sector: mem.primary_sector,
+                };
+            }
+
+            if (!sync_id || !sync_content) {
+                throw new Error("Either id or content plus document_id is required.");
+            }
+
+            const result = await syncGraphRagDocument({
+                id: sync_id,
+                content: sync_content,
+                metadata: sync_metadata,
+                user_id: sync_user,
+                project_id: sync_project,
+                finalize,
+            });
+            return {
+                content: [
+                    { type: "text", text: JSON.stringify(result, null, 2) },
+                ],
+            };
+        },
+    );
+
+    registry.tool(
+        "openmemory_graphrag_delete",
+        "Delete one GraphRAG document by OpenMemory memory id or explicit document id",
+        {
+            id: z.string().min(1).optional().describe("Existing OpenMemory memory id"),
+            document_id: z.string().min(1).optional().describe("Explicit GraphRAG document id"),
+            finalize: z.boolean().default(false).describe("Ask the bridge to finalize indexes after this delete"),
+        },
+        async ({ id, document_id, finalize }) => {
+            const delete_id = document_id || id;
+            if (!delete_id) {
+                throw new Error("Either id or document_id is required.");
+            }
+            const result = await deleteGraphRagDocument({
+                id: delete_id,
+                finalize,
+            });
+            return {
+                content: [
+                    { type: "text", text: JSON.stringify(result, null, 2) },
+                ],
+            };
+        },
+    );
     registry.apply(srv);
 
     srv.resource(
@@ -660,6 +850,10 @@ export const create_mcp_srv = () => {
                     "openmemory_reinforce",
                     "openmemory_list",
                     "openmemory_get",
+                    "openmemory_graphrag_status",
+                    "openmemory_graphrag_query",
+                    "openmemory_graphrag_sync",
+                    "openmemory_graphrag_delete",
                 ],
             };
             return {

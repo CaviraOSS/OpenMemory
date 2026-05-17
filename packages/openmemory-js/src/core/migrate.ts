@@ -151,14 +151,15 @@ async function run_sqlite_migration(
 ): Promise<void> {
     log(`Running migration: ${m.version} - ${m.desc}`);
 
-    const has_user_id = await check_column_exists_sqlite(
+    const guard_column = m.version >= "1.3.0" ? "project_id" : "user_id";
+    const has_guard_column = await check_column_exists_sqlite(
         db,
         "memories",
-        "user_id",
+        guard_column,
     );
-    if (has_user_id) {
+    if (has_guard_column) {
         log(
-            `Migration ${m.version} already applied (user_id exists), skipping`,
+            `Migration ${m.version} already applied (${guard_column} exists), skipping`,
         );
         await set_db_version_sqlite(db, m.version);
         return;
@@ -237,11 +238,12 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
 
     const sc = process.env.OM_PG_SCHEMA || "public";
     const mt = process.env.OM_PG_TABLE || "openmemory_memories";
-    const has_user_id = await check_column_exists_pg(pool, mt, "user_id");
+    const guard_column = m.version >= "1.3.0" ? "project_id" : "user_id";
+    const has_guard_column = await check_column_exists_pg(pool, mt, guard_column);
 
-    if (has_user_id) {
+    if (has_guard_column) {
         log(
-            `Migration ${m.version} already applied (user_id exists), skipping`,
+            `Migration ${m.version} already applied (${guard_column} exists), skipping`,
         );
         await set_db_version_pg(pool, m.version);
         return;

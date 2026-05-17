@@ -3,6 +3,8 @@ import { add_hsg_memory, hsg_query } from "../../memory/hsg";
 import { update_user_summary } from "../../memory/user_summary";
 import { j, p } from "../../utils";
 import * as crypto from "crypto";
+import { env } from "../../core/cfg";
+import { maybeSyncGraphRagDocument, queryGraphRag } from "../../graphrag/bridge";
 export function ide(app: any) {
     app.post("/api/ide/events", async (req: any, res: any) => {
         try {
@@ -12,6 +14,7 @@ export function ide(app: any) {
             const session_id = req.body.session_id || "default";
             const metadata = req.body.metadata || {};
             const user_id = req.body.user_id || "anonymous";
+            const project_id = req.body.project_id || metadata.project_id;
 
             if (!event_type)
                 return res.status(400).json({ err: "event_type_required" });
@@ -45,7 +48,21 @@ export function ide(app: any) {
                 undefined,
                 full_metadata,
                 user_id,
+                project_id,
             );
+
+            maybeSyncGraphRagDocument({
+                id: result.id,
+                content: memory_content,
+                metadata: {
+                    ...full_metadata,
+                    source: "openmemory:/api/ide/events",
+                    openmemory_id: result.id,
+                    primary_sector: result.primary_sector,
+                },
+                user_id,
+                project_id,
+            });
 
 
             if (user_id && user_id !== "anonymous") {
@@ -72,10 +89,24 @@ export function ide(app: any) {
             const k = req.body.k || req.body.limit || 5;
             const session_id = req.body.session_id;
             const file_path = req.body.file_path;
+            const user_id = req.body.user_id;
+            const project_id = req.body.project_id;
 
             if (!query) return res.status(400).json({ err: "query_required" });
 
-            const results = await hsg_query(query, k);
+            const results = await hsg_query(query, k, {
+                ...(user_id ? { user_id } : {}),
+                ...(project_id ? { project_id } : {}),
+            });
+            const graph_context = env.graphrag_context_enabled
+                ? await queryGraphRag({
+                    query,
+                    k,
+                    user_id,
+                    project_id,
+                    return_context: true,
+                })
+                : undefined;
 
             let filtered = results;
 
@@ -112,6 +143,7 @@ export function ide(app: any) {
             res.json({
                 success: true,
                 memories: formatted,
+                graphrag: graph_context,
                 total: formatted.length,
                 query: query,
             });
@@ -126,6 +158,7 @@ export function ide(app: any) {
             const user_id = req.body.user_id || "anonymous";
             const project_name = req.body.project_name || "unknown";
             const ide_name = req.body.ide_name || "unknown";
+            const project_id = req.body.project_id;
 
             const session_id = `session_${Date.now()}_${crypto.randomBytes(7).toString("hex")}`;
             const now_ts = Date.now();
@@ -136,13 +169,27 @@ export function ide(app: any) {
                 ide_session_id: session_id,
                 ide_user_id: user_id,
                 ide_project_name: project_name,
+                project_id: project_id,
                 ide_name: ide_name,
                 session_start_time: now_ts,
                 session_type: "ide_session",
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(content, undefined, metadata, user_id);
+            const result = await add_hsg_memory(content, undefined, metadata, user_id, project_id);
+
+            maybeSyncGraphRagDocument({
+                id: result.id,
+                content,
+                metadata: {
+                    ...metadata,
+                    source: "openmemory:/api/ide/session/start",
+                    openmemory_id: result.id,
+                    primary_sector: result.primary_sector,
+                },
+                user_id,
+                project_id,
+            });
 
             if (user_id && user_id !== "anonymous") {
                 update_user_summary(user_id).catch(err =>
@@ -169,6 +216,7 @@ export function ide(app: any) {
         try {
             const session_id = req.body.session_id;
             const user_id = req.body.user_id || "anonymous";
+            const project_id = req.body.project_id;
 
             if (!session_id)
                 return res.status(400).json({ err: "session_id_required" });
@@ -216,7 +264,20 @@ export function ide(app: any) {
                 ide_mode: true,
             };
 
-            const result = await add_hsg_memory(summary, undefined, metadata, user_id);
+            const result = await add_hsg_memory(summary, undefined, metadata, user_id, project_id);
+
+            maybeSyncGraphRagDocument({
+                id: result.id,
+                content: summary,
+                metadata: {
+                    ...metadata,
+                    source: "openmemory:/api/ide/session/end",
+                    openmemory_id: result.id,
+                    primary_sector: result.primary_sector,
+                },
+                user_id,
+                project_id,
+            });
 
             if (user_id && user_id !== "anonymous") {
                 update_user_summary(user_id).catch(err =>

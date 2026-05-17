@@ -22,6 +22,7 @@ OpenMemory is a **cognitive memory engine** for LLMs and agents.
 - 🧩 Integrations: LangChain, CrewAI, AutoGen, Streamlit, MCP, VS Code
 - 📥 Sources: GitHub, Notion, Google Drive, OneDrive, Web Crawler
 - 🔍 Explainable traces (see *why* something was recalled)
+- 🕸 Optional FalkorDB GraphRAG sidecar for relationship-heavy retrieval
 
 Your model stays stateless. **Your app stops being amnesiac.**
 
@@ -75,6 +76,28 @@ OpenMemory is designed to sit behind **agent frameworks and UIs**:
 - Streamlit apps: give each user a persistent memory by `user_id`
 
 See the integrations section in the docs for concrete patterns.
+
+---
+
+### Optional FalkorDB GraphRAG
+
+OpenMemory can mirror selected memories into a FalkorDB GraphRAG-SDK sidecar for
+relationship-heavy and multi-hop retrieval. The existing HSG and temporal memory
+systems stay enabled, and GraphRAG is off by default.
+
+When enabled, OpenMemory uses the GraphRAG SDK incremental document APIs for
+upserts and deletes, so memory updates can be propagated without rebuilding the
+entire graph. Finalization remains explicit and should be batched deliberately.
+
+See [docs/graphrag.md](docs/graphrag.md) for the bridge, Docker profile, API,
+and MCP tools.
+
+### Codex IDE/CLI autouse
+
+Codex can use OpenMemory through MCP, the IDE context provider, and bounded
+redacted hooks that store session/prompt events through `/api/ide/events`.
+
+See [docs/codex-autouse.md](docs/codex-autouse.md).
 
 ---
 

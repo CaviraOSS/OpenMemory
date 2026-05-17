@@ -4,7 +4,7 @@ services:
       context: ./packages/openmemory-js
       dockerfile: Dockerfile
     ports:
-      - '8180:8180'
+      - '127.0.0.1:8180:8180'
     environment:
       # Core Configuration
       - OM_PORT=${OM_PORT:-8180}
@@ -51,6 +51,7 @@ services:
       # Ollama Provider
       - OLLAMA_URL=${OLLAMA_URL:-http://localhost:11434}
       - OM_OLLAMA_URL=${OM_OLLAMA_URL:-http://localhost:11434}
+      - OM_OLLAMA_MODEL=${OM_OLLAMA_MODEL:-}
 
       # Local Model
       - LOCAL_MODEL_PATH=${LOCAL_MODEL_PATH:-}
@@ -116,6 +117,18 @@ services:
       # Keyword Extraction
       - OM_KEYWORD_BOOST=${OM_KEYWORD_BOOST:-2.5}
       - OM_KEYWORD_MIN_LENGTH=${OM_KEYWORD_MIN_LENGTH:-3}
+
+      # Optional FalkorDB GraphRAG bridge
+      - OM_GRAPHRAG_ENABLED=${OM_GRAPHRAG_ENABLED:-false}
+      - OM_GRAPHRAG_URL=${OM_GRAPHRAG_URL:-http://graphrag-bridge:8765}
+      - OM_GRAPHRAG_TIMEOUT_MS=${OM_GRAPHRAG_TIMEOUT_MS:-120000}
+      - OM_GRAPHRAG_BRIDGE_API_KEY=${OM_GRAPHRAG_BRIDGE_API_KEY:-}
+      - OM_GRAPHRAG_WRITE_ENABLED=${OM_GRAPHRAG_WRITE_ENABLED:-false}
+      - OM_GRAPHRAG_ALLOW_UNAUTH_WRITE=${OM_GRAPHRAG_ALLOW_UNAUTH_WRITE:-false}
+      - OM_GRAPHRAG_ALLOW_GLOBAL_QUERY=${OM_GRAPHRAG_ALLOW_GLOBAL_QUERY:-false}
+      - OM_GRAPHRAG_ALLOW_UNFILTERED_SCOPED_QUERY=${OM_GRAPHRAG_ALLOW_UNFILTERED_SCOPED_QUERY:-false}
+      - OM_GRAPHRAG_SYNC_ON_ADD=${OM_GRAPHRAG_SYNC_ON_ADD:-false}
+      - OM_GRAPHRAG_CONTEXT_ENABLED=${OM_GRAPHRAG_CONTEXT_ENABLED:-false}
     volumes:
       - openmemory_data:/data
     restart: unless-stopped
@@ -175,8 +188,57 @@ services:
   #     retries: 3
   #     start_period: 30s
 
+  # Optional: FalkorDB + GraphRAG-SDK bridge for relationship-heavy retrieval.
+  # Start with: docker compose --profile graphrag up -d falkordb graphrag-bridge openmemory
+  falkordb:
+    profiles:
+      - graphrag
+    image: falkordb/falkordb:latest
+    ports:
+      - '127.0.0.1:${FALKORDB_HOST_PORT:-6379}:6379'
+      - '127.0.0.1:${FALKORDB_DASHBOARD_PORT:-3001}:3000'
+    volumes:
+      - falkordb_data:/data
+    restart: unless-stopped
+
+  graphrag-bridge:
+    profiles:
+      - graphrag
+    build:
+      context: ./tools/openmemory-graphrag-bridge
+      dockerfile: Dockerfile
+    ports:
+      - '127.0.0.1:${GRAPHRAG_BRIDGE_HOST_PORT:-8765}:8765'
+    environment:
+      - FALKORDB_HOST=falkordb
+      - FALKORDB_PORT=6379
+      - OM_GRAPHRAG_BRIDGE_API_KEY=${OM_GRAPHRAG_BRIDGE_API_KEY:-}
+      - OM_GRAPHRAG_GRAPH_NAME=${OM_GRAPHRAG_GRAPH_NAME:-openmemory}
+      - OM_GRAPHRAG_LLM_MODEL=${OM_GRAPHRAG_LLM_MODEL:-}
+      - OM_GRAPHRAG_LLM_MAX_TOKENS=${OM_GRAPHRAG_LLM_MAX_TOKENS:-}
+      - OM_GRAPHRAG_EMBEDDER_MODEL=${OM_GRAPHRAG_EMBEDDER_MODEL:-}
+      - OM_GRAPHRAG_EMBEDDER_DIMENSIONS=${OM_GRAPHRAG_EMBEDDER_DIMENSIONS:-256}
+      - OLLAMA_API_BASE=${OLLAMA_API_BASE:-http://host.docker.internal:11434}
+      - OM_GRAPHRAG_API_BASE=${OM_GRAPHRAG_API_BASE:-}
+      - HF_HOME=${HF_HOME:-/root/.cache/huggingface}
+      - TRANSFORMERS_CACHE=${TRANSFORMERS_CACHE:-/root/.cache/huggingface/transformers}
+      - OM_GRAPHRAG_GLINER_MODEL=${OM_GRAPHRAG_GLINER_MODEL:-urchade/gliner_medium-v2.1}
+      - OM_GRAPHRAG_GLINER_CACHE_DIR=${OM_GRAPHRAG_GLINER_CACHE_DIR:-/root/.cache/huggingface}
+      - OM_GRAPHRAG_GLINER_PREWARM=${OM_GRAPHRAG_GLINER_PREWARM:-true}
+      - OM_GRAPHRAG_GLINER_ALLOW_ONLINE_FALLBACK=${OM_GRAPHRAG_GLINER_ALLOW_ONLINE_FALLBACK:-false}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    volumes:
+      - graphrag_bridge_hf_cache:/root/.cache/huggingface
+    depends_on:
+      - falkordb
+    restart: unless-stopped
+
 volumes:
   openmemory_data:
+    driver: local
+  falkordb_data:
+    driver: local
+  graphrag_bridge_hf_cache:
     driver: local
   # Uncomment if using Valkey
   # valkey_data:

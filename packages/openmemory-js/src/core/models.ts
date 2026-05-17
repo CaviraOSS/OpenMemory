@@ -7,21 +7,27 @@ let cfg: model_cfg | null = null;
 
 export const load_models = (): model_cfg => {
     if (cfg) return cfg;
-    const p = join(__dirname, "../../../models.yml");
-    if (!existsSync(p)) {
+    const candidates = [
+        join(__dirname, "../../models.yml"),
+        join(__dirname, "../../../models.yml"),
+    ];
+    const p = candidates.find((candidate) => existsSync(candidate));
+    if (!p) {
         console.error("[MODELS] models.yml not found, using defaults");
-        return get_defaults();
+        cfg = get_defaults();
+        return cfg;
     }
     try {
         const yml = readFileSync(p, "utf-8");
         cfg = parse_yaml(yml);
         console.error(
-            `[MODELS] Loaded models.yml (${Object.keys(cfg).length} sectors)`,
+            `[MODELS] Loaded models.yml from ${p} (${Object.keys(cfg).length} sectors)`,
         );
         return cfg;
     } catch (e) {
         console.error("[MODELS] Failed to parse models.yml:", e);
-        return get_defaults();
+        cfg = get_defaults();
+        return cfg;
     }
 };
 

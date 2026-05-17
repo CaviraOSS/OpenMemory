@@ -15,6 +15,10 @@ import type {
     ingest_req,
     ingest_url_req,
 } from "../../core/types";
+import {
+    maybeDeleteGraphRagDocument,
+    maybeSyncGraphRagDocument,
+} from "../../graphrag/bridge";
 
 export function mem(app: any) {
     app.post("/memory/add", async (req: any, res: any) => {
@@ -26,8 +30,23 @@ export function mem(app: any) {
                 j(b.tags || []),
                 b.metadata,
                 b.user_id,
+                b.project_id,
             );
             res.json(m);
+
+            maybeSyncGraphRagDocument({
+                id: m.id,
+                content: b.content,
+                metadata: {
+                    ...(b.metadata || {}),
+                    openmemory_id: m.id,
+                    source: "openmemory:/memory/add",
+                    primary_sector: m.primary_sector,
+                    tags: b.tags || [],
+                },
+                user_id: b.user_id,
+                project_id: b.project_id,
+            });
 
             if (b.user_id) {
                 update_user_summary(b.user_id).catch((e) =>
@@ -76,6 +95,7 @@ export function mem(app: any) {
                 sectors: b.filters?.sector ? [b.filters.sector] : undefined,
                 minSalience: b.filters?.min_score,
                 user_id: b.filters?.user_id || b.user_id,
+                project_id: b.filters?.project_id || b.project_id,
                 startTime: b.filters?.startTime ?? b.startTime,
                 endTime: b.filters?.endTime ?? b.endTime,
             };
@@ -129,6 +149,24 @@ export function mem(app: any) {
             }
 
             const r = await update_memory(id, b.content, b.tags, b.metadata);
+            if (b.content !== undefined && b.content !== m.content) {
+                const updated_mem = await q.get_mem.get(id);
+                if (updated_mem) {
+                    maybeSyncGraphRagDocument({
+                        id: updated_mem.id,
+                        content: updated_mem.content,
+                        metadata: {
+                            ...p(updated_mem.meta || "{}"),
+                            openmemory_id: updated_mem.id,
+                            source: "openmemory:/memory/patch",
+                            primary_sector: updated_mem.primary_sector,
+                            tags: p(updated_mem.tags || "[]"),
+                        },
+                        user_id: updated_mem.user_id,
+                        project_id: updated_mem.project_id,
+                    });
+                }
+            }
             res.json(r);
         } catch (e: any) {
             if (e.message.includes("not found")) {
@@ -227,6 +265,7 @@ export function mem(app: any) {
             await q.del_mem.run(id);
             await vector_store.deleteVectors(id);
             await q.del_waypoints.run(id, id);
+            maybeDeleteGraphRagDocument({ id: m.id });
             res.json({ ok: true });
         } catch (e: any) {
             res.status(500).json({ err: "internal" });

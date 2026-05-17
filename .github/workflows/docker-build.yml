@@ -20,6 +20,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check models mirror
+        run: node tools/sync-openmemory-models.mjs --check
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 

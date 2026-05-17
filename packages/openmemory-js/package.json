@@ -12,13 +12,14 @@
         "dev": "nodemon src/server/index.ts",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
+        "test:graphrag": "tsx tests/test_graphrag_bridge.ts",
         "start": "node dist/server/index.js",
         "migrate": "tsx src/migrate.ts"
     },
     "dependencies": {
-        "@aws-sdk/client-bedrock-runtime": "^3.932.0",
+        "@aws-sdk/client-bedrock-runtime": "^3.1046.0",
         "@azure/msal-node": "^2.0.0",
-        "@modelcontextprotocol/sdk": "^1.27.1",
+        "@modelcontextprotocol/sdk": "^1.29.0",
         "@notionhq/client": "^2.2.0",
         "@octokit/rest": "^21.0.0",
         "cheerio": "^1.0.0",
@@ -30,7 +31,7 @@
         "openai": "^4.73.0",
         "pdf-parse": "^2.4.5",
         "pg": "^8.16.3",
-        "sqlite3": "^5.1.7",
+        "sqlite3": "^6.0.1",
         "turndown": "^7.2.2",
         "ws": "^8.18.3",
         "zod": "^3.25.76"
