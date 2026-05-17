@@ -7,6 +7,7 @@ const rate_limit_store = new Map<
 >();
 const auth_config = {
   api_key: env.api_key,
+  require_api_key: env.require_api_key,
   api_key_header: "x-api-key",
   rate_limit_enabled: env.rate_limit_enabled,
   rate_limit_window_ms: env.rate_limit_window_ms,
@@ -80,7 +81,12 @@ export function authenticate_api_request(req: any, res: any, next: any) {
   const path = req.path || req.url;
   if (is_public_endpoint(path)) return next();
   if (!auth_config.api_key || auth_config.api_key === "") {
-    console.warn("[AUTH] No API key configured");
+    if (auth_config.require_api_key) {
+      return res.status(503).json({
+        error: "server_auth_not_configured",
+        message: "OM_API_KEY is required when auth is required",
+      });
+    }
     return next();
   }
   const provided = extract_api_key(req);

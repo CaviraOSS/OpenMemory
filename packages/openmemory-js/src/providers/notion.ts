@@ -1,9 +1,3 @@
-/**
- * notion source for openmemory - production grade
- * requires: @notionhq/client
- * env vars: NOTION_API_KEY
- */
-
 import {
   base_source,
   import_optional,

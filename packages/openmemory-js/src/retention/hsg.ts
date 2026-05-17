@@ -1,5 +1,8 @@
 import crypto from "node:crypto";
-import { canonical_token_set, stable_text_fallback_hash } from "../utilities/text";
+import {
+  canonical_token_set,
+  stable_text_fallback_hash,
+} from "../utilities/text";
 import { inc_q, dec_q, on_query_hit } from "./decay";
 import { env, tier } from "../configuration/index";
 import { cos_sim, buf_to_vec, vec_to_buf } from "../utilities/index";
@@ -661,7 +664,10 @@ import {
 } from "./embed";
 import { chunk_text } from "../utilities/chunking";
 import { j } from "../utilities";
-import { keyword_filter_memories, extract_keywords } from "../utilities/keyword";
+import {
+  keyword_filter_memories,
+  extract_keywords,
+} from "../utilities/keyword";
 import {
   calculateCrossSectorResonanceScore,
   applyRetrievalTraceReinforcementToMemory,

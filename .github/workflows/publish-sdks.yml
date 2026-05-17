@@ -1,12 +1,12 @@
 name: Publish JavaScript package
 permissions:
   contents: read
+  id-token: write
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "packages/openmemory-js/**"
+    tags:
+      - "v*"
   workflow_dispatch:
 
 jobs:
@@ -21,13 +21,15 @@ jobs:
           registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
-        run: cd packages/openmemory-js && npm ci
+        run: cd packages/openmemory-js && npm ci --workspaces=false
 
       - name: Build
         run: cd packages/openmemory-js && npm run build
 
+      - name: Pack dry run
+        run: cd packages/openmemory-js && npm pack --dry-run
+
       - name: Publish
-        run: cd packages/openmemory-js && npm publish --access public
+        run: cd packages/openmemory-js && npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-

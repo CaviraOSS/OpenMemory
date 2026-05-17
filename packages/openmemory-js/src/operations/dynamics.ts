@@ -1,4 +1,10 @@
-import { all_async, run_async, get_async, q, memories_table } from "../database/connection";
+import {
+  all_async,
+  run_async,
+  get_async,
+  q,
+  memories_table,
+} from "../database/connection";
 import { now } from "../utilities";
 import { cosineSimilarity } from "../retention/embed";
 

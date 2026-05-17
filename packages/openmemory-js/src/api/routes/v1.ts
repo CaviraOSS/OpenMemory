@@ -1,8 +1,17 @@
-import { all_async, q, run_async, transaction } from "../../database/connection";
+import {
+  all_async,
+  q,
+  run_async,
+  transaction,
+} from "../../database/connection";
 import { env } from "../../configuration";
 import {
+  claimDurableConsolidation,
+  createDurableContradiction,
   createDurableConsolidation,
   createWorkingMemoryEvent,
+  DurableConflictError,
+  DurableRecallInput,
   DurableRememberInput,
   deleteDurableMemory,
   explainDurableMemory,
@@ -23,9 +32,11 @@ import {
   reinforce_memory,
   update_memory,
 } from "../../retention/hsg";
+import { embed } from "../../retention/embed";
 import { j, p } from "../../utilities";
 
 type RecallMode = "strict" | "historical" | "associative";
+const RECALL_MODES = ["strict", "historical", "associative"] as const;
 
 type RememberRequest = {
   content?: string;
@@ -42,6 +53,7 @@ type RememberRequest = {
   tags?: string[];
   user_id?: string;
   project_id?: string;
+  actor_id?: string;
 };
 
 type RecallRequest = {
@@ -51,6 +63,11 @@ type RecallRequest = {
   limit?: number;
   user_id?: string;
   project_id?: string;
+  source?: {
+    kind?: string;
+    uri?: string;
+    id?: string;
+  };
 };
 
 type UpdateRequest = {
@@ -60,6 +77,7 @@ type UpdateRequest = {
   metadata?: Record<string, unknown>;
   tags?: string[];
   user_id?: string;
+  expected_version?: number;
 };
 
 type ReinforceRequest = {
@@ -67,17 +85,43 @@ type ReinforceRequest = {
   user_id?: string;
 };
 
+type DeleteRequest = {
+  user_id?: string;
+  actor_id?: string;
+  reason?: string;
+};
+
 type ResolveContradictionRequest = {
   resolution?: string;
+  actor_id?: string;
+  reason?: string;
   user_id?: string;
+};
+
+type CreateContradictionRequest = {
+  user_id?: string;
+  project_id?: string;
+  memory_id?: string;
+  contradicts_memory_id?: string;
+  conflict_group_id?: string;
+  resolution_policy?: string;
+  confidence?: number;
+  metadata?: Record<string, unknown>;
 };
 
 type ConsolidationRequest = {
   user_id?: string;
   project_id?: string;
+  idempotency_key?: string;
   scope?: Record<string, unknown>;
   source_memory_ids?: string[];
   metadata?: Record<string, unknown>;
+};
+
+type ConsolidationClaimRequest = {
+  worker_id?: string;
+  user_id?: string;
+  project_id?: string;
 };
 
 const parseTime = (value: string | number | undefined) => {
@@ -118,6 +162,12 @@ type CandidateRejectRequest = {
 
 const invalidRequest = (res: any, field: string, msg: string) =>
   res.status(400).json({ err: "invalid_request", field, msg });
+
+const serverError = (res: any, err: string, e: unknown) =>
+  res.status(500).json({
+    err,
+    msg: e instanceof Error ? e.message : String(e),
+  });
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === "object" && !Array.isArray(value);
@@ -177,17 +227,39 @@ export const makeDurableExecutor = (
 
 export const toDurableRememberInput = (
   body: RememberRequest,
+  embedding?: number[],
 ): DurableRememberInput => ({
   content: body.content || "",
   user_id: body.user_id,
   project_id: body.project_id,
+  actor_id: body.actor_id,
   facets: body.facets,
   contracts: body.contracts,
   metadata: body.metadata,
   entities: body.entities,
   edges: body.edges,
   source: body.source,
+  embedding,
 });
+
+export const toDurableRecallInput = async (
+  body: RecallRequest,
+  mode: RecallMode,
+  atTime: number | undefined,
+  embedder: (text: string) => Promise<number[]> = embed,
+): Promise<DurableRecallInput> => {
+  const embedding = await embedder(body.query || "");
+  return {
+    query: body.query || "",
+    mode,
+    at_time: atTime === undefined ? undefined : new Date(atTime),
+    limit: body.limit,
+    user_id: body.user_id,
+    project_id: body.project_id,
+    source: body.source,
+    embedding: embedding.length > 0 ? embedding : undefined,
+  };
+};
 
 export function v1(app: any) {
   const durableDb = makeDurableExecutor(run_async, all_async);
@@ -195,7 +267,11 @@ export function v1(app: any) {
   app.post("/v1/memories", async (req: any, res: any) => {
     const body = req.body as RememberRequest;
     if (typeof body?.content !== "string" || body.content.trim().length === 0) {
-      return invalidRequest(res, "content", "content must be a non-empty string");
+      return invalidRequest(
+        res,
+        "content",
+        "content must be a non-empty string",
+      );
     }
     if (body.metadata !== undefined && !isRecord(body.metadata)) {
       return invalidRequest(res, "metadata", "metadata must be an object");
@@ -216,9 +292,10 @@ export function v1(app: any) {
 
     try {
       if (env.metadata_backend === "postgres") {
+        const embedding = await embed(body.content);
         const memory = await rememberDurableMemory(
           durableDb,
-          toDurableRememberInput(body),
+          toDurableRememberInput(body, embedding),
         );
 
         return res.json({
@@ -250,8 +327,8 @@ export function v1(app: any) {
           status: memory.deduplicated ? "deduplicated" : "stored",
         }),
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "remember_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "remember_failed", e);
     }
   });
 
@@ -262,30 +339,47 @@ export function v1(app: any) {
     }
 
     const mode = body.mode || "associative";
-    if (!["strict", "historical", "associative"].includes(mode)) {
-      return invalidRequest(res, "mode", "mode must be strict, historical, or associative");
+    if (!RECALL_MODES.includes(mode as RecallMode)) {
+      return invalidRequest(
+        res,
+        "mode",
+        "mode must be strict, historical, or associative",
+      );
     }
 
     const atTime = parseTime(body.at_time);
     if (body.at_time !== undefined && atTime === undefined) {
-      return invalidRequest(res, "at_time", "at_time must be a valid date or timestamp");
+      return invalidRequest(
+        res,
+        "at_time",
+        "at_time must be a valid date or timestamp",
+      );
     }
     if (body.limit !== undefined && !isPositiveInteger(body.limit)) {
       return invalidRequest(res, "limit", "limit must be a positive integer");
+    }
+    if (body.source !== undefined && !isRecord(body.source)) {
+      return invalidRequest(res, "source", "source must be an object");
+    }
+    if (
+      body.source &&
+      ["kind", "uri", "id"].some(
+        (key) =>
+          body.source?.[key as keyof NonNullable<RecallRequest["source"]>] !==
+            undefined &&
+          typeof body.source[
+            key as keyof NonNullable<RecallRequest["source"]>
+          ] !== "string",
+      )
+    ) {
+      return invalidRequest(res, "source", "source fields must be strings");
     }
 
     try {
       if (env.metadata_backend === "postgres") {
         const recalled = await recallDurableMemories(
           durableDb,
-          {
-            query: body.query,
-            mode,
-            at_time: atTime === undefined ? undefined : new Date(atTime),
-            limit: body.limit,
-            user_id: body.user_id,
-            project_id: body.project_id,
-          },
+          await toDurableRecallInput(body, mode, atTime),
         );
 
         return res.json({
@@ -316,8 +410,8 @@ export function v1(app: any) {
           last_seen_at: memory.last_seen_at,
         })),
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "recall_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "recall_failed", e);
     }
   });
 
@@ -335,7 +429,11 @@ export function v1(app: any) {
         req.query.offset !== undefined &&
         (!Number.isInteger(offset) || Number(offset) < 0)
       ) {
-        return invalidRequest(res, "offset", "offset must be a non-negative integer");
+        return invalidRequest(
+          res,
+          "offset",
+          "offset must be a non-negative integer",
+        );
       }
 
       if (env.metadata_backend === "postgres") {
@@ -357,7 +455,11 @@ export function v1(app: any) {
       }
 
       const rows = req.query.user_id
-        ? await q.all_mem_by_user.all(req.query.user_id, limit || 100, offset || 0)
+        ? await q.all_mem_by_user.all(
+            req.query.user_id,
+            limit || 100,
+            offset || 0,
+          )
         : await q.all_mem.all(limit || 100, offset || 0);
 
       return res.json({
@@ -381,8 +483,8 @@ export function v1(app: any) {
           count: rows.length,
         },
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "list_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "list_failed", e);
     }
   });
 
@@ -432,16 +534,35 @@ export function v1(app: any) {
         version_count: memory.version || 1,
       };
       return res.json({ ...response, memory: { ...response } });
-    } catch (e: any) {
-      res.status(500).json({ err: "get_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "get_failed", e);
     }
   });
 
   app.get("/v1/memories/:id/explain", async (req: any, res: any) => {
     try {
+      const recallQuery =
+        typeof req.query.recall_query === "string"
+          ? req.query.recall_query
+          : undefined;
+      const recallMode = (req.query.recall_mode || "associative") as RecallMode;
+      if (recallQuery && !RECALL_MODES.includes(recallMode)) {
+        return invalidRequest(
+          res,
+          "recall_mode",
+          "recall_mode must be strict, historical, or associative",
+        );
+      }
+
       if (env.metadata_backend === "postgres") {
         const explained = await explainDurableMemory(durableDb, {
           id: req.params.id,
+          recall: recallQuery
+            ? {
+                query: recallQuery,
+                mode: recallMode,
+              }
+            : undefined,
         });
         if (!explained) return res.status(404).json({ err: "not_found" });
 
@@ -453,6 +574,20 @@ export function v1(app: any) {
 
       const memory = await q.get_mem.get(req.params.id);
       if (!memory) return res.status(404).json({ err: "not_found" });
+      const confidence = Number(memory.feedback_score || 0);
+      const salience = Number(memory.salience || 0);
+      const recall_score_inputs = recallQuery
+        ? {
+            query: recallQuery,
+            mode: recallMode,
+            confidence,
+            salience,
+            provenance: 0,
+            contradiction_penalty: 0,
+            contract_penalty: 0,
+            score: confidence * 0.6 + salience * 0.4,
+          }
+        : undefined;
 
       res.json({
         id: memory.id,
@@ -469,19 +604,20 @@ export function v1(app: any) {
           superseded_at: null,
         },
         confidence: {
-          salience: memory.salience,
-          feedback_score: memory.feedback_score || 0,
+          salience,
+          feedback_score: confidence,
         },
         score_components: {
-          confidence: Number(memory.feedback_score || 0),
-          salience: Number(memory.salience || 0),
+          confidence,
+          salience,
           provenance: 0,
           contradiction_penalty: 0,
           contract_penalty: 0,
           contracts: {},
         },
+        recall_score_inputs,
         reasons: [
-          `confidence ${Number(memory.feedback_score || 0)}`,
+          `confidence ${confidence}`,
           "0 provenance sources",
           "0 open contradictions",
           "recall allowed by contract",
@@ -492,8 +628,8 @@ export function v1(app: any) {
         versions: [],
         audit_events: [],
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "explain_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "explain_failed", e);
     }
   });
 
@@ -518,6 +654,16 @@ export function v1(app: any) {
     if (body.metadata !== undefined && !isRecord(body.metadata)) {
       return invalidRequest(res, "metadata", "metadata must be an object");
     }
+    if (
+      body.expected_version !== undefined &&
+      (!Number.isInteger(body.expected_version) || body.expected_version < 1)
+    ) {
+      return invalidRequest(
+        res,
+        "expected_version",
+        "expected_version must be a positive integer",
+      );
+    }
 
     try {
       if (env.metadata_backend === "postgres") {
@@ -528,6 +674,7 @@ export function v1(app: any) {
           facets: body?.facets,
           contracts: body?.contracts,
           metadata: body?.metadata,
+          expected_version: body?.expected_version,
         });
         if (!updated) return res.status(404).json({ err: "not_found" });
 
@@ -555,8 +702,16 @@ export function v1(app: any) {
         ...updated,
         memory: memoryRef(updated),
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "update_failed", msg: e.message });
+    } catch (e: unknown) {
+      if (e instanceof DurableConflictError) {
+        return res.status(409).json({
+          err: "conflict",
+          msg: e.message,
+          expected_version: e.expected_version,
+          current_version: e.current_version,
+        });
+      }
+      serverError(res, "update_failed", e);
     }
   });
 
@@ -564,9 +719,16 @@ export function v1(app: any) {
     const body = req.body as ReinforceRequest;
     if (
       body?.boost !== undefined &&
-      (typeof body.boost !== "number" || !Number.isFinite(body.boost) || body.boost < 0 || body.boost > 1)
+      (typeof body.boost !== "number" ||
+        !Number.isFinite(body.boost) ||
+        body.boost < 0 ||
+        body.boost > 1)
     ) {
-      return invalidRequest(res, "boost", "boost must be a number between 0 and 1");
+      return invalidRequest(
+        res,
+        "boost",
+        "boost must be a number between 0 and 1",
+      );
     }
 
     try {
@@ -597,17 +759,27 @@ export function v1(app: any) {
         adapter: "legacy-hsg",
         memory: memoryRef({ id: req.params.id, status: "reinforced" }),
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "reinforce_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "reinforce_failed", e);
     }
   });
 
   app.delete("/v1/memories/:id", async (req: any, res: any) => {
+    const body = (req.body || {}) as DeleteRequest;
+    if (body.actor_id !== undefined && typeof body.actor_id !== "string") {
+      return invalidRequest(res, "actor_id", "actor_id must be a string");
+    }
+    if (body.reason !== undefined && typeof body.reason !== "string") {
+      return invalidRequest(res, "reason", "reason must be a string");
+    }
+
     try {
       if (env.metadata_backend === "postgres") {
         const deleted = await deleteDurableMemory(durableDb, {
           id: req.params.id,
-          user_id: req.query.user_id || req.body?.user_id,
+          user_id: req.query.user_id || body.user_id,
+          actor_id: body.actor_id,
+          reason: body.reason,
         });
         if (!deleted) return res.status(404).json({ err: "not_found" });
 
@@ -621,7 +793,7 @@ export function v1(app: any) {
       const memory = await q.get_mem.get(req.params.id);
       if (!memory) return res.status(404).json({ err: "not_found" });
 
-      const userId = req.query.user_id || req.body?.user_id;
+      const userId = req.query.user_id || body.user_id;
       if (userId && memory.user_id !== userId) {
         return res.status(404).json({ err: "not_found" });
       }
@@ -632,15 +804,95 @@ export function v1(app: any) {
         adapter: "legacy-hsg",
         deleted: { id: req.params.id },
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "delete_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "delete_failed", e);
+    }
+  });
+
+  app.post("/v1/contradictions", async (req: any, res: any) => {
+    const body = (req.body || {}) as CreateContradictionRequest;
+    if (
+      typeof body.memory_id !== "string" ||
+      body.memory_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "memory_id",
+        "memory_id must be a non-empty string",
+      );
+    }
+    if (
+      typeof body.contradicts_memory_id !== "string" ||
+      body.contradicts_memory_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "contradicts_memory_id",
+        "contradicts_memory_id must be a non-empty string",
+      );
+    }
+    if (
+      body.confidence !== undefined &&
+      (typeof body.confidence !== "number" ||
+        body.confidence < 0 ||
+        body.confidence > 1)
+    ) {
+      return invalidRequest(
+        res,
+        "confidence",
+        "confidence must be between 0 and 1",
+      );
+    }
+    if (body.metadata !== undefined && !isRecord(body.metadata)) {
+      return invalidRequest(res, "metadata", "metadata must be an object");
+    }
+
+    try {
+      if (env.metadata_backend !== "postgres") {
+        return res.status(501).json({
+          err: "unsupported",
+          msg: "contradiction creation requires durable postgres mode",
+        });
+      }
+
+      const created = await createDurableContradiction(durableDb, {
+        user_id: body.user_id,
+        project_id: body.project_id,
+        memory_id: body.memory_id,
+        contradicts_memory_id: body.contradicts_memory_id,
+        conflict_group_id: body.conflict_group_id,
+        resolution_policy: body.resolution_policy,
+        confidence: body.confidence,
+        metadata: body.metadata,
+      });
+
+      return res.json({
+        adapter: "durable-postgres",
+        ...created,
+        contradiction: { ...created },
+      });
+    } catch (e: unknown) {
+      serverError(res, "contradiction_create_failed", e);
     }
   });
 
   app.post("/v1/contradictions/:id/resolve", async (req: any, res: any) => {
     const body = req.body as ResolveContradictionRequest;
-    if (typeof body?.resolution !== "string" || body.resolution.trim().length === 0) {
-      return invalidRequest(res, "resolution", "resolution must be a non-empty string");
+    if (
+      typeof body?.resolution !== "string" ||
+      body.resolution.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "resolution",
+        "resolution must be a non-empty string",
+      );
+    }
+    if (body.actor_id !== undefined && typeof body.actor_id !== "string") {
+      return invalidRequest(res, "actor_id", "actor_id must be a string");
+    }
+    if (body.reason !== undefined && typeof body.reason !== "string") {
+      return invalidRequest(res, "reason", "reason must be a string");
     }
 
     try {
@@ -654,6 +906,8 @@ export function v1(app: any) {
       const resolved = await resolveDurableContradiction(durableDb, {
         id: req.params.id,
         resolution: body.resolution,
+        actor_id: body.actor_id,
+        reason: body.reason,
         user_id: body.user_id,
       });
       if (!resolved) return res.status(404).json({ err: "not_found" });
@@ -662,8 +916,8 @@ export function v1(app: any) {
         adapter: "durable-postgres",
         ...resolved,
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "resolve_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "resolve_failed", e);
     }
   });
 
@@ -672,7 +926,9 @@ export function v1(app: any) {
     if (
       body.source_memory_ids !== undefined &&
       (!Array.isArray(body.source_memory_ids) ||
-        body.source_memory_ids.some((id) => typeof id !== "string" || id.length === 0))
+        body.source_memory_ids.some(
+          (id) => typeof id !== "string" || id.length === 0,
+        ))
     ) {
       return invalidRequest(
         res,
@@ -698,6 +954,7 @@ export function v1(app: any) {
       const consolidation = await createDurableConsolidation(durableDb, {
         user_id: body.user_id,
         project_id: body.project_id,
+        idempotency_key: body.idempotency_key,
         scope: body.scope,
         source_memory_ids: body.source_memory_ids,
         metadata: body.metadata,
@@ -707,18 +964,65 @@ export function v1(app: any) {
         adapter: "durable-postgres",
         ...consolidation,
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "consolidation_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "consolidation_failed", e);
+    }
+  });
+
+  app.post("/v1/consolidations/claim", async (req: any, res: any) => {
+    const body = (req.body || {}) as ConsolidationClaimRequest;
+    if (
+      typeof body.worker_id !== "string" ||
+      body.worker_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "worker_id",
+        "worker_id must be a non-empty string",
+      );
+    }
+
+    try {
+      if (env.metadata_backend !== "postgres") {
+        return res.status(501).json({
+          err: "unsupported",
+          msg: "consolidation claim requires durable postgres mode",
+        });
+      }
+
+      const job = await claimDurableConsolidation(durableDb, {
+        worker_id: body.worker_id,
+        user_id: body.user_id,
+        project_id: body.project_id,
+      });
+
+      return res.json({
+        adapter: "durable-postgres",
+        job,
+      });
+    } catch (e: unknown) {
+      serverError(res, "consolidation_claim_failed", e);
     }
   });
 
   app.post("/v1/ingest", async (req: any, res: any) => {
     const body = (req.body || {}) as IngestRequest;
-    if (typeof body.source?.kind !== "string" || body.source.kind.trim().length === 0) {
-      return invalidRequest(res, "source.kind", "source.kind must be a non-empty string");
+    if (
+      typeof body.source?.kind !== "string" ||
+      body.source.kind.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "source.kind",
+        "source.kind must be a non-empty string",
+      );
     }
     if (typeof body.content !== "string" || body.content.trim().length === 0) {
-      return invalidRequest(res, "content", "content must be a non-empty string");
+      return invalidRequest(
+        res,
+        "content",
+        "content must be a non-empty string",
+      );
     }
     if (body.metadata !== undefined && !isRecord(body.metadata)) {
       return invalidRequest(res, "metadata", "metadata must be an object");
@@ -754,14 +1058,17 @@ export function v1(app: any) {
         adapter: "durable-postgres",
         event,
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "ingest_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "ingest_failed", e);
     }
   });
 
   app.post("/v1/ingest/candidates/:id/accept", async (req: any, res: any) => {
     const body = (req.body || {}) as CandidateAcceptRequest;
-    if (typeof req.params?.id !== "string" || req.params.id.trim().length === 0) {
+    if (
+      typeof req.params?.id !== "string" ||
+      req.params.id.trim().length === 0
+    ) {
       return invalidRequest(res, "id", "id must be a non-empty string");
     }
     if (body.source !== undefined && !isRecord(body.source)) {
@@ -786,14 +1093,17 @@ export function v1(app: any) {
         adapter: "durable-postgres",
         memory,
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "candidate_accept_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "candidate_accept_failed", e);
     }
   });
 
   app.post("/v1/ingest/candidates/:id/reject", async (req: any, res: any) => {
     const body = (req.body || {}) as CandidateRejectRequest;
-    if (typeof req.params?.id !== "string" || req.params.id.trim().length === 0) {
+    if (
+      typeof req.params?.id !== "string" ||
+      req.params.id.trim().length === 0
+    ) {
       return invalidRequest(res, "id", "id must be a non-empty string");
     }
     if (typeof body.reason !== "string" || body.reason.trim().length === 0) {
@@ -819,8 +1129,8 @@ export function v1(app: any) {
         adapter: "durable-postgres",
         candidate: rejected,
       });
-    } catch (e: any) {
-      res.status(500).json({ err: "candidate_reject_failed", msg: e.message });
+    } catch (e: unknown) {
+      serverError(res, "candidate_reject_failed", e);
     }
   });
 }

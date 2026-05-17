@@ -1,6 +1,3 @@
-import { add_hsg_memory, hsg_query } from "../retention/hsg";
-import { q, vector_store } from "../database/connection";
-
 export interface MemoryOptions {
   user_id?: string;
   tags?: string[];
@@ -15,6 +12,7 @@ export class Memory {
   }
 
   async add(content: string, opts?: MemoryOptions) {
+    const { add_hsg_memory } = await import("../retention/hsg");
     const uid = opts?.user_id || this.default_user;
     const proj = opts?.project_id || null;
     const tags = opts?.tags || [];
@@ -36,6 +34,7 @@ export class Memory {
   }
 
   async get(id: string) {
+    const { q } = await import("../database/connection");
     return await q.get_mem.get(id);
   }
 
@@ -48,6 +47,7 @@ export class Memory {
       sectors?: string[];
     },
   ) {
+    const { hsg_query } = await import("../retention/hsg");
     const k = opts?.limit || 10;
     const uid = opts?.user_id || this.default_user;
     const proj = opts?.project_id || null;
@@ -61,6 +61,7 @@ export class Memory {
   }
 
   async delete_all(user_id?: string) {
+    const { q, vector_store } = await import("../database/connection");
     const uid = user_id || this.default_user;
     if (!uid) {
       throw new Error("delete_all requires a user_id");
@@ -76,6 +77,7 @@ export class Memory {
   }
 
   async wipe() {
+    const { q } = await import("../database/connection");
     await q.clear_all.run();
   }
 

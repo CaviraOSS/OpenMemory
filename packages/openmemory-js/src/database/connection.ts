@@ -7,6 +7,7 @@ import path from "node:path";
 import { VectorStore } from "../services/vectorStore";
 import { PostgresVectorStore } from "./vector/postgres";
 import { ValkeyVectorStore } from "./vector/valkey";
+import { buildPgPoolConfig } from "./pgConfig";
 
 type q_type = {
   ins_mem: { run: (...p: any[]) => Promise<void> };
@@ -69,22 +70,8 @@ function convertPlaceholders(sql: string): string {
 }
 
 if (is_pg) {
-  const ssl =
-    process.env.OM_PG_SSL === "require"
-      ? { rejectUnauthorized: false }
-      : process.env.OM_PG_SSL === "disable"
-        ? false
-        : undefined;
   const db_name = process.env.OM_PG_DB || "openmemory";
-  const pool = (db: string) =>
-    new Pool({
-      host: process.env.OM_PG_HOST,
-      port: process.env.OM_PG_PORT ? +process.env.OM_PG_PORT : undefined,
-      database: db,
-      user: process.env.OM_PG_USER,
-      password: process.env.OM_PG_PASSWORD,
-      ssl,
-    });
+  const pool = (db: string) => new Pool(buildPgPoolConfig(db));
   let pg = pool(db_name);
   let cli: PoolClient | null = null;
   const sc = process.env.OM_PG_SCHEMA || "public";

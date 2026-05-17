@@ -6,6 +6,7 @@
         "outDir": "dist",
         "allowJs": true,
         "checkJs": false,
+        "declaration": true,
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "strict": true,

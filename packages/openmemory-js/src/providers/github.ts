@@ -1,9 +1,3 @@
-/**
- * github source for openmemory - production grade
- * requires: @octokit/rest
- * env vars: GITHUB_TOKEN
- */
-
 import {
   base_source,
   import_optional,

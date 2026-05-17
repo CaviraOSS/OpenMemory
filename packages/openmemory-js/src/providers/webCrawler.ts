@@ -1,9 +1,3 @@
-/**
- * web crawler source for openmemory - production grade
- * requires: cheerio (for html parsing)
- * no auth required for public urls
- */
-
 import {
   base_source,
   import_optional,
@@ -12,18 +6,17 @@ import {
   source_content,
   source_config,
 } from "./base";
+import { fetchWithProviderTimeout } from "./fetch";
 
 export interface webCrawler_config extends source_config {
   max_pages?: number;
   max_depth?: number;
-  timeout?: number;
 }
 
 export class webCrawler_source extends base_source {
   name = "webCrawler";
   private max_pages: number;
   private max_depth: number;
-  private timeout: number;
   private visited: Set<string> = new Set();
   private crawled: source_item[] = [];
 
@@ -31,7 +24,6 @@ export class webCrawler_source extends base_source {
     super(user_id, config);
     this.max_pages = config?.max_pages || 50;
     this.max_depth = config?.max_depth || 3;
-    this.timeout = config?.timeout || 30000;
   }
 
   async _connect(): Promise<boolean> {
@@ -70,15 +62,9 @@ export class webCrawler_source extends base_source {
       this.visited.add(url);
 
       try {
-        const controller = new AbortController();
-        const timeout_id = setTimeout(() => controller.abort(), this.timeout);
-
-        const resp = await fetch(url, {
+        const resp = await fetchWithProviderTimeout(url, {
           headers: { "User-Agent": "OpenMemory-Crawler/1.0 (compatible)" },
-          signal: controller.signal,
         });
-
-        clearTimeout(timeout_id);
 
         if (!resp.ok) continue;
 
@@ -133,15 +119,9 @@ export class webCrawler_source extends base_source {
       );
     }
 
-    const controller = new AbortController();
-    const timeout_id = setTimeout(() => controller.abort(), this.timeout);
-
-    const resp = await fetch(item_id, {
+    const resp = await fetchWithProviderTimeout(item_id, {
       headers: { "User-Agent": "OpenMemory-Crawler/1.0 (compatible)" },
-      signal: controller.signal,
     });
-
-    clearTimeout(timeout_id);
 
     if (!resp.ok) throw new Error(`http ${resp.status}: ${resp.statusText}`);
 

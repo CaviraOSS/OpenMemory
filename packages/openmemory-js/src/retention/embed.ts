@@ -2,7 +2,10 @@
 import { get_model } from "../database/models";
 import { sector_configs } from "./hsg";
 import { q } from "../database/connection";
-import { canonical_tokens_from_text, add_synonym_tokens } from "../utilities/text";
+import {
+  canonical_tokens_from_text,
+  add_synonym_tokens,
+} from "../utilities/text";
 import {
   BedrockRuntimeClient,
   InvokeModelCommand,

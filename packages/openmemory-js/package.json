@@ -2,6 +2,10 @@
     "name": "openmemory-js",
     "version": "1.4.0",
     "author": "caviraoss",
+    "files": [
+        "dist",
+        "bin"
+    ],
     "bin": {
         "opm": "./bin/opm.js"
     },
@@ -9,7 +13,7 @@
     "types": "dist/index.d.ts",
     "scripts": {
         "dev": "nodemon src/server.ts",
-        "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+        "format": "prettier --write \"src/**/*.ts\"",
         "build": "tsc -p tsconfig.json",
         "start": "node dist/server.js",
         "migrate": "tsx src/database/migrate.ts"

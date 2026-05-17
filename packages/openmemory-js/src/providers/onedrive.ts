@@ -1,9 +1,3 @@
-/**
- * onedrive source for openmemory - production grade
- * requires: @azure/msal-node
- * env vars: AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, AZURE_TENANT_ID
- */
-
 import {
   base_source,
   import_optional,
@@ -12,6 +6,7 @@ import {
   source_item,
   source_content,
 } from "./base";
+import { fetchWithProviderTimeout } from "./fetch";
 
 export class onedrive_source extends base_source {
   name = "onedrive";
@@ -86,7 +81,7 @@ export class onedrive_source extends base_source {
     let next_url: string | null = url;
 
     while (next_url) {
-      const resp: Response = await fetch(next_url, {
+      const resp: Response = await fetchWithProviderTimeout(next_url, {
         headers: { Authorization: `Bearer ${this.access_token}` },
       });
 
@@ -114,17 +109,23 @@ export class onedrive_source extends base_source {
   async _fetch_item(item_id: string): Promise<source_content> {
     const base = `${this.graph_url}/me/drive`;
 
-    const meta_resp = await fetch(`${base}/items/${item_id}`, {
-      headers: { Authorization: `Bearer ${this.access_token}` },
-    });
+    const meta_resp = await fetchWithProviderTimeout(
+      `${base}/items/${item_id}`,
+      {
+        headers: { Authorization: `Bearer ${this.access_token}` },
+      },
+    );
 
     if (!meta_resp.ok) throw new Error(`http ${meta_resp.status}`);
     const meta = await meta_resp.json();
 
-    const content_resp = await fetch(`${base}/items/${item_id}/content`, {
-      headers: { Authorization: `Bearer ${this.access_token}` },
-      redirect: "follow",
-    });
+    const content_resp = await fetchWithProviderTimeout(
+      `${base}/items/${item_id}/content`,
+      {
+        headers: { Authorization: `Bearer ${this.access_token}` },
+        redirect: "follow",
+      },
+    );
 
     if (!content_resp.ok) throw new Error(`http ${content_resp.status}`);
     const data = Buffer.from(await content_resp.arrayBuffer());

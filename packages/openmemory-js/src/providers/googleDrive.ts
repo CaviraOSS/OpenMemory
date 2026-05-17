@@ -1,9 +1,3 @@
-/**
- * google drive source for openmemory - production grade
- * requires: googleapis
- * env vars: GOOGLE_SERVICE_ACCOUNT_FILE or GOOGLE_CREDENTIALS_JSON
- */
-
 import {
   base_source,
   import_optional,

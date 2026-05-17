@@ -30,7 +30,7 @@ const TIER_BENEFITS = {
   },
 };
 
-export function sys(app: any) {
+export function systemRoutes(app: any) {
   app.get("/health", async (_req: any, res: any) => {
     res.json({
       ok: true,

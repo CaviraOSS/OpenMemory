@@ -5,7 +5,7 @@ import {
   auto_update_user_summaries,
 } from "../../retention/userSummary";
 
-export const usr = (app: any) => {
+export const userRoutes = (app: any) => {
   app.get("/users/:user_id/summary", async (req: any, res: any) => {
     try {
       const userId = req.params.user_id;

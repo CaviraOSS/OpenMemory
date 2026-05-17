@@ -5,6 +5,7 @@ import {
   buildDurableSchemaSql,
   DURABLE_SCHEMA_VERSION,
 } from "../durable/schema";
+import { buildPgPoolConfig } from "./pgConfig";
 
 const is_pg = env.metadata_backend === "postgres";
 
@@ -278,7 +279,9 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
 
 async function run_durable_schema_migration(pool: Pool): Promise<void> {
   const schema = process.env.OM_PG_SCHEMA || "public";
-  const vectorDim = process.env.OM_VEC_DIM ? +process.env.OM_VEC_DIM : env.vec_dim;
+  const vectorDim = process.env.OM_VEC_DIM
+    ? +process.env.OM_VEC_DIM
+    : env.vec_dim;
   const statements = buildDurableSchemaSql({ schema, vectorDim });
 
   log(`Running migration: ${DURABLE_SCHEMA_VERSION} - Durable core schema`);
@@ -301,21 +304,9 @@ export async function run_migrations() {
   log("Checking for pending migrations...");
 
   if (is_pg) {
-    const ssl =
-      process.env.OM_PG_SSL === "require"
-        ? { rejectUnauthorized: false }
-        : process.env.OM_PG_SSL === "disable"
-          ? false
-          : undefined;
-
-    const pool = new Pool({
-      host: process.env.OM_PG_HOST,
-      port: process.env.OM_PG_PORT ? +process.env.OM_PG_PORT : undefined,
-      database: process.env.OM_PG_DB || "openmemory",
-      user: process.env.OM_PG_USER,
-      password: process.env.OM_PG_PASSWORD,
-      ssl,
-    });
+    const pool = new Pool(
+      buildPgPoolConfig(process.env.OM_PG_DB || "openmemory"),
+    );
 
     const current = await get_db_version_pg(pool);
     log(`Current database version: ${current || "none"}`);

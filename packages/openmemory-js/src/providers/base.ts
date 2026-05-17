@@ -1,13 +1,3 @@
-/**
- * base source class for openmemory data sources - production grade
- *
- * features:
- * - custom exception hierarchy
- * - logging
- * - retry logic with exponential backoff
- * - rate limiting
- */
-
 export class source_error extends Error {
   source?: string;
   cause?: Error;

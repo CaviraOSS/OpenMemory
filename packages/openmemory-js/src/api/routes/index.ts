@@ -1,11 +1,11 @@
-import { sys } from "./system";
-import { mem } from "./memory";
-import { usr } from "./users";
+import { systemRoutes } from "./system";
+import { memoryRoutes } from "./memory";
+import { userRoutes } from "./users";
 import { v1 } from "./v1";
 
 export function routes(app: any) {
-  sys(app);
-  mem(app);
-  usr(app);
+  systemRoutes(app);
+  memoryRoutes(app);
+  userRoutes(app);
   v1(app);
 }

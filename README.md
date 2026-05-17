@@ -13,8 +13,11 @@ Deferred surfaces such as editor extensions, dashboard UI, secondary SDKs, old e
 
 ## Current Setup
 
+From GitHub:
+
 ```bash
-cd packages/openmemory-js
+git clone https://github.com/cavira/OpenMemory.git
+cd OpenMemory
 npm install
 npm run build
 npm run start
@@ -22,17 +25,25 @@ npm run start
 
 The default server port is `8080`.
 
+From the package directory:
+
+```bash
+cd packages/openmemory-js
+npm install
+npm run build
+npm run start
+```
+
 ## Development
 
 ```bash
 cd packages/openmemory-js
 npm run dev
 npm run build
-npx tsx tests/omnibus.ts
 ```
 
 The default server registers only the core JS API: `/health`, `/sectors`,
-`/retention/*`, `/users/*`, and MCP. Dashboard, IDE, hosted deploy, and
+`/retention/*`, `/users/*`, `/v1/*`, and `/mcp`. Dashboard, IDE, hosted deploy, and
 connector webhook surfaces are deferred.
 
 ## Documentation
@@ -40,6 +51,9 @@ connector webhook surfaces are deferred.
 - Rewrite plan: `docs/architecture-rewrite-plan.md`
 - Persistent AI context: `docs/ai-context.md`, `docs/ai-rules.md`, `docs/decisions.md`
 - Package docs: `packages/openmemory-js/README.md`
+- Versioning: `docs/versioning.md`
+- Migrations: `docs/migrations.md`
+- pgvector index strategy: `docs/pgvector-index-strategy.md`
 
 ## Status
 
@@ -56,4 +70,3 @@ The current rewrite focuses on:
 - Explainable recall.
 - Contract-aware memory usage.
 - A small JavaScript server package that can be installed and run through npm.
-

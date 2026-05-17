@@ -15,7 +15,21 @@ import type {
   ingest_url_req,
 } from "../../types/index";
 
-export function mem(app: any) {
+const markRetentionDeprecated = (_req: any, res: any, next: any) => {
+  res.setHeader("Deprecation", "true");
+  res.setHeader("Link", '</v1>; rel="successor-version"');
+  next();
+};
+
+export function memoryRoutes(app: any) {
+  app.use((req: any, res: any, next: any) => {
+    if (String(req.path || req.url || "").startsWith("/retention/")) {
+      markRetentionDeprecated(req, res, next);
+      return;
+    }
+    next();
+  });
+
   app.post("/retention/add", async (req: any, res: any) => {
     const body = req.body as add_req;
     if (!body?.content) return res.status(400).json({ err: "content" });

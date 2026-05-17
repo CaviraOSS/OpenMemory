@@ -11,7 +11,12 @@ import {
   delete_memory,
   sector_configs,
 } from "../retention/hsg";
-import { q, all_async, memories_table, vector_store } from "../database/connection";
+import {
+  q,
+  all_async,
+  memories_table,
+  vector_store,
+} from "../database/connection";
 import { getEmbeddingInfo } from "../retention/embed";
 import { j, p } from "../utilities";
 import type { sector_type, mem_row, rpc_err_code } from "../types/index";

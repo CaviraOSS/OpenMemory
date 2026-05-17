@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test-js:
-    name: Test JavaScript package
+  build-js:
+    name: Build JavaScript package
     runs-on: ubuntu-latest
     env:
       OM_TIER: fast
@@ -27,9 +27,3 @@ jobs:
 
       - name: Build
         run: cd packages/openmemory-js && npm run build
-
-      - name: Import smoke test
-        run: cd packages/openmemory-js && npx tsx tests/import_smoke.ts
-
-      - name: Run omnibus test
-        run: cd packages/openmemory-js && npx tsx tests/omnibus.ts

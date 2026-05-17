@@ -3,7 +3,6 @@
 ## Project
 - OpenMemory repository.
 - Current focus: architectural rewrite and code improvement.
-- User priority: remove Python surfaces; make the project JavaScript-only for now.
 
 ## Current Goal
 - Continue `/retention/*` parity review before moving legacy route behavior onto durable internals.
@@ -25,8 +24,18 @@
 - Strict durable recall enforces `contracts.recall_allowed !== false` in addition to provenance, current validity, and contradiction checks.
 - Durable explain responses include score components for confidence, salience, provenance, contradiction penalty, contract penalty, and contract state.
 - `POST /v1/contradictions/:id/resolve` resolves durable contradiction rows in Postgres mode and writes audit.
+- `POST /v1/contradictions` creates manual durable contradiction rows in Postgres mode and writes `contradiction.create` audit. Extraction candidates can carry contradiction candidates, and promotion inserts open contradiction rows for the promoted memory.
+- Durable contradictions support `conflict_group_id` and `resolution_policy` so related conflicts can be grouped and later resolved by explicit policy.
+- Durable contradiction resolution records optional `actor_id` as `resolved_by` and optional `reason` as `resolution_reason`, and returns both fields.
+- Strict durable recall treats only open contradictions in the same project context as blocking; resolved contradictions, cross-project contradictions, and contradictions against superseded memories do not suppress recall.
 - `POST /v1/consolidations` records pending durable consolidation requests in Postgres mode and writes audit; the actual consolidation worker is not implemented yet.
-- `/retention/*` routes are inventoried and classified in `ATODO.md`; keep them as legacy compatibility until parity tests prove safe migration, especially because legacy delete is hard-delete while durable delete is soft-delete.
+- Durable consolidation now has a repository-level worker claim contract: claim one pending job with `FOR UPDATE SKIP LOCKED`, mark it running with `worker_id` and `started_at`, and write `consolidation.claim` audit. No background worker loop exists yet.
+- Consolidation states are explicit and stable: `pending`, `running`, `completed`, `failed`, and `canceled`.
+- Durable consolidation completion writes a `consolidation_results` record, links `consolidations.result_memory_id`, marks the request `completed`, and writes `consolidation.complete` audit.
+- Durable consolidation requests accept an optional `idempotency_key`; repeated requests for the same user/project/key return the existing request instead of inserting duplicates.
+- `POST /v1/consolidations/claim` is the explicit admin trigger for consolidation work; it claims one pending job in Postgres mode and does not start a scheduler.
+- Consolidation recall-impact evals compare baseline and candidate recall/noise scores. Automatic consolidation remains disabled unless candidate recall gain meets the threshold and noise does not exceed the allowed increase.
+- `/retention/*` routes are inventoried and classified in `ATODO.md`; keep them as legacy compatibility until migration is intentionally scheduled, especially because legacy delete is hard-delete while durable delete is soft-delete.
 - `/v1` malformed input now returns a consistent `400` envelope: `{ err: "invalid_request", field, msg }`.
 - `/v1` memory lifecycle routes hide tenant mismatch as `404 not_found`, including the legacy-backed local delete adapter; `/retention/*` keeps legacy compatibility behavior.
 - `/v1` memory lifecycle success responses preserve top-level compatibility fields and add normalized envelopes: `memory`, `page`, or `deleted` depending on the operation.
@@ -35,14 +44,66 @@
 - Durable ingestion now has `working_memory_events` and `extraction_candidates` schema tables. `createWorkingMemoryEvent` records raw input events and writes `ingestion.event` audit rows.
 - `createExtractionCandidate` records deterministic extraction candidates with facets, entities, edges, contracts, confidence, metadata, and `ingestion.candidate` audit rows.
 - `POST /v1/ingest` is registered. It validates raw durable ingestion events and writes `working_memory_events` only in Postgres mode; local SQLite mode returns `501 unsupported`.
+- Raw durable `/v1/ingest` explicitly reports automatic extraction as disabled and does not create extraction candidates. Candidate creation/promotion remains explicit only.
 - `promoteExtractionCandidate` promotes a pending extraction candidate to durable `memories`, `memory_versions`, provenance, entities, edges, candidate accepted status, and `ingestion.promote` audit in one transaction.
+- Durable ingestion promotion previously used fixed fixtures; the test tree has now been deleted by request.
 - `POST /v1/ingest/candidates/:id/accept` and `POST /v1/ingest/candidates/:id/reject` are registered as Postgres-only durable candidate controls. Reject writes `ingestion.reject` audit; accept uses candidate promotion.
-- Legacy `/retention/ingest` and `/retention/ingest/url` behavior is covered by parity tests before any durable migration.
-- `tests/postgres_v1_integration.ts` is an opt-in real Postgres HTTP harness. It runs when `OM_TEST_POSTGRES_URL` is set and skips in default local test runs.
-- The opt-in Postgres harness now checks that `/v1/ingest` persists both `working_memory_events` and matching `audit_log` rows.
+- Durable graph edge types are explicit and enforced in code/schema: `mentions`, `supports`, `contradicts`, `derives_from`, `causes`, `depends_on`, `part_of`, and `related_to`.
+- Durable graph edges persist confidence, provenance JSON, and temporal validity (`valid_from`, `valid_to`) in both direct memory writes and candidate promotion.
+- Durable graph traversal is repository-level only for now. `traverseDurableGraph` uses a bounded recursive query over durable edges and memories with tenant, project, supersession, and temporal filters.
+- Durable graph traversal returns deterministic `explain.reasons` plus a read-only `audit_trace` for traversed edges. It does not write audit rows during read traversal.
+- Durable graph traversal tests assert tenant filters on edges and target nodes, plus project-local and global visibility for both edges and target nodes.
+- Executable edges are side-effect-free by default: `buildExecutableEdgePlan` only creates a plan, and `executeExecutableEdgePlan` runs only a caller-provided handler for the plan operation.
+- Durable public contracts are normalized through a shared schema: `recall_allowed`, `retention_policy`, `sensitivity`, `source_visibility`, and optional `expires_at`.
+- Durable create/update/ingest/candidate/promotion normalize contracts before storage. Durable recall enforces both `recall_allowed` and contract `expires_at`.
+- Legacy `/retention/ingest` and `/retention/ingest/url` stay legacy until durable ingestion migration is intentionally implemented.
+- `/retention/ingest` and `/retention/ingest/url` remain legacy HSG routes; do not point them at durable ingestion until route-level parity is complete.
+- The opt-in Postgres verification code was deleted with the test tree by request. Real Postgres verification will need a smaller replacement later if needed.
 - Package root exports are intentionally narrow: `src/index.ts` exports the `Memory` SDK/service surface only. Deferred ingestion helpers and provider modules are no longer root exports.
 - Deferred provider SDKs for GitHub, Notion, Google, OneDrive, and web crawling are optional runtime installs, not hard package dependencies.
 - `/v1/memories/:id/explain` exposes a normalized schema in both durable Postgres and legacy local modes: bitemporal, score components, provenance, contradictions, inference path, versions, audit events, contracts, and metadata.
 - Explain responses include deterministic factual `reasons` strings derived from confidence, provenance count, open contradiction count, and recall contract state. Do not generate narrative explanations yet.
-- Obsolete unreferenced tests `tests/verify.ts` and `tests/multilingual_dedup.ts` were removed. Keep durable, v1, Postgres opt-in, retention parity, import smoke, omnibus, and project isolation tests until their covered behavior is intentionally replaced.
+- Explain responses include `recall_score_inputs` only when the caller supplies recall context with `recall_query` and optional `recall_mode`. The field records query, mode, confidence, salience, provenance score, contradiction penalty, contract penalty, and score.
+- Durable recall and explain return memory/provenance metadata with sensitive keys redacted recursively. Current sensitive keys include token, api_key/apikey, authorization/auth, cookie, password, and secret.
+- Durable audit rows have `actor_id` and `actor_type` columns with `system` defaults. Durable remember accepts explicit `actor_id`; `/v1/memories` maps it through to the audit row.
+- API auth stays open for local development when no API key is configured, but production mode or `OM_REQUIRE_API_KEY=true` fails closed on protected routes until `OM_API_KEY` is set. `/health` remains public.
+- Durable recall supports provenance source filters through `source.kind`, `source.id`, and `source.uri`. `contracts.source_visibility='hidden'` suppresses provenance details in recall and explain payloads without disabling internal scoring or strict provenance eligibility.
+- Phase 10 migration status: compatible durable lifecycle behavior is behind `/v1`; `/retention/*` remains legacy compatibility for now.
+- `/retention/*` responses now include `Deprecation: true` and `Link: </v1>; rel="successor-version"` headers while preserving legacy JSON response bodies.
+- Provider files no longer carry generic "production grade" header comments; keep future provider comments specific to requirements or non-obvious behavior.
+- Trivial-helper cleanup is reviewed. Keep shared route validation, durable SQL serialization, scoring, and response-shape helpers until a local edit clearly reduces code.
+- Deferred route modules for dashboard, IDE, Vercel, sources, compression, dynamics, LangGraph, and temporal HTTP APIs were deleted after confirming they were not imported by the active route index. Provider implementations remain because `Memory` lazy-loads them.
+- Active route registrar exports are named by role: `systemRoutes`, `memoryRoutes`, and `userRoutes`.
+- `/v1` route failures use a local `serverError` helper for the repeated `{ err, msg }` 500 envelope.
+- Oversized files remain unsplit until a stable boundary is proven by tests. Current largest files are durable repository, legacy HSG, v1 routes, MCP, and database connection.
+- Do not add broad lint/check scripts yet.
+- Durable query-plan contracts cover list, recall, explain, and graph traversal. Source-scoped recall has a `durable_provenance_source_idx` index on `(source_kind, source_id, source_uri)`.
+- Startup baseline test files were removed by request with the rest of `packages/openmemory-js/tests`.
+- Postgres pool configuration is centralized in `src/database/pgConfig.ts`; both normal connections and migrations use the same pool size, timeout, SSL, and statement-timeout env parsing.
+- Source-provider fetches use `fetchWithProviderTimeout` with `OM_PROVIDER_TIMEOUT_MS`; web crawler and OneDrive fetch paths now share cancellation behavior.
+- Provider fetch retries are limited to safe read methods (`GET`/`HEAD`) and transient statuses; write-like requests are single-shot.
+- Local load smoke files were removed by request with the rest of the package test tree.
+- Package publishing contents are constrained with `packages/openmemory-js/package.json#files` to `dist` and `bin`; clean builds now emit `.d.ts` files so `types: dist/index.d.ts` is valid.
+- The package root remains quiet on import: `Memory` lazy-loads HSG/database internals inside methods instead of importing runtime storage during SDK import.
+- CLI smoke files were removed by request with the rest of the package test tree.
+- `.github/workflows/publish-sdks.yml` is now npm-only, tag/manual gated, package-lock based, smoke-tested, pack-dry-run checked, and publishes with npm provenance.
+- Versioning policy is documented in `docs/versioning.md`: SemVer for `openmemory-js`, `v<version>` tags, package version as source of truth.
+- README GitHub setup is clone/fork based because npm does not install this workspace subpackage directly from a repository subdirectory.
+- Local PostgreSQL 18 is running on port 5432, but credentials remain undiscovered; `postgres/postgres` failed and no-prompt local roles require a password.
+- Stale deleted-path references were rechecked after cleanup; only intentional roadmap/deferred-surface docs remain. `Makefile` and `CONTRIBUTING.md` now use root npm scripts instead of removed test paths.
+- Remaining package dependencies were reviewed against imports. No further safe removals were found because active MCP, extraction, vector, DB, embedding, or legacy compatibility paths still reference them.
+- README runtime docs now point to root/package npm scripts and list active `/v1/*` plus `/mcp` routes.
+- Prettier formatting pass has been applied to `src/**/*.ts`; `npm --workspace openmemory-js run format` now targets source only because tests were deleted.
+- Migration policy is documented in `docs/migrations.md`: durable Postgres migrations are forward-only, idempotent where practical, and destructive cleanup is manual.
+- pgvector index strategy is documented in `docs/pgvector-index-strategy.md`: durable memory embeddings use a partial HNSW cosine index, and repository vector recall orders by `<=>` when a query embedding is supplied.
+- Durable query-plan indexes now include tenant/project current-memory partial indexes, memory/source provenance lookup, tenant/source graph lookup, and memory/status/project contradiction lookup.
+- Durable updates accept optional `expected_version`; stale updates raise a conflict before writing memory, version, or audit rows. `/v1` maps this to `409 conflict`.
+- Durable deletes support optional `actor_id` and `reason`; delete audit rows store actor fields and reason metadata. `/v1` validates both fields before durable delete.
+- Durable recall scoring now uses one deterministic policy shared by recall and explain: semantic match, confidence, salience, provenance, contradiction penalty, and contract penalty are clamped and weighted in `src/durable/scoring.ts`.
+- `/v1/recall` generates a query embedding in Postgres mode and passes it to durable recall so the pgvector path is active at the product API boundary.
+- Durable recall results include `provenance_summary` with count and source identifiers. When `source_visibility='hidden'`, detailed provenance rows stay hidden while the summary remains available for source coverage.
+- Durable memory creation stores content embeddings in Postgres mode so `/v1/recall` can use pgvector against newly created memories.
+- Project-scoped durable recall is intended to include both matching project-local memories and matching global records where `project_id` is null.
+- Durable explain audit events are public projections. Internal storage target fields such as `target_table`, `target_id`, `before_state`, and `after_state` are stripped before response.
+- The test tree under `packages/openmemory-js/tests` was deleted by request. `npm test` is now build-only.
 - Current JS package still contains legacy internals that will be handled in later rewrite phases: custom `server.js`, SQLite/Postgres branches, sector-based HSG memory, waypoints, and route groups beyond the future `/v1` API.

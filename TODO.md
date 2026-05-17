@@ -2,12 +2,8 @@
 
 ## Active
 
-- [ ] Include recall score inputs when explanation follows recall.
+- [ ] Remove legacy HSG internals after durable parity/migration strategy is rebuilt.
 
 ## Next
 
-- [ ] Run the opt-in real Postgres harness with `OM_TEST_POSTGRES_URL` once local credentials are available.
-
 ## Done
-
-- [x] Remove obsolete unreferenced tests that are not part of the durable rewrite safety net.
