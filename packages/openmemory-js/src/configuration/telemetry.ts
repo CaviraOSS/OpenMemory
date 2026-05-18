@@ -20,7 +20,7 @@ export const sendTelemetry = async () => {
       name: os.hostname(),
       os: os.platform(),
       embeddings: env.emb_kind || "synthetic",
-      metadata: env.metadata_backend || "sqlite",
+      metadata: "postgres",
       version: gatherVersion(),
       ram: ramMb,
       storage: storageMb,

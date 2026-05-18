@@ -42,15 +42,14 @@ npm run dev
 npm run build
 ```
 
-The default server registers only the core JS API: `/health`, `/sectors`,
-`/retention/*`, `/users/*`, `/v1/*`, and `/mcp`. Dashboard, IDE, hosted deploy, and
-connector webhook surfaces are deferred.
+The default server registers only `/health` and durable `/v1/*` routes. Legacy
+retention, user-summary, MCP, dashboard, IDE, hosted deploy, and connector webhook
+surfaces are deferred from the default runtime.
 
 ## Documentation
 
 - Rewrite plan: `docs/architecture-rewrite-plan.md`
 - Persistent AI context: `docs/ai-context.md`, `docs/ai-rules.md`, `docs/decisions.md`
-- Package docs: `packages/openmemory-js/README.md`
 - Versioning: `docs/versioning.md`
 - Migrations: `docs/migrations.md`
 - pgvector index strategy: `docs/pgvector-index-strategy.md`

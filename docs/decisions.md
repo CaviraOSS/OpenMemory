@@ -5,7 +5,7 @@
 - Near-term rewrite direction: JavaScript-only server-first package; defer VS Code and adjacent integrations.
 - Use `packages/openmemory-js` as the canonical product package for the rewrite.
 - Prefer a strangler rewrite: build a clean durable core inside the JS package while temporarily adapting legacy endpoints.
-- Production storage target is Postgres + pgvector first; SQLite local mode is deferred.
+- Production storage target is Postgres + pgvector only for the active package path.
 - Public API should stay small: remember, recall, explain, consolidate, resolve contradiction.
 - Aggressive cleanup removes deferred product surfaces from the active tree instead of parking them.
 - Cleanup pass may edit docs/config/workflows/package metadata, but should avoid changing JS implementation logic until the setup task is complete.
@@ -13,22 +13,21 @@
 ## 2026-05-14
 - JS package startup contract: `npm run dev` runs `src/server.ts`, `npm run build` emits `dist`, and `npm run start` runs `dist/server.js`.
 - Importing `openmemory-js` must not start an HTTP server; server startup is explicit through `startServer()`.
-- Default server route set is limited to health/system, retention memory, users, and MCP; dashboard, IDE, Vercel, connector webhooks, compression, dynamics, LangGraph, and temporal HTTP routes are deferred.
-- Root env and compose defaults are Postgres + pgvector first; SQLite remains legacy/local compatibility, not the advertised production path.
+- Default server route set is limited to `/health` and durable `/v1`; retention, users, MCP, dashboard, IDE, Vercel, connector webhooks, compression, dynamics, LangGraph, and temporal HTTP routes are deferred or removed from the active source path.
+- Root env and compose defaults are Postgres + pgvector. SQLite is no longer an active runtime or migration path.
 - Live server cleanup should improve only the default runtime path first; broad splits of `connection.ts` and `hsg.ts` wait for the durable-core rewrite.
 - `TODO.md` is part of the persistent workflow and must be updated on every user prompt.
 - Rewrite Phase 0 root npm workflow is active: root scripts delegate to the `openmemory-js` workspace for dev, build, start, test, and migrate.
 - Durable rewrite now has a Postgres-first schema module under `src/durable/schema.ts`; migration version `2.0.0-durable-core` creates the target durable tables and pgvector index.
-- `/v1/memories`, `/v1/recall`, and `/v1/memories/:id/explain` exist as explicit legacy-HSG adapters until the durable repository/pipeline replaces their internals.
-- `/v1/memories` uses the durable repository when `OM_METADATA_BACKEND=postgres`; SQLite compatibility continues to use legacy HSG until a replacement Postgres verification path exists.
-- `/v1/recall` and `/v1/memories/:id/explain` use durable repositories when `OM_METADATA_BACKEND=postgres`; SQLite compatibility remains on legacy HSG.
+- `/v1/memories`, `/v1/recall`, and `/v1/memories/:id/explain` use durable repositories in Postgres mode; local legacy adapters have been removed from `/v1`.
+- `/v1` durable lifecycle routes run on Postgres directly; `OM_METADATA_BACKEND` no longer selects a backend.
 - Durable `/v1` route execution must use `all_async` for SELECT queries and `transaction.begin/commit/rollback` for repository transaction commands; plain `run_async("BEGIN")` is not a real Postgres transaction.
 - Durable `/v1/memories` supports explicit structured entity and edge input first; automatic NLP extraction is deferred until the durable route has a Postgres integration harness.
 - Durable explain inference queries must use the schema columns `memory_id`, `derived_from`, and `inference_method`; do not reference non-existent `output_memory_id` or `inference_type` columns.
 - Real Postgres durable `/v1` verification must be rebuilt later if needed because the package test tree was deleted by request.
 - Durable memory writes must insert a `memory_versions` row in the same transaction, and explain responses expose the version history.
 - Durable deletes are soft deletes: set `superseded_at`, write a `memory.delete` audit event, and rely on durable recall filters to exclude superseded memories.
-- Durable `/v1` is the product API path for lifecycle operations. `/retention/*` stays legacy HSG compatibility until endpoint parity is intentionally proven.
+- Durable `/v1` is the product API path for lifecycle operations. `/retention/*` is no longer registered by default.
 - Durable update appends a new `memory_versions` row and writes `memory.update` audit; durable reinforce clamps salience and writes `memory.reinforce` audit.
 - Strict durable recall excludes memories with `contracts.recall_allowed === false`.
 - Durable explain exposes score components directly instead of requiring callers to infer confidence, provenance, contradiction, and contract state from raw arrays.
@@ -38,19 +37,18 @@
 - `ATODO.md` is the repository-level architecture rewrite backlog; `TODO.md` tracks the immediate active tranche.
 - Durable consolidation starts as an explicit request API: `POST /v1/consolidations` creates a pending row and audit event in Postgres mode.
 - The consolidation worker, automatic scheduling, and recall-impact evals remain deferred; do not auto-merge memories until evaluation proves behavior.
-- `/retention/*` stays as legacy compatibility after classification; do not silently point it at durable repositories until behavior differences such as hard delete versus durable soft delete are intentionally handled.
-- `/v1` validation errors use `{ err: "invalid_request", field, msg }`; validation should run before durable/legacy storage work or unsupported-mode checks.
+- `/retention/*` has been removed from default route registration and active source; do not silently reintroduce it or point it at durable repositories.
+- `/v1` validation errors use `{ err: "invalid_request", field, msg }`; validation should run before durable storage work.
 - Dependency cleanup should remove only demonstrably unused packages until provider exports are narrowed; `dotenv` is removed because the package has its own `.env` loader and no runtime import.
-- `/v1` memory lifecycle tenant mismatches return `404 not_found` even in legacy-backed local mode; legacy `/retention/*` keeps its existing compatibility status codes.
-- Durable ingestion starts with a persisted input-event design and fixture tests; do not move `/retention/ingest*` until raw event storage, extraction candidates, durable writes, and audit behavior are implemented.
+- `/v1` memory lifecycle tenant mismatches return `404 not_found`.
+- Durable ingestion starts with a persisted input-event design; document/URL/provider ingestion should be rebuilt on durable `/v1` semantics instead of reviving `/retention/ingest*`.
 - `/v1` success responses keep existing top-level fields for compatibility while adding normalized `memory`, `page`, and `deleted` envelopes for new clients.
 - Durable ingestion raw events are stored in `working_memory_events` and audited with `ingestion.event`; extraction candidates stay separate so failed extraction can preserve raw input without partial memory writes.
 - Durable extraction candidates are persisted explicitly before promotion to memories; automatic NLP extraction remains disabled until deterministic fixture tests exist for the promotion path.
-- `/v1/ingest` exists as a Postgres-only raw event endpoint. It does not replace `/retention/ingest*` and does not promote candidates to memories yet.
+- `/v1/ingest` exists as a Postgres-only raw event endpoint. It does not promote candidates to memories implicitly.
 - Automatic NLP extraction remains disabled by contract: raw durable ingest returns an explicit disabled extraction marker and never creates extraction candidates implicitly.
 - Extraction candidate promotion is repository-level and transactional; route-level accept/reject controls remain separate from raw `/v1/ingest`.
-- Legacy document and URL ingestion remain on `/retention/*` with parity coverage; durable ingestion should not replace them until route-level candidate acceptance and Postgres integration tests exist.
-- `/retention/ingest*` migration is explicitly deferred; current tests keep those routes legacy while `/v1/ingest` develops durable raw-event semantics separately.
+- Legacy document and URL ingestion source was deleted with the provider/deferred surface cleanup. Rebuild it later as durable candidate creation/promotion, not as `/retention/*`.
 - Candidate accept/reject controls live under `/v1/ingest/candidates/:id/*` and are Postgres-only until durable ingestion has local-compatible semantics.
 - Durable ingestion promotion tests are fixture-driven so accepted candidate shape changes are explicit and replayable.
 - Future real Postgres ingestion verification should assert persisted rows, not only HTTP response shape.
@@ -72,7 +70,7 @@
 - Durable audit schema uses explicit actor fields. Unknown callers default to `actor_id='system'` and `actor_type='system'`; explicit user actors are stored as `actor_type='user'`.
 - Secure auth defaults are environment-sensitive: local dev can run without `OM_API_KEY`, while production mode and `OM_REQUIRE_API_KEY=true` reject protected routes if no key is configured.
 - Source visibility is a payload policy, not a recall-eligibility policy: hidden sources are still usable for strict recall and scoring, but provenance details are omitted from durable recall and explain responses.
-- `/v1` remains the durable product API while `/retention/*` remains stable legacy compatibility. Do not add deprecation warnings until client impact is known.
+- `/v1` remains the durable product API. Legacy retention routes are out of the default runtime.
 - Code-quality cleanup should remove generic quality claims from comments. Keep comments only when they explain requirements, constraints, or non-obvious behavior.
 - Do not inline shared helpers just to satisfy style cleanup. Inline only when it removes real duplication or makes a touched code path shorter.
 - Delete unregistered deferred route modules once import graph confirms they are unreachable. Do not delete provider implementations while `Memory` lazy-loads them.
@@ -86,8 +84,8 @@
 - Provider retry policy is conservative: retry only safe reads on transient transport/HTTP failures; never retry write-like provider calls by default.
 - Local load smoke should stay bounded and synthetic; it is a regression guard for create/recall throughput, not a benchmark replacement for real Postgres.
 - Npm package contents should ship built artifacts and the CLI only: `dist`, `bin`, and package metadata. Do not publish `src`, tests, package lock, Dockerfile, or local data.
-- SDK root imports must not initialize storage or log runtime configuration; load legacy storage lazily from `Memory` methods.
-- CLI checks should stay smoke-level until the server API is stable; avoid tests that start long-running `opm serve` or MCP stdio processes by default.
+- SDK root imports must not initialize storage or log runtime configuration; `Memory` methods lazy-load durable storage only when called.
+- CLI checks should stay smoke-level until the server API is stable; avoid tests that start long-running `opm serve` by default.
 - Npm publishing should be explicit and tag/manual gated. Do not publish on every main branch push.
 - Versioning policy lives in `docs/versioning.md`; `packages/openmemory-js/package.json` is the source of truth and releases use `v<version>` tags.
 - GitHub install docs use clone/fork plus root npm scripts until the package is published or moved to a repository root install shape.
@@ -106,7 +104,19 @@
 - Public explain responses must project audit events rather than exposing raw audit storage fields.
 - Real Postgres migration idempotency verification was removed with the test tree and must be rebuilt later if needed.
 - Root `npm test` is build-only after deleting `packages/openmemory-js/tests` by request.
-- `/retention/*` deprecation starts with HTTP headers only. Do not change legacy JSON bodies until replacement clients are known.
+- `/retention/*` was removed from default route registration after the header-only deprecation step, then the legacy source modules were deleted during HSG cleanup.
+- MCP, provider source modules, document extraction/ingestion, temporal graph helpers, old CLI migration source, and legacy HSG/decay/reflection/user-summary modules are removed from `packages/openmemory-js/src`.
+- `Memory.source()` is removed until connector ingestion is rebuilt on durable APIs.
+- `opm` uses durable `/v1` add/query/list/delete routes and no longer advertises users/stats/MCP commands.
+- `database/connection.ts` is now a small Postgres executor. Durable migrations are Postgres-only and apply the durable schema directly.
+- The old JS `api/server.js` wrapper was replaced by `src/api/httpApp.ts`, a minimal TypeScript HTTP adapter for current routes and middleware.
+- `sqlite3`, Valkey vector store code, legacy vector store abstractions, old stats/waypoint/user table setup, and related package dependencies are removed from the active package path.
+- Active embedding helpers live under `src/embeddings`; do not add new code under `src/retention`.
+- Malformed JSON request bodies are normalized to `{}` in the HTTP adapter so route validation returns consistent request errors instead of throwing on `null`.
+- Embedding internals use facet terminology. Do not reintroduce sector-named embedding modules or unused multi-sector batch helpers unless a tested public API needs them.
+- Embedding provider selection is direct: `OM_EMBEDDINGS` controls the provider, and `OM_TIER` is not a supported runtime selector.
+- Builds must clean `dist` before TypeScript emit because the rewrite deletes whole source directories and stale compiled files would otherwise remain publishable.
+- Removed retention-era chunking, keyword, and vector utility modules are not active API. Rebuild search helpers inside durable repository contracts when needed instead of reviving those generic utilities.
 - Contradiction creation is explicit and audited. Manual contradictions use `POST /v1/contradictions`; ingestion can carry contradiction candidates that become open contradictions during candidate promotion.
 - Contradiction grouping is explicit metadata on contradiction rows: `conflict_group_id` groups related conflicts and `resolution_policy` records the intended resolution policy. It does not auto-resolve conflicts yet.
 - Strict durable recall only treats same-project open contradictions as blockers; resolved contradictions, cross-project contradictions, and contradictions pointing at superseded memories are ignored for recall suppression.

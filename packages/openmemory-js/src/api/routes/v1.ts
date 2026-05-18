@@ -1,10 +1,4 @@
-import {
-  all_async,
-  q,
-  run_async,
-  transaction,
-} from "../../database/connection";
-import { env } from "../../configuration";
+import { all_async, run_async, transaction } from "../../database/connection";
 import {
   claimDurableConsolidation,
   createDurableContradiction,
@@ -25,15 +19,7 @@ import {
   resolveDurableContradiction,
   updateDurableMemory,
 } from "../../durable/repository";
-import {
-  add_hsg_memory,
-  delete_memory,
-  hsg_query,
-  reinforce_memory,
-  update_memory,
-} from "../../retention/hsg";
-import { embed } from "../../retention/embed";
-import { j, p } from "../../utilities";
+import { embed } from "../../embeddings/embed";
 
 type RecallMode = "strict" | "historical" | "associative";
 const RECALL_MODES = ["strict", "historical", "associative"] as const;
@@ -283,49 +269,19 @@ export function v1(app: any) {
       return invalidRequest(res, "contracts", "contracts must be an object");
     }
 
-    const metadata = {
-      ...(body.metadata || {}),
-      ...(body.source ? { source: body.source } : {}),
-      ...(body.facets ? { facets: body.facets } : {}),
-      ...(body.contracts ? { contracts: body.contracts } : {}),
-    };
-
     try {
-      if (env.metadata_backend === "postgres") {
-        const embedding = await embed(body.content);
-        const memory = await rememberDurableMemory(
-          durableDb,
-          toDurableRememberInput(body, embedding),
-        );
-
-        return res.json({
-          id: memory.id,
-          memory_id: memory.id,
-          status: memory.status,
-          adapter: "durable-postgres",
-          memory: memoryRef(memory),
-        });
-      }
-
-      const memory = await add_hsg_memory(
-        body.content,
-        j(body.tags || []),
-        metadata,
-        body.user_id,
-        body.project_id,
+      const embedding = await embed(body.content);
+      const memory = await rememberDurableMemory(
+        durableDb,
+        toDurableRememberInput(body, embedding),
       );
 
-      res.json({
+      return res.json({
         id: memory.id,
         memory_id: memory.id,
-        status: memory.deduplicated ? "deduplicated" : "stored",
-        adapter: "legacy-hsg",
-        primary_facet: memory.primary_sector,
-        facets: memory.sectors,
-        memory: memoryRef({
-          id: memory.id,
-          status: memory.deduplicated ? "deduplicated" : "stored",
-        }),
+        status: memory.status,
+        adapter: "durable-postgres",
+        memory: memoryRef(memory),
       });
     } catch (e: unknown) {
       serverError(res, "remember_failed", e);
@@ -376,39 +332,16 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend === "postgres") {
-        const recalled = await recallDurableMemories(
-          durableDb,
-          await toDurableRecallInput(body, mode, atTime),
-        );
+      const recalled = await recallDurableMemories(
+        durableDb,
+        await toDurableRecallInput(body, mode, atTime),
+      );
 
-        return res.json({
-          query: recalled.query,
-          mode: recalled.mode,
-          adapter: "durable-postgres",
-          results: recalled.results,
-        });
-      }
-
-      const matches = await hsg_query(body.query, body.limit || 10, {
-        user_id: body.user_id,
-        project_id: body.project_id,
-        endTime: atTime,
-      });
-
-      res.json({
-        query: body.query,
-        mode,
-        adapter: "legacy-hsg",
-        results: matches.map((memory) => ({
-          id: memory.id,
-          content: memory.content,
-          score: memory.score,
-          facets: memory.sectors,
-          primary_facet: memory.primary_sector,
-          salience: memory.salience,
-          last_seen_at: memory.last_seen_at,
-        })),
+      return res.json({
+        query: recalled.query,
+        mode: recalled.mode,
+        adapter: "durable-postgres",
+        results: recalled.results,
       });
     } catch (e: unknown) {
       serverError(res, "recall_failed", e);
@@ -436,51 +369,19 @@ export function v1(app: any) {
         );
       }
 
-      if (env.metadata_backend === "postgres") {
-        const listed = await listDurableMemories(durableDb, {
-          user_id: req.query.user_id,
-          project_id: req.query.project_id,
-          limit,
-          offset,
-        });
-        return res.json({
-          adapter: "durable-postgres",
-          ...listed,
-          page: {
-            limit: listed.limit,
-            offset: listed.offset,
-            count: listed.items.length,
-          },
-        });
-      }
-
-      const rows = req.query.user_id
-        ? await q.all_mem_by_user.all(
-            req.query.user_id,
-            limit || 100,
-            offset || 0,
-          )
-        : await q.all_mem.all(limit || 100, offset || 0);
-
+      const listed = await listDurableMemories(durableDb, {
+        user_id: req.query.user_id,
+        project_id: req.query.project_id,
+        limit,
+        offset,
+      });
       return res.json({
-        adapter: "legacy-hsg",
-        items: rows.map((memory: any) => ({
-          id: memory.id,
-          content: memory.content,
-          facets: p(memory.tags),
-          metadata: p(memory.meta),
-          user_id: memory.user_id,
-          project_id: memory.project_id,
-          salience: memory.salience,
-          confidence: memory.feedback_score || 0,
-          recorded_at: memory.created_at,
-        })),
-        limit: limit || 100,
-        offset: offset || 0,
+        adapter: "durable-postgres",
+        ...listed,
         page: {
-          limit: limit || 100,
-          offset: offset || 0,
-          count: rows.length,
+          limit: listed.limit,
+          offset: listed.offset,
+          count: listed.items.length,
         },
       });
     } catch (e: unknown) {
@@ -490,48 +391,16 @@ export function v1(app: any) {
 
   app.get("/v1/memories/:id", async (req: any, res: any) => {
     try {
-      if (env.metadata_backend === "postgres") {
-        const memory = await getDurableMemory(durableDb, {
-          id: req.params.id,
-          user_id: req.query.user_id,
-          project_id: req.query.project_id,
-        });
-        if (!memory) return res.status(404).json({ err: "not_found" });
-
-        const response = {
-          adapter: "durable-postgres",
-          ...memory,
-        };
-        return res.json({ ...response, memory: { ...response } });
-      }
-
-      const memory = await q.get_mem.get(req.params.id);
+      const memory = await getDurableMemory(durableDb, {
+        id: req.params.id,
+        user_id: req.query.user_id,
+        project_id: req.query.project_id,
+      });
       if (!memory) return res.status(404).json({ err: "not_found" });
-      if (req.query.user_id && memory.user_id !== req.query.user_id) {
-        return res.status(404).json({ err: "not_found" });
-      }
 
       const response = {
-        id: memory.id,
-        adapter: "legacy-hsg",
-        content: memory.content,
-        facets: p(memory.tags),
-        metadata: p(memory.meta),
-        user_id: memory.user_id,
-        project_id: memory.project_id,
-        bitemporal: {
-          valid_from: null,
-          valid_to: null,
-          observed_at: memory.created_at,
-          recorded_at: memory.created_at,
-          superseded_at: null,
-        },
-        confidence: {
-          salience: memory.salience,
-          confidence: memory.feedback_score || 0,
-        },
-        provenance_count: 0,
-        version_count: memory.version || 1,
+        adapter: "durable-postgres",
+        ...memory,
       };
       return res.json({ ...response, memory: { ...response } });
     } catch (e: unknown) {
@@ -554,79 +423,20 @@ export function v1(app: any) {
         );
       }
 
-      if (env.metadata_backend === "postgres") {
-        const explained = await explainDurableMemory(durableDb, {
-          id: req.params.id,
-          recall: recallQuery
-            ? {
-                query: recallQuery,
-                mode: recallMode,
-              }
-            : undefined,
-        });
-        if (!explained) return res.status(404).json({ err: "not_found" });
+      const explained = await explainDurableMemory(durableDb, {
+        id: req.params.id,
+        recall: recallQuery
+          ? {
+              query: recallQuery,
+              mode: recallMode,
+            }
+          : undefined,
+      });
+      if (!explained) return res.status(404).json({ err: "not_found" });
 
-        return res.json({
-          adapter: "durable-postgres",
-          ...explained,
-        });
-      }
-
-      const memory = await q.get_mem.get(req.params.id);
-      if (!memory) return res.status(404).json({ err: "not_found" });
-      const confidence = Number(memory.feedback_score || 0);
-      const salience = Number(memory.salience || 0);
-      const recall_score_inputs = recallQuery
-        ? {
-            query: recallQuery,
-            mode: recallMode,
-            confidence,
-            salience,
-            provenance: 0,
-            contradiction_penalty: 0,
-            contract_penalty: 0,
-            score: confidence * 0.6 + salience * 0.4,
-          }
-        : undefined;
-
-      res.json({
-        id: memory.id,
-        adapter: "legacy-hsg",
-        content: memory.content,
-        facets: p(memory.tags),
-        contracts: {},
-        metadata: p(memory.meta),
-        bitemporal: {
-          valid_from: null,
-          valid_to: null,
-          observed_at: memory.created_at,
-          recorded_at: memory.created_at,
-          superseded_at: null,
-        },
-        confidence: {
-          salience,
-          feedback_score: confidence,
-        },
-        score_components: {
-          confidence,
-          salience,
-          provenance: 0,
-          contradiction_penalty: 0,
-          contract_penalty: 0,
-          contracts: {},
-        },
-        recall_score_inputs,
-        reasons: [
-          `confidence ${confidence}`,
-          "0 provenance sources",
-          "0 open contradictions",
-          "recall allowed by contract",
-        ],
-        provenance: [],
-        contradictions: [],
-        inference_path: [],
-        versions: [],
-        audit_events: [],
+      return res.json({
+        adapter: "durable-postgres",
+        ...explained,
       });
     } catch (e: unknown) {
       serverError(res, "explain_failed", e);
@@ -666,42 +476,22 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend === "postgres") {
-        const updated = await updateDurableMemory(durableDb, {
-          id: req.params.id,
-          user_id: body?.user_id,
-          content: body?.content,
-          facets: body?.facets,
-          contracts: body?.contracts,
-          metadata: body?.metadata,
-          expected_version: body?.expected_version,
-        });
-        if (!updated) return res.status(404).json({ err: "not_found" });
-
-        const response = {
-          adapter: "durable-postgres",
-          ...updated,
-        };
-        return res.json({ ...response, memory: memoryRef(response) });
-      }
-
-      const memory = await q.get_mem.get(req.params.id);
-      if (!memory) return res.status(404).json({ err: "not_found" });
-      if (body?.user_id && memory.user_id !== body.user_id) {
-        return res.status(404).json({ err: "not_found" });
-      }
-
-      const updated = await update_memory(
-        req.params.id,
-        body?.content,
-        body?.tags,
-        body?.metadata,
-      );
-      res.json({
-        adapter: "legacy-hsg",
-        ...updated,
-        memory: memoryRef(updated),
+      const updated = await updateDurableMemory(durableDb, {
+        id: req.params.id,
+        user_id: body?.user_id,
+        content: body?.content,
+        facets: body?.facets,
+        contracts: body?.contracts,
+        metadata: body?.metadata,
+        expected_version: body?.expected_version,
       });
+      if (!updated) return res.status(404).json({ err: "not_found" });
+
+      const response = {
+        adapter: "durable-postgres",
+        ...updated,
+      };
+      return res.json({ ...response, memory: memoryRef(response) });
     } catch (e: unknown) {
       if (e instanceof DurableConflictError) {
         return res.status(409).json({
@@ -732,33 +522,18 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend === "postgres") {
-        const reinforced = await reinforceDurableMemory(durableDb, {
-          id: req.params.id,
-          user_id: body?.user_id,
-          boost: body?.boost,
-        });
-        if (!reinforced) return res.status(404).json({ err: "not_found" });
-
-        const response = {
-          adapter: "durable-postgres",
-          ...reinforced,
-        };
-        return res.json({ ...response, memory: memoryRef(response) });
-      }
-
-      const memory = await q.get_mem.get(req.params.id);
-      if (!memory) return res.status(404).json({ err: "not_found" });
-      if (body?.user_id && memory.user_id !== body.user_id) {
-        return res.status(404).json({ err: "not_found" });
-      }
-
-      await reinforce_memory(req.params.id, body?.boost);
-      res.json({
-        ok: true,
-        adapter: "legacy-hsg",
-        memory: memoryRef({ id: req.params.id, status: "reinforced" }),
+      const reinforced = await reinforceDurableMemory(durableDb, {
+        id: req.params.id,
+        user_id: body?.user_id,
+        boost: body?.boost,
       });
+      if (!reinforced) return res.status(404).json({ err: "not_found" });
+
+      const response = {
+        adapter: "durable-postgres",
+        ...reinforced,
+      };
+      return res.json({ ...response, memory: memoryRef(response) });
     } catch (e: unknown) {
       serverError(res, "reinforce_failed", e);
     }
@@ -774,34 +549,17 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend === "postgres") {
-        const deleted = await deleteDurableMemory(durableDb, {
-          id: req.params.id,
-          user_id: req.query.user_id || body.user_id,
-          actor_id: body.actor_id,
-          reason: body.reason,
-        });
-        if (!deleted) return res.status(404).json({ err: "not_found" });
+      const deleted = await deleteDurableMemory(durableDb, {
+        id: req.params.id,
+        user_id: req.query.user_id || body.user_id,
+        actor_id: body.actor_id,
+        reason: body.reason,
+      });
+      if (!deleted) return res.status(404).json({ err: "not_found" });
 
-        return res.json({
-          ok: true,
-          adapter: "durable-postgres",
-          deleted: { id: req.params.id },
-        });
-      }
-
-      const memory = await q.get_mem.get(req.params.id);
-      if (!memory) return res.status(404).json({ err: "not_found" });
-
-      const userId = req.query.user_id || body.user_id;
-      if (userId && memory.user_id !== userId) {
-        return res.status(404).json({ err: "not_found" });
-      }
-
-      await delete_memory(req.params.id);
-      res.json({
+      return res.json({
         ok: true,
-        adapter: "legacy-hsg",
+        adapter: "durable-postgres",
         deleted: { id: req.params.id },
       });
     } catch (e: unknown) {
@@ -848,13 +606,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "contradiction creation requires durable postgres mode",
-        });
-      }
-
       const created = await createDurableContradiction(durableDb, {
         user_id: body.user_id,
         project_id: body.project_id,
@@ -896,13 +647,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "contradiction resolution requires durable postgres mode",
-        });
-      }
-
       const resolved = await resolveDurableContradiction(durableDb, {
         id: req.params.id,
         resolution: body.resolution,
@@ -944,13 +688,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "consolidations require durable postgres mode",
-        });
-      }
-
       const consolidation = await createDurableConsolidation(durableDb, {
         user_id: body.user_id,
         project_id: body.project_id,
@@ -983,13 +720,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "consolidation claim requires durable postgres mode",
-        });
-      }
-
       const job = await claimDurableConsolidation(durableDb, {
         worker_id: body.worker_id,
         user_id: body.user_id,
@@ -1032,13 +762,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "durable ingestion requires durable postgres mode",
-        });
-      }
-
       const event = await createWorkingMemoryEvent(durableDb, {
         user_id: body.user_id,
         project_id: body.project_id,
@@ -1076,13 +799,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "candidate acceptance requires durable postgres mode",
-        });
-      }
-
       const memory = await promoteExtractionCandidate(durableDb, {
         candidate_id: req.params.id,
         source: body.source,
@@ -1111,13 +827,6 @@ export function v1(app: any) {
     }
 
     try {
-      if (env.metadata_backend !== "postgres") {
-        return res.status(501).json({
-          err: "unsupported",
-          msg: "candidate rejection requires durable postgres mode",
-        });
-      }
-
       const rejected = await rejectExtractionCandidate(durableDb, {
         candidate_id: req.params.id,
         reason: body.reason,

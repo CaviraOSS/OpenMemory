@@ -27,5 +27,5 @@ await memory.add("User prefers concise responses");
 const results = await memory.search("response preference");
 ```
 
-The current SDK is kept while the durable JS server rewrite is staged.
-
+The SDK currently targets durable Postgres mode. Deferred connector ingestion is
+not exposed from the package root during the server-first rewrite.

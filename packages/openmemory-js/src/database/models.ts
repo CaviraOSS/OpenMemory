@@ -1,7 +1,7 @@
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 interface model_cfg {
-  [sector: string]: Record<string, string>;
+  [facet: string]: Record<string, string>;
 }
 let cfg: model_cfg | null = null;
 
@@ -16,7 +16,7 @@ export const load_models = (): model_cfg => {
     const yml = readFileSync(p, "utf-8");
     cfg = parse_yaml(yml);
     console.error(
-      `[MODELS] Loaded models.yml (${Object.keys(cfg).length} sectors)`,
+      `[MODELS] Loaded models.yml (${Object.keys(cfg).length} facets)`,
     );
     return cfg;
   } catch (e) {
@@ -87,7 +87,7 @@ const get_defaults = (): model_cfg => ({
   },
 });
 
-export const get_model = (sector: string, provider: string): string => {
+export const get_model = (facet: string, provider: string): string => {
   if (provider === "ollama" && process.env.OM_OLLAMA_MODEL) {
     return process.env.OM_OLLAMA_MODEL;
   }
@@ -97,10 +97,6 @@ export const get_model = (sector: string, provider: string): string => {
 
   const cfg = load_models();
   return (
-    cfg[sector]?.[provider] || cfg.semantic?.[provider] || "nomic-embed-text"
+    cfg[facet]?.[provider] || cfg.semantic?.[provider] || "nomic-embed-text"
   );
-};
-
-export const get_provider_config = (provider: string): any => {
-  return {};
 };

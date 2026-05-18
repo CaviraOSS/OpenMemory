@@ -13,7 +13,7 @@ const auth_config = {
   rate_limit_window_ms: env.rate_limit_window_ms,
   rate_limit_max_requests: env.rate_limit_max_requests,
 };
-const PUBLIC_ENDPOINTS = new Set(["/health", "/sectors", "/mcp"]);
+const PUBLIC_ENDPOINTS = new Set(["/health"]);
 
 function is_public_endpoint(path: string): boolean {
   return PUBLIC_ENDPOINTS.has(path);

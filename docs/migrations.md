@@ -12,6 +12,5 @@ OpenMemory durable storage migrations are forward-only.
 
 ## Current Scope
 
-- SQLite remains legacy/local compatibility.
-- Postgres plus pgvector is the production migration target.
+- Postgres plus pgvector is the only active migration target.
 - `DURABLE_SCHEMA_VERSION` tracks the durable schema generation, not app release version.

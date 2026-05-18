@@ -1,7 +1,6 @@
-﻿import { env, tier } from "../configuration/index";
+import { env } from "../configuration/index";
 import { get_model } from "../database/models";
-import { sector_configs } from "./hsg";
-import { q } from "../database/connection";
+import { facetConfigs } from "./facets";
 import {
   canonical_tokens_from_text,
   add_synonym_tokens,
@@ -28,105 +27,13 @@ async function fetchWithTimeout(
   }
 }
 
-export interface EmbeddingResult {
-  sector: string;
-  vector: number[];
-  dim: number;
-}
-
-const compress_vec = (v: number[], td: number): number[] => {
-  if (v.length <= td) return v;
-  const c = new Float32Array(td),
-    bs = v.length / td;
-  for (let i = 0; i < td; i++) {
-    const s = Math.floor(i * bs),
-      e = Math.floor((i + 1) * bs);
-    let sum = 0,
-      cnt = 0;
-    for (let j = s; j < e && j < v.length; j++) {
-      sum += v[j];
-      cnt++;
-    }
-    c[i] = cnt > 0 ? sum / cnt : 0;
-  }
-  let n = 0;
-  for (let i = 0; i < td; i++) n += c[i] * c[i];
-  n = Math.sqrt(n);
-  if (n > 0) for (let i = 0; i < td; i++) c[i] /= n;
-  return Array.from(c);
-};
-
-const fuse_vecs = (syn: number[], sem: number[]): number[] => {
-  const synLength = syn.length;
-  const semLength = sem.length;
-  const totalLength = synLength + semLength;
-  const f = new Array(totalLength);
-  let sumOfSquares = 0;
-  for (let i = 0; i < synLength; i++) {
-    const val = syn[i] * 0.6;
-    f[i] = val;
-    sumOfSquares += val * val;
-  }
-  for (let i = 0; i < semLength; i++) {
-    const val = sem[i] * 0.4;
-    f[synLength + i] = val;
-    sumOfSquares += val * val;
-  }
-  if (sumOfSquares > 0) {
-    const norm = Math.sqrt(sumOfSquares);
-    for (let i = 0; i < totalLength; i++) {
-      f[i] /= norm;
-    }
-  }
-  return f;
-};
-
-export async function embedForSector(t: string, s: string): Promise<number[]> {
-  console.error(
-    `[EMBED] Provider: ${env.emb_kind}, Tier: ${tier}, Sector: ${s}`,
-  );
-  if (!sector_configs[s]) throw new Error(`Unknown sector: ${s}`);
-  if (tier === "hybrid") return gen_syn_emb(t, s);
-  if (tier === "smart" && env.emb_kind !== "synthetic") {
-    const syn = gen_syn_emb(t, s),
-      sem = await get_sem_emb(t, s),
-      comp = compress_vec(sem, 128);
-    return fuse_vecs(syn, comp);
-  }
-  if (tier === "fast") return gen_syn_emb(t, s);
-  return await get_sem_emb(t, s);
-}
-
-/**
- * Batch embed query text for ALL sectors in one API call.
- * This significantly improves query performance by reducing 5 sequential
- * API calls to a single batched call (~4.5x faster for deep tier).
- */
-export async function embedQueryForAllSectors(
-  query: string,
-  sectors: string[],
-): Promise<Record<string, number[]>> {
-  if (tier === "hybrid" || tier === "fast") {
-    const result: Record<string, number[]> = {};
-    for (const s of sectors) result[s] = gen_syn_emb(query, s);
-    return result;
-  }
-
-  if (env.emb_kind === "gemini" && env.gemini_key) {
-    try {
-      const txts: Record<string, string> = {};
-      for (const s of sectors) txts[s] = query;
-      return await emb_gemini(txts);
-    } catch (e) {
-      console.error(
-        `[EMBED] Gemini batch failed, falling back to sequential: ${e}`,
-      );
-    }
-  }
-
-  const result: Record<string, number[]> = {};
-  for (const s of sectors) result[s] = await embedForSector(query, s);
-  return result;
+export async function embedForFacet(
+  text: string,
+  facet: string,
+): Promise<number[]> {
+  console.error(`[EMBED] Provider: ${env.emb_kind}, Facet: ${facet}`);
+  if (!facetConfigs[facet]) throw new Error(`Unknown facet: ${facet}`);
+  return await get_sem_emb(text, facet);
 }
 
 async function embed_with_provider(
@@ -163,7 +70,7 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
       const result = await embed_with_provider(provider, t, s);
       if (i > 0) {
         console.error(
-          `[EMBED] Fallback to ${provider} succeeded for sector: ${s}`,
+          `[EMBED] Fallback to ${provider} succeeded for facet: ${s}`,
         );
       }
       return result;
@@ -187,61 +94,6 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
   return gen_syn_emb(t, s);
 }
 
-async function emb_batch_with_fallback(
-  txts: Record<string, string>,
-): Promise<Record<string, number[]>> {
-  const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
-
-  for (let i = 0; i < providers.length; i++) {
-    const provider = providers[i];
-    try {
-      let result: Record<string, number[]>;
-      switch (provider) {
-        case "gemini":
-          result = await emb_gemini(txts);
-          break;
-        case "openai":
-          result = await emb_batch_openai(txts);
-          break;
-        default:
-          result = {};
-          for (const [s, t] of Object.entries(txts)) {
-            result[s] = await embed_with_provider(provider, t, s);
-          }
-      }
-      if (i > 0) {
-        console.error(`[EMBED] Fallback to ${provider} succeeded for batch`);
-      }
-      return result;
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      const nextProvider = providers[i + 1];
-
-      if (nextProvider) {
-        console.error(
-          `[EMBED] ${provider} batch failed: ${errMsg}, trying ${nextProvider}`,
-        );
-      } else {
-        console.error(
-          `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}. Using synthetic.`,
-        );
-
-        const result: Record<string, number[]> = {};
-        for (const [s, t] of Object.entries(txts)) {
-          result[s] = gen_syn_emb(t, s);
-        }
-        return result;
-      }
-    }
-  }
-
-  const result: Record<string, number[]> = {};
-  for (const [s, t] of Object.entries(txts)) {
-    result[s] = gen_syn_emb(t, s);
-  }
-  return result;
-}
-
 async function emb_openai(t: string, s: string): Promise<number[]> {
   if (!env.openai_key) throw new Error("OpenAI key missing");
   const m = get_model(s, "openai");
@@ -262,34 +114,6 @@ async function emb_openai(t: string, s: string): Promise<number[]> {
   );
   if (!r.ok) throw new Error(`OpenAI: ${r.status}`);
   return ((await r.json()) as any).data[0].embedding;
-}
-
-async function emb_batch_openai(
-  txts: Record<string, string>,
-): Promise<Record<string, number[]>> {
-  if (!env.openai_key) throw new Error("OpenAI key missing");
-  const secs = Object.keys(txts),
-    m = get_model("semantic", "openai");
-  const r = await fetchWithTimeout(
-    `${env.openai_base_url.replace(/\/$/, "")}/embeddings`,
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${env.openai_key}`,
-      },
-      body: JSON.stringify({
-        input: Object.values(txts),
-        model: env.openai_model || m,
-        dimensions: env.vec_dim,
-      }),
-    },
-  );
-  if (!r.ok) throw new Error(`OpenAI batch: ${r.status}`);
-  const d = (await r.json()) as any,
-    out: Record<string, number[]> = {};
-  secs.forEach((s, i) => (out[s] = d.data[i].embedding));
-  return out;
 }
 
 const task_map: Record<string, string> = {
@@ -560,107 +384,7 @@ const resize_vec = (v: number[], t: number) => {
   return [...v, ...Array(t - v.length).fill(0)];
 };
 
-export async function embedMultiSector(
-  id: string,
-  txt: string,
-  secs: string[],
-  chunks?: Array<{ text: string }>,
-): Promise<EmbeddingResult[]> {
-  const r: EmbeddingResult[] = [];
-  await q.ins_log.run(id, "multi-sector", "pending", Date.now(), null);
-  for (let a = 0; a < 3; a++) {
-    try {
-      const simp = env.embed_mode === "simple";
-      if (simp && (env.emb_kind === "gemini" || env.emb_kind === "openai")) {
-        console.error(
-          `[EMBED] Simple mode (1 batch for ${secs.length} sectors)`,
-        );
-        const tb: Record<string, string> = {};
-        secs.forEach((s) => (tb[s] = txt));
-
-        const b = await emb_batch_with_fallback(tb);
-        Object.entries(b).forEach(([s, v]) =>
-          r.push({ sector: s, vector: v, dim: v.length }),
-        );
-      } else {
-        console.error(`[EMBED] Advanced mode (${secs.length} calls)`);
-        const par = env.adv_embed_parallel && env.emb_kind !== "gemini";
-        if (par) {
-          const p = secs.map(async (s) => {
-            let v: number[];
-            if (chunks && chunks.length > 1) {
-              const cv: number[][] = [];
-              for (const c of chunks) cv.push(await embedForSector(c.text, s));
-              v = agg_chunks(cv);
-            } else v = await embedForSector(txt, s);
-            return { sector: s, vector: v, dim: v.length };
-          });
-          r.push(...(await Promise.all(p)));
-        } else {
-          for (let i = 0; i < secs.length; i++) {
-            const s = secs[i];
-            let v: number[];
-            if (chunks && chunks.length > 1) {
-              const cv: number[][] = [];
-              for (const c of chunks) cv.push(await embedForSector(c.text, s));
-              v = agg_chunks(cv);
-            } else v = await embedForSector(txt, s);
-            r.push({ sector: s, vector: v, dim: v.length });
-            if (env.embed_delay_ms > 0 && i < secs.length - 1)
-              await new Promise((x) => setTimeout(x, env.embed_delay_ms));
-          }
-        }
-      }
-      await q.upd_log.run("completed", null, id);
-      return r;
-    } catch (e) {
-      if (a === 2) {
-        await q.upd_log.run(
-          "failed",
-          e instanceof Error ? e.message : String(e),
-          id,
-        );
-        throw e;
-      }
-      await new Promise((x) => setTimeout(x, 1000 * Math.pow(2, a)));
-    }
-  }
-  throw new Error("Embedding failed after retries");
-}
-
-const agg_chunks = (vecs: number[][]): number[] => {
-  if (!vecs.length) throw new Error("No vectors");
-  if (vecs.length === 1) return vecs[0];
-  const d = vecs[0].length,
-    r = Array(d).fill(0);
-  for (const v of vecs) for (let i = 0; i < d; i++) r[i] += v[i];
-  return r.map((x) => x / vecs.length);
-};
-
-export const cosineSimilarity = (a: number[], b: number[]) => {
-  if (a.length !== b.length) return 0;
-  let dot = 0,
-    na = 0,
-    nb = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    na += a[i] * a[i];
-    nb += b[i] * b[i];
-  }
-  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
-};
-
-export const vectorToBuffer = (v: number[]) => {
-  const b = Buffer.allocUnsafe(v.length * 4);
-  for (let i = 0; i < v.length; i++) b.writeFloatLE(v[i], i * 4);
-  return b;
-};
-export const bufferToVector = (b: Buffer) => {
-  const v: number[] = [];
-  for (let i = 0; i < b.length; i += 4) v.push(b.readFloatLE(i));
-  return v;
-};
-export const embed = (t: string) => embedForSector(t, "semantic");
+export const embed = (text: string) => embedForFacet(text, "semantic");
 export const getEmbeddingProvider = () => env.emb_kind;
 
 export const getEmbeddingInfo = () => {
@@ -668,18 +392,11 @@ export const getEmbeddingInfo = () => {
     provider: env.emb_kind,
     fallback_chain: env.embedding_fallback,
     dimensions: env.vec_dim,
-    mode: env.embed_mode,
-    batch_support:
-      env.embed_mode === "simple" &&
-      (env.emb_kind === "gemini" || env.emb_kind === "openai"),
-    advanced_parallel: env.adv_embed_parallel,
-    embed_delay_ms: env.embed_delay_ms,
   };
   if (env.emb_kind === "openai") {
     i.configured = !!env.openai_key;
     i.base_url = env.openai_base_url;
     i.model_override = env.openai_model || null;
-    i.batch_api = env.embed_mode === "simple";
     i.models = {
       episodic: get_model("episodic", "openai"),
       semantic: get_model("semantic", "openai"),
@@ -689,14 +406,12 @@ export const getEmbeddingInfo = () => {
     };
   } else if (env.emb_kind === "gemini") {
     i.configured = !!env.gemini_key;
-    i.batch_api = env.embed_mode === "simple";
     i.model = "embedding-001";
   } else if (env.emb_kind === "aws") {
     i.configured =
       !!env.AWS_REGION &&
       !!env.AWS_ACCESS_KEY_ID &&
       !!env.AWS_SECRET_ACCESS_KEY;
-    i.batch_api = env.embed_mode === "simple";
     i.model = "amazon.titan-embed-text-v2:0";
   } else if (env.emb_kind === "siray") {
     i.configured = !!env.siray_key;

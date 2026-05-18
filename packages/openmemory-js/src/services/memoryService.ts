@@ -1,5 +1,6 @@
 export interface MemoryOptions {
   user_id?: string;
+  project_id?: string;
   tags?: string[];
   [key: string]: any;
 }
@@ -12,7 +13,9 @@ export class Memory {
   }
 
   async add(content: string, opts?: MemoryOptions) {
-    const { add_hsg_memory } = await import("../retention/hsg");
+    const { rememberDurableMemory } = await import("../durable/repository");
+    const { embed } = await import("../embeddings/embed");
+    const db = await durableExecutor();
     const uid = opts?.user_id || this.default_user;
     const proj = opts?.project_id || null;
     const tags = opts?.tags || [];
@@ -22,20 +25,22 @@ export class Memory {
     delete meta.project_id;
     delete meta.tags;
 
-    const tags_str = JSON.stringify(tags);
-
-    return await add_hsg_memory(
+    return await rememberDurableMemory(db, {
       content,
-      tags_str,
-      meta,
-      uid ?? undefined,
-      proj ?? undefined,
-    );
+      user_id: uid ?? undefined,
+      project_id: proj ?? undefined,
+      facets: tags.length > 0 ? { tags } : undefined,
+      metadata: meta,
+      embedding: await embed(content),
+    });
   }
 
   async get(id: string) {
-    const { q } = await import("../database/connection");
-    return await q.get_mem.get(id);
+    const { getDurableMemory } = await import("../durable/repository");
+    return await getDurableMemory(await durableExecutor(), {
+      id,
+      user_id: this.default_user ?? undefined,
+    });
   }
 
   async search(
@@ -44,81 +49,77 @@ export class Memory {
       user_id?: string;
       project_id?: string;
       limit?: number;
-      sectors?: string[];
     },
   ) {
-    const { hsg_query } = await import("../retention/hsg");
+    const { recallDurableMemories } = await import("../durable/repository");
+    const { embed } = await import("../embeddings/embed");
     const k = opts?.limit || 10;
     const uid = opts?.user_id || this.default_user;
     const proj = opts?.project_id || null;
-    const f: any = {};
 
-    if (uid) f.user_id = uid;
-    if (proj) f.project_id = proj;
-    if (opts?.sectors) f.sectors = opts.sectors;
-
-    return await hsg_query(query, k, f);
+    return await recallDurableMemories(await durableExecutor(), {
+      query,
+      limit: k,
+      user_id: uid ?? undefined,
+      project_id: proj ?? undefined,
+      embedding: await embed(query),
+    });
   }
 
   async delete_all(user_id?: string) {
-    const { q, vector_store } = await import("../database/connection");
+    const { listDurableMemories, deleteDurableMemory } =
+      await import("../durable/repository");
+    const db = await durableExecutor();
     const uid = user_id || this.default_user;
     if (!uid) {
       throw new Error("delete_all requires a user_id");
     }
 
-    const memories = await q.all_mem_by_user.all(uid, 10000, 0);
-    for (const memory of memories) {
-      await q.del_mem.run(memory.id);
-      await vector_store.deleteVectors(memory.id);
-      await q.del_waypoints.run(memory.id, memory.id);
+    let deleted = 0;
+    for (;;) {
+      const page = await listDurableMemories(db, {
+        user_id: uid,
+        limit: 100,
+        offset: 0,
+      });
+      if (page.items.length === 0) break;
+      for (const memory of page.items) {
+        if (await deleteDurableMemory(db, { id: memory.id, user_id: uid })) {
+          deleted++;
+        }
+      }
     }
-    return { deleted: memories.length };
+    return { deleted };
   }
 
   async wipe() {
-    const { q } = await import("../database/connection");
-    await q.clear_all.run();
+    throw new Error("wipe is not supported by the durable SDK");
   }
+}
 
-  source(name: string) {
-    const sources: Record<string, any> = {
-      github: () =>
-        import("../providers/github").then(
-          (m) => new m.github_source(this.default_user ?? undefined),
-        ),
-      notion: () =>
-        import("../providers/notion").then(
-          (m) => new m.notion_source(this.default_user ?? undefined),
-        ),
-      googleDrive: () =>
-        import("../providers/googleDrive").then(
-          (m) => new m.googleDrive_source(this.default_user ?? undefined),
-        ),
-      googleSheets: () =>
-        import("../providers/googleSheets").then(
-          (m) => new m.googleSheets_source(this.default_user ?? undefined),
-        ),
-      googleSlides: () =>
-        import("../providers/googleSlides").then(
-          (m) => new m.googleSlides_source(this.default_user ?? undefined),
-        ),
-      onedrive: () =>
-        import("../providers/onedrive").then(
-          (m) => new m.onedrive_source(this.default_user ?? undefined),
-        ),
-      webCrawler: () =>
-        import("../providers/webCrawler").then(
-          (m) => new m.webCrawler_source(this.default_user ?? undefined),
-        ),
-    };
+async function durableExecutor() {
+  const connection = await import("../database/connection");
+  return {
+    query: async (sql: string, params: unknown[] = []) => {
+      const command = sql.trim().toUpperCase();
+      if (command === "BEGIN") {
+        await connection.transaction.begin();
+        return { rows: [] };
+      }
+      if (command === "COMMIT") {
+        await connection.transaction.commit();
+        return { rows: [] };
+      }
+      if (command === "ROLLBACK") {
+        await connection.transaction.rollback();
+        return { rows: [] };
+      }
+      if (/^\s*select\b/i.test(sql)) {
+        return { rows: await connection.all_async(sql, params as any[]) };
+      }
 
-    if (!(name in sources)) {
-      throw new Error(
-        `unknown source: ${name}. available: ${Object.keys(sources).join(", ")}`,
-      );
-    }
-
-    return sources[name]();
-  }
+      await connection.run_async(sql, params as any[]);
+      return { rows: [] };
+    },
+  };
 }

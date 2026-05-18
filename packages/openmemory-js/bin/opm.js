@@ -33,11 +33,7 @@ commands:
   query <text>          search memories
   list                  show all memories
   delete <id>           delete memory
-  stats                 show stats
-  users                 list users
-  user <id>             get user summary
   health                ping server
-  mcp                   start mcp server (stdio)
   serve                 start api server
 
 options:
@@ -55,8 +51,6 @@ examples:
   opm add "user likes dark mode" --user u123 --tags prefs
   opm query "preferences" --user u123
   opm list --limit 5
-  opm user u123
-  opm stats
 `;
 
 const hdrs = {
@@ -85,91 +79,56 @@ const req = async (pth, opts = {}) => {
 const addmem = async (txt, opts) => {
   const body = { content: txt };
   if (opts.usr) body.user_id = opts.usr;
-  if (opts.tags) body.tags = opts.tags.split(',');
-  const r = await req('/retention/add', {
+  if (opts.tags) body.facets = { tags: opts.tags.split(',') };
+  const r = await req('/v1/memories', {
     method: 'POST',
     body: JSON.stringify(body),
   });
   console.log('[ok] memory added');
-  console.log(`id: ${r.id}`);
-  console.log(`sector: ${r.primary_sector}`);
-  console.log(`salience: ${r.salience?.toFixed(3) || 'n/a'}`);
+  console.log(`id: ${r.id || r.memory_id}`);
+  if (r.status) console.log(`status: ${r.status}`);
 };
 
 const querymem = async (txt, opts) => {
-  const body = { query: txt, k: opts.lim || 10 };
-  if (opts.usr) body.filters = { user_id: opts.usr };
-  const r = await req('/retention/query', {
+  const body = { query: txt, limit: opts.lim || 10 };
+  if (opts.usr) body.user_id = opts.usr;
+  const r = await req('/v1/recall', {
     method: 'POST',
     body: JSON.stringify(body),
   });
-  const memories = r.matches || r.memories || [];
+  const memories = r.results || [];
   console.log(`[results] ${memories.length} found\n`);
   memories.forEach((m, i) => {
-    console.log(`${i + 1}. [${m.primary_sector}] ${m.content}`);
-    console.log(`   id: ${m.id}`);
-    console.log(
-      `   score: ${m.score?.toFixed(3) || 'n/a'} | sal: ${m.salience.toFixed(
-        3,
-      )}`,
-    );
-    if (m.tags) console.log(`   tags: ${m.tags}`);
+    console.log(`${i + 1}. ${m.content}`);
+    console.log(`   id: ${m.id || m.memory_id}`);
+    if (typeof m.score === 'number') console.log(`   score: ${m.score.toFixed(3)}`);
+    if (m.facets?.tags) console.log(`   tags: ${m.facets.tags.join(',')}`);
     console.log();
   });
 };
 
 const listmem = async (opts) => {
   const lim = opts.lim || 10;
-  const off = 0;
-  let r;
-  if (opts.usr) {
-    r = await req(`/users/${opts.usr}/memories?l=${lim}&u=${off}`);
-  } else {
-    r = await req(`/retention/all?l=${lim}&u=${off}`);
-  }
-  const items = r.items || r.memories || [];
+  const params = new URLSearchParams({ limit: String(lim), offset: '0' });
+  if (opts.usr) params.set('user_id', opts.usr);
+  const r = await req(`/v1/memories?${params.toString()}`);
+  const items = r.items || [];
   console.log(`[memories] showing ${items.length}\n`);
   items.forEach((m, i) => {
-    console.log(`${i + 1}. [${m.primary_sector}] ${m.content}`);
-    console.log(`   id: ${m.id} | user: ${opts.usr || 'system'}`);
-    console.log(`   sal: ${m.salience.toFixed(3)}`);
-    if (m.tags) console.log(`   tags: ${m.tags}`);
+    console.log(`${i + 1}. ${m.content}`);
+    console.log(`   id: ${m.id} | user: ${m.user_id || opts.usr || 'system'}`);
+    if (typeof m.salience === 'number') console.log(`   salience: ${m.salience.toFixed(3)}`);
+    if (m.facets?.tags) console.log(`   tags: ${m.facets.tags.join(',')}`);
     console.log();
   });
 };
 
-const delmem = async (id) => {
-  await req(`/retention/${id}`, { method: 'DELETE' });
+const delmem = async (id, opts) => {
+  const params = new URLSearchParams();
+  if (opts.usr) params.set('user_id', opts.usr);
+  const suffix = params.size ? `?${params.toString()}` : '';
+  await req(`/v1/memories/${id}${suffix}`, { method: 'DELETE' });
   console.log(`[ok] memory ${id} deleted`);
-};
-
-const getstats = async () => {
-  const r = await req('/sectors');
-  console.log('[stats]\n');
-  console.log(`\nmemories by sector:`);
-  (r.stats || []).forEach((row) => {
-    console.log(`  ${row.sector}: ${row.count}`);
-  });
-};
-
-const listusers = async () => {
-  const r = await req('/users');
-  console.log(`[users] ${r.users.length} found\n`);
-  r.users.forEach((u, i) => {
-    console.log(`${i + 1}. ${u.user_id}`);
-    console.log(`   memories: ${u.memory_count || 0}`);
-    console.log(`   reflections: ${u.reflection_count || 0}`);
-    if (u.summary) console.log(`   summary: ${u.summary.substring(0, 100)}...`);
-    console.log();
-  });
-};
-
-const getuser = async (uid) => {
-  const r = await req(`/users/${uid}/summary`);
-  console.log(`[user] ${uid}\n`);
-  console.log(`summary:\n${r.summary || 'no summary'}\n`);
-  console.log(`memories: ${r.memory_count || 0}`);
-  console.log(`reflections: ${r.reflection_count || 0}`);
 };
 
 const health = async () => {
@@ -219,37 +178,10 @@ const text = commandText();
         break;
       case 'delete':
         if (!argv[1]) throw new Error('id required: opm delete <id>');
-        await delmem(argv[1]);
-        break;
-      case 'stats':
-        await getstats();
-        break;
-      case 'users':
-        await listusers();
-        break;
-      case 'user':
-        if (!argv[1]) throw new Error('user id required: opm user <id>');
-        await getuser(argv[1]);
+        await delmem(argv[1], opts);
         break;
       case 'health':
         await health();
-        break;
-      case 'mcp':
-        try {
-          const mcp = require('../dist/intelligence/mcp.js');
-          if (mcp && mcp.start_mcp_stdio) {
-            await mcp.start_mcp_stdio();
-          } else {
-            console.error('[error] mcp module missing start_mcp_stdio export');
-            process.exit(1);
-          }
-        } catch (e) {
-          console.error(
-            '[error] failed to start mcp server. ensure project is built (npm run build).',
-          );
-          console.error(e.message);
-          process.exit(1);
-        }
         break;
       case 'serve':
         try {

@@ -25,8 +25,6 @@ services:
       OM_PORT: ${OM_PORT:-8080}
       OM_MODE: ${OM_MODE:-standard}
       OM_TIER: ${OM_TIER:-hybrid}
-      OM_METADATA_BACKEND: postgres
-      OM_VECTOR_BACKEND: postgres
       OM_PG_HOST: postgres
       OM_PG_PORT: 5432
       OM_PG_DB: ${OM_PG_DB:-openmemory}
@@ -35,7 +33,6 @@ services:
       OM_PG_SCHEMA: ${OM_PG_SCHEMA:-public}
       OM_PG_TABLE: ${OM_PG_TABLE:-openmemory_memories}
       OM_PG_SSL: disable
-      OM_VECTOR_TABLE: ${OM_VECTOR_TABLE:-openmemory_vectors}
       OM_API_KEY: ${OM_API_KEY:-}
       OM_EMBEDDINGS: ${OM_EMBEDDINGS:-synthetic}
       OM_EMBEDDING_FALLBACK: ${OM_EMBEDDING_FALLBACK:-synthetic}
@@ -51,8 +48,6 @@ services:
       OM_RATE_LIMIT_ENABLED: ${OM_RATE_LIMIT_ENABLED:-false}
       OM_RATE_LIMIT_WINDOW_MS: ${OM_RATE_LIMIT_WINDOW_MS:-60000}
       OM_RATE_LIMIT_MAX_REQUESTS: ${OM_RATE_LIMIT_MAX_REQUESTS:-100}
-      OM_AUTO_REFLECT: ${OM_AUTO_REFLECT:-false}
-      OM_DECAY_INTERVAL_MINUTES: ${OM_DECAY_INTERVAL_MINUTES:-120}
     depends_on:
       postgres:
         condition: service_healthy

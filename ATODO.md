@@ -4,13 +4,13 @@
 - Track the full OpenMemory architecture rewrite as repository state, not chat state.
 - Keep the near-term product path JS-only: `packages/openmemory-js`, npm install/fork, `npm run start`.
 - Make `/v1/*` the durable product API.
-- Keep `/retention/*` as legacy HSG compatibility until parity is proven and explicitly migrated.
+- Keep legacy compatibility out of the default runtime unless explicitly revived.
 
 ## Current State
 - Active package: `packages/openmemory-js`.
 - Production direction: Postgres plus pgvector.
-- Local SQLite behavior: legacy compatibility only, not the production architecture.
-- Default runtime surface: health/system, retention compatibility, users, MCP only when stable, and durable `/v1`.
+- SQLite behavior is removed from the active runtime and migration path.
+- Default runtime surface: `/health` and durable `/v1`.
 - Durable `/v1` currently covers remember, get, list, update, reinforce, recall, explain, soft delete, contradiction resolve, and pending consolidation requests.
 - Durable `/v1/ingest` persists raw working-memory events in Postgres mode. Candidate accept/reject routes are registered, but automatic extraction is still disabled.
 
@@ -32,6 +32,8 @@
 - [x] Make root npm scripts delegate to the JS workspace.
 - [x] Fix package import side effects so SDK import does not bind a port.
 - [x] Limit default route registration to the JS core path and explicit durable `/v1`.
+- [x] Replace the old custom `api/server.js` wrapper with a small TypeScript HTTP adapter.
+- [x] Remove SQLite and Valkey compatibility from the active runtime and migration path.
 
 ### Remaining
 - [x] Recheck stale references after each major deletion: Python, dashboard, VS Code, `SDK/JS`, `SDK/PY`, `backend`, Railway, Render, Vercel.
@@ -75,7 +77,7 @@
 
 ### Done
 - [x] Move `/v1/recall` to durable repository in Postgres mode.
-- [x] Keep SQLite/local fallback on legacy HSG.
+- [x] Remove SQLite/local fallback after deleting legacy HSG.
 - [x] Add strict, historical, and associative recall query contract tests.
 - [x] Enforce current validity, provenance visibility, superseded exclusion, contradiction exclusion, and `contracts.recall_allowed !== false`.
 - [x] Include global project records where project visibility permits it.
@@ -172,18 +174,18 @@
 - [x] Move compatible behavior onto durable repositories behind `/v1`.
 - [x] Keep `/retention/*` responses stable until deprecation is announced.
 - [x] Add deprecation warnings using headers only; keep `/retention/*` JSON bodies stable.
-- [ ] Remove legacy HSG internals after parity and migration are complete.
+- [x] Remove legacy HSG internals that are no longer referenced by exported SDK/provider surfaces.
 
-### Current `/retention/*` Classification
-- [ ] `POST /retention/add`: keep as legacy compatibility; durable replacement is `POST /v1/memories`.
-- [ ] `POST /retention/ingest`: keep legacy for now; durable ingestion pipeline is not built.
-- [ ] `POST /retention/ingest/url`: keep legacy for now; durable URL ingestion is not built.
-- [ ] `POST /retention/query`: keep as legacy compatibility; durable replacement is `POST /v1/recall`.
-- [ ] `POST /retention/reinforce`: keep as legacy compatibility; durable replacement is `POST /v1/memories/:id/reinforce`.
-- [ ] `PATCH /retention/:id`: keep as legacy compatibility; durable replacement is `PATCH /v1/memories/:id`.
-- [ ] `GET /retention/all`: keep as legacy compatibility; durable replacement is `GET /v1/memories`.
-- [ ] `GET /retention/:id`: keep as legacy compatibility; durable replacement is `GET /v1/memories/:id`.
-- [ ] `DELETE /retention/:id`: keep legacy for now; it hard-deletes memory, vectors, and waypoints, while durable `DELETE /v1/memories/:id` soft-deletes.
+### Former `/retention/*` Classification
+- [x] `POST /retention/add`: removed from default runtime; durable replacement is `POST /v1/memories`.
+- [x] `POST /retention/ingest`: removed from default runtime; durable ingestion is `/v1/ingest`.
+- [x] `POST /retention/ingest/url`: removed from default runtime.
+- [x] `POST /retention/query`: removed from default runtime; durable replacement is `POST /v1/recall`.
+- [x] `POST /retention/reinforce`: removed from default runtime; durable replacement is `POST /v1/memories/:id/reinforce`.
+- [x] `PATCH /retention/:id`: removed from default runtime; durable replacement is `PATCH /v1/memories/:id`.
+- [x] `GET /retention/all`: removed from default runtime; durable replacement is `GET /v1/memories`.
+- [x] `GET /retention/:id`: removed from default runtime; durable replacement is `GET /v1/memories/:id`.
+- [x] `DELETE /retention/:id`: removed from default runtime; durable replacement is soft-delete `DELETE /v1/memories/:id`.
 
 ## Phase 11: Code Quality And De-AI Pass
 
@@ -194,9 +196,15 @@
 - [x] Narrow package root exports to the SDK surface; do not export deferred provider or ingestion surfaces from `src/index.ts`.
 - [x] Demote deferred provider SDKs from hard dependencies by using optional dynamic imports.
 - [x] Delete dead providers and unused route modules only after import graph confirms they are unused.
+- [x] Remove deferred provider source modules after removing `Memory.source()` from the public SDK.
 - [x] Split oversized files only when a stable boundary is proven by tests; no current split was safe enough to justify churn.
 - [x] Normalize names to framework idioms: `req`, `res`, repository verbs, durable domain nouns.
 - [x] Replace copy/paste error handling with small consistent helpers where repetition is real.
+- [x] Rename active embedding internals from sectors to facets and delete unused legacy embedding helpers.
+- [x] Remove legacy `OM_TIER` embedding selection so provider behavior follows `OM_EMBEDDINGS` directly.
+- [x] Clean `dist` before package builds so deleted source surfaces cannot remain in build artifacts.
+- [x] Delete unused legacy request type definitions for removed runtime surfaces.
+- [x] Delete unused retention-era chunking, keyword, and vector utility modules.
 - [x] Add linting only after the codebase can pass it without masking real work. Prettier check now passes.
 
 ## Phase 12: Performance And Reliability

@@ -5,7 +5,7 @@
 - Current focus: architectural rewrite and code improvement.
 
 ## Current Goal
-- Continue `/retention/*` parity review before moving legacy route behavior onto durable internals.
+- Continue Postgres-first cleanup after removing legacy runtime surfaces from the active package path.
 - Use `ATODO.md` as the full step-by-step architecture rewrite backlog; use `TODO.md` for the immediate active tranche.
 
 ## Architecture Inputs
@@ -15,12 +15,12 @@
 ## Repo Snapshot
 - Active implementation package is `packages/openmemory-js`.
 - Deferred surfaces were removed from the active tree during cleanup: secondary SDKs, old examples, ops tools, editor extension, dashboard shell, local DB/temp artifacts, and hosted deploy configs.
-- Current default JS server surface is intentionally narrow: health/system, retention memory, users, and MCP when it builds cleanly.
-- Initial `/v1` memory endpoints are registered. `/v1/memories`, `/v1/recall`, and `/v1/memories/:id/explain` use durable repositories on Postgres and fall back to legacy HSG in SQLite compatibility mode.
+- Current default JS server surface is intentionally narrow: `/health` and durable `/v1/*`.
+- Initial `/v1` memory endpoints are registered. `/v1/memories`, `/v1/recall`, and `/v1/memories/:id/explain` use durable repositories on Postgres.
 - Durable `/v1/memories` accepts structured entities and edges, then writes `entities`, `memory_entities`, and `edges` rows inside the memory transaction.
 - Durable `/v1/memories` writes an append-only `memory_versions` row, and durable explain returns that version history.
 - `DELETE /v1/memories/:id` is available. In Postgres mode it soft-deletes by setting `superseded_at`, writes audit, and recall excludes the memory.
-- Durable `/v1` lifecycle endpoints now cover get, list, update, reinforce, explain, recall, remember, and soft delete. `/retention/*` remains legacy HSG compatibility.
+- Durable `/v1` lifecycle endpoints now cover get, list, update, reinforce, explain, recall, remember, and soft delete. `/retention/*` has been removed from the active package source path.
 - Strict durable recall enforces `contracts.recall_allowed !== false` in addition to provenance, current validity, and contradiction checks.
 - Durable explain responses include score components for confidence, salience, provenance, contradiction penalty, contract penalty, and contract state.
 - `POST /v1/contradictions/:id/resolve` resolves durable contradiction rows in Postgres mode and writes audit.
@@ -35,15 +35,15 @@
 - Durable consolidation requests accept an optional `idempotency_key`; repeated requests for the same user/project/key return the existing request instead of inserting duplicates.
 - `POST /v1/consolidations/claim` is the explicit admin trigger for consolidation work; it claims one pending job in Postgres mode and does not start a scheduler.
 - Consolidation recall-impact evals compare baseline and candidate recall/noise scores. Automatic consolidation remains disabled unless candidate recall gain meets the threshold and noise does not exceed the allowed increase.
-- `/retention/*` routes are inventoried and classified in `ATODO.md`; keep them as legacy compatibility until migration is intentionally scheduled, especially because legacy delete is hard-delete while durable delete is soft-delete.
+- `/retention/*` routes were inventoried, mapped to durable `/v1` replacements, and removed from the active runtime.
 - `/v1` malformed input now returns a consistent `400` envelope: `{ err: "invalid_request", field, msg }`.
-- `/v1` memory lifecycle routes hide tenant mismatch as `404 not_found`, including the legacy-backed local delete adapter; `/retention/*` keeps legacy compatibility behavior.
+- `/v1` memory lifecycle routes hide tenant mismatch as `404 not_found`.
 - `/v1` memory lifecycle success responses preserve top-level compatibility fields and add normalized envelopes: `memory`, `page`, or `deleted` depending on the operation.
-- `dotenv` was removed from dependencies because configuration uses the custom `.env` loader in `src/configuration/index.ts`; remaining provider/MCP/ingestion/vector dependencies are still referenced by exported or active code.
-- Durable ingestion is specified in `docs/durable-ingestion-design.md`; `/retention/ingest*` stays legacy until durable ingestion fixtures and working-memory tables exist.
+- `dotenv`, MCP, provider, and document-ingest dependencies were removed from the package manifests where their source surfaces were deleted.
+- Durable ingestion is specified in `docs/durable-ingestion-design.md`; document/URL provider ingestion is deferred until it can be rebuilt on durable `/v1` semantics.
 - Durable ingestion now has `working_memory_events` and `extraction_candidates` schema tables. `createWorkingMemoryEvent` records raw input events and writes `ingestion.event` audit rows.
 - `createExtractionCandidate` records deterministic extraction candidates with facets, entities, edges, contracts, confidence, metadata, and `ingestion.candidate` audit rows.
-- `POST /v1/ingest` is registered. It validates raw durable ingestion events and writes `working_memory_events` only in Postgres mode; local SQLite mode returns `501 unsupported`.
+- `POST /v1/ingest` is registered. It validates raw durable ingestion events and writes `working_memory_events` in Postgres mode.
 - Raw durable `/v1/ingest` explicitly reports automatic extraction as disabled and does not create extraction candidates. Candidate creation/promotion remains explicit only.
 - `promoteExtractionCandidate` promotes a pending extraction candidate to durable `memories`, `memory_versions`, provenance, entities, edges, candidate accepted status, and `ingestion.promote` audit in one transaction.
 - Durable ingestion promotion previously used fixed fixtures; the test tree has now been deleted by request.
@@ -56,26 +56,24 @@
 - Executable edges are side-effect-free by default: `buildExecutableEdgePlan` only creates a plan, and `executeExecutableEdgePlan` runs only a caller-provided handler for the plan operation.
 - Durable public contracts are normalized through a shared schema: `recall_allowed`, `retention_policy`, `sensitivity`, `source_visibility`, and optional `expires_at`.
 - Durable create/update/ingest/candidate/promotion normalize contracts before storage. Durable recall enforces both `recall_allowed` and contract `expires_at`.
-- Legacy `/retention/ingest` and `/retention/ingest/url` stay legacy until durable ingestion migration is intentionally implemented.
-- `/retention/ingest` and `/retention/ingest/url` remain legacy HSG routes; do not point them at durable ingestion until route-level parity is complete.
+- Legacy `/retention/ingest` and `/retention/ingest/url` are removed from the active package source; durable ingestion continues under `/v1/ingest`.
 - The opt-in Postgres verification code was deleted with the test tree by request. Real Postgres verification will need a smaller replacement later if needed.
 - Package root exports are intentionally narrow: `src/index.ts` exports the `Memory` SDK/service surface only. Deferred ingestion helpers and provider modules are no longer root exports.
 - Deferred provider SDKs for GitHub, Notion, Google, OneDrive, and web crawling are optional runtime installs, not hard package dependencies.
-- `/v1/memories/:id/explain` exposes a normalized schema in both durable Postgres and legacy local modes: bitemporal, score components, provenance, contradictions, inference path, versions, audit events, contracts, and metadata.
+- `/v1/memories/:id/explain` exposes a normalized durable schema: bitemporal, score components, provenance, contradictions, inference path, versions, audit events, contracts, and metadata.
 - Explain responses include deterministic factual `reasons` strings derived from confidence, provenance count, open contradiction count, and recall contract state. Do not generate narrative explanations yet.
 - Explain responses include `recall_score_inputs` only when the caller supplies recall context with `recall_query` and optional `recall_mode`. The field records query, mode, confidence, salience, provenance score, contradiction penalty, contract penalty, and score.
 - Durable recall and explain return memory/provenance metadata with sensitive keys redacted recursively. Current sensitive keys include token, api_key/apikey, authorization/auth, cookie, password, and secret.
 - Durable audit rows have `actor_id` and `actor_type` columns with `system` defaults. Durable remember accepts explicit `actor_id`; `/v1/memories` maps it through to the audit row.
 - API auth stays open for local development when no API key is configured, but production mode or `OM_REQUIRE_API_KEY=true` fails closed on protected routes until `OM_API_KEY` is set. `/health` remains public.
 - Durable recall supports provenance source filters through `source.kind`, `source.id`, and `source.uri`. `contracts.source_visibility='hidden'` suppresses provenance details in recall and explain payloads without disabling internal scoring or strict provenance eligibility.
-- Phase 10 migration status: compatible durable lifecycle behavior is behind `/v1`; `/retention/*` remains legacy compatibility for now.
-- `/retention/*` responses now include `Deprecation: true` and `Link: </v1>; rel="successor-version"` headers while preserving legacy JSON response bodies.
+- Phase 10 migration status: compatible durable lifecycle behavior is behind `/v1`; `/retention/*` source routes and HSG internals were deleted from the active package path.
 - Provider files no longer carry generic "production grade" header comments; keep future provider comments specific to requirements or non-obvious behavior.
 - Trivial-helper cleanup is reviewed. Keep shared route validation, durable SQL serialization, scoring, and response-shape helpers until a local edit clearly reduces code.
-- Deferred route modules for dashboard, IDE, Vercel, sources, compression, dynamics, LangGraph, and temporal HTTP APIs were deleted after confirming they were not imported by the active route index. Provider implementations remain because `Memory` lazy-loads them.
-- Active route registrar exports are named by role: `systemRoutes`, `memoryRoutes`, and `userRoutes`.
+- Deferred route modules for dashboard, IDE, Vercel, sources, compression, dynamics, LangGraph, temporal HTTP APIs, providers, and MCP were deleted after confirming they were not part of the active route index or SDK root.
+- Active route registrar exports are named by role; default registration is `systemRoutes` plus `v1`.
 - `/v1` route failures use a local `serverError` helper for the repeated `{ err, msg }` 500 envelope.
-- Oversized files remain unsplit until a stable boundary is proven by tests. Current largest files are durable repository, legacy HSG, v1 routes, MCP, and database connection.
+- Oversized files remain unsplit until a stable boundary is proven. Current largest active files are durable repository, v1 routes, embed, custom server adapter, and database connection.
 - Do not add broad lint/check scripts yet.
 - Durable query-plan contracts cover list, recall, explain, and graph traversal. Source-scoped recall has a `durable_provenance_source_idx` index on `(source_kind, source_id, source_uri)`.
 - Startup baseline test files were removed by request with the rest of `packages/openmemory-js/tests`.
@@ -91,8 +89,8 @@
 - README GitHub setup is clone/fork based because npm does not install this workspace subpackage directly from a repository subdirectory.
 - Local PostgreSQL 18 is running on port 5432, but credentials remain undiscovered; `postgres/postgres` failed and no-prompt local roles require a password.
 - Stale deleted-path references were rechecked after cleanup; only intentional roadmap/deferred-surface docs remain. `Makefile` and `CONTRIBUTING.md` now use root npm scripts instead of removed test paths.
-- Remaining package dependencies were reviewed against imports. No further safe removals were found because active MCP, extraction, vector, DB, embedding, or legacy compatibility paths still reference them.
-- README runtime docs now point to root/package npm scripts and list active `/v1/*` plus `/mcp` routes.
+- Remaining package dependencies were reviewed against imports after deleting MCP/provider/document-ingest source. Active dependency pressure now comes from embedding, vector, DB, and the custom server adapter.
+- README runtime docs now point to root/package npm scripts and list only `/health` plus durable `/v1/*` routes.
 - Prettier formatting pass has been applied to `src/**/*.ts`; `npm --workspace openmemory-js run format` now targets source only because tests were deleted.
 - Migration policy is documented in `docs/migrations.md`: durable Postgres migrations are forward-only, idempotent where practical, and destructive cleanup is manual.
 - pgvector index strategy is documented in `docs/pgvector-index-strategy.md`: durable memory embeddings use a partial HNSW cosine index, and repository vector recall orders by `<=>` when a query embedding is supplied.
@@ -106,4 +104,15 @@
 - Project-scoped durable recall is intended to include both matching project-local memories and matching global records where `project_id` is null.
 - Durable explain audit events are public projections. Internal storage target fields such as `target_table`, `target_id`, `before_state`, and `after_state` are stripped before response.
 - The test tree under `packages/openmemory-js/tests` was deleted by request. `npm test` is now build-only.
-- Current JS package still contains legacy internals that will be handled in later rewrite phases: custom `server.js`, SQLite/Postgres branches, sector-based HSG memory, waypoints, and route groups beyond the future `/v1` API.
+- Active embedding code now uses facet naming internally. The old `sectors.ts`, multi-sector batch helper, vector buffer helpers, and unused legacy request type definitions were deleted.
+- `OM_TIER` is removed. `OM_EMBEDDINGS` now directly selects the embedding provider, with `synthetic` remaining the local fallback/default.
+- `npm run build` now deletes `packages/openmemory-js/dist` before compiling so removed source surfaces cannot survive as stale publish artifacts.
+- Removed unused `utilities/chunking.ts`, `utilities/keyword.ts`, and `utilities/index.ts`; active embedding code still uses `utilities/text.ts`.
+- The active database layer is Postgres-only. SQLite branches, `sqlite3`, Valkey vector store code, legacy vector store abstractions, old stats/waypoint/user table setup, and the old custom `server.js` wrapper were removed.
+- The server now uses a small TypeScript HTTP adapter in `src/api/httpApp.ts`; it supports the active route/middleware surface only.
+- `OM_METADATA_BACKEND` is no longer an active backend selector; `/v1` routes call durable Postgres repositories directly.
+- The HTTP adapter normalizes malformed JSON bodies to `{}` so route validation returns controlled `invalid_request` responses.
+- Active embedding code now lives under `src/embeddings`; the old `src/retention` directory was removed.
+- MCP, provider source modules, document extraction/ingestion, temporal graph helpers, old CLI migration source, and legacy HSG/decay/reflection/user-summary modules were deleted from `packages/openmemory-js/src`.
+- `Memory.source()` was removed; the SDK root now exposes durable memory add/get/search/delete behavior only.
+- `opm` now targets durable `/v1` for add/query/list/delete and no longer advertises users/stats/MCP commands.

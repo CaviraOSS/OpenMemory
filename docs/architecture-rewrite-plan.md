@@ -54,9 +54,7 @@ This avoids a blank rewrite while still forcing clean boundaries.
    - `src/index.ts` exports SDK/client APIs only.
    - `src/server/entry.ts` starts the HTTP server.
    - Importing `openmemory-js` must not start a server.
-2. Replace or isolate the custom `server.js` wrapper.
-   - Preferred: use a boring HTTP framework with schema validation and predictable middleware.
-   - Minimum: keep the wrapper temporarily but hide it behind a small app adapter.
+2. Keep the small TypeScript HTTP adapter until a boring framework is justified by real route complexity.
 3. Add `/health` as the first contract.
 4. Add clear startup validation:
    - Node version
