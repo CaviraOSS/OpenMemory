@@ -1,11 +1,15 @@
 import crypto from "node:crypto";
 import { scoreDurableRecall } from "./scoring";
+import { enrichDurableMetadata } from "./metadata";
+import { computeLexicalScore } from "../utilities/keyword";
 
 export const ALLOWED_DURABLE_EDGE_TYPES = [
   "mentions",
   "supports",
   "contradicts",
   "derives_from",
+  "supersedes",
+  "same_as",
   "causes",
   "depends_on",
   "part_of",
@@ -13,6 +17,7 @@ export const ALLOWED_DURABLE_EDGE_TYPES = [
 ] as const;
 
 export type DurableEdgeType = (typeof ALLOWED_DURABLE_EDGE_TYPES)[number];
+export type DurableMemoryTier = "active" | "warm" | "cold" | "archived";
 
 export const PUBLIC_DURABLE_CONTRACT_FIELDS = [
   "recall_allowed",
@@ -101,6 +106,7 @@ export interface DurableRecallInput {
   project_id?: string;
   source?: DurableSource;
   embedding?: number[];
+  candidate_ids?: string[];
 }
 
 export interface DurableRecallResult {
@@ -171,9 +177,36 @@ export interface DurableGraphTraversalResult {
   }>;
 }
 
+export interface DurableTemporalGraphQueryInput {
+  user_id?: string;
+  project_id?: string;
+  memory_id?: string;
+  edge_type?: DurableEdgeType;
+  at_time?: string | Date;
+  from?: string | Date;
+  to?: string | Date;
+  limit?: number;
+}
+
+export interface DurableTemporalGraphQueryResult {
+  edges: Array<{
+    id: string;
+    source_memory_id: string;
+    target_memory_id: string | null;
+    edge_type: DurableEdgeType;
+    confidence: number;
+    weight: number;
+    valid_from: string | null;
+    valid_to: string | null;
+    source_content: string | null;
+    target_content: string | null;
+  }>;
+}
+
 export interface ExecutableEdgePlan {
   edge_id: string;
   edge_type: DurableEdgeType;
+  source_memory_id?: string | null;
   target_memory_id: string | null;
   operation: string | null;
   metadata: Record<string, unknown>;
@@ -182,6 +215,26 @@ export interface ExecutableEdgePlan {
 export type ExecutableEdgeHandler = (
   plan: ExecutableEdgePlan,
 ) => Promise<unknown> | unknown;
+
+export interface DurableExecutableEdgeInput {
+  edge_id: string;
+  edge_type: DurableEdgeType;
+  source_memory_id?: string | null;
+  target_memory_id?: string | null;
+  user_id?: string;
+  project_id?: string | null;
+  metadata?: Record<string, unknown>;
+  now?: Date;
+}
+
+export interface MoveDurableMemoryTierInput {
+  id: string;
+  tier: DurableMemoryTier;
+  user_id?: string;
+  project_id?: string;
+  reason?: string;
+  now?: Date;
+}
 
 export interface DurableExplainInput {
   id: string;
@@ -313,6 +366,27 @@ export interface DurableReinforceResult {
   id: string;
   salience: number;
   status: "reinforced";
+}
+
+export interface DurableDecayJobInput {
+  user_id?: string;
+  project_id?: string;
+  actor_id?: string;
+  limit?: number;
+  dry_run?: boolean;
+  now?: Date;
+}
+
+export interface DurableDecayJobResult {
+  scanned: number;
+  changed: number;
+  dry_run: boolean;
+  memories: Array<{
+    id: string;
+    salience_before: number;
+    salience_after: number;
+    memory_tier: DurableMemoryTier;
+  }>;
 }
 
 export class DurableConflictError extends Error {
@@ -791,6 +865,7 @@ export async function rememberDurableMemory(
   const auditLog = table(schema, "audit_log");
   const contracts = normalizeDurableContracts(input.contracts);
   const actor = auditActor(input.actor_id, userId);
+  const metadata = enrichDurableMetadata(input.content, input.metadata);
 
   const memoryState = {
     id,
@@ -799,7 +874,7 @@ export async function rememberDurableMemory(
     content: input.content,
     facets: input.facets || {},
     contracts,
-    metadata: input.metadata || {},
+    metadata,
     observed_at: sourceObservedAt(input.source, now).toISOString(),
     recorded_at: now.toISOString(),
   };
@@ -817,7 +892,7 @@ export async function rememberDurableMemory(
         input.content,
         asJson(input.facets),
         JSON.stringify(contracts),
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         memoryState.observed_at,
         memoryState.recorded_at,
         asVector(input.embedding),
@@ -835,7 +910,7 @@ export async function rememberDurableMemory(
         input.content,
         asJson(input.facets),
         JSON.stringify(contracts),
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         memoryState.recorded_at,
       ],
     );
@@ -992,6 +1067,17 @@ export async function recallDurableMemories(
     filters.push(`m.embedding is not null`);
   }
 
+  const candidateIds = Array.from(
+    new Set((input.candidate_ids || []).filter((id) => id?.trim())),
+  );
+  let candidateOrder = "";
+  if (candidateIds.length) {
+    params.push(candidateIds);
+    const candidateParam = params.length;
+    filters.push(`m.id = any($${candidateParam}::text[])`);
+    candidateOrder = `array_position($${candidateParam}::text[], m.id::text) asc`;
+  }
+
   if (input.user_id) {
     params.push(input.user_id);
     filters.push(`m.user_id = $${params.length}`);
@@ -1034,13 +1120,15 @@ export async function recallDurableMemories(
     filters.push(`coalesce(m.contracts->>'recall_allowed', 'true') <> 'false'`);
   }
 
-  const order = useVectorRecall
-    ? `vector_distance asc, ${mode === "historical" ? "m.recorded_at desc" : "m.confidence desc, m.salience desc, m.recorded_at desc"}`
-    : mode === "historical"
-      ? "m.recorded_at desc"
-      : mode === "strict"
-        ? "m.confidence desc, m.recorded_at desc"
-        : "m.salience desc, m.confidence desc, m.recorded_at desc";
+  const order = candidateOrder
+    ? `${candidateOrder}, m.recorded_at desc`
+    : useVectorRecall
+      ? `vector_distance asc, ${mode === "historical" ? "m.recorded_at desc" : "m.confidence desc, m.salience desc, m.recorded_at desc"}`
+      : mode === "historical"
+        ? "m.recorded_at desc"
+        : mode === "strict"
+          ? "m.confidence desc, m.recorded_at desc"
+          : "m.salience desc, m.confidence desc, m.recorded_at desc";
 
   const sql = `
     select
@@ -1107,6 +1195,7 @@ export async function recallDurableMemories(
         vector_distance:
           row.vector_distance == null ? null : Number(row.vector_distance),
         text_match: !useVectorRecall,
+        lexical_score: computeLexicalScore(input.query, row.content || ""),
       });
       return {
         id: row.id,
@@ -1267,9 +1356,128 @@ export async function traverseDurableGraph(
   };
 }
 
+export async function queryDurableTemporalGraph(
+  db: DurableExecutor,
+  input: DurableTemporalGraphQueryInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<DurableTemporalGraphQueryResult> {
+  const edges = table(schema, "edges");
+  const memories = table(schema, "memories");
+  const limit = Math.max(1, Math.min(input.limit || 100, 500));
+  const params: unknown[] = [];
+  const filters = [
+    "source.superseded_at is null",
+    "target.superseded_at is null",
+  ];
+
+  const addTemporalFilters = (
+    alias: string,
+    at?: Date,
+    from?: Date,
+    to?: Date,
+  ) => {
+    if (at) {
+      params.push(at.toISOString());
+      const index = params.length;
+      filters.push(
+        `(${alias}.valid_from is null or ${alias}.valid_from <= $${index})`,
+      );
+      filters.push(
+        `(${alias}.valid_to is null or ${alias}.valid_to > $${index})`,
+      );
+    } else if (from || to) {
+      const fromIso = (from || new Date(0)).toISOString();
+      const toIso = (to || new Date("9999-12-31T00:00:00.000Z")).toISOString();
+      params.push(fromIso, toIso);
+      const fromIndex = params.length - 1;
+      const toIndex = params.length;
+      filters.push(
+        `(${alias}.valid_from is null or ${alias}.valid_from <= $${toIndex})`,
+      );
+      filters.push(
+        `(${alias}.valid_to is null or ${alias}.valid_to > $${fromIndex})`,
+      );
+    }
+  };
+
+  const at = input.at_time ? recallTime(input.at_time) : undefined;
+  const from = input.from ? recallTime(input.from) : undefined;
+  const to = input.to ? recallTime(input.to) : undefined;
+  for (const alias of ["e", "source", "target"]) {
+    addTemporalFilters(alias, at, from, to);
+  }
+
+  if (input.user_id) {
+    params.push(input.user_id);
+    const index = params.length;
+    filters.push(`e.user_id = $${index}`);
+    filters.push(`source.user_id = $${index}`);
+    filters.push(`target.user_id = $${index}`);
+  }
+  if (input.project_id) {
+    params.push(input.project_id);
+    const index = params.length;
+    filters.push(`(e.project_id = $${index} or e.project_id is null)`);
+    filters.push(
+      `(source.project_id = $${index} or source.project_id is null)`,
+    );
+    filters.push(
+      `(target.project_id = $${index} or target.project_id is null)`,
+    );
+  }
+  if (input.memory_id) {
+    params.push(input.memory_id);
+    filters.push(
+      `(e.source_memory_id = $${params.length} or e.target_memory_id = $${params.length})`,
+    );
+  }
+  if (input.edge_type) {
+    params.push(allowedEdgeType(input.edge_type));
+    filters.push(`e.edge_type = $${params.length}`);
+  }
+  params.push(limit);
+
+  const result = (await db.query(
+    `select
+       e.id as edge_id,
+       e.source_memory_id,
+       e.target_memory_id,
+       e.edge_type,
+       e.confidence,
+       e.weight,
+       e.valid_from,
+       e.valid_to,
+       source.content as source_content,
+       target.content as target_content
+     from ${edges} e
+     join ${memories} source on source.id = e.source_memory_id
+     join ${memories} target on target.id = e.target_memory_id
+     where ${filters.join("\n       and ")}
+     order by e.confidence desc, e.weight desc, e.valid_from desc nulls last
+     limit $${params.length}`,
+    params,
+  )) as { rows?: any[] };
+
+  return {
+    edges: (result.rows || []).map((row) => ({
+      id: row.edge_id,
+      source_memory_id: row.source_memory_id,
+      target_memory_id: row.target_memory_id ?? null,
+      edge_type: row.edge_type,
+      confidence: Number(row.confidence ?? 1),
+      weight: Number(row.weight ?? 1),
+      valid_from: row.valid_from ?? null,
+      valid_to: row.valid_to ?? null,
+      source_content: row.source_content ?? null,
+      target_content: row.target_content ?? null,
+    })),
+  };
+}
+
 export function buildExecutableEdgePlan(edge: {
   id: string;
   edge_type: DurableEdgeType;
+  source_memory_id?: string | null;
   target_memory_id?: string | null;
   metadata?: Record<string, unknown>;
 }): ExecutableEdgePlan {
@@ -1281,6 +1489,7 @@ export function buildExecutableEdgePlan(edge: {
   return {
     edge_id: edge.id,
     edge_type: allowedEdgeType(edge.edge_type),
+    source_memory_id: edge.source_memory_id ?? null,
     target_memory_id: edge.target_memory_id ?? null,
     operation,
     metadata: edge.metadata || {},
@@ -1301,6 +1510,201 @@ export async function executeExecutableEdgePlan(
     );
   }
   return handler(plan);
+}
+
+const executableEdgeEvent = (edgeType: DurableEdgeType) => `edge.${edgeType}`;
+
+export async function executeDurableEdgeHandler(
+  db: DurableExecutor,
+  input: DurableExecutableEdgeInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+) {
+  const edgeType = allowedEdgeType(input.edge_type);
+  if (
+    !["supersedes", "contradicts", "derives_from", "same_as"].includes(edgeType)
+  ) {
+    throw new Error(`edge handler is not required for ${edgeType}`);
+  }
+  if (!input.source_memory_id?.trim()) {
+    throw new Error("source_memory_id is required");
+  }
+  if (!input.target_memory_id?.trim()) {
+    throw new Error("target_memory_id is required");
+  }
+
+  const memories = table(schema, "memories");
+  const contradictions = table(schema, "contradictions");
+  const inferences = table(schema, "inferences");
+  const auditLog = table(schema, "audit_log");
+  const now = (input.now || new Date()).toISOString();
+  const userId = input.user_id || "anonymous";
+  const projectId = input.project_id || null;
+
+  await db.query("BEGIN");
+  try {
+    if (edgeType === "supersedes") {
+      await db.query(
+        `update ${memories}
+         set valid_to = coalesce(valid_to, $1), superseded_at = coalesce(superseded_at, $1)
+         where id = $2 and superseded_at is null`,
+        [now, input.target_memory_id],
+      );
+      await db.query(
+        `update ${memories}
+         set salience = least(1, salience + 0.05)
+         where id = $1`,
+        [input.source_memory_id],
+      );
+    } else if (edgeType === "contradicts") {
+      await db.query(
+        `insert into ${contradictions}
+          (id,user_id,project_id,memory_id,contradicts_memory_id,status,confidence,metadata,created_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9)`,
+        [
+          crypto.randomUUID(),
+          userId,
+          projectId,
+          input.source_memory_id,
+          input.target_memory_id,
+          "open",
+          bounded(Number(input.metadata?.confidence), 1),
+          asJson(input.metadata),
+          now,
+        ],
+      );
+      await db.query(
+        `update ${memories}
+         set confidence = greatest(0, confidence - 0.1)
+         where id in ($1,$2)`,
+        [input.source_memory_id, input.target_memory_id],
+      );
+    } else if (edgeType === "derives_from") {
+      await db.query(
+        `insert into ${inferences}
+          (id,memory_id,derived_from,inference_method,confidence,metadata,recorded_at)
+         values ($1,$2,$3::jsonb,$4,$5,$6::jsonb,$7)`,
+        [
+          crypto.randomUUID(),
+          input.source_memory_id,
+          JSON.stringify([input.target_memory_id]),
+          String(input.metadata?.inference_method || "edge"),
+          bounded(Number(input.metadata?.confidence), 0.8),
+          asJson(input.metadata),
+          now,
+        ],
+      );
+    } else if (edgeType === "same_as") {
+      await db.query(
+        `update ${memories}
+         set metadata = coalesce(metadata, '{}'::jsonb) || $1::jsonb
+         where id in ($2,$3)`,
+        [
+          JSON.stringify({
+            same_as: [input.source_memory_id, input.target_memory_id],
+          }),
+          input.source_memory_id,
+          input.target_memory_id,
+        ],
+      );
+    }
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        userId,
+        projectId,
+        executableEdgeEvent(edgeType),
+        "edges",
+        input.edge_id,
+        edgeType,
+        null,
+        JSON.stringify({
+          edge_id: input.edge_id,
+          edge_type: edgeType,
+          source_memory_id: input.source_memory_id,
+          target_memory_id: input.target_memory_id,
+        }),
+        asJson(input.metadata),
+        now,
+      ],
+    );
+    await db.query("COMMIT");
+    return { edge_id: input.edge_id, edge_type: edgeType, status: "executed" };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
+}
+
+export async function moveDurableMemoryTier(
+  db: DurableExecutor,
+  input: MoveDurableMemoryTierInput,
+  schema = process.env.OM_PG_SCHEMA || "public",
+) {
+  if (!input.id?.trim()) throw new Error("id is required");
+  if (!["active", "warm", "cold", "archived"].includes(input.tier)) {
+    throw new Error("tier must be active, warm, cold, or archived");
+  }
+
+  const memories = table(schema, "memories");
+  const auditLog = table(schema, "audit_log");
+  const now = (input.now || new Date()).toISOString();
+  const params: unknown[] = [input.tier, input.id];
+  const filters = ["id = $2", "superseded_at is null"];
+  if (input.user_id) {
+    params.push(input.user_id);
+    filters.push(`user_id = $${params.length}`);
+  }
+  if (input.project_id) {
+    params.push(input.project_id);
+    filters.push(`project_id = $${params.length}`);
+  }
+
+  await db.query("BEGIN");
+  try {
+    const result = (await db.query(
+      `update ${memories}
+       set memory_tier = $1
+       where ${filters.join(" and ")}
+       returning id,memory_tier`,
+      params,
+    )) as { rows?: any[] };
+    const row = result.rows?.[0];
+    if (!row) {
+      await db.query("COMMIT");
+      return null;
+    }
+
+    await db.query(
+      `insert into ${auditLog}
+        (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11)`,
+      [
+        crypto.randomUUID(),
+        input.user_id || null,
+        input.project_id || null,
+        "memory.tier",
+        "memories",
+        input.id,
+        "update",
+        null,
+        JSON.stringify({ id: input.id, memory_tier: input.tier }),
+        JSON.stringify({ reason: input.reason || null }),
+        now,
+      ],
+    );
+    await db.query("COMMIT");
+    return {
+      id: row.id || input.id,
+      tier: (row.memory_tier || input.tier) as DurableMemoryTier,
+    };
+  } catch (err) {
+    await db.query("ROLLBACK");
+    throw err;
+  }
 }
 
 export async function explainDurableMemory(
@@ -1860,6 +2264,135 @@ export async function reinforceDurableMemory(
   }
 }
 
+const decayLambdaByTier: Record<DurableMemoryTier, number> = {
+  active: 0.005,
+  warm: 0.02,
+  cold: 0.05,
+  archived: 0.08,
+};
+
+const daysBetween = (later: Date, earlier: unknown) => {
+  const parsed =
+    earlier instanceof Date
+      ? earlier
+      : typeof earlier === "string" || typeof earlier === "number"
+        ? new Date(earlier)
+        : later;
+  if (Number.isNaN(parsed.getTime())) return 0;
+  return Math.max(0, (later.getTime() - parsed.getTime()) / 86_400_000);
+};
+
+const decaySalience = (
+  salience: number,
+  tier: DurableMemoryTier,
+  days: number,
+) => {
+  const current = bounded(salience, 0.5);
+  const lambda = decayLambdaByTier[tier] ?? decayLambdaByTier.active;
+  const next = current * Math.exp((-lambda * days) / (current + 0.1));
+  return Math.max(0, Math.min(1, Number(next.toFixed(6))));
+};
+
+export async function runDurableDecayJob(
+  db: DurableExecutor,
+  input: DurableDecayJobInput = {},
+  schema = process.env.OM_PG_SCHEMA || "public",
+): Promise<DurableDecayJobResult> {
+  const memories = table(schema, "memories");
+  const auditLog = table(schema, "audit_log");
+  const now = input.now || new Date();
+  const nowIso = now.toISOString();
+  const limit = Math.max(1, Math.min(1000, Math.floor(input.limit || 100)));
+  const params: unknown[] = [limit];
+  const filters = ["superseded_at is null"];
+
+  if (input.user_id) {
+    params.push(input.user_id);
+    filters.push(`user_id = $${params.length}`);
+  }
+  if (input.project_id) {
+    params.push(input.project_id);
+    filters.push(`project_id = $${params.length}`);
+  }
+
+  const selected = (await db.query(
+    `select id,user_id,project_id,salience,memory_tier,recorded_at,observed_at,valid_from
+     from ${memories}
+     where ${filters.join(" and ")}
+     order by recorded_at asc
+     limit $1`,
+    params,
+  )) as { rows?: any[] };
+  const rows = selected.rows || [];
+  const changes = rows
+    .map((row) => {
+      const tier = (row.memory_tier || "active") as DurableMemoryTier;
+      const before = Number(row.salience ?? 0.5);
+      const age = daysBetween(
+        now,
+        row.observed_at || row.valid_from || row.recorded_at,
+      );
+      return {
+        row,
+        tier,
+        before,
+        after: decaySalience(before, tier, age),
+      };
+    })
+    .filter((change) => Math.abs(change.before - change.after) >= 0.001);
+
+  if (!input.dry_run && changes.length) {
+    await db.query("BEGIN");
+    try {
+      for (const change of changes) {
+        await db.query(
+          `update ${memories}
+           set salience = $2, recorded_at = $3
+           where id = $1 and superseded_at is null
+           returning id,user_id,project_id,salience`,
+          [change.row.id, change.after, nowIso],
+        );
+        await db.query(
+          `insert into ${auditLog}
+            (id,user_id,project_id,event_type,target_table,target_id,operation,before_state,after_state,metadata,recorded_at,actor_id,actor_type)
+           values ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,$11,$12,$13)`,
+          [
+            crypto.randomUUID(),
+            change.row.user_id || null,
+            change.row.project_id || null,
+            "memory.decay",
+            "memories",
+            change.row.id,
+            "decay",
+            JSON.stringify({ salience: change.before }),
+            JSON.stringify({ salience: change.after }),
+            JSON.stringify({ memory_tier: change.tier }),
+            nowIso,
+            input.actor_id || "system",
+            input.actor_id ? "user" : "system",
+          ],
+        );
+      }
+      await db.query("COMMIT");
+    } catch (err) {
+      await db.query("ROLLBACK");
+      throw err;
+    }
+  }
+
+  return {
+    scanned: rows.length,
+    changed: changes.length,
+    dry_run: Boolean(input.dry_run),
+    memories: changes.map((change) => ({
+      id: change.row.id,
+      salience_before: change.before,
+      salience_after: change.after,
+      memory_tier: change.tier,
+    })),
+  };
+}
+
 export async function resolveDurableContradiction(
   db: DurableExecutor,
   input: DurableResolveContradictionInput,
@@ -2321,6 +2854,7 @@ export async function createWorkingMemoryEvent(
   const workingMemoryEvents = table(schema, "working_memory_events");
   const auditLog = table(schema, "audit_log");
   const contracts = normalizeDurableContracts(input.contracts);
+  const metadata = enrichDurableMetadata(content, input.metadata);
 
   await db.query("BEGIN");
   try {
@@ -2335,7 +2869,7 @@ export async function createWorkingMemoryEvent(
         projectId,
         JSON.stringify(input.source),
         content,
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         JSON.stringify(contracts),
         "pending",
         observedAt,
@@ -2365,7 +2899,7 @@ export async function createWorkingMemoryEvent(
           status: "pending",
           observed_at: observedAt,
         }),
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         recordedAt,
       ],
     );
@@ -2404,6 +2938,7 @@ export async function createExtractionCandidate(
   const extractionCandidates = table(schema, "extraction_candidates");
   const auditLog = table(schema, "audit_log");
   const contracts = normalizeDurableContracts(input.contracts);
+  const metadata = enrichDurableMetadata(input.content, input.metadata);
 
   await db.query("BEGIN");
   try {
@@ -2425,7 +2960,7 @@ export async function createExtractionCandidate(
         JSON.stringify(contracts),
         bounded(input.confidence, 0.5),
         "pending",
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         now,
       ],
     )) as { rows?: any[] };
@@ -2452,7 +2987,7 @@ export async function createExtractionCandidate(
           status: "pending",
           confidence: bounded(input.confidence, 0.5),
         }),
-        asJson(input.metadata),
+        JSON.stringify(metadata),
         now,
       ],
     );
@@ -2512,6 +3047,10 @@ export async function promoteExtractionCandidate(
       ? candidate.contradictions
       : [];
     const contracts = normalizeDurableContracts(candidate.contracts || {});
+    const candidateMetadata = enrichDurableMetadata(
+      candidate.content,
+      candidate.metadata || {},
+    );
     const source: DurableSource = input.source || {
       kind: "ingestion",
       id: candidate.event_id,
@@ -2528,7 +3067,7 @@ export async function promoteExtractionCandidate(
         candidate.content,
         JSON.stringify(candidate.facets || {}),
         JSON.stringify(contracts),
-        JSON.stringify(candidate.metadata || {}),
+        JSON.stringify(candidateMetadata),
         bounded(Number(candidate.confidence), 0.5),
         sourceObservedAt(source, now).toISOString(),
         recordedAt,
@@ -2546,7 +3085,7 @@ export async function promoteExtractionCandidate(
         candidate.content,
         JSON.stringify(candidate.facets || {}),
         JSON.stringify(contracts),
-        JSON.stringify(candidate.metadata || {}),
+        JSON.stringify(candidateMetadata),
         recordedAt,
       ],
     );

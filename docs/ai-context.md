@@ -1,18 +1,22 @@
 # AI Context
 
 ## Project
+
 - OpenMemory repository.
 - Current focus: architectural rewrite and code improvement.
 
 ## Current Goal
+
 - Continue Postgres-first cleanup after removing legacy runtime surfaces from the active package path.
 - Use `ATODO.md` as the full step-by-step architecture rewrite backlog; use `TODO.md` for the immediate active tranche.
 
 ## Architecture Inputs
+
 - Target architecture from the attached architecture document: bitemporal, append-only cognitive graph with working memory, facets, provenance, contracts, contradictions, consolidation, three recall modes, explain API, and Postgres + pgvector first.
 - FigJam board `cHvNZ1CU304RAH4ccuADBv`: input event -> working memory buffer -> ingestion pipeline -> durable cognitive graph -> executable edge runtime -> consolidation -> memory tiers -> recall engine -> explain API -> agent/app response.
 
 ## Repo Snapshot
+
 - Active implementation package is `packages/openmemory-js`.
 - Deferred surfaces were removed from the active tree during cleanup: secondary SDKs, old examples, ops tools, editor extension, dashboard shell, local DB/temp artifacts, and hosted deploy configs.
 - Current default JS server surface is intentionally narrow: `/health` and durable `/v1/*`.
@@ -44,20 +48,20 @@
 - Durable ingestion now has `working_memory_events` and `extraction_candidates` schema tables. `createWorkingMemoryEvent` records raw input events and writes `ingestion.event` audit rows.
 - `createExtractionCandidate` records deterministic extraction candidates with facets, entities, edges, contracts, confidence, metadata, and `ingestion.candidate` audit rows.
 - `POST /v1/ingest` is registered. It validates raw durable ingestion events and writes `working_memory_events` in Postgres mode.
-- Raw durable `/v1/ingest` explicitly reports automatic extraction as disabled and does not create extraction candidates. Candidate creation/promotion remains explicit only.
+- Raw durable `/v1/ingest` now creates a deterministic extraction candidate after writing the working-memory event. Candidate promotion remains explicit through accept/reject routes.
 - `promoteExtractionCandidate` promotes a pending extraction candidate to durable `memories`, `memory_versions`, provenance, entities, edges, candidate accepted status, and `ingestion.promote` audit in one transaction.
-- Durable ingestion promotion previously used fixed fixtures; the test tree has now been deleted by request.
+- Durable ingestion and architecture parity have focused JS tests under `packages/openmemory-js/tests`.
 - `POST /v1/ingest/candidates/:id/accept` and `POST /v1/ingest/candidates/:id/reject` are registered as Postgres-only durable candidate controls. Reject writes `ingestion.reject` audit; accept uses candidate promotion.
-- Durable graph edge types are explicit and enforced in code/schema: `mentions`, `supports`, `contradicts`, `derives_from`, `causes`, `depends_on`, `part_of`, and `related_to`.
+- Durable graph edge types are explicit and enforced in code/schema: `mentions`, `supports`, `contradicts`, `derives_from`, `supersedes`, `same_as`, `causes`, `depends_on`, `part_of`, and `related_to`.
 - Durable graph edges persist confidence, provenance JSON, and temporal validity (`valid_from`, `valid_to`) in both direct memory writes and candidate promotion.
 - Durable graph traversal is repository-level only for now. `traverseDurableGraph` uses a bounded recursive query over durable edges and memories with tenant, project, supersession, and temporal filters.
 - Durable graph traversal returns deterministic `explain.reasons` plus a read-only `audit_trace` for traversed edges. It does not write audit rows during read traversal.
 - Durable graph traversal tests assert tenant filters on edges and target nodes, plus project-local and global visibility for both edges and target nodes.
-- Executable edges are side-effect-free by default: `buildExecutableEdgePlan` only creates a plan, and `executeExecutableEdgePlan` runs only a caller-provided handler for the plan operation.
+- Executable edge planning remains side-effect-free. Durable `/v1/edges/execute` now provides explicit transaction handlers for `supersedes`, `contradicts`, `derives_from`, and `same_as`, each with audit logging.
 - Durable public contracts are normalized through a shared schema: `recall_allowed`, `retention_policy`, `sensitivity`, `source_visibility`, and optional `expires_at`.
 - Durable create/update/ingest/candidate/promotion normalize contracts before storage. Durable recall enforces both `recall_allowed` and contract `expires_at`.
 - Legacy `/retention/ingest` and `/retention/ingest/url` are removed from the active package source; durable ingestion continues under `/v1/ingest`.
-- The opt-in Postgres verification code was deleted with the test tree by request. Real Postgres verification will need a smaller replacement later if needed.
+- Opt-in real Postgres verification is not part of the default test script; add it separately when credentials are available.
 - Package root exports are intentionally narrow: `src/index.ts` exports the `Memory` SDK/service surface only. Deferred ingestion helpers and provider modules are no longer root exports.
 - Deferred provider SDKs for GitHub, Notion, Google, OneDrive, and web crawling are optional runtime installs, not hard package dependencies.
 - `/v1/memories/:id/explain` exposes a normalized durable schema: bitemporal, score components, provenance, contradictions, inference path, versions, audit events, contracts, and metadata.
@@ -78,20 +82,19 @@
 - Durable query-plan contracts cover list, recall, explain, and graph traversal. Source-scoped recall has a `durable_provenance_source_idx` index on `(source_kind, source_id, source_uri)`.
 - Startup baseline test files were removed by request with the rest of `packages/openmemory-js/tests`.
 - Postgres pool configuration is centralized in `src/database/pgConfig.ts`; both normal connections and migrations use the same pool size, timeout, SSL, and statement-timeout env parsing.
-- Source-provider fetches use `fetchWithProviderTimeout` with `OM_PROVIDER_TIMEOUT_MS`; web crawler and OneDrive fetch paths now share cancellation behavior.
-- Provider fetch retries are limited to safe read methods (`GET`/`HEAD`) and transient statuses; write-like requests are single-shot.
-- Local load smoke files were removed by request with the rest of the package test tree.
+- Provider fetch helpers were deleted with the deferred provider source modules. Rebuild provider cancellation/retry behavior when connector ingestion is revived.
+- Local load smoke files remain deferred; current release smoke is package health by default with optional full durable DB smoke.
 - Package publishing contents are constrained with `packages/openmemory-js/package.json#files` to `dist` and `bin`; clean builds now emit `.d.ts` files so `types: dist/index.d.ts` is valid.
 - The package root remains quiet on import: `Memory` lazy-loads HSG/database internals inside methods instead of importing runtime storage during SDK import.
-- CLI smoke files were removed by request with the rest of the package test tree.
+- CLI smoke stays minimal; `npm run release-smoke` covers server health and optional durable API flow.
 - `.github/workflows/publish-sdks.yml` is now npm-only, tag/manual gated, package-lock based, smoke-tested, pack-dry-run checked, and publishes with npm provenance.
 - Versioning policy is documented in `docs/versioning.md`: SemVer for `openmemory-js`, `v<version>` tags, package version as source of truth.
 - README GitHub setup is clone/fork based because npm does not install this workspace subpackage directly from a repository subdirectory.
 - Local PostgreSQL 18 is running on port 5432, but credentials remain undiscovered; `postgres/postgres` failed and no-prompt local roles require a password.
 - Stale deleted-path references were rechecked after cleanup; only intentional roadmap/deferred-surface docs remain. `Makefile` and `CONTRIBUTING.md` now use root npm scripts instead of removed test paths.
-- Remaining package dependencies were reviewed against imports after deleting MCP/provider/document-ingest source. Active dependency pressure now comes from embedding, vector, DB, and the custom server adapter.
+- Remaining package dependencies were reviewed against imports after deleting MCP/provider/document-ingest source. Active runtime dependencies are embedding providers and Postgres.
 - README runtime docs now point to root/package npm scripts and list only `/health` plus durable `/v1/*` routes.
-- Prettier formatting pass has been applied to `src/**/*.ts`; `npm --workspace openmemory-js run format` now targets source only because tests were deleted.
+- Prettier formatting pass applies to `src/**/*.ts`; focused tests are intentionally small and not formatted by the package format script.
 - Migration policy is documented in `docs/migrations.md`: durable Postgres migrations are forward-only, idempotent where practical, and destructive cleanup is manual.
 - pgvector index strategy is documented in `docs/pgvector-index-strategy.md`: durable memory embeddings use a partial HNSW cosine index, and repository vector recall orders by `<=>` when a query embedding is supplied.
 - Durable query-plan indexes now include tenant/project current-memory partial indexes, memory/source provenance lookup, tenant/source graph lookup, and memory/status/project contradiction lookup.
@@ -103,11 +106,13 @@
 - Durable memory creation stores content embeddings in Postgres mode so `/v1/recall` can use pgvector against newly created memories.
 - Project-scoped durable recall is intended to include both matching project-local memories and matching global records where `project_id` is null.
 - Durable explain audit events are public projections. Internal storage target fields such as `target_table`, `target_id`, `before_state`, and `after_state` are stripped before response.
-- The test tree under `packages/openmemory-js/tests` was deleted by request. `npm test` is now build-only.
+- Focused tests are active under `packages/openmemory-js/tests`; `npm test` runs build plus architecture parity tests.
 - Active embedding code now uses facet naming internally. The old `sectors.ts`, multi-sector batch helper, vector buffer helpers, and unused legacy request type definitions were deleted.
 - `OM_TIER` is removed. `OM_EMBEDDINGS` now directly selects the embedding provider, with `synthetic` remaining the local fallback/default.
 - `npm run build` now deletes `packages/openmemory-js/dist` before compiling so removed source surfaces cannot survive as stale publish artifacts.
 - Removed unused `utilities/chunking.ts`, `utilities/keyword.ts`, and `utilities/index.ts`; active embedding code still uses `utilities/text.ts`.
+- `OM_PG_TABLE` was removed from config examples because durable storage uses fixed schema table names. The unused `openai` package dependency was removed; OpenAI embeddings use direct `fetch`.
+- Final JS-server hardening verification now uses build, JS tests, npm pack dry-run, SDK import smoke, and release-smoke health.
 - The active database layer is Postgres-only. SQLite branches, `sqlite3`, Valkey vector store code, legacy vector store abstractions, old stats/waypoint/user table setup, and the old custom `server.js` wrapper were removed.
 - The server now uses a small TypeScript HTTP adapter in `src/api/httpApp.ts`; it supports the active route/middleware surface only.
 - `OM_METADATA_BACKEND` is no longer an active backend selector; `/v1` routes call durable Postgres repositories directly.
@@ -116,3 +121,50 @@
 - MCP, provider source modules, document extraction/ingestion, temporal graph helpers, old CLI migration source, and legacy HSG/decay/reflection/user-summary modules were deleted from `packages/openmemory-js/src`.
 - `Memory.source()` was removed; the SDK root now exposes durable memory add/get/search/delete behavior only.
 - `opm` now targets durable `/v1` for add/query/list/delete and no longer advertises users/stats/MCP commands.
+- `/v1/memories/:id/tier` changes durable memory accessibility among active, warm, cold, and archived without deleting the memory row.
+- `npm run migration-report -- <legacy-data.json> [report.json]` generates a non-destructive report for legacy memory, waypoint, and temporal-fact shapes.
+- Focused JS tests are active again under `packages/openmemory-js/tests`; they cover deterministic ingestion, executable edges, tier movement, migration reports, and v1 route registration.
+- `npm run release-smoke` builds and health-checks the package server. `OM_RELEASE_SMOKE_FULL=true npm run release-smoke` additionally runs durable remember, strict recall, and explain against configured Postgres.
+- Runtime config and migration config both load `.env` through `src/configuration/envFile.ts`, checking root/workspace paths and stripping inline comments.
+- Local PostgreSQL 18 is running, and `psql.exe` exists at `C:\Program Files\PostgreSQL\18\bin\psql.exe`; full durable DB smoke is currently blocked because `postgres/postgres` fails authentication.
+- `insp/openmemory-js` was inventoried. Durable-safe old features ported into the active package are deterministic language detection, simhash fingerprinting, and keyword lexical scoring.
+- Durable metadata enrichment now records `language`, `language_script`, `language_confidence`, `simhash`, and `token_count` for direct memory writes, working-memory events, extraction candidates, and candidate promotion.
+- Durable recall scoring includes a small bounded lexical score from canonical keyword overlap. This is a fallback/rerank signal, not a replacement for pgvector recall.
+- Old source connectors, document/audio/video extraction, MCP, dashboard, temporal route surfaces, and background decay/reflection loops remain deferred; do not revive them wholesale from `insp/openmemory-js`.
+- `docs/insp-openmemory-js-forensic-audit.md` is the persistent file-by-file audit of the old `insp/openmemory-js` tree. It inventories 80 files and records port/reject/defer decisions.
+- `docs/github-issues-prs-audit.md` is the persistent GitHub issue/PR audit. Public listings showed 7 open issues, 3 open PRs, 91 closed PRs, and recurring themes around multilingual correctness, MCP compatibility, Docker/deploy reliability, and tenant/project isolation.
+- `docs/github-issues-prs-full-audit.md` and `.json` are the item-level GitHub audit. Public open/closed history yielded 42 real issues and 94 pull requests, with each issue/PR page fetched and classified for rewrite relevance.
+- `docs/github-rewrite-intake.md` converts the full GitHub audit into actionable add/defer/reject decisions. Add-now signals are Unicode regressions, tenant/project isolation, npm startup/release reliability, provider config/timeouts, and durable Postgres/pgvector behavior.
+- Multilingual regression coverage now asserts Cyrillic meaningful tokens are indexed, Cyrillic records produce distinct simhashes, and Chinese exact-token overlap beats unrelated Chinese content.
+- Provider regression coverage now checks current Gemini embedding naming, model config discovery from the repo root, invalid-provider fallback to synthetic embeddings, and timeout env validation.
+- Durable source webhook HMAC verification is active at `/v1/ingest`: webhook source kinds require `OM_<SOURCE>_WEBHOOK_SECRET`, raw request bodies are preserved by the HTTP adapter, and invalid signatures are rejected before durable writes.
+- `docs/mcp.md` now contains the durable `/v1` MCP rebuild design. MCP remains deferred until STDIO silence, SDK schema validation, per-request transport, and tenant/project tests are in place.
+- Durable decay is an explicit admin operation at `POST /v1/admin/decay/run`. It updates salience with tier-based decay, supports `dry_run`, writes `memory.decay` audit rows, and does not run timers, compression, or query hooks.
+- Durable source connector framework is restored only as `src/sources/framework.ts`: connector list/fetch/retry contracts feed `working_memory_events` and `extraction_candidates`. No old connector routes, hard provider dependencies, or legacy document ingest are active.
+- Optional extraction adapters live in `src/ingestion/extract.ts`: text/markdown preserve exact content, HTML strips tags locally, and PDF/DOCX/audio/video fail with `OptionalExtractorUnavailable` until optional adapters are installed. Extracted content becomes durable extraction candidates.
+- Temporal graph querying is rebuilt on durable `edges` plus `memories` bitemporal fields. `POST /v1/graph/temporal/query` filters source and target memories by tenant, project/global visibility, valid time/range, and edge type; old `temporal_facts` storage remains removed.
+- Second `insp/openmemory-js` runtime-value pass ported only durable-compatible helpers: paragraph-preserving candidate chunking, deterministic compression preview, injected URL extraction, and a testable source token-bucket rate limiter. These remain pure/helper paths and do not revive old routes or storage.
+- MCP is active only through explicit `opm mcp` stdio startup and maps to durable `/v1` HTTP routes.
+- `/v1/ingest/document` supports text, markdown, HTML, URL HTML, and base64/text payloads; unsupported PDF/DOCX/audio/video return explicit optional-extractor errors.
+- `/v1/sources/:source/ingest` uses the source framework; built-in `web` and `github` adapters create working-memory events and extraction candidates, not memories.
+- Notion, Google Drive/Sheets/Slides, OneDrive, and bounded web crawler adapters are active through the durable source registry. They use injected clients/fetchers in tests and optional dynamic SDK imports at runtime.
+- Vector search is now configurable. Postgres remains the durable metadata/source-of-truth database and pgvector remains the default vector path, but `OM_VECTOR_STORE` can activate external vector search through Qdrant, Valkey/Redis Search, Pinecone, Weaviate, Chroma, or Milvus.
+- External vector stores are used only for nearest-neighbor candidate IDs. `/v1/recall` then loads the matching durable memory rows from Postgres with tenant, project/global visibility, contract, contradiction, and bitemporal filters still enforced.
+- Embedding model routing now supports facet-specific, provider-specific, and global env overrides before `models.yml` defaults. `/health` reports the normalized provider chain, routed models, timeout, and vector store config.
+- `MDRS/` is the lightweight decay-quality benchmark folder. It defines Memory Decay Reliability Score, Stale Leakage Rate, Useful Forgetting Rate, rating bands, and tests. Package `npm test` runs the MDRS tests along with architecture parity.
+- MDRS now tests decay quality in separate files: exponential math, retrieval ranking changes from decay, reinforcement resistance, supersession behavior across strict/historical/associative recall, and 1,000-item noise cleanup.
+- `docs/memoryagentbench-full-intake.md` is the persistent full-tree MemoryAgentBench intake. It inventories 1,073 files and separates benchmark-owned runner/config/eval code from vendored Mem0, Letta, Cognee, HippoRAG, MemoRAG, RAPTOR, Self-RAG, Zep, and embedding baselines.
+- `benchmark/` now uses the MemoryAgentBench core shape in TypeScript: typed agent/dataset configs, MAB-shaped dataset normalization, conversation chunks, suite-aware prompt templates, adapter answers with timing/context metadata, resumable result files, deterministic metrics, and richer summaries.
+- Active public benchmark targets remain LongMemEval, LongMemEval-V2, LoCoMo, and TReMu, but do not claim public scores from fixtures or toy data.
+- Benchmark dataset loading is manifest-driven. `--download` fetches/caches full public sources where configured: MemoryAgentBench rows for LongMemEval, LongMemEval-V2 `questions.jsonl`, and LoCoMo `raw/locomo10.json`; normal fixture smoke remains offline.
+- Benchmark LLM judging is optional and env-driven through `--llm_eval` plus `OM_BENCHMARK_LLM_API_KEY` or `OPENAI_API_KEY`. It uses a JSON-only chat-completions call and records per-query `llm_judge` plus summary score.
+- TReMu remains fixture-backed until a stable public dataset file is added to its source manifest; do not claim TReMu public scores from the current fixture.
+- Benchmark LLM judge providers now include OpenAI-compatible default, Gemini (`GEMINI_API_KEY`/`GOOGLE_API_KEY`), and Siray.ai (`SIRAY_API_KEY`, OpenAI-compatible endpoint).
+- Benchmark external memory adapters now include Mem0, Cognee, Zep, and Supermemory. Mem0/Cognee/Zep follow MemoryAgentBench flows; Supermemory uses the same add/search/generate contract because MemoryAgentBench has no Supermemory baseline.
+- Optional benchmark SDK dependencies are not hard package dependencies. Mem0 uses `mem0ai`, Zep uses `@getzep/zep-cloud`, Supermemory uses `supermemory`, and Cognee requires a local HTTP bridge because no stable TypeScript SDK package was found.
+- The benchmark matrix now treats OpenMemory, Mem0, Cognee, Zep, and Supermemory as the five systems under comparison. OpenMemory is the subject; the other four are alternatives.
+- `npm run benchmark:matrix` runs the MemoryAgentBench-style five-system matrix. On Windows/npm, pass an extra `--` before matrix flags so arguments reach `benchmark/matrixMain.ts`.
+- MemoryAgentBench adapter treatment is now mirrored more closely in TypeScript: Mem0 ingests system/user/assistant chat messages and then searches memories before LLM answering; Cognee adds/cognifies each dataset chunk and returns search output directly; Zep creates user/thread/graph per context, adds graph text plus thread messages, searches edges/nodes/episodes, formats facts/entities/episodes with valid date ranges, and generates from that context.
+- Benchmark matrix runs now fail preflight unless selected external systems are configured. Real competitor runs require OpenMemory server health, Mem0/Zep/Supermemory API keys, Cognee bridge URL, and answer/eval LLM keys as applicable. Fixture and dry-run output is harness validation only, not a public score.
+- Siray.ai benchmark judge was smoke-tested with model `x-ai/grok-4.1-fast-reasoning` and returned a valid JSON score. Do not store ephemeral API keys in repo files.
+- A small OpenMemory-only benchmark attempt reached the local server on port 8765 but failed on `/v1/memories` because local PostgreSQL rejects user `postgres` with password authentication. Real OpenMemory benchmark runs require valid `OM_PG_USER` and `OM_PG_PASSWORD` plus migrations.

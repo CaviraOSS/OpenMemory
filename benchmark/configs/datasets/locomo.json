@@ -1,0 +1,16 @@
+{
+  "benchmark_id": "locomo",
+  "dataset": "Conversation_Memory",
+  "sub_dataset": "locomo",
+  "chunk_size": 4096,
+  "generation_max_length": 80,
+  "max_test_samples": 500,
+  "shots": 0,
+  "tag": null,
+  "source": {
+    "kind": "url_json",
+    "url": "https://huggingface.co/datasets/Percena/locomo-mc10/resolve/main/raw/locomo10.json",
+    "cache_path": "benchmark-results/cache/locomo10.json"
+  },
+  "fixture_path": "benchmark/data/fixtures/locomo.json"
+}

@@ -1,0 +1,8 @@
+{
+  "agent_name": "openmemory_v1",
+  "adapter": "openmemory_http",
+  "output_dir": "benchmark-results",
+  "model": "openmemory",
+  "retrieve_num": 5,
+  "api_base_url": "http://127.0.0.1:8765"
+}

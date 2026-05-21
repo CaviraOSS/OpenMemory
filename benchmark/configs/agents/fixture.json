@@ -1,0 +1,7 @@
+{
+  "agent_name": "fixture",
+  "adapter": "fixture",
+  "output_dir": "benchmark-results",
+  "model": "fixture",
+  "retrieve_num": 1
+}

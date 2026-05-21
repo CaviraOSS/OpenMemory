@@ -5,6 +5,8 @@ export const DURABLE_EDGE_TYPES = [
   "supports",
   "contradicts",
   "derives_from",
+  "supersedes",
+  "same_as",
   "causes",
   "depends_on",
   "part_of",

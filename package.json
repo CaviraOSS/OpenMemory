@@ -8,7 +8,11 @@
     "dev": "npm --workspace openmemory-js run dev",
     "build": "npm --workspace openmemory-js run build",
     "start": "npm --workspace openmemory-js run build && npm --workspace openmemory-js run start",
-    "test": "npm run build",
-    "migrate": "npm --workspace openmemory-js run migrate"
+    "test": "npm --workspace openmemory-js run test",
+    "benchmark": "tsx benchmark/main.ts",
+    "benchmark:matrix": "tsx benchmark/matrixMain.ts",
+    "migrate": "npm --workspace openmemory-js run migrate",
+    "migration-report": "npm --workspace openmemory-js run migration-report",
+    "release-smoke": "npm --workspace openmemory-js run release-smoke"
   }
 }

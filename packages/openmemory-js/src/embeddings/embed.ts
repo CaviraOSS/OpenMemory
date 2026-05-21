@@ -13,13 +13,20 @@ import {
 let gem_q: Promise<any> = Promise.resolve();
 export const emb_dim = () => env.vec_dim;
 
-const EMBED_TIMEOUT_MS = Number(process.env.OM_EMBED_TIMEOUT_MS) || 30000;
+export function getEmbeddingTimeoutMs(): number {
+  const timeout = Number(process.env.OM_EMBED_TIMEOUT_MS);
+  return Number.isFinite(timeout) && timeout > 0 ? timeout : 30000;
+}
+
 async function fetchWithTimeout(
   url: string,
   options: RequestInit,
 ): Promise<Response> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), EMBED_TIMEOUT_MS);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    getEmbeddingTimeoutMs(),
+  );
   try {
     return await fetch(url, { ...options, signal: controller.signal });
   } finally {
@@ -31,7 +38,6 @@ export async function embedForFacet(
   text: string,
   facet: string,
 ): Promise<number[]> {
-  console.error(`[EMBED] Provider: ${env.emb_kind}, Facet: ${facet}`);
   if (!facetConfigs[facet]) throw new Error(`Unknown facet: ${facet}`);
   return await get_sem_emb(text, facet);
 }
@@ -124,16 +130,48 @@ const task_map: Record<string, string> = {
   reflective: "SEMANTIC_SIMILARITY",
 };
 
+const knownProviders = [
+  "openai",
+  "gemini",
+  "ollama",
+  "aws",
+  "local",
+  "synthetic",
+  "siray",
+];
+
+const embeddingFacets = [
+  "episodic",
+  "semantic",
+  "procedural",
+  "emotional",
+  "reflective",
+];
+
+function providerChain(): string[] {
+  const providers = [env.emb_kind, ...env.embedding_fallback]
+    .map((provider) => provider.trim().toLowerCase())
+    .filter((provider) => knownProviders.includes(provider));
+  return [...new Set(providers.length ? providers : ["synthetic"])];
+}
+
+function modelsForProvider(provider: string) {
+  return Object.fromEntries(
+    embeddingFacets.map((facet) => [facet, get_model(facet, provider)]),
+  );
+}
+
 async function emb_gemini(
   txts: Record<string, string>,
 ): Promise<Record<string, number[]>> {
   if (!env.gemini_key) throw new Error("Gemini key missing");
   const prom = gem_q.then(async () => {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents?key=${env.gemini_key}`;
     for (let a = 0; a < 3; a++) {
       try {
+        const model = get_model("semantic", "gemini");
+        const url = `https://generativelanguage.googleapis.com/v1beta/${model.replace(/^models\//, "models/")}:batchEmbedContents?key=${env.gemini_key}`;
         const reqs = Object.entries(txts).map(([s, t]) => ({
-          model: "models/text-embedding-004",
+          model: get_model(s, "gemini"),
           content: { parts: [{ text: t }] },
           taskType: task_map[s] || task_map.semantic,
         }));
@@ -391,54 +429,42 @@ export const getEmbeddingInfo = () => {
   const i: Record<string, any> = {
     provider: env.emb_kind,
     fallback_chain: env.embedding_fallback,
+    provider_chain: providerChain(),
     dimensions: env.vec_dim,
+    timeout_ms: getEmbeddingTimeoutMs(),
   };
   if (env.emb_kind === "openai") {
     i.configured = !!env.openai_key;
     i.base_url = env.openai_base_url;
     i.model_override = env.openai_model || null;
-    i.models = {
-      episodic: get_model("episodic", "openai"),
-      semantic: get_model("semantic", "openai"),
-      procedural: get_model("procedural", "openai"),
-      emotional: get_model("emotional", "openai"),
-      reflective: get_model("reflective", "openai"),
-    };
+    i.models = modelsForProvider("openai");
   } else if (env.emb_kind === "gemini") {
     i.configured = !!env.gemini_key;
-    i.model = "embedding-001";
+    i.model = get_model("semantic", "gemini").replace(/^models\//, "");
+    i.models = modelsForProvider("gemini");
   } else if (env.emb_kind === "aws") {
     i.configured =
       !!env.AWS_REGION &&
       !!env.AWS_ACCESS_KEY_ID &&
       !!env.AWS_SECRET_ACCESS_KEY;
-    i.model = "amazon.titan-embed-text-v2:0";
+    i.model = get_model("semantic", "aws");
+    i.models = modelsForProvider("aws");
   } else if (env.emb_kind === "siray") {
     i.configured = !!env.siray_key;
     i.base_url = env.siray_base_url;
-    i.models = {
-      episodic: get_model("episodic", "siray"),
-      semantic: get_model("semantic", "siray"),
-      procedural: get_model("procedural", "siray"),
-      emotional: get_model("emotional", "siray"),
-      reflective: get_model("reflective", "siray"),
-    };
+    i.models = modelsForProvider("siray");
   } else if (env.emb_kind === "ollama") {
     i.configured = true;
     i.url = env.ollama_url;
-    i.models = {
-      episodic: get_model("episodic", "ollama"),
-      semantic: get_model("semantic", "ollama"),
-      procedural: get_model("procedural", "ollama"),
-      emotional: get_model("emotional", "ollama"),
-      reflective: get_model("reflective", "ollama"),
-    };
+    i.models = modelsForProvider("ollama");
   } else if (env.emb_kind === "local") {
     i.configured = !!env.local_model_path;
     i.path = env.local_model_path;
+    i.models = modelsForProvider("local");
   } else {
     i.configured = true;
     i.type = "synthetic";
+    i.models = modelsForProvider("synthetic");
   }
   return i;
 };

@@ -36,8 +36,7 @@ const stem_rules: Array<[RegExp, string]> = [
 ];
 const cjk_pat =
   /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/u;
-const tok_pat =
-  /[a-z0-9]+|[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af]+/giu;
+const tok_pat = /[\p{L}\p{N}]+/gu;
 
 const expand_cjk_token = (tok: string): string[] => {
   if (tok.length <= 1) return [tok];

@@ -6,7 +6,7 @@ The active product path is currently:
 
 - `packages/openmemory-js`
 - Node/TypeScript server runtime
-- Postgres + pgvector as the production storage target
+- Postgres as the durable source of truth, with pgvector by default and optional external vector search stores
 - npm-based development and release workflow
 
 Deferred surfaces such as editor extensions, dashboard UI, secondary SDKs, old examples, and hosted deploy templates have been removed from the active tree for now.
@@ -22,6 +22,17 @@ npm install
 npm run build
 npm run start
 ```
+
+Release smoke:
+
+```bash
+npm run release-smoke
+OM_RELEASE_SMOKE_FULL=true npm run release-smoke
+```
+
+The default smoke verifies package build and `/health`. Full smoke also creates a
+durable memory, recalls it in strict mode, and explains it against a configured
+Postgres database.
 
 The default server port is `8080`.
 
@@ -40,11 +51,16 @@ npm run start
 cd packages/openmemory-js
 npm run dev
 npm run build
+npm run test
 ```
 
 The default server registers only `/health` and durable `/v1/*` routes. Legacy
 retention, user-summary, MCP, dashboard, IDE, hosted deploy, and connector webhook
 surfaces are deferred from the default runtime.
+
+Vector search defaults to Postgres/pgvector. Set `OM_VECTOR_STORE` to `qdrant`,
+`valkey`, `redis`, `pinecone`, `weaviate`, `chroma`, or `milvus` to delegate
+nearest-neighbor search while keeping memory lifecycle data in Postgres.
 
 ## Documentation
 
@@ -53,6 +69,13 @@ surfaces are deferred from the default runtime.
 - Versioning: `docs/versioning.md`
 - Migrations: `docs/migrations.md`
 - pgvector index strategy: `docs/pgvector-index-strategy.md`
+- Vector stores: `docs/vector-stores.md`
+
+Legacy data can be inspected without mutation:
+
+```bash
+npm run migration-report -- legacy-data.json report.json
+```
 
 ## Status
 

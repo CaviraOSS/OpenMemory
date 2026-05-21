@@ -7,8 +7,13 @@ let cfg: model_cfg | null = null;
 
 export const load_models = (): model_cfg => {
   if (cfg) return cfg;
-  const p = join(__dirname, "../../../models.yml");
-  if (!existsSync(p)) {
+  const p = [
+    join(__dirname, "../../../../models.yml"),
+    join(__dirname, "../../../models.yml"),
+    join(process.cwd(), "models.yml"),
+    join(process.cwd(), "../../models.yml"),
+  ].find((candidate) => existsSync(candidate));
+  if (!p) {
     console.error("[MODELS] models.yml not found, using defaults");
     return get_defaults();
   }
@@ -51,7 +56,7 @@ const get_defaults = (): model_cfg => ({
   episodic: {
     ollama: "nomic-embed-text",
     openai: "text-embedding-3-small",
-    gemini: "models/embedding-001",
+    gemini: "models/gemini-embedding-001",
     aws: "amazon.titan-embed-text-v2:0",
     siray: "text-embedding-3-small",
     local: "all-MiniLM-L6-v2",
@@ -59,7 +64,7 @@ const get_defaults = (): model_cfg => ({
   semantic: {
     ollama: "nomic-embed-text",
     openai: "text-embedding-3-small",
-    gemini: "models/embedding-001",
+    gemini: "models/gemini-embedding-001",
     aws: "amazon.titan-embed-text-v2:0",
     siray: "text-embedding-3-small",
     local: "all-MiniLM-L6-v2",
@@ -67,36 +72,66 @@ const get_defaults = (): model_cfg => ({
   procedural: {
     ollama: "nomic-embed-text",
     openai: "text-embedding-3-small",
-    gemini: "models/embedding-001",
+    gemini: "models/gemini-embedding-001",
     aws: "amazon.titan-embed-text-v2:0",
     local: "all-MiniLM-L6-v2",
   },
   emotional: {
     ollama: "nomic-embed-text",
     openai: "text-embedding-3-small",
-    gemini: "models/embedding-001",
+    gemini: "models/gemini-embedding-001",
     aws: "amazon.titan-embed-text-v2:0",
     local: "all-MiniLM-L6-v2",
   },
   reflective: {
     ollama: "nomic-embed-text",
     openai: "text-embedding-3-large",
-    gemini: "models/embedding-001",
+    gemini: "models/gemini-embedding-001",
     aws: "amazon.titan-embed-text-v2:0",
     local: "all-mpnet-base-v2",
   },
 });
 
-export const get_model = (facet: string, provider: string): string => {
-  if (provider === "ollama" && process.env.OM_OLLAMA_MODEL) {
-    return process.env.OM_OLLAMA_MODEL;
-  }
-  if (provider === "openai" && process.env.OM_OPENAI_MODEL) {
-    return process.env.OM_OPENAI_MODEL;
-  }
+const env_key = (provider: string, facet?: string) =>
+  ["OM", provider, facet, "MODEL"]
+    .filter(Boolean)
+    .join("_")
+    .replace(/[^A-Z0-9_]/gi, "_")
+    .toUpperCase();
 
-  const cfg = load_models();
+export function resolveEmbeddingModel(
+  facet: string,
+  provider: string,
+  options: {
+    env?: Record<string, string | undefined>;
+    models?: model_cfg;
+  } = {},
+): string {
+  const env = options.env || process.env;
+  const normalizedProvider = provider.trim().toLowerCase();
+  const normalizedFacet = facet.trim().toLowerCase();
+  const facetOverride =
+    env[env_key(normalizedProvider, normalizedFacet)] ||
+    env[
+      `OM_${normalizedProvider.toUpperCase()}_${normalizedFacet.toUpperCase()}_MODEL`
+    ];
+  if (facetOverride) return facetOverride;
+
+  const providerOverride =
+    env[env_key(normalizedProvider)] ||
+    env[`OM_${normalizedProvider.toUpperCase()}_MODEL`];
+  if (providerOverride) return providerOverride;
+
+  if (env.OM_EMBED_MODEL) return env.OM_EMBED_MODEL;
+
+  const cfg = options.models || load_models();
   return (
-    cfg[facet]?.[provider] || cfg.semantic?.[provider] || "nomic-embed-text"
+    cfg[normalizedFacet]?.[normalizedProvider] ||
+    cfg.semantic?.[normalizedProvider] ||
+    cfg.semantic?.openai ||
+    "nomic-embed-text"
   );
-};
+}
+
+export const get_model = (facet: string, provider: string): string =>
+  resolveEmbeddingModel(facet, provider);

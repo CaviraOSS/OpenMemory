@@ -8,6 +8,7 @@ type Request = http.IncomingMessage & {
   params: Record<string, string>;
   path: string;
   query: Record<string, any>;
+  rawBody?: Buffer;
 };
 
 type Response = http.ServerResponse & {
@@ -27,7 +28,7 @@ type Route = {
 
 export type HttpApp = {
   use: (handler: Middleware) => void;
-  listen: (port: number, callback?: () => void) => void;
+  listen: (port: number, callback?: () => void) => http.Server;
   get: (path: string, handler: Handler) => void;
   post: (path: string, handler: Handler) => void;
   put: (path: string, handler: Handler) => void;
@@ -102,15 +103,20 @@ const parseJsonBody = (
     return;
   }
 
-  let raw = "";
+  const chunks: Buffer[] = [];
+  let rawLength = 0;
   req.on("data", (chunk) => {
-    raw += chunk;
-    if (raw.length > maxPayloadSize) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    chunks.push(buffer);
+    rawLength += buffer.length;
+    if (rawLength > maxPayloadSize) {
       res.status(413).send("Payload Too Large");
       req.destroy();
     }
   });
   req.on("end", () => {
+    req.rawBody = Buffer.concat(chunks);
+    const raw = req.rawBody.toString("utf8");
     if (raw.length === 0) {
       req.body = {};
       next();
@@ -177,7 +183,7 @@ export function createHttpApp(config: { max_payload_size?: number } = {}) {
     use: (handler) => middleware.push(handler),
     listen: (port, callback) => {
       server.setTimeout(10_000);
-      server.listen(port, callback);
+      return server.listen(port, callback);
     },
     get: (path, handler) => add("GET", path, handler),
     post: (path, handler) => add("POST", path, handler),

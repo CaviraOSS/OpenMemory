@@ -1,0 +1,13 @@
+{
+  "agent_name": "Structure_rag_cognee",
+  "adapter": "cognee",
+  "output_dir": "benchmark-results/cognee",
+  "model": "gpt-4o-mini",
+  "temperature": 0.7,
+  "input_length_limit": 1280000,
+  "buffer_length": 2000,
+  "agent_chunk_size": 4096,
+  "retrieve_num": 10,
+  "memory_api_base_url": "http://127.0.0.1:8791",
+  "llm_provider": "openai"
+}

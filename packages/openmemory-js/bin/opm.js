@@ -34,6 +34,7 @@ commands:
   list                  show all memories
   delete <id>           delete memory
   health                ping server
+  mcp                   start mcp server (stdio)
   serve                 start api server
 
 options:
@@ -182,6 +183,19 @@ const text = commandText();
         break;
       case 'health':
         await health();
+        break;
+      case 'mcp':
+        try {
+          const mcp = require('../dist/mcp/server.js');
+          if (!mcp.startMcpStdio) throw new Error('missing startMcpStdio export');
+          await mcp.startMcpStdio({ base_url: url, api_key: key });
+        } catch (e) {
+          console.error(
+            '[error] failed to start mcp server. ensure project is built and @modelcontextprotocol/sdk is installed.',
+          );
+          console.error(e.message);
+          process.exit(1);
+        }
         break;
       case 'serve':
         try {

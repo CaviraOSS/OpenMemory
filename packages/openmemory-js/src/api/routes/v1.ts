@@ -1,25 +1,46 @@
 import { all_async, run_async, transaction } from "../../database/connection";
 import {
   claimDurableConsolidation,
+  completeDurableConsolidation,
+  createExtractionCandidate,
   createDurableContradiction,
   createDurableConsolidation,
   createWorkingMemoryEvent,
   DurableConflictError,
+  DurableEdgeType,
   DurableRecallInput,
   DurableRememberInput,
   deleteDurableMemory,
+  executeDurableEdgeHandler,
   explainDurableMemory,
   getDurableMemory,
   listDurableMemories,
+  moveDurableMemoryTier,
   recallDurableMemories,
   reinforceDurableMemory,
   rememberDurableMemory,
   promoteExtractionCandidate,
+  queryDurableTemporalGraph,
   rejectExtractionCandidate,
   resolveDurableContradiction,
+  runDurableDecayJob,
   updateDurableMemory,
 } from "../../durable/repository";
+import { buildExtractionCandidateInput } from "../../durable/ingestion";
+import { verifyDurableSourceSignature } from "../../durable/sourceAuth";
 import { embed } from "../../embeddings/embed";
+import {
+  OptionalExtractorUnavailable,
+  extractDocumentContent,
+  extractUrlContent,
+  extractionToCandidateInput,
+} from "../../ingestion/extract";
+import {
+  SourceConfigError,
+  ingestSourceConnector,
+} from "../../sources/framework";
+import { getSourceConnector } from "../../sources/registry";
+import { createVectorStore, VectorStore } from "../../vectorStores";
 
 type RecallMode = "strict" | "historical" | "associative";
 const RECALL_MODES = ["strict", "historical", "associative"] as const;
@@ -110,6 +131,49 @@ type ConsolidationClaimRequest = {
   project_id?: string;
 };
 
+type ConsolidationCompleteRequest = {
+  result_memory_id?: string;
+  source_memory_ids?: string[];
+  summary?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type TierRequest = {
+  tier?: "active" | "warm" | "cold" | "archived";
+  user_id?: string;
+  project_id?: string;
+  reason?: string;
+};
+
+type EdgeExecuteRequest = {
+  edge_id?: string;
+  edge_type?: DurableEdgeType;
+  source_memory_id?: string;
+  target_memory_id?: string;
+  user_id?: string;
+  project_id?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type TemporalGraphQueryRequest = {
+  user_id?: string;
+  project_id?: string;
+  memory_id?: string;
+  edge_type?: DurableEdgeType;
+  at_time?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+};
+
+type DecayRunRequest = {
+  user_id?: string;
+  project_id?: string;
+  actor_id?: string;
+  limit?: number;
+  dry_run?: boolean;
+};
+
 const parseTime = (value: string | number | undefined) => {
   if (value === undefined) return undefined;
   if (typeof value === "number") return value;
@@ -130,6 +194,32 @@ type IngestRequest = {
   metadata?: Record<string, unknown>;
   contracts?: Record<string, unknown>;
   observed_at?: string;
+};
+
+type DocumentIngestRequest = {
+  user_id?: string;
+  project_id?: string;
+  source?: {
+    kind?: string;
+    uri?: string;
+    id?: string;
+    content_type?: string;
+  };
+  content_type?: string;
+  data?: string;
+  url?: string;
+  encoding?: "text" | "base64";
+  metadata?: Record<string, unknown>;
+  contracts?: Record<string, unknown>;
+  observed_at?: string;
+};
+
+type SourceIngestRequest = {
+  user_id?: string;
+  project_id?: string;
+  config?: Record<string, unknown>;
+  filters?: Record<string, unknown>;
+  contracts?: Record<string, unknown>;
 };
 
 type CandidateAcceptRequest = {
@@ -247,8 +337,28 @@ export const toDurableRecallInput = async (
   };
 };
 
+export async function getExternalVectorCandidateIds(
+  vectorStore: Pick<VectorStore, "query"> | null,
+  input: {
+    embedding?: number[];
+    limit?: number;
+    user_id?: string;
+    project_id?: string;
+  },
+): Promise<string[]> {
+  if (!vectorStore || !input.embedding?.length) return [];
+  const results = await vectorStore.query({
+    embedding: input.embedding,
+    limit: Math.max(1, Math.min(input.limit || 10, 100)),
+    user_id: input.user_id,
+    project_id: input.project_id,
+  });
+  return results.map((result) => result.id).filter(Boolean);
+}
+
 export function v1(app: any) {
   const durableDb = makeDurableExecutor(run_async, all_async);
+  const vectorStore = createVectorStore();
 
   app.post("/v1/memories", async (req: any, res: any) => {
     const body = req.body as RememberRequest;
@@ -275,6 +385,16 @@ export function v1(app: any) {
         durableDb,
         toDurableRememberInput(body, embedding),
       );
+      if (vectorStore) {
+        await vectorStore.upsert({
+          id: memory.id,
+          embedding,
+          content: body.content,
+          user_id: body.user_id || "anonymous",
+          project_id: body.project_id || null,
+          metadata: body.metadata,
+        });
+      }
 
       return res.json({
         id: memory.id,
@@ -332,15 +452,30 @@ export function v1(app: any) {
     }
 
     try {
-      const recalled = await recallDurableMemories(
-        durableDb,
-        await toDurableRecallInput(body, mode, atTime),
+      const recallInput = await toDurableRecallInput(body, mode, atTime);
+      const candidateIds = await getExternalVectorCandidateIds(
+        vectorStore,
+        recallInput,
       );
+      if (vectorStore && candidateIds.length === 0) {
+        return res.json({
+          query: recallInput.query,
+          mode: recallInput.mode,
+          adapter: "durable-postgres",
+          vector_store: vectorStore.kind,
+          results: [],
+        });
+      }
+      const recalled = await recallDurableMemories(durableDb, {
+        ...recallInput,
+        candidate_ids: candidateIds.length ? candidateIds : undefined,
+      });
 
       return res.json({
         query: recalled.query,
         mode: recalled.mode,
         adapter: "durable-postgres",
+        vector_store: vectorStore?.kind || "postgres",
         results: recalled.results,
       });
     } catch (e: unknown) {
@@ -486,6 +621,16 @@ export function v1(app: any) {
         expected_version: body?.expected_version,
       });
       if (!updated) return res.status(404).json({ err: "not_found" });
+      if (vectorStore && body.content) {
+        await vectorStore.upsert({
+          id: req.params.id,
+          embedding: await embed(body.content),
+          content: body.content,
+          user_id: body.user_id,
+          project_id: undefined,
+          metadata: body.metadata,
+        });
+      }
 
       const response = {
         adapter: "durable-postgres",
@@ -539,6 +684,41 @@ export function v1(app: any) {
     }
   });
 
+  app.post("/v1/memories/:id/tier", async (req: any, res: any) => {
+    const body = (req.body || {}) as TierRequest;
+    if (
+      typeof body.tier !== "string" ||
+      !["active", "warm", "cold", "archived"].includes(body.tier)
+    ) {
+      return invalidRequest(
+        res,
+        "tier",
+        "tier must be active, warm, cold, or archived",
+      );
+    }
+    if (body.reason !== undefined && typeof body.reason !== "string") {
+      return invalidRequest(res, "reason", "reason must be a string");
+    }
+
+    try {
+      const moved = await moveDurableMemoryTier(durableDb, {
+        id: req.params.id,
+        tier: body.tier,
+        user_id: body.user_id,
+        project_id: body.project_id,
+        reason: body.reason,
+      });
+      if (!moved) return res.status(404).json({ err: "not_found" });
+
+      return res.json({
+        adapter: "durable-postgres",
+        memory: moved,
+      });
+    } catch (e: unknown) {
+      serverError(res, "tier_failed", e);
+    }
+  });
+
   app.delete("/v1/memories/:id", async (req: any, res: any) => {
     const body = (req.body || {}) as DeleteRequest;
     if (body.actor_id !== undefined && typeof body.actor_id !== "string") {
@@ -556,6 +736,7 @@ export function v1(app: any) {
         reason: body.reason,
       });
       if (!deleted) return res.status(404).json({ err: "not_found" });
+      if (vectorStore) await vectorStore.delete(req.params.id);
 
       return res.json({
         ok: true,
@@ -735,6 +916,188 @@ export function v1(app: any) {
     }
   });
 
+  app.post("/v1/consolidations/:id/complete", async (req: any, res: any) => {
+    const body = (req.body || {}) as ConsolidationCompleteRequest;
+    if (
+      typeof body.result_memory_id !== "string" ||
+      body.result_memory_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "result_memory_id",
+        "result_memory_id must be a non-empty string",
+      );
+    }
+    if (
+      body.source_memory_ids !== undefined &&
+      (!Array.isArray(body.source_memory_ids) ||
+        body.source_memory_ids.some(
+          (id) => typeof id !== "string" || id.trim().length === 0,
+        ))
+    ) {
+      return invalidRequest(
+        res,
+        "source_memory_ids",
+        "source_memory_ids must be an array of non-empty strings",
+      );
+    }
+    if (body.metadata !== undefined && !isRecord(body.metadata)) {
+      return invalidRequest(res, "metadata", "metadata must be an object");
+    }
+
+    try {
+      const completed = await completeDurableConsolidation(durableDb, {
+        id: req.params.id,
+        result_memory_id: body.result_memory_id,
+        source_memory_ids: body.source_memory_ids,
+        summary: body.summary,
+        metadata: body.metadata,
+      });
+      if (!completed) return res.status(404).json({ err: "not_found" });
+
+      return res.json({
+        adapter: "durable-postgres",
+        consolidation: completed,
+      });
+    } catch (e: unknown) {
+      serverError(res, "consolidation_complete_failed", e);
+    }
+  });
+
+  app.post("/v1/edges/execute", async (req: any, res: any) => {
+    const body = (req.body || {}) as EdgeExecuteRequest;
+    if (typeof body.edge_id !== "string" || body.edge_id.trim().length === 0) {
+      return invalidRequest(
+        res,
+        "edge_id",
+        "edge_id must be a non-empty string",
+      );
+    }
+    if (
+      typeof body.edge_type !== "string" ||
+      !["supersedes", "contradicts", "derives_from", "same_as"].includes(
+        body.edge_type,
+      )
+    ) {
+      return invalidRequest(
+        res,
+        "edge_type",
+        "edge_type must be supersedes, contradicts, derives_from, or same_as",
+      );
+    }
+    if (
+      typeof body.source_memory_id !== "string" ||
+      body.source_memory_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "source_memory_id",
+        "source_memory_id must be a non-empty string",
+      );
+    }
+    if (
+      typeof body.target_memory_id !== "string" ||
+      body.target_memory_id.trim().length === 0
+    ) {
+      return invalidRequest(
+        res,
+        "target_memory_id",
+        "target_memory_id must be a non-empty string",
+      );
+    }
+    if (body.metadata !== undefined && !isRecord(body.metadata)) {
+      return invalidRequest(res, "metadata", "metadata must be an object");
+    }
+
+    try {
+      const edge = await executeDurableEdgeHandler(durableDb, {
+        edge_id: body.edge_id,
+        edge_type: body.edge_type,
+        source_memory_id: body.source_memory_id,
+        target_memory_id: body.target_memory_id,
+        user_id: body.user_id,
+        project_id: body.project_id,
+        metadata: body.metadata,
+      });
+
+      return res.json({
+        adapter: "durable-postgres",
+        edge,
+      });
+    } catch (e: unknown) {
+      serverError(res, "edge_execute_failed", e);
+    }
+  });
+
+  app.post("/v1/graph/temporal/query", async (req: any, res: any) => {
+    const body = (req.body || {}) as TemporalGraphQueryRequest;
+    if (
+      body.edge_type !== undefined &&
+      ![
+        "mentions",
+        "supports",
+        "contradicts",
+        "derives_from",
+        "supersedes",
+        "same_as",
+        "causes",
+        "depends_on",
+        "part_of",
+        "related_to",
+      ].includes(body.edge_type)
+    ) {
+      return invalidRequest(res, "edge_type", "edge_type is not supported");
+    }
+    if (body.limit !== undefined && !isPositiveInteger(body.limit)) {
+      return invalidRequest(res, "limit", "limit must be a positive integer");
+    }
+    for (const field of ["at_time", "from", "to"] as const) {
+      if (body[field] !== undefined && parseTime(body[field]) === undefined) {
+        return invalidRequest(res, field, `${field} must be a valid date`);
+      }
+    }
+
+    try {
+      const graph = await queryDurableTemporalGraph(durableDb, body);
+      return res.json({
+        adapter: "durable-postgres",
+        graph,
+      });
+    } catch (e: unknown) {
+      serverError(res, "temporal_graph_failed", e);
+    }
+  });
+
+  app.post("/v1/admin/decay/run", async (req: any, res: any) => {
+    const body = (req.body || {}) as DecayRunRequest;
+    if (body.limit !== undefined && !isPositiveInteger(body.limit)) {
+      return invalidRequest(res, "limit", "limit must be a positive integer");
+    }
+    if (body.dry_run !== undefined && typeof body.dry_run !== "boolean") {
+      return invalidRequest(res, "dry_run", "dry_run must be a boolean");
+    }
+    if (body.actor_id !== undefined && typeof body.actor_id !== "string") {
+      return invalidRequest(res, "actor_id", "actor_id must be a string");
+    }
+
+    try {
+      const decay = await runDurableDecayJob(durableDb, {
+        user_id: body.user_id,
+        project_id: body.project_id,
+        actor_id: body.actor_id,
+        limit: body.limit,
+        dry_run: body.dry_run,
+      });
+
+      return res.json({
+        adapter: "durable-postgres",
+        decay,
+      });
+    } catch (e: unknown) {
+      serverError(res, "decay_failed", e);
+    }
+  });
+
   app.post("/v1/ingest", async (req: any, res: any) => {
     const body = (req.body || {}) as IngestRequest;
     if (
@@ -762,6 +1125,22 @@ export function v1(app: any) {
     }
 
     try {
+      const signature = verifyDurableSourceSignature({
+        source_kind: body.source.kind,
+        raw_body: req.rawBody,
+        headers: req.headers,
+      });
+      if (!signature.ok) {
+        const status = signature.reason === "secret_missing" ? 503 : 401;
+        return res.status(status).json({
+          err:
+            signature.reason === "secret_missing"
+              ? "webhook_not_configured"
+              : "invalid_signature",
+          reason: signature.reason,
+        });
+      }
+
       const event = await createWorkingMemoryEvent(durableDb, {
         user_id: body.user_id,
         project_id: body.project_id,
@@ -776,13 +1155,182 @@ export function v1(app: any) {
         contracts: body.contracts,
         observed_at: body.observed_at,
       });
+      const candidate = await createExtractionCandidate(
+        durableDb,
+        buildExtractionCandidateInput({
+          event_id: event.id,
+          user_id: body.user_id,
+          project_id: body.project_id,
+          source: {
+            kind: body.source.kind,
+            uri: body.source.uri,
+            id: body.source.id,
+            observed_at: body.observed_at,
+          },
+          content: body.content,
+          metadata: body.metadata,
+          contracts: body.contracts,
+        }),
+      );
+
+      return res.json({
+        adapter: "durable-postgres",
+        event: {
+          ...event,
+          extraction: {
+            automatic: true,
+            status: "candidate_created",
+            candidate_id: candidate.id,
+          },
+        },
+        candidate,
+      });
+    } catch (e: unknown) {
+      serverError(res, "ingest_failed", e);
+    }
+  });
+
+  app.post("/v1/ingest/document", async (req: any, res: any) => {
+    const body = (req.body || {}) as DocumentIngestRequest;
+    if (body.url !== undefined && typeof body.url !== "string") {
+      return invalidRequest(res, "url", "url must be a string");
+    }
+    if (body.data !== undefined && typeof body.data !== "string") {
+      return invalidRequest(res, "data", "data must be a string");
+    }
+    if (!body.url && !body.data) {
+      return invalidRequest(res, "data", "data or url is required");
+    }
+    if (
+      !body.url &&
+      (typeof body.content_type !== "string" ||
+        body.content_type.trim().length === 0)
+    ) {
+      return invalidRequest(
+        res,
+        "content_type",
+        "content_type is required when data is provided",
+      );
+    }
+    if (
+      body.encoding !== undefined &&
+      !["text", "base64"].includes(body.encoding)
+    ) {
+      return invalidRequest(res, "encoding", "encoding must be text or base64");
+    }
+    if (body.metadata !== undefined && !isRecord(body.metadata)) {
+      return invalidRequest(res, "metadata", "metadata must be an object");
+    }
+    if (body.contracts !== undefined && !isRecord(body.contracts)) {
+      return invalidRequest(res, "contracts", "contracts must be an object");
+    }
+
+    try {
+      const content = body.url
+        ? await extractUrlContent(body.url)
+        : await extractDocumentContent(
+            body.content_type || "text/plain",
+            body.encoding === "base64"
+              ? Buffer.from(body.data || "", "base64")
+              : body.data || "",
+          );
+      const source = {
+        kind: body.source?.kind || (body.url ? "url" : "document"),
+        uri: body.source?.uri || body.url,
+        id: body.source?.id,
+        content_type:
+          body.source?.content_type || content.metadata.content_type,
+      };
+      const event = await createWorkingMemoryEvent(durableDb, {
+        user_id: body.user_id,
+        project_id: body.project_id,
+        source,
+        content: content.text,
+        metadata: {
+          ...body.metadata,
+          ...content.metadata,
+        },
+        contracts: body.contracts,
+        observed_at: body.observed_at,
+      });
+      const candidate = await createExtractionCandidate(
+        durableDb,
+        extractionToCandidateInput({
+          event_id: event.id,
+          user_id: body.user_id,
+          project_id: body.project_id,
+          source: {
+            kind: source.kind,
+            uri: source.uri,
+            id: source.id,
+            observed_at: body.observed_at,
+          },
+          content,
+          metadata: body.metadata,
+          contracts: body.contracts,
+        }),
+      );
 
       return res.json({
         adapter: "durable-postgres",
         event,
+        candidate,
       });
     } catch (e: unknown) {
-      serverError(res, "ingest_failed", e);
+      if (e instanceof OptionalExtractorUnavailable) {
+        return res.status(422).json({
+          err: "extractor_unavailable",
+          content_type: e.content_type,
+          install_hint: e.install_hint,
+        });
+      }
+      serverError(res, "document_ingest_failed", e);
+    }
+  });
+
+  app.post("/v1/sources/:source/ingest", async (req: any, res: any) => {
+    const body = (req.body || {}) as SourceIngestRequest;
+    if (body.config !== undefined && !isRecord(body.config)) {
+      return invalidRequest(res, "config", "config must be an object");
+    }
+    if (body.filters !== undefined && !isRecord(body.filters)) {
+      return invalidRequest(res, "filters", "filters must be an object");
+    }
+    if (body.contracts !== undefined && !isRecord(body.contracts)) {
+      return invalidRequest(res, "contracts", "contracts must be an object");
+    }
+
+    try {
+      const connector = getSourceConnector(
+        req.params.source,
+        body.config || {},
+      );
+      const result = await ingestSourceConnector(durableDb, connector, {
+        user_id: body.user_id,
+        project_id: body.project_id,
+        filters: body.filters,
+        contracts: body.contracts,
+      });
+      return res.json({
+        adapter: "durable-postgres",
+        source: req.params.source,
+        ...result,
+      });
+    } catch (e: unknown) {
+      if (e instanceof SourceConfigError) {
+        return res.status(400).json({
+          err: "source_config",
+          msg: e.message,
+        });
+      }
+      if (e instanceof OptionalExtractorUnavailable) {
+        return res.status(422).json({
+          err: "extractor_unavailable",
+          content_type: e.content_type,
+          install_hint: e.install_hint,
+        });
+      }
+      serverError(res, "source_ingest_failed", e);
     }
   });
 

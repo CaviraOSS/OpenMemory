@@ -3,6 +3,7 @@ export const DURABLE_RECALL_SCORE_WEIGHTS = {
   confidence: 0.25,
   salience: 0.15,
   provenance: 0.2,
+  lexical: 0.1,
   contradiction_penalty: 0.35,
   contract_penalty: 1,
 } as const;
@@ -15,6 +16,7 @@ export interface DurableRecallScoreInput {
   recall_allowed?: boolean;
   vector_distance?: number | null;
   text_match?: boolean;
+  lexical_score?: number;
 }
 
 export interface DurableRecallScore {
@@ -22,6 +24,7 @@ export interface DurableRecallScore {
   salience: number;
   provenance: number;
   semantic: number;
+  lexical: number;
   contradiction_penalty: number;
   contract_penalty: number;
   score: number;
@@ -37,6 +40,7 @@ export function scoreDurableRecall(
   const salience = clamp01(input.salience ?? 0);
   const provenance =
     input.provenance_count && input.provenance_count > 0 ? 1 : 0;
+  const lexical = clamp01(input.lexical_score ?? 0);
   const semantic =
     input.vector_distance === undefined || input.vector_distance === null
       ? input.text_match === false
@@ -55,7 +59,8 @@ export function scoreDurableRecall(
     semantic * DURABLE_RECALL_SCORE_WEIGHTS.semantic +
     confidence * DURABLE_RECALL_SCORE_WEIGHTS.confidence +
     salience * DURABLE_RECALL_SCORE_WEIGHTS.salience +
-    provenance * DURABLE_RECALL_SCORE_WEIGHTS.provenance -
+    provenance * DURABLE_RECALL_SCORE_WEIGHTS.provenance +
+    lexical * DURABLE_RECALL_SCORE_WEIGHTS.lexical -
     contradiction_penalty -
     contract_penalty;
 
@@ -64,6 +69,7 @@ export function scoreDurableRecall(
     salience,
     provenance,
     semantic,
+    lexical,
     contradiction_penalty,
     contract_penalty,
     score: clamp01(weighted),

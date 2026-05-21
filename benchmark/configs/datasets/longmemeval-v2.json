@@ -1,0 +1,17 @@
+{
+  "benchmark_id": "longmemeval-v2",
+  "dataset": "Agent_Environment_Memory",
+  "sub_dataset": "longmemeval_v2",
+  "chunk_size": 4096,
+  "generation_max_length": 80,
+  "max_test_samples": 500,
+  "shots": 0,
+  "tag": null,
+  "source": {
+    "kind": "huggingface_jsonl",
+    "dataset": "xiaowu0162/longmemeval-v2",
+    "path": "questions.jsonl",
+    "cache_path": "benchmark-results/cache/longmemeval-v2-questions.json"
+  },
+  "fixture_path": "benchmark/data/fixtures/longmemeval-v2.json"
+}

@@ -36,7 +36,7 @@ This avoids a blank rewrite while still forcing clean boundaries.
 4. Define the supported near-term commands:
    - `npm run start`: build if needed and start server.
    - `npm run dev`: run server from TypeScript for local work.
-   - `npm run test`: currently build-only after test files were removed by request.
+   - `npm run test`: build plus focused JS architecture parity tests.
    - `npm run migrate`: run JS/Postgres migrations.
 5. Treat TypeScript as acceptable JS ecosystem code unless the product requirement becomes literal `.js` only.
 

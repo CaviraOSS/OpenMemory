@@ -1,4 +1,7 @@
 import type { PoolConfig } from "pg";
+import { loadEnvFiles } from "../configuration/envFile";
+
+loadEnvFiles(__dirname);
 
 type OpenMemoryPoolConfig = PoolConfig & {
   statement_timeout?: number;

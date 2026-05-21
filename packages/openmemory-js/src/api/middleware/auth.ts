@@ -121,7 +121,7 @@ export function log_authenticated_request(req: any, res: any, next: any) {
   next();
 }
 
-setInterval(
+const cleanup_rate_limit_store = setInterval(
   () => {
     const now = Date.now();
     for (const [id, data] of rate_limit_store.entries())
@@ -129,3 +129,4 @@ setInterval(
   },
   5 * 60 * 1000,
 );
+cleanup_rate_limit_store.unref?.();

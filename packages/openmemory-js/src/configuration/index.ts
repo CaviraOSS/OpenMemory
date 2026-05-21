@@ -1,26 +1,6 @@
-import path from "path";
-import fs from "fs";
+import { loadEnvFiles } from "./envFile";
 
-const loadEnv = (envPath: string) => {
-  try {
-    const content = fs.readFileSync(envPath, "utf-8");
-    content.split("\n").forEach((line) => {
-      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-      if (match) {
-        const key = match[1];
-        let value = match[2] || "";
-        value = value.replace(/^['"](.*)['"]$/, "$1"); // remove quotes
-        if (!process.env[key]) {
-          process.env[key] = value;
-        }
-      }
-    });
-  } catch (e) {
-    // no-op if file doesn't exist
-  }
-};
-
-loadEnv(path.resolve(__dirname, "../../../.env"));
+loadEnvFiles(__dirname);
 const num = (v: string | undefined, d: number) => Number(v) || d;
 const str = (v: string | undefined, d: string) => v || d;
 const bool = (v: string | undefined) => v === "true";

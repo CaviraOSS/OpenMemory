@@ -15,13 +15,17 @@
         "dev": "nodemon src/server.ts",
         "format": "prettier --write \"src/**/*.ts\"",
         "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+        "test": "npm run build && tsx --test tests/*.test.ts ../../MDRS/*.test.ts ../../benchmark/*.test.ts",
         "start": "node dist/server.js",
-        "migrate": "tsx src/database/migrate.ts"
+        "migrate": "tsx src/database/migrate.ts",
+        "migration-report": "tsx src/database/legacyMigrationReport.ts",
+        "release-smoke": "npm run build && node dist/releaseSmoke.js"
     },
     "dependencies": {
         "@aws-sdk/client-bedrock-runtime": "^3.932.0",
-        "openai": "^4.73.0",
-        "pg": "^8.16.3"
+        "@modelcontextprotocol/sdk": "^1.21.0",
+        "pg": "^8.16.3",
+        "redis": "^4.7.1"
     },
     "devDependencies": {
         "@types/node": "^20.19.25",

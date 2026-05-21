@@ -12,13 +12,13 @@
 - SQLite behavior is removed from the active runtime and migration path.
 - Default runtime surface: `/health` and durable `/v1`.
 - Durable `/v1` currently covers remember, get, list, update, reinforce, recall, explain, soft delete, contradiction resolve, and pending consolidation requests.
-- Durable `/v1/ingest` persists raw working-memory events in Postgres mode. Candidate accept/reject routes are registered, but automatic extraction is still disabled.
+- Durable `/v1/ingest` persists raw working-memory events and creates deterministic extraction candidates in Postgres mode. Candidate accept/reject routes are registered.
 
 ## Non-Negotiables
 - No Python product path in this rewrite phase.
 - No dashboard, VS Code extension, hosted deploy templates, or broad connector rebuild until the JS server is stable.
 - Importing the package must not start a server.
-- Root `npm run build`, `npm run test`, and `npm run start` must keep working. `npm run test` is currently build-only because package test files were deleted by request.
+- Root `npm run build`, `npm run test`, and `npm run start` must keep working. Focused JS architecture parity tests are active again.
 - Prefer deleting obsolete code over adapting around it.
 - Keep route behavior tenant-safe: user mismatches return `404` where existence would leak.
 - Durable writes must be transactional and audited.
@@ -139,7 +139,8 @@
 - [x] Add explicit promotion path that turns accepted extraction candidates into durable memories.
 - [x] Add route/API contract for accepting or rejecting extraction candidates.
 - [x] Add opt-in real Postgres integration coverage for durable ingestion event and audit writes.
-- [x] Keep automatic NLP extraction disabled until outputs are testable.
+- [x] Keep LLM extraction disabled until outputs are testable.
+- [x] Add deterministic automatic extraction candidate creation for `/v1/ingest`.
 - [x] Move `/retention/ingest` and `/retention/ingest/url` only after durable ingestion parity exists.
 - [x] Add replayable durable ingestion event and candidate tests from fixed fixtures.
 - [x] Add durable ingestion promotion tests from fixed fixtures.
@@ -151,6 +152,7 @@
 - [x] Add edge confidence, provenance, and temporal validity.
 - [x] Add graph traversal repository.
 - [x] Add executable edge runtime boundary without hidden side effects.
+- [x] Add transaction handlers for supersedes, contradicts, derives_from, and same_as edges.
 - [x] Add graph explainability and audit trail.
 - [x] Add tenant/project isolation tests for graph traversal.
 
@@ -163,6 +165,7 @@
 - [x] Add audit actor model.
 - [x] Add secure defaults for unauthenticated local development and production mode.
 - [x] Denial, redaction, expiry, and source-scoped recall behavior were implemented; package test files were later deleted by request.
+- [x] Add tier movement endpoint that changes memory accessibility without deleting durable rows.
 
 ## Phase 10: Legacy Route Parity And Migration
 
@@ -175,6 +178,7 @@
 - [x] Keep `/retention/*` responses stable until deprecation is announced.
 - [x] Add deprecation warnings using headers only; keep `/retention/*` JSON bodies stable.
 - [x] Remove legacy HSG internals that are no longer referenced by exported SDK/provider surfaces.
+- [x] Add non-destructive legacy migration report CLI for old memory/waypoint/temporal-fact shapes.
 
 ### Former `/retention/*` Classification
 - [x] `POST /retention/add`: removed from default runtime; durable replacement is `POST /v1/memories`.
@@ -226,6 +230,7 @@
 - [x] Add release workflow for npm only when package contents are stable.
 - [x] Add versioning policy.
 - [x] Add install-from-GitHub path in README.
+- [x] Add release smoke command for packaged server health plus optional durable remember/recall/explain.
 
 ## Phase 14: Deferred Product Surfaces
 
@@ -237,11 +242,32 @@
 - [ ] Broad connector/webhook surfaces.
 - [ ] Multi-app UI management.
 
+## Phase 15: GitHub History Intake
+
+### Source
+- [x] Review every public issue and PR in `docs/github-issues-prs-full-audit.md`.
+- [x] Convert historical requests into add/defer/reject decisions in `docs/github-rewrite-intake.md`.
+
+### Add To Rewrite Backlog
+- [ ] Add explicit multilingual regression tests for Cyrillic repeated memories and Chinese dedup/recall.
+- [ ] Add embedding provider config tests for invalid model names, fallback chains, request timeout, and current Gemini model naming.
+- [ ] Port webhook HMAC verification into durable source ingestion before rebuilding broad connectors.
+- [ ] Design optional document/URL extraction adapters with exact-content preservation tests.
+- [ ] Add explicit audited decay/compression admin job design; no background timers.
+- [ ] Write MCP rebuild design against durable `/v1`: STDIO silence, SDK schema validation, per-request transport, tenant/project scope, update/delete/list tools.
+- [ ] Add Postgres-only Docker compose plan after npm/fork startup remains stable.
+- [ ] Add temporal query design mapped to durable bitemporal graph tables.
+- [ ] Add recall quality evaluation plan using LOCOMO/LongMemEval after API shape is stable.
+
+### Keep Deferred Or Rejected
+- [ ] Keep dashboard, IDE, hosted deploy, Python SDK, and external graph stores out of the current runtime.
+- [ ] Do not reintroduce SQLite, Valkey, old HSG, or old MCP modules from historical PRs.
+
 ## Verification Checklist For Every Tranche
 - [x] Update `TODO.md` at start and end.
-- [x] Test files were deleted by request; use build-only verification until a smaller test strategy is rebuilt.
+- [x] Keep focused JS tests for architecture parity; delete only obsolete broad tests.
 - [x] Run targeted build/type checks for the touched area.
 - [x] Run `npm run build`.
-- [x] Run `npm run test` when practical; it is currently build-only.
+- [x] Run `npm run test`; focused JS architecture parity tests are active.
 - [x] Run `git status --short`.
 - [x] Update `docs/ai-context.md` and `docs/decisions.md` for reusable decisions.

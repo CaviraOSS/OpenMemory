@@ -1,0 +1,12 @@
+{
+  "agent_name": "Structure_rag_supermemory",
+  "adapter": "supermemory",
+  "output_dir": "benchmark-results/supermemory",
+  "model": "gpt-4o-mini",
+  "temperature": 0.7,
+  "input_length_limit": 10000000,
+  "buffer_length": 1000,
+  "agent_chunk_size": 4096,
+  "retrieve_num": 10,
+  "llm_provider": "openai"
+}

@@ -16,7 +16,7 @@ OpenMemory uses SemVer for the active JavaScript package, `openmemory-js`.
 
 ## Release Checklist
 
-- Run `npm run build` from the repo root. `npm test` is currently build-only.
+- Run `npm run build` and `npm test` from the repo root.
 - Run `cd packages/openmemory-js && npm pack --dry-run`.
 - Confirm the tarball contains `dist`, `bin`, and package metadata only.
 - Update release notes with user-visible API, storage, and migration changes.

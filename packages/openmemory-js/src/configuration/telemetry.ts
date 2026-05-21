@@ -32,10 +32,6 @@ export const sendTelemetry = async () => {
       body: JSON.stringify(payload),
       keepalive: true,
     });
-    if (!res.ok) {
-      console.warn(``);
-    } else {
-      console.log(`[telemetry] sent`);
-    }
+    await res.arrayBuffer().catch(() => undefined);
   } catch {}
 };

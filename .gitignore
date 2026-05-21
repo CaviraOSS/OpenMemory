@@ -14,7 +14,7 @@ yarn-error.log*
 out
 .env.local
 coverage
-benchmark
+benchmark-results
 temp
 exports
 *.egg-info
@@ -24,3 +24,4 @@ test
 *.db
 hits.json
 debug_*.log
+dev
