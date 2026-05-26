@@ -54,6 +54,10 @@ jobs:
           npm ci
           
       - name: Run Verification Test
+        # `tests/test_omnibus.ts` was ported to vitest as
+        # `tests/omnibus.test.ts` in cbc8c84; this step has been failing
+        # ever since. Run the whole vitest suite so omnibus + the rest of
+        # the per-tenant / temporal / multilingual specs are exercised.
         run: |
           cd packages/openmemory-js
-          npx tsx tests/test_omnibus.ts
+          npm test
