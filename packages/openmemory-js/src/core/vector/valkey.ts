@@ -11,6 +11,7 @@ export class ValkeyVectorStore implements VectorStore {
             host: env.valkey_host || "localhost",
             port: env.valkey_port || 6379,
             password: env.valkey_password,
+            connectionName: "openmemory_vector_store_client",
         });
     }
 
