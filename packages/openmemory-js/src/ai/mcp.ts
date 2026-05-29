@@ -81,7 +81,42 @@ const send_err = (
 
 const uid = (val?: string | null) => (val?.trim() ? val.trim() : undefined);
 
-export const create_mcp_srv = () => {
+/**
+ * Resolve the effective user_id for a tool call.
+ *
+ * The HTTP MCP route runs through the same `authenticate_api_request`
+ * middleware as the REST routes (see src/server/index.ts), so for every
+ * authenticated MCP call we have a `tenant` derived from the API key.
+ * That tenant is the source of truth for ownership, mirroring the REST
+ * `require_tenant` + `reject_tenant_mismatch` model.
+ *
+ *  - tenant set + no arg                -> use tenant
+ *  - tenant set + matching arg          -> use tenant
+ *  - tenant set + mismatching arg       -> throw (becomes an MCP isError)
+ *  - tenant unset (stdio transport etc) -> use the arg as supplied
+ *
+ * Stdio MCP keeps its existing behaviour — there is no HTTP request to
+ * carry an API key, so tenant is undefined and the tool falls back to
+ * whatever user_id the client passed (or `add_hsg_memory`'s "anonymous"
+ * default).
+ */
+const resolve_user_id = (
+    tenant: string | undefined,
+    arg: string | null | undefined,
+): string | undefined => {
+    const trimmed = uid(arg);
+    if (tenant) {
+        if (trimmed && trimmed !== tenant) {
+            throw new Error(
+                "tenant_mismatch: user_id does not match authenticated tenant; omit user_id or pass the tenant identifier",
+            );
+        }
+        return tenant;
+    }
+    return trimmed;
+};
+
+export const create_mcp_srv = (tenant?: string) => {
     const srv = new McpServer(
         {
             name: "openmemory-mcp",
@@ -182,7 +217,7 @@ export const create_mcp_srv = () => {
             user_id,
             project_id,
         }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             const proj = uid(project_id);
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
@@ -368,7 +403,7 @@ export const create_mcp_srv = () => {
             metadata,
             user_id,
         }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             const proj = uid(project_id);
             const results: any = { type };
 
@@ -485,7 +520,7 @@ export const create_mcp_srv = () => {
             metadata,
             user_id,
         }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             // Force global scope for this tool
             const proj = "system_global";
             const results: any = { type };
@@ -571,6 +606,15 @@ export const create_mcp_srv = () => {
                 .describe("Salience boost amount (default 0.1)"),
         },
         async ({ id, boost }) => {
+            if (tenant) {
+                // When HTTP-bound, refuse to reinforce another tenant's memory.
+                const mem = await q.get_mem.get(id);
+                if (!mem || mem.user_id !== tenant) {
+                    throw new Error(
+                        `Memory ${id} not found for user ${tenant}`,
+                    );
+                }
+            }
             await reinforce_memory(id, boost);
             return {
                 content: [
@@ -602,7 +646,7 @@ export const create_mcp_srv = () => {
                 .describe("Validate project identifier"),
         },
         async ({ id, user_id, project_id }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             const proj = uid(project_id);
             if (u || proj) {
                 // Pre-check ownership if user_id/project_id provided
@@ -675,7 +719,7 @@ export const create_mcp_srv = () => {
                 .describe("Restrict results to a specific project identifier"),
         },
         async ({ limit, sector, user_id, project_id }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             const proj = uid(project_id);
             let rows: mem_row[];
 
@@ -750,7 +794,7 @@ export const create_mcp_srv = () => {
                 ),
         },
         async ({ id, include_vectors, user_id }) => {
-            const u = uid(user_id);
+            const u = resolve_user_id(tenant, user_id);
             const mem = await q.get_mem.get(id);
             if (!mem)
                 return {
@@ -875,7 +919,20 @@ export const mcp = (app: any) => {
             // Create a fresh transport + server per request to support
             // multiple clients (MCP SDK 1.27 rejects re-initialization
             // on a single transport instance).
-            const srv = create_mcp_srv();
+            //
+            // `req.tenant` is set by the global `authenticate_api_request`
+            // middleware (src/server/index.ts). Threading it into the
+            // per-request server is what scopes MCP tool calls to the
+            // authenticated tenant — without this, tools either wrote
+            // memories with user_id="anonymous" (invisible to REST
+            // `/memory/all` which is tenant-scoped) or read across
+            // every tenant. See resolve_user_id() for the per-tool
+            // contract.
+            const tenant_from_req =
+                typeof (req as any).tenant === "string"
+                    ? ((req as any).tenant as string)
+                    : undefined;
+            const srv = create_mcp_srv(tenant_from_req);
             const trans = new StreamableHTTPServerTransport({
                 sessionIdGenerator: undefined,
                 enableJsonResponse: true,
