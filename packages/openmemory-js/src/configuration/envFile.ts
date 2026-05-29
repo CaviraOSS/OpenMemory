@@ -1,52 +1,52 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename: packages/openmemory-js/src/configuration/envfile.ts
+ - what is the file used for: loads local .env files and strips inline comments safely
+*/
+
 import fs from "node:fs";
 import path from "node:path";
 
-const parseEnvValue = (raw: string) => {
-  let value = raw.trim();
-  let quote: string | null = null;
-  let end = value.length;
+const val = (raw: string) => {
+  const txt = raw.trim();
+  let q: string | null = null;
+  let end = txt.length;
 
-  for (let i = 0; i < value.length; i++) {
-    const char = value[i];
-    if ((char === "'" || char === '"') && (i === 0 || value[i - 1] !== "\\")) {
-      quote = quote === char ? null : quote || char;
-    }
-    if (
-      char === "#" &&
-      quote === null &&
-      (i === 0 || /\s/.test(value[i - 1]))
-    ) {
+  for (let i = 0; i < txt.length; i++) {
+    const ch = txt[i];
+    if ((ch === "'" || ch === '"') && (i === 0 || txt[i - 1] !== "\\")) q = q === ch ? null : q || ch;
+    if (ch === "#" && q === null && (i === 0 || /\s/.test(txt[i - 1]))) {
       end = i;
       break;
     }
   }
 
-  value = value.slice(0, end).trim();
-  return value.replace(/^['"](.*)['"]$/, "$1");
+  return txt.slice(0, end).trim().replace(/^['"](.*)['"]$/, "$1");
 };
 
-const loadEnv = (envPath: string) => {
+const load = (file: string) => {
   try {
-    const content = fs.readFileSync(envPath, "utf-8");
-    content.split("\n").forEach((line) => {
-      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
-      if (!match) return;
-
-      const key = match[1];
-      if (!process.env[key]) {
-        process.env[key] = parseEnvValue(match[2] || "");
-      }
-    });
-  } catch {
-    // Optional local config file.
-  }
+    for (const line of fs.readFileSync(file, "utf-8").split(/\r?\n/)) {
+      const m = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (m && !process.env[m[1]]) process.env[m[1]] = val(m[2] || "");
+    }
+  } catch {}
 };
 
-export function loadEnvFiles(baseDir: string = __dirname) {
+export const load_env_files = (base = __dirname) => {
   [
     path.resolve(process.cwd(), ".env"),
-    path.resolve(baseDir, "../../.env"),
-    path.resolve(baseDir, "../../../.env"),
-    path.resolve(baseDir, "../../../../.env"),
-  ].forEach(loadEnv);
-}
+    path.resolve(base, "../../.env"),
+    path.resolve(base, "../../../.env"),
+    path.resolve(base, "../../../../.env"),
+  ].forEach(load);
+};

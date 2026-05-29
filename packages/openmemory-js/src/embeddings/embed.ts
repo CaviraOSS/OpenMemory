@@ -1,3 +1,18 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename
+ - what is the file used for
+*/
+
 import { env } from "../configuration/index";
 import { get_model } from "../database/models";
 import { facetConfigs } from "./facets";
@@ -227,12 +242,12 @@ async function emb_ollama(t: string, s: string): Promise<number[]> {
   return resize_vec(((await r.json()) as any).embedding, env.vec_dim);
 }
 async function emb_aws(t: string, s: string): Promise<number[]> {
-  if (!env.AWS_REGION) throw new Error("AWS_REGION missing");
-  if (!env.AWS_ACCESS_KEY_ID) throw new Error("AWS_ACCESS_KEY_ID missing");
-  if (!env.AWS_SECRET_ACCESS_KEY)
+  if (!env.aws_region) throw new Error("AWS_REGION missing");
+  if (!env.aws_access_key_id) throw new Error("AWS_ACCESS_KEY_ID missing");
+  if (!env.aws_secret_access_key)
     throw new Error("AWS_SECRET_ACCESS_KEY missing");
   const m = get_model(s, "aws");
-  const client = new BedrockRuntimeClient({ region: process.env.AWS_REGION });
+  const client = new BedrockRuntimeClient({ region: env.aws_region });
   const dim = [256, 512, 1024].find((x) => x >= env.vec_dim) ?? 1024;
   const params = {
     modelId: m,
@@ -444,9 +459,9 @@ export const getEmbeddingInfo = () => {
     i.models = modelsForProvider("gemini");
   } else if (env.emb_kind === "aws") {
     i.configured =
-      !!env.AWS_REGION &&
-      !!env.AWS_ACCESS_KEY_ID &&
-      !!env.AWS_SECRET_ACCESS_KEY;
+      !!env.aws_region &&
+      !!env.aws_access_key_id &&
+      !!env.aws_secret_access_key;
     i.model = get_model("semantic", "aws");
     i.models = modelsForProvider("aws");
   } else if (env.emb_kind === "siray") {

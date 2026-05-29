@@ -1,3 +1,18 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename
+ - what is the file used for
+*/
+
 import crypto from "node:crypto";
 import { scoreDurableRecall } from "./scoring";
 import { enrichDurableMetadata } from "./metadata";
@@ -1059,11 +1074,11 @@ export async function recallDurableMemories(
     `m.superseded_at is null`,
     `(m.contracts->>'expires_at' is null or (m.contracts->>'expires_at')::timestamptz > $2)`,
   ];
-  let vectorDistance = "null::double precision as vector_distance";
+  let vectorDistanceExpr = "null::double precision";
 
   if (useVectorRecall) {
     params.push(JSON.stringify(input.embedding));
-    vectorDistance = `m.embedding <=> $${params.length}::vector as vector_distance`;
+    vectorDistanceExpr = `m.embedding <=> $${params.length}::vector`;
     filters.push(`m.embedding is not null`);
   }
 
@@ -1113,17 +1128,26 @@ export async function recallDurableMemories(
   }
 
   if (mode === "strict") {
-    filters.push(`jsonb_array_length(coalesce(p.provenance, '[]'::jsonb)) > 0`);
-    filters.push(
-      `jsonb_array_length(coalesce(c.contradictions, '[]'::jsonb)) = 0`,
-    );
+    filters.push(`exists (
+      select 1 from ${provenance} strict_p
+      where strict_p.memory_id = m.id
+    )`);
+    filters.push(`not exists (
+      select 1 from ${contradictions} strict_c
+      left join ${memories} strict_contradicted
+        on strict_contradicted.id = strict_c.contradicts_memory_id
+      where strict_c.memory_id = m.id
+        and strict_c.status = 'open'
+        and (strict_c.project_id = m.project_id or (strict_c.project_id is null and m.project_id is null))
+        and (strict_contradicted.id is null or strict_contradicted.superseded_at is null)
+    )`);
     filters.push(`coalesce(m.contracts->>'recall_allowed', 'true') <> 'false'`);
   }
 
   const order = candidateOrder
     ? `${candidateOrder}, m.recorded_at desc`
     : useVectorRecall
-      ? `vector_distance asc, ${mode === "historical" ? "m.recorded_at desc" : "m.confidence desc, m.salience desc, m.recorded_at desc"}`
+      ? `${vectorDistanceExpr} asc, ${mode === "historical" ? "m.recorded_at desc" : "m.confidence desc, m.salience desc, m.recorded_at desc"}`
       : mode === "historical"
         ? "m.recorded_at desc"
         : mode === "strict"
@@ -1131,6 +1155,16 @@ export async function recallDurableMemories(
           : "m.salience desc, m.confidence desc, m.recorded_at desc";
 
   const sql = `
+    with ranked as (
+      select
+        m.id,
+        ${vectorDistanceExpr} as vector_distance,
+        row_number() over (order by ${order}) as recall_rank
+      from ${memories} m
+      where ${filters.join("\n        and ")}
+      order by ${order}
+      limit $3
+    )
     select
       m.id,
       m.content,
@@ -1142,10 +1176,11 @@ export async function recallDurableMemories(
       m.recorded_at,
       m.valid_from,
       m.valid_to,
-      ${vectorDistance},
+      ranked.vector_distance,
       coalesce(p.provenance, '[]'::jsonb) as provenance,
       coalesce(c.contradictions, '[]'::jsonb) as contradictions
-    from ${memories} m
+    from ranked
+    join ${memories} m on m.id = ranked.id
     left join lateral (
       select jsonb_agg(jsonb_build_object(
         'source_kind', source_kind,
@@ -1171,9 +1206,7 @@ export async function recallDurableMemories(
         and (c.project_id = m.project_id or (c.project_id is null and m.project_id is null))
         and (contradicted.id is null or contradicted.superseded_at is null)
     ) c on true
-    where ${filters.join("\n      and ")}
-    order by ${order}
-    limit $3
+    order by ranked.recall_rank
   `;
 
   const result = (await db.query(sql, params)) as { rows?: any[] };

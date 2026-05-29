@@ -3,16 +3,16 @@
 ## Purpose
 - Track the full OpenMemory architecture rewrite as repository state, not chat state.
 - Keep the near-term product path JS-only: `packages/openmemory-js`, npm install/fork, `npm run start`.
-- Make `/v1/*` the durable product API.
+- Make `durable routes` the durable product API.
 - Keep legacy compatibility out of the default runtime unless explicitly revived.
 
 ## Current State
 - Active package: `packages/openmemory-js`.
 - Production direction: Postgres plus pgvector.
 - SQLite behavior is removed from the active runtime and migration path.
-- Default runtime surface: `/health` and durable `/v1`.
-- Durable `/v1` currently covers remember, get, list, update, reinforce, recall, explain, soft delete, contradiction resolve, and pending consolidation requests.
-- Durable `/v1/ingest` persists raw working-memory events and creates deterministic extraction candidates in Postgres mode. Candidate accept/reject routes are registered.
+- Default runtime surface: `/health` and durable unprefixed api.
+- durable unprefixed api currently covers remember, get, list, update, reinforce, recall, explain, soft delete, contradiction resolve, and pending consolidation requests.
+- Durable `/ingest` persists raw working-memory events and creates deterministic extraction candidates in Postgres mode. Candidate accept/reject routes are registered.
 
 ## Non-Negotiables
 - No Python product path in this rewrite phase.
@@ -31,7 +31,7 @@
 - [x] Keep `packages/openmemory-js` as canonical package.
 - [x] Make root npm scripts delegate to the JS workspace.
 - [x] Fix package import side effects so SDK import does not bind a port.
-- [x] Limit default route registration to the JS core path and explicit durable `/v1`.
+- [x] Limit default route registration to the JS core path and explicit durable unprefixed api.
 - [x] Replace the old custom `api/server.js` wrapper with a small TypeScript HTTP adapter.
 - [x] Remove SQLite and Valkey compatibility from the active runtime and migration path.
 
@@ -57,17 +57,17 @@
 ## Phase 2: Durable Memory Lifecycle API
 
 ### Done
-- [x] `POST /v1/memories`: durable create in Postgres mode.
-- [x] `GET /v1/memories/:id`: durable get with facets, contracts, metadata, bitemporal fields, provenance summary, and version count.
-- [x] `GET /v1/memories`: durable list with user, project, limit, and offset filters.
-- [x] `PATCH /v1/memories/:id`: durable update with version append and audit.
-- [x] `POST /v1/memories/:id/reinforce`: durable salience boost with clamp and audit.
-- [x] `DELETE /v1/memories/:id`: durable soft delete with audit.
+- [x] `POST /memories`: durable create in Postgres mode.
+- [x] `GET /memories/:id`: durable get with facets, contracts, metadata, bitemporal fields, provenance summary, and version count.
+- [x] `GET /memories`: durable list with user, project, limit, and offset filters.
+- [x] `PATCH /memories/:id`: durable update with version append and audit.
+- [x] `POST /memories/:id/reinforce`: durable salience boost with clamp and audit.
+- [x] `DELETE /memories/:id`: durable soft delete with audit.
 - [x] Tenant mismatch returns `404` for durable memory access.
 
 ### Remaining
-- [x] Add stricter request validation and consistent `invalid_request` envelopes for malformed `/v1` lifecycle inputs.
-- [x] Normalize `/v1` lifecycle tenant mismatches to `404 not_found`.
+- [x] Add stricter request validation and consistent `invalid_request` envelopes for malformed unprefixed durable api lifecycle inputs.
+- [x] Normalize unprefixed durable api lifecycle tenant mismatches to `404 not_found`.
 - [x] Normalize response shapes for create, get, list, update, reinforce, and delete.
 - [x] Add pagination metadata for list.
 - [x] Add optimistic concurrency using memory version or updated timestamp.
@@ -76,7 +76,7 @@
 ## Phase 3: Durable Recall
 
 ### Done
-- [x] Move `/v1/recall` to durable repository in Postgres mode.
+- [x] Move `/recall` to durable repository in Postgres mode.
 - [x] Remove SQLite/local fallback after deleting legacy HSG.
 - [x] Add strict, historical, and associative recall query contract tests.
 - [x] Enforce current validity, provenance visibility, superseded exclusion, contradiction exclusion, and `contracts.recall_allowed !== false`.
@@ -93,7 +93,7 @@
 ## Phase 4: Explain API
 
 ### Done
-- [x] `GET /v1/memories/:id/explain` reads durable memory, provenance, contradictions, inferences, audit, versions, and score components.
+- [x] `GET /memories/:id/explain` reads durable memory, provenance, contradictions, inferences, audit, versions, and score components.
 - [x] Align inference query with actual durable schema columns.
 
 ### Remaining
@@ -119,7 +119,7 @@
 ## Phase 6: Consolidation
 
 ### Done
-- [x] Add `POST /v1/consolidations` for pending durable consolidation requests in Postgres mode.
+- [x] Add `POST /consolidations` for pending durable consolidation requests in Postgres mode.
 - [x] Write `consolidation.request` audit events.
 
 ### Remaining
@@ -140,7 +140,7 @@
 - [x] Add route/API contract for accepting or rejecting extraction candidates.
 - [x] Add opt-in real Postgres integration coverage for durable ingestion event and audit writes.
 - [x] Keep LLM extraction disabled until outputs are testable.
-- [x] Add deterministic automatic extraction candidate creation for `/v1/ingest`.
+- [x] Add deterministic automatic extraction candidate creation for `/ingest`.
 - [x] Move `/retention/ingest` and `/retention/ingest/url` only after durable ingestion parity exists.
 - [x] Add replayable durable ingestion event and candidate tests from fixed fixtures.
 - [x] Add durable ingestion promotion tests from fixed fixtures.
@@ -171,25 +171,25 @@
 
 ### Remaining
 - [x] Inventory every `/retention/*` route.
-- [x] Classify each `/retention/*` route as keep, move to `/v1`, or delete.
+- [x] Classify each `/retention/*` route as keep, move to unprefixed durable api, or delete.
 - [x] Legacy add, query, get, list, update, reinforce, and delete behavior was previously covered; package test files were later deleted by request.
 - [x] Legacy document and URL ingest behavior was previously covered; package test files were later deleted by request.
-- [x] Move compatible behavior onto durable repositories behind `/v1`.
+- [x] Move compatible behavior onto durable repositories behind unprefixed durable api.
 - [x] Keep `/retention/*` responses stable until deprecation is announced.
 - [x] Add deprecation warnings using headers only; keep `/retention/*` JSON bodies stable.
 - [x] Remove legacy HSG internals that are no longer referenced by exported SDK/provider surfaces.
 - [x] Add non-destructive legacy migration report CLI for old memory/waypoint/temporal-fact shapes.
 
 ### Former `/retention/*` Classification
-- [x] `POST /retention/add`: removed from default runtime; durable replacement is `POST /v1/memories`.
-- [x] `POST /retention/ingest`: removed from default runtime; durable ingestion is `/v1/ingest`.
+- [x] `POST /retention/add`: removed from default runtime; durable replacement is `POST /memories`.
+- [x] `POST /retention/ingest`: removed from default runtime; durable ingestion is `/ingest`.
 - [x] `POST /retention/ingest/url`: removed from default runtime.
-- [x] `POST /retention/query`: removed from default runtime; durable replacement is `POST /v1/recall`.
-- [x] `POST /retention/reinforce`: removed from default runtime; durable replacement is `POST /v1/memories/:id/reinforce`.
-- [x] `PATCH /retention/:id`: removed from default runtime; durable replacement is `PATCH /v1/memories/:id`.
-- [x] `GET /retention/all`: removed from default runtime; durable replacement is `GET /v1/memories`.
-- [x] `GET /retention/:id`: removed from default runtime; durable replacement is `GET /v1/memories/:id`.
-- [x] `DELETE /retention/:id`: removed from default runtime; durable replacement is soft-delete `DELETE /v1/memories/:id`.
+- [x] `POST /retention/query`: removed from default runtime; durable replacement is `POST /recall`.
+- [x] `POST /retention/reinforce`: removed from default runtime; durable replacement is `POST /memories/:id/reinforce`.
+- [x] `PATCH /retention/:id`: removed from default runtime; durable replacement is `PATCH /memories/:id`.
+- [x] `GET /retention/all`: removed from default runtime; durable replacement is `GET /memories`.
+- [x] `GET /retention/:id`: removed from default runtime; durable replacement is `GET /memories/:id`.
+- [x] `DELETE /retention/:id`: removed from default runtime; durable replacement is soft-delete `DELETE /memories/:id`.
 
 ## Phase 11: Code Quality And De-AI Pass
 
@@ -254,7 +254,7 @@
 - [ ] Port webhook HMAC verification into durable source ingestion before rebuilding broad connectors.
 - [ ] Design optional document/URL extraction adapters with exact-content preservation tests.
 - [ ] Add explicit audited decay/compression admin job design; no background timers.
-- [ ] Write MCP rebuild design against durable `/v1`: STDIO silence, SDK schema validation, per-request transport, tenant/project scope, update/delete/list tools.
+- [ ] Write MCP rebuild design against durable unprefixed api: STDIO silence, SDK schema validation, per-request transport, tenant/project scope, update/delete/list tools.
 - [ ] Add Postgres-only Docker compose plan after npm/fork startup remains stable.
 - [ ] Add temporal query design mapped to durable bitemporal graph tables.
 - [ ] Add recall quality evaluation plan using LOCOMO/LongMemEval after API shape is stable.

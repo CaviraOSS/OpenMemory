@@ -54,13 +54,18 @@ npm run build
 npm run test
 ```
 
-The default server registers only `/health` and durable `/v1/*` routes. Legacy
+The default server registers only `/health` and durable unprefixed routes. Legacy
 retention, user-summary, MCP, dashboard, IDE, hosted deploy, and connector webhook
 surfaces are deferred from the default runtime.
 
 Vector search defaults to Postgres/pgvector. Set `OM_VECTOR_STORE` to `qdrant`,
 `valkey`, `redis`, `pinecone`, `weaviate`, `chroma`, or `milvus` to delegate
 nearest-neighbor search while keeping memory lifecycle data in Postgres.
+
+Database storage defaults to `OM_STORAGE=postgres`. Local runs can use
+`OM_STORAGE=memory`, `OM_STORAGE=sqlite`, or `OM_STORAGE=valkey`/`redis`; those
+local backends support the active memory lifecycle routes but are not the full
+durable Postgres graph store.
 
 ## Documentation
 

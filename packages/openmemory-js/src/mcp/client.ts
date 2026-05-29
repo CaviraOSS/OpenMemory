@@ -1,3 +1,18 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename
+ - what is the file used for
+*/
+
 export type DurableMcpClientConfig = {
   base_url?: string;
   api_key?: string;
@@ -42,14 +57,14 @@ export class DurableMcpClient {
   }
 
   store(input: Record<string, unknown>) {
-    return this.request("/v1/memories", {
+    return this.request("/memories", {
       method: "POST",
       body: JSON.stringify(input),
     });
   }
 
   search(input: Record<string, unknown>) {
-    return this.request("/v1/recall", {
+    return this.request("/recall", {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -60,7 +75,7 @@ export class DurableMcpClient {
     if (input.user_id) query.set("user_id", input.user_id);
     if (input.project_id) query.set("project_id", input.project_id);
     return this.request(
-      `/v1/memories/${encodeURIComponent(input.id)}${query.size ? `?${query}` : ""}`,
+      `/memories/${encodeURIComponent(input.id)}${query.size ? `?${query}` : ""}`,
     );
   }
 
@@ -69,12 +84,12 @@ export class DurableMcpClient {
     for (const [key, value] of Object.entries(input)) {
       if (value !== undefined) query.set(key, String(value));
     }
-    return this.request(`/v1/memories${query.size ? `?${query}` : ""}`);
+    return this.request(`/memories${query.size ? `?${query}` : ""}`);
   }
 
   update(input: Record<string, unknown> & { id: string }) {
     const { id, ...body } = input;
-    return this.request(`/v1/memories/${encodeURIComponent(id)}`, {
+    return this.request(`/memories/${encodeURIComponent(id)}`, {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -89,7 +104,7 @@ export class DurableMcpClient {
     const query = new URLSearchParams();
     if (input.user_id) query.set("user_id", input.user_id);
     return this.request(
-      `/v1/memories/${encodeURIComponent(input.id)}${query.size ? `?${query}` : ""}`,
+      `/memories/${encodeURIComponent(input.id)}${query.size ? `?${query}` : ""}`,
       {
         method: "DELETE",
         body: JSON.stringify({
@@ -105,12 +120,12 @@ export class DurableMcpClient {
     if (input.recall_query) query.set("recall_query", input.recall_query);
     if (input.recall_mode) query.set("recall_mode", input.recall_mode);
     return this.request(
-      `/v1/memories/${encodeURIComponent(input.id)}/explain${query.size ? `?${query}` : ""}`,
+      `/memories/${encodeURIComponent(input.id)}/explain${query.size ? `?${query}` : ""}`,
     );
   }
 
   ingest(input: Record<string, unknown>) {
-    return this.request("/v1/ingest", {
+    return this.request("/ingest", {
       method: "POST",
       body: JSON.stringify(input),
     });

@@ -1,6 +1,6 @@
 # MCP
 
-MCP support is active as an explicit stdio adapter over durable `/v1` behavior.
+MCP support is active as an explicit stdio adapter over durable unprefixed api behavior.
 It does not start with the default HTTP server and does not revive the old
 `insp/openmemory-js/src/ai/mcp.ts` module or the removed `/retention/*` runtime.
 
@@ -18,7 +18,7 @@ The adapter calls `OPENMEMORY_URL` or `http://localhost:8080` by default. Use
 
 ## Goals
 
-- Keep `npm run start` focused on the HTTP API: `/health` and durable `/v1/*`.
+- Keep `npm run start` focused on the HTTP API: `/health` and durable unprefixed routes.
 - Keep MCP only as an explicit command or opt-in transport.
 - Map every MCP operation to the durable lifecycle API: create, recall, get,
   list, update, delete, explain, candidate accept/reject, and later graph tools.
@@ -30,17 +30,17 @@ The adapter calls `OPENMEMORY_URL` or `http://localhost:8080` by default. Use
 
 Use schema-stable tool names without dots:
 
-- `openmemory_store`: create durable memory through `/v1/memories`.
-- `openmemory_search`: recall through `/v1/recall`.
-- `openmemory_get`: get one memory through `/v1/memories/:id`.
-- `openmemory_list`: list current memories through `/v1/memories`.
-- `openmemory_update`: patch durable memory through `/v1/memories/:id`.
-- `openmemory_delete`: soft-delete through `/v1/memories/:id`.
-- `openmemory_explain`: explain through `/v1/memories/:id/explain`.
-- `openmemory_ingest`: create a durable source event through `/v1/ingest`.
+- `openmemory_store`: create durable memory through `/memories`.
+- `openmemory_search`: recall through `/recall`.
+- `openmemory_get`: get one memory through `/memories/:id`.
+- `openmemory_list`: list current memories through `/memories`.
+- `openmemory_update`: patch durable memory through `/memories/:id`.
+- `openmemory_delete`: soft-delete through `/memories/:id`.
+- `openmemory_explain`: explain through `/memories/:id/explain`.
+- `openmemory_ingest`: create a durable source event through `/ingest`.
 
 Do not expose temporal, connector, dashboard, or compression tools until those
-features exist as durable `/v1` contracts with tests.
+features exist as durable unprefixed api contracts with tests.
 
 ## Transport Plan
 
@@ -65,13 +65,13 @@ features exist as durable `/v1` contracts with tests.
 
 - Use the installed MCP SDK schema format directly. Do not hand-roll a JSON
   schema dialect that strict clients reject.
-- Tool input schemas should mirror `/v1` validation:
+- Tool input schemas should mirror unprefixed durable api validation:
   - required non-empty strings for content, query, ids, and reasons
   - bounded numbers for limits, boosts, confidence, and offsets
   - closed enums for recall mode, tier, and executable edge types
   - object-only metadata, facets, contracts, source, and scope fields
 - Every tool result should return the same normalized durable payload shape as
-  `/v1`, with no MCP-only response schema unless the protocol requires wrapping.
+  unprefixed durable api, with no MCP-only response schema unless the protocol requires wrapping.
 
 ## Test Coverage
 

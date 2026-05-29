@@ -1,3 +1,18 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename: packages/openmemory-js/src/api/middleware/auth.ts
+ - what is the file used for: api key middleware and local development auth defaults
+*/
+
 import { env } from "../../configuration/index";
 import crypto from "crypto";
 

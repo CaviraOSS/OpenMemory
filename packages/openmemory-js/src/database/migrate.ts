@@ -1,10 +1,25 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename: packages/openmemory-js/src/database/migrate.ts
+ - what is the file used for: runs durable postgres schema migrations
+*/
+
 import { Pool } from "pg";
 import { env } from "../configuration/index";
 import {
   buildDurableSchemaSql,
   DURABLE_SCHEMA_VERSION,
 } from "../durable/schema";
-import { buildPgPoolConfig } from "./pgConfig";
+import { build_pg_pool_config } from "./pgconfig";
 
 const log = (msg: string) => console.log(`[MIGRATE] ${msg}`);
 
@@ -48,7 +63,7 @@ async function run_durable_schema_migration(pool: Pool): Promise<void> {
 export async function run_migrations() {
   log("Checking for pending durable migrations...");
   const pool = new Pool(
-    buildPgPoolConfig(process.env.OM_PG_DB || "openmemory"),
+    build_pg_pool_config(process.env.OM_PG_DB || "openmemory"),
   );
 
   try {

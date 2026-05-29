@@ -22,9 +22,9 @@ Common settings:
 
 Behavior:
 
-- `/v1/memories` still writes the memory row and pgvector embedding to Postgres.
-- If an external vector store is configured, `/v1/memories` also upserts the vector record there.
-- `/v1/recall` queries the external vector store first, then loads matching durable memory rows from Postgres with tenant/project filters.
+- `/memories` still writes the memory row and pgvector embedding to Postgres.
+- If an external vector store is configured, `/memories` also upserts the vector record there.
+- `/recall` queries the external vector store first, then loads matching durable memory rows from Postgres with tenant/project filters.
 - Project-scoped recall includes both exact project matches and global records with null project.
 - `/health` reports the configured vector store and embedding provider/model routing.
 

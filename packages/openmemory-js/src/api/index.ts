@@ -1,10 +1,25 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename: packages/openmemory-js/src/api/index.ts
+ - what is the file used for: creates and starts the openmemory http server app
+*/
+
 import { env } from "../configuration/index";
 import { routes } from "./routes";
 import {
   authenticate_api_request,
   log_authenticated_request,
 } from "./middleware/auth";
-import { sendTelemetry } from "../configuration/telemetry";
+import { send_telemetry } from "../configuration/telemetry";
 import { createHttpApp } from "./httpApp";
 
 export function createApp() {
@@ -44,7 +59,7 @@ export function startServer() {
   console.log(`[SERVER] Starting on port ${env.port}`);
   app.listen(env.port, () => {
     console.log(`[SERVER] Running on http://localhost:${env.port}`);
-    sendTelemetry().catch(() => {});
+    send_telemetry().catch(() => {});
   });
 
   return app;

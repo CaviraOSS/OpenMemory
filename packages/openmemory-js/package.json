@@ -1,37 +1,38 @@
 {
-    "name": "openmemory-js",
-    "version": "1.4.0",
-    "author": "caviraoss",
-    "files": [
-        "dist",
-        "bin"
-    ],
-    "bin": {
-        "opm": "./bin/opm.js"
-    },
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "scripts": {
-        "dev": "nodemon src/server.ts",
-        "format": "prettier --write \"src/**/*.ts\"",
-        "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
-        "test": "npm run build && tsx --test tests/*.test.ts ../../MDRS/*.test.ts ../../benchmark/*.test.ts",
-        "start": "node dist/server.js",
-        "migrate": "tsx src/database/migrate.ts",
-        "migration-report": "tsx src/database/legacyMigrationReport.ts",
-        "release-smoke": "npm run build && node dist/releaseSmoke.js"
-    },
-    "dependencies": {
-        "@aws-sdk/client-bedrock-runtime": "^3.932.0",
-        "@modelcontextprotocol/sdk": "^1.21.0",
-        "pg": "^8.16.3",
-        "redis": "^4.7.1"
-    },
-    "devDependencies": {
-        "@types/node": "^20.19.25",
-        "@types/pg": "^8.15.6",
-        "prettier": "^3.6.2",
-        "tsx": "^4.20.6",
-        "typescript": "^5.9.3"
-    }
+  "name": "openmemory-js",
+  "version": "1.4.0",
+  "author": "caviraoss",
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "bin": {
+    "opm": "./bin/opm.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "nodemon src/server.ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -p tsconfig.json",
+    "test": "npm run build && tsx --test tests/*.test.ts ../../MDRS/*.test.ts ../../benchmark/tests/*.test.ts",
+    "start": "node dist/server.js",
+    "migrate": "tsx src/database/migrate.ts",
+    "migration-report": "tsx src/database/legacymigrationreport.ts",
+    "release-smoke": "npm run build && node dist/releaseSmoke.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.932.0",
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "pg": "^8.16.3",
+    "redis": "^4.7.1",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.25",
+    "@types/pg": "^8.15.6",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
 }

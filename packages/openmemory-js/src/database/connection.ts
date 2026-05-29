@@ -1,13 +1,27 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename: packages/openmemory-js/src/database/connection.ts
+ - what is the file used for: postgres query helpers used by durable repository calls
+*/
+
 import { Pool } from "pg";
 import type { PoolClient } from "pg";
-import { buildPgPoolConfig } from "./pgConfig";
+import { build_pg_pool_config } from "./pgconfig";
 
-const pool = new Pool(buildPgPoolConfig(process.env.OM_PG_DB || "openmemory"));
-let transactionClient: PoolClient | null = null;
+const pool = new Pool(build_pg_pool_config(process.env.OM_PG_DB || "openmemory"));
+let txc: PoolClient | null = null;
 
 const query = async (sql: string, params: any[] = []) => {
-  const client = transactionClient || pool;
-  return await client.query(sql, params);
+  return await (txc || pool).query(sql, params);
 };
 
 export const run_async = async (
@@ -29,34 +43,34 @@ export const all_async = async (
 
 export const transaction = {
   begin: async () => {
-    if (transactionClient) throw new Error("transaction active");
-    transactionClient = await pool.connect();
-    await transactionClient.query("BEGIN");
+    if (txc) throw new Error("transaction active");
+    txc = await pool.connect();
+    await txc.query("BEGIN");
   },
   commit: async () => {
-    if (!transactionClient) return;
+    if (!txc) return;
     try {
-      await transactionClient.query("COMMIT");
+      await txc.query("COMMIT");
     } finally {
-      transactionClient.release();
-      transactionClient = null;
+      txc.release();
+      txc = null;
     }
   },
   rollback: async () => {
-    if (!transactionClient) return;
+    if (!txc) return;
     try {
-      await transactionClient.query("ROLLBACK");
+      await txc.query("ROLLBACK");
     } finally {
-      transactionClient.release();
-      transactionClient = null;
+      txc.release();
+      txc = null;
     }
   },
 };
 
 export const close_database = async () => {
-  if (transactionClient) {
-    transactionClient.release();
-    transactionClient = null;
+  if (txc) {
+    txc.release();
+    txc = null;
   }
   await pool.end();
 };

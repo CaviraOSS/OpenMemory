@@ -22,5 +22,5 @@ npm run start
 - `DELETE /memory/:id`
 - `POST /memory/reinforce`
 
-The durable rewrite will introduce the smaller `/v1` API described in `docs/architecture-rewrite-plan.md`.
+The durable rewrite will introduce the smaller unprefixed durable api described in `docs/architecture-rewrite-plan.md`.
 

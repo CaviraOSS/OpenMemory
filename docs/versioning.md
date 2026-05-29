@@ -11,7 +11,7 @@ OpenMemory uses SemVer for the active JavaScript package, `openmemory-js`.
 ## Rules
 
 - Patch: bug fixes, test-only changes, docs, packaging fixes, and compatible cleanup.
-- Minor: new compatible `/v1` APIs, new SDK methods, or optional runtime features.
+- Minor: new compatible unprefixed durable APIs, new SDK methods, or optional runtime features.
 - Major: breaking API changes, removed public exports, incompatible storage migrations, or changed default runtime behavior.
 
 ## Release Checklist

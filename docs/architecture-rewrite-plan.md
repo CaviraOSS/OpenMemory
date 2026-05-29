@@ -146,11 +146,11 @@ This avoids a blank rewrite while still forcing clean boundaries.
    - `memory.consolidate({ scope })`
    - `memory.resolve_contradiction({ contradiction_id, resolution })`
 3. HTTP API target:
-   - `POST /v1/memories`
-   - `POST /v1/recall`
-   - `GET /v1/memories/:id/explain`
-   - `POST /v1/consolidations`
-   - `POST /v1/contradictions/:id/resolve`
+   - `POST /memories`
+   - `POST /recall`
+   - `GET /memories/:id/explain`
+   - `POST /consolidations`
+   - `POST /contradictions/:id/resolve`
 4. Keep old `/memory/add` and `/memory/query` as adapters until docs and examples are migrated.
 5. Enforce contracts at recall time.
 
@@ -255,5 +255,5 @@ The first useful milestone is not the full architecture. It is:
 1. Root `npm run start` works.
 2. Python package/docs/workflows are removed from the active product path.
 3. Postgres + pgvector migration creates the durable core tables.
-4. `POST /v1/memories`, `POST /v1/recall`, and `/health` work.
+4. `POST /memories`, `POST /recall`, and `/health` work.
 5. Strict recall respects provenance, contracts, current validity, and audit logging.

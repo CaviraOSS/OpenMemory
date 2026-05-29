@@ -10,6 +10,7 @@ episodic:
   openai: text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
+  siray: openai/text-embedding-3-small
   local: all-MiniLM-L6-v2
 
 semantic:
@@ -17,6 +18,7 @@ semantic:
   openai: text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
+  siray: openai/text-embedding-3-small
   local: all-MiniLM-L6-v2
 
 procedural:
@@ -24,6 +26,7 @@ procedural:
   openai: text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
+  siray: openai/text-embedding-3-small
   local: all-MiniLM-L6-v2
 
 emotional:
@@ -31,6 +34,7 @@ emotional:
   openai: text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
+  siray: openai/text-embedding-3-small
   local: all-MiniLM-L6-v2
 
 reflective:
@@ -38,6 +42,7 @@ reflective:
   openai: text-embedding-3-large
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
+  siray: openai/text-embedding-3-small
   local: all-mpnet-base-v2
 # Available Ollama models (pull with: ollama pull <model>)
 # - nomic-embed-text (768d, recommended)
@@ -53,6 +58,9 @@ reflective:
 # - models/gemini-embedding-001 (3072d, resizable) - current
 # - models/text-embedding-004 (768d) - deprecated
 # - models/embedding-001 (768d) - deprecated
+
+# Siray.ai OpenAI-compatible embedding models:
+# - openai/text-embedding-3-small (1536d)
 
 #AWS models:
 # - amazon.titan-embed-text-v2:0 (1024d, 512d, 256)

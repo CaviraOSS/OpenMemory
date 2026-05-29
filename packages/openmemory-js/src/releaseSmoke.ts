@@ -1,3 +1,18 @@
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename
+ - what is the file used for
+*/
+
 import type http from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
 
@@ -41,7 +56,7 @@ async function waitForHealth() {
 }
 
 async function runFullSmoke() {
-  const memory = await request("/v1/memories", {
+  const memory = await request("/memories", {
     method: "POST",
     body: JSON.stringify({
       content: "release smoke memory for strict recall",
@@ -61,7 +76,7 @@ async function runFullSmoke() {
   if (!memoryId)
     throw new Error("remember response did not include a memory id");
 
-  const recall = await request("/v1/recall", {
+  const recall = await request("/recall", {
     method: "POST",
     body: JSON.stringify({
       query: "release smoke memory",
@@ -76,7 +91,7 @@ async function runFullSmoke() {
   }
 
   const explain = await request(
-    `/v1/memories/${encodeURIComponent(memoryId)}/explain`,
+    `/memories/${encodeURIComponent(memoryId)}/explain`,
   );
   if (explain.id !== memoryId && explain.memory_id !== memoryId) {
     throw new Error("explain response did not match the smoke memory");

@@ -107,7 +107,7 @@
 - Do not copy vendored Letta, Mem0, Cognee, HippoRAG, MemoRAG, RAPTOR, Self-RAG internals into product code.
 - Do not claim public benchmark scores from fixtures or toy data.
 - Do not treat one generic prompt as equivalent to MemoryAgentBench.
-- Do not make benchmark execution depend on OpenMemory server side effects unless the adapter explicitly targets durable `/v1`.
+- Do not make benchmark execution depend on OpenMemory server side effects unless the adapter explicitly targets durable unprefixed api.
 
 ## Correction Plan For `benchmark/`
 
@@ -118,7 +118,7 @@
   - HuggingFace/local dataset adapters,
   - MemoryAgentBench-style conversation creator,
   - suite-specific templates for LongMemEval, LongMemEval-V2, LoCoMo, and TReMu,
-  - OpenMemory `/v1` adapter,
+  - OpenMemory unprefixed durable api adapter,
   - long-context baseline adapter,
   - resumable JSON result writer,
   - deterministic metric aggregation,

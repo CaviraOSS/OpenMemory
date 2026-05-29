@@ -1,4 +1,18 @@
 #!/usr/bin/env node
+/*
+   ____                   __  __                                 
+  / __ \                 |  \/  |                                
+ | |  | |_ __   ___ _ __ | \  / | ___ _ __ ___   ___  _ __ _   _ 
+ | |  | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
+ | |__| | |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
+  \____/| .__/ \___|_| |_|_|  |_|\___|_| |_| |_|\___/|_|   \__, |
+        | |                                                 __/ |
+        |_|                                                |___/ 
+  CaviraOSS @ 2026
+
+ - filename
+ - what is the file used for
+*/
 
 const fs = require('fs');
 const path = require('path');
@@ -81,7 +95,7 @@ const addmem = async (txt, opts) => {
   const body = { content: txt };
   if (opts.usr) body.user_id = opts.usr;
   if (opts.tags) body.facets = { tags: opts.tags.split(',') };
-  const r = await req('/v1/memories', {
+  const r = await req('/memories', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -93,7 +107,7 @@ const addmem = async (txt, opts) => {
 const querymem = async (txt, opts) => {
   const body = { query: txt, limit: opts.lim || 10 };
   if (opts.usr) body.user_id = opts.usr;
-  const r = await req('/v1/recall', {
+  const r = await req('/recall', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -112,7 +126,7 @@ const listmem = async (opts) => {
   const lim = opts.lim || 10;
   const params = new URLSearchParams({ limit: String(lim), offset: '0' });
   if (opts.usr) params.set('user_id', opts.usr);
-  const r = await req(`/v1/memories?${params.toString()}`);
+  const r = await req(`/memories?${params.toString()}`);
   const items = r.items || [];
   console.log(`[memories] showing ${items.length}\n`);
   items.forEach((m, i) => {
@@ -128,7 +142,7 @@ const delmem = async (id, opts) => {
   const params = new URLSearchParams();
   if (opts.usr) params.set('user_id', opts.usr);
   const suffix = params.size ? `?${params.toString()}` : '';
-  await req(`/v1/memories/${id}${suffix}`, { method: 'DELETE' });
+  await req(`/memories/${id}${suffix}`, { method: 'DELETE' });
   console.log(`[ok] memory ${id} deleted`);
 };
 
