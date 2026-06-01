@@ -19,7 +19,7 @@ class MiniMaxAdapter(AIAdapter):
         self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
     async def chat(self, messages: List[Dict[str, str]], model: str = None, **kwargs) -> str:
-        m = model or env.minimax_model or "MiniMax-M2.7"
+        m = model or env.minimax_model or "MiniMax-M3"
         temperature = kwargs.pop("temperature", None)
         if temperature is not None:
             temperature = max(0.0, min(float(temperature), 1.0))

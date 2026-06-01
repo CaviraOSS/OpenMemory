@@ -71,7 +71,7 @@ class TestMiniMaxChat:
             await adapter.chat([{"role": "user", "content": "test"}])
 
         call_kwargs = adapter.client.chat.completions.create.call_args
-        assert call_kwargs.kwargs["model"] == "MiniMax-M2.7"
+        assert call_kwargs.kwargs["model"] == "MiniMax-M3"
 
     @pytest.mark.asyncio
     async def test_chat_custom_model(self):
@@ -87,10 +87,10 @@ class TestMiniMaxChat:
 
         await adapter.chat(
             [{"role": "user", "content": "test"}],
-            model="MiniMax-M2.5-highspeed",
+            model="MiniMax-M2.7-highspeed",
         )
         call_kwargs = adapter.client.chat.completions.create.call_args
-        assert call_kwargs.kwargs["model"] == "MiniMax-M2.5-highspeed"
+        assert call_kwargs.kwargs["model"] == "MiniMax-M2.7-highspeed"
 
     @pytest.mark.asyncio
     async def test_chat_temperature_clamping(self):
@@ -408,7 +408,7 @@ class TestMiniMaxIntegrationChat:
         adapter = MiniMaxAdapter(api_key=api_key)
         result = await adapter.chat(
             [{"role": "user", "content": "Say 'hello' and nothing else."}],
-            model="MiniMax-M2.5-highspeed",
+            model="MiniMax-M2.7-highspeed",
             temperature=0.0,
         )
         assert isinstance(result, str)
