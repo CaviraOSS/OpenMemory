@@ -180,7 +180,7 @@ embeddings={
 }
 ```
 
-> uses MiniMax's `embo-01` model (1536 dimensions). for chat completions, MiniMax supports `MiniMax-M2.7` and `MiniMax-M2.5-highspeed` via OpenAI-compatible API.
+> uses MiniMax's `embo-01` model (1536 dimensions). for chat completions, MiniMax supports `MiniMax-M3` (default), `MiniMax-M2.7`, and `MiniMax-M2.7-highspeed` via OpenAI-compatible API.
 
 #### aws bedrock
 ```python
