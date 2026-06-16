@@ -20,8 +20,15 @@ npm install
 npm run dev
 ```
 
-By default the dashboard expects the backend at `http://localhost:8080`.
-If you use a different backend URL, configure it in `.env.local` as described in `CHAT_SETUP.md`.
+By default the dashboard calls its same-origin server-side proxy at `/api/openmemory`, which forwards requests to the OpenMemory backend.
+Configure the backend URL and optional API key in `.env.local`:
+
+```env
+OPENMEMORY_API_URL=http://localhost:8080
+# OPENMEMORY_API_KEY=your-secret-api-key
+```
+
+This keeps authenticated backend API keys on the server. For local development only, you can still use browser-direct configuration with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY`, but `NEXT_PUBLIC_*` values are public in the browser bundle.
 
 ## Run the dashboard locally
 

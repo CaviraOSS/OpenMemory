@@ -26,12 +26,16 @@ The backend will start on `http://localhost:8080`
 
 ### 2. Configure Environment (Optional)
 
-The dashboard is pre-configured to connect to `localhost:8080`. If your backend runs on a different port, create a `.env.local` file:
+The dashboard is pre-configured to use its same-origin server-side proxy at `/api/openmemory`.
+If your backend runs on a different port, create a `.env.local` file:
 
 ```bash
 # dashboard/.env.local
-NEXT_PUBLIC_API_URL=http://localhost:8080
+OPENMEMORY_API_URL=http://localhost:8080
+# OPENMEMORY_API_KEY=your-secret-api-key
 ```
+
+This keeps backend API keys server-side. For local development only, you can set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` to make the browser call the backend directly, but `NEXT_PUBLIC_*` values are public in the browser bundle.
 
 ### 3. Start the Dashboard
 
@@ -137,7 +141,7 @@ Clicking the **+** button on a memory card:
 ### Connection refused
 
 - Backend not started
-- Wrong port in `.env.local`
+- Wrong port in `.env.local` (`OPENMEMORY_API_URL` for server-side proxy mode, or `NEXT_PUBLIC_API_URL` for browser-direct mode)
 - Firewall blocking connection
 
 ## API Endpoints Used
