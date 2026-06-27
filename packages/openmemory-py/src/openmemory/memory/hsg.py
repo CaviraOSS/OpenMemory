@@ -278,7 +278,7 @@ async def create_single_waypoint(new_id: str, new_mean: List[float], ts: int, us
             best = r["id"]
 
     # Fallback to older DB-based exhaustive search if vector store returns nothing (e.g. not migrated)
-    if not res:
+    if best is None:
         mems = q.all_mem_by_user(user_id, 1000, 0) if user_id and user_id != "anonymous" else q.all_mem(1000, 0)
         import numpy as np
         nm = np.array(new_mean, dtype=np.float32)
@@ -486,9 +486,10 @@ def clear_cache(user_id: str = None):
         keys_to_delete = []
         for k in cache.keys():
             try:
-                parts = k.split(":", 2)
-                if len(parts) == 3:
-                    f = json.loads(parts[2])
+                import re
+                match = re.search(r':\d+:({.*}|null)$', k)
+                if match:
+                    f = json.loads(match.group(1))
                     if f and isinstance(f, dict) and f.get("user_id") == user_id:
                         keys_to_delete.append(k)
             except:
