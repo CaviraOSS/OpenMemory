@@ -1,7 +1,7 @@
 import logging
 from typing import List, Dict, Optional, Any
 from .core.db import db, q
-from .memory.hsg import hsg_query, add_hsg_memory
+from .memory.hsg import hsg_query, add_hsg_memory, clear_cache
 from .ops.ingest import ingest_document
 from .openai_handler import OpenAIRegistrar
 
@@ -35,11 +35,17 @@ class Memory:
 
     async def delete(self, memory_id: str):
         q.del_mem(memory_id)
+        clear_cache()
 
     async def delete_all(self, user_id: str = None):
         uid = user_id or self.default_user
         if uid:
             q.del_mem_by_user(uid)
+            clear_cache(uid)
+        else:
+            # If no user_id is provided at all, clear everything? 
+            # Well, del_mem_by_user requires a uid, but if we want to clear all:
+            clear_cache()
 
     def history(self, user_id: str = None, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
         uid = user_id or self.default_user

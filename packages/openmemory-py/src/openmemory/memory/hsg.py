@@ -266,25 +266,35 @@ def compute_hybrid_score(sim: float, tok_ov: float, wp_wt: float, rec_sc: float,
     return sigmoid(raw)
 
 async def create_single_waypoint(new_id: str, new_mean: List[float], ts: int, user_id: str = "anonymous"):
-    mems = q.all_mem_by_user(user_id, 1000, 0) if user_id else q.all_mem(1000, 0)
+    res = await store.search(new_mean, "_mean", 10, {"user_id": user_id} if user_id and user_id != "anonymous" else None)
+    
     best = None
     best_sim = -1.0
 
-    import numpy as np
-    nm = np.array(new_mean, dtype=np.float32)
+    for r in res:
+        if r["id"] == new_id: continue
+        if r["similarity"] > best_sim:
+            best_sim = r["similarity"]
+            best = r["id"]
 
-    for mem in mems:
-        if mem["id"] == new_id or not mem["mean_vec"]: continue
-        ex_mean = np.array(buf_to_vec(mem["mean_vec"]), dtype=np.float32)
-        sim = cos_sim(nm, ex_mean)
-        if sim > best_sim:
-            best_sim = sim
-            best = mem["id"]
+    # Fallback to older DB-based exhaustive search if vector store returns nothing (e.g. not migrated)
+    if not res:
+        mems = q.all_mem_by_user(user_id, 1000, 0) if user_id and user_id != "anonymous" else q.all_mem(1000, 0)
+        import numpy as np
+        nm = np.array(new_mean, dtype=np.float32)
+        for mem in mems:
+            if mem["id"] == new_id or not mem["mean_vec"]: continue
+            ex_mean = np.array(buf_to_vec(mem["mean_vec"]), dtype=np.float32)
+            sim = cos_sim(nm, ex_mean)
+            if sim > best_sim:
+                best_sim = sim
+                best = mem["id"]
 
     if best:
         db.execute("INSERT OR REPLACE INTO waypoints(src_id,dst_id,user_id,weight,created_at,updated_at) VALUES (?,?,?,?,?,?)", (new_id, best, user_id, float(best_sim), ts, ts))
     else:
         db.execute("INSERT OR REPLACE INTO waypoints(src_id,dst_id,user_id,weight,created_at,updated_at) VALUES (?,?,?,?,?,?)", (new_id, new_id, user_id, 1.0, ts, ts))
+
     db.commit()
 
 async def create_cross_sector_waypoints(prim_id: str, prim_sec: str, add_secs: List[str], user_id: Optional[str] = None):
@@ -446,6 +456,9 @@ async def add_hsg_memory(content: str, tags: Optional[str] = None, metadata: Any
         mean_buf = vec_to_buf(mean_vec)
         db.execute("UPDATE memories SET mean_dim=?, mean_vec=? WHERE id=?", (len(mean_vec), mean_buf, mid))
 
+        # Store the mean vector into the vector store as `_mean` sector to enable ANN search (Issue #141)
+        await store.storeVector(mid, "_mean", mean_vec, len(mean_vec), user_id or "anonymous")
+
         if len(mean_vec) > 128:
             comp = compress_vec_for_storage(mean_vec, 128)
             db.execute("UPDATE memories SET compressed_vec=? WHERE id=?", (vec_to_buf(comp), mid))
@@ -465,6 +478,23 @@ async def add_hsg_memory(content: str, tags: Optional[str] = None, metadata: Any
         raise e
 cache = {}
 TTL = 60000
+
+def clear_cache(user_id: str = None):
+    if user_id is None:
+        cache.clear()
+    else:
+        keys_to_delete = []
+        for k in cache.keys():
+            try:
+                parts = k.split(":", 2)
+                if len(parts) == 3:
+                    f = json.loads(parts[2])
+                    if f and isinstance(f, dict) and f.get("user_id") == user_id:
+                        keys_to_delete.append(k)
+            except:
+                pass
+        for k in keys_to_delete:
+            del cache[k]
 
 async def expand_via_waypoints(ids: List[str], max_exp: int = 10):
     exp = []
