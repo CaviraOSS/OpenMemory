@@ -103,14 +103,15 @@ const querymem = async (txt, opts) => {
     method: 'POST',
     body: JSON.stringify(body),
   });
-  console.log(`[results] ${r.memories.length} found\n`);
-  r.memories.forEach((m, i) => {
+  const items = r.matches || r.memories || [];
+  console.log(`[results] ${items.length} found\n`);
+  items.forEach((m, i) => {
     console.log(`${i + 1}. [${m.primary_sector}] ${m.content}`);
     console.log(`   id: ${m.id}`);
     console.log(
-      `   score: ${m.score?.toFixed(3) || 'n/a'} | sal: ${m.salience.toFixed(
-        3,
-      )}`,
+      `   score: ${m.score?.toFixed(3) ?? 'n/a'} | sal: ${
+        m.salience?.toFixed(3) ?? 'n/a'
+      }`,
     );
     if (m.tags) console.log(`   tags: ${m.tags}`);
     console.log();
@@ -191,10 +192,17 @@ const health = async () => {
 const argv = process.argv.slice(2);
 const cmd = argv[0];
 
-if (!cmd || cmd === '--help' || cmd === '-h') {
+// --help anywhere wins: otherwise `opm add --help` stores "--help" as a memory
+if (!cmd || argv.includes('--help') || argv.includes('-h')) {
   console.log(helptext);
   process.exit(0);
 }
+
+// positional text = everything after the command up to the first --flag
+const textargs = () => {
+  const stop = argv.findIndex((a, i) => i > 0 && a.startsWith('--'));
+  return argv.slice(1, stop === -1 ? argv.length : stop).join(' ');
+};
 
 const opts = {};
 for (let i = 1; i < argv.length; i++) {
@@ -207,20 +215,18 @@ for (let i = 1; i < argv.length; i++) {
 (async () => {
   try {
     switch (cmd) {
-      case 'add':
-        if (!argv[1]) throw new Error('content required: opm add "text"');
-        await addmem(
-          argv.slice(1, argv.indexOf('--')).join(' ') || argv[1],
-          opts,
-        );
+      case 'add': {
+        const text = textargs();
+        if (!text) throw new Error('content required: opm add "text"');
+        await addmem(text, opts);
         break;
-      case 'query':
-        if (!argv[1]) throw new Error('query text required: opm query "text"');
-        await querymem(
-          argv.slice(1, argv.indexOf('--')).join(' ') || argv[1],
-          opts,
-        );
+      }
+      case 'query': {
+        const q = textargs();
+        if (!q) throw new Error('query text required: opm query "text"');
+        await querymem(q, opts);
         break;
+      }
       case 'list':
         await listmem(opts);
         break;
