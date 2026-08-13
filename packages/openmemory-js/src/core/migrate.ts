@@ -21,6 +21,7 @@ const LEGACY_SQLITE_VECTOR_TABLE = "vectors";
 interface Migration {
     version: string;
     desc: string;
+    completionColumn: string;
     sqlite: (vectorTable: string) => string[];
     postgres: string[];
 }
@@ -29,6 +30,7 @@ const migrations: Migration[] = [
     {
         version: "1.2.0",
         desc: "Multi-user tenant support",
+        completionColumn: "user_id",
         sqlite: (vectorTable: string) => [
             `ALTER TABLE memories ADD COLUMN user_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`,
@@ -76,6 +78,7 @@ const migrations: Migration[] = [
     {
         version: "1.3.0",
         desc: "Project-level isolation support",
+        completionColumn: "project_id",
         sqlite: (vectorTable: string) => [
             `ALTER TABLE memories ADD COLUMN project_id TEXT`,
             `CREATE INDEX IF NOT EXISTS idx_memories_project ON memories(project_id)`,
@@ -193,14 +196,14 @@ async function run_sqlite_migration(
 ): Promise<void> {
     log(`Running migration: ${m.version} - ${m.desc}`);
 
-    const has_user_id = await check_column_exists_sqlite(
+    const is_complete = await check_column_exists_sqlite(
         db,
         "memories",
-        "user_id",
+        m.completionColumn,
     );
-    if (has_user_id) {
+    if (is_complete) {
         log(
-            `Migration ${m.version} already applied (user_id exists), skipping`,
+            `Migration ${m.version} already applied (${m.completionColumn} exists), skipping`,
         );
         await set_db_version_sqlite(db, m.version);
         return;
@@ -296,11 +299,15 @@ async function run_pg_migration(pool: Pool, m: Migration): Promise<void> {
         process.env.OM_VECTOR_TABLE || DEFAULT_VECTOR_TABLE,
         "OM_VECTOR_TABLE",
     );
-    const has_user_id = await check_column_exists_pg(pool, mt, "user_id");
+    const is_complete = await check_column_exists_pg(
+        pool,
+        mt,
+        m.completionColumn,
+    );
 
-    if (has_user_id) {
+    if (is_complete) {
         log(
-            `Migration ${m.version} already applied (user_id exists), skipping`,
+            `Migration ${m.version} already applied (${m.completionColumn} exists), skipping`,
         );
         await set_db_version_pg(pool, m.version);
         return;
@@ -392,6 +399,49 @@ async function quarantine_orphan_temporal_facts_pg(pool: Pool): Promise<void> {
     }
 }
 
+export async function run_sqlite_migrations(
+    db: sqlite3.Database,
+): Promise<void> {
+    const current = await get_db_version_sqlite(db);
+    log(`Current database version: ${current || "none"}`);
+
+    for (const m of migrations) {
+        const is_complete = await check_column_exists_sqlite(
+            db,
+            "memories",
+            m.completionColumn,
+        );
+        if (!is_complete || !current || m.version > current) {
+            await run_sqlite_migration(db, m);
+        }
+    }
+
+    await quarantine_orphan_temporal_facts_sqlite(db);
+}
+
+async function run_pg_migrations(pool: Pool): Promise<void> {
+    const current = await get_db_version_pg(pool);
+    log(`Current database version: ${current || "none"}`);
+
+    const mt = assertSafeIdentifier(
+        process.env.OM_PG_TABLE || "openmemory_memories",
+        "OM_PG_TABLE",
+    );
+
+    for (const m of migrations) {
+        const is_complete = await check_column_exists_pg(
+            pool,
+            mt,
+            m.completionColumn,
+        );
+        if (!is_complete || !current || m.version > current) {
+            await run_pg_migration(pool, m);
+        }
+    }
+
+    await quarantine_orphan_temporal_facts_pg(pool);
+}
+
 export async function run_migrations() {
     log("Checking for pending migrations...");
 
@@ -411,32 +461,14 @@ export async function run_migrations() {
             ssl,
         });
 
-        const current = await get_db_version_pg(pool);
-        log(`Current database version: ${current || "none"}`);
-
-        for (const m of migrations) {
-            if (!current || m.version > current) {
-                await run_pg_migration(pool, m);
-            }
-        }
-
-        await quarantine_orphan_temporal_facts_pg(pool);
+        await run_pg_migrations(pool);
 
         await pool.end();
     } else {
         const db_path = process.env.OM_DB_PATH || "./data/openmemory.sqlite";
         const db = new sqlite3.Database(db_path);
 
-        const current = await get_db_version_sqlite(db);
-        log(`Current database version: ${current || "none"}`);
-
-        for (const m of migrations) {
-            if (!current || m.version > current) {
-                await run_sqlite_migration(db, m);
-            }
-        }
-
-        await quarantine_orphan_temporal_facts_sqlite(db);
+        await run_sqlite_migrations(db);
 
         await new Promise<void>((ok) => db.close(() => ok()));
     }
