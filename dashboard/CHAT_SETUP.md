@@ -35,7 +35,7 @@ OPENMEMORY_API_URL=http://localhost:8080
 # OPENMEMORY_API_KEY=your-secret-api-key
 ```
 
-This keeps backend API keys server-side. For local development only, you can set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` to make the browser call the backend directly, but `NEXT_PUBLIC_*` values are public in the browser bundle.
+This keeps backend API keys server-side. Set `NEXT_PUBLIC_API_URL` only when the dashboard must call a different URL directly; API keys should remain in the server-only `OPENMEMORY_API_KEY` or `OM_API_KEY` environment variables.
 
 ### 3. Start the Dashboard
 

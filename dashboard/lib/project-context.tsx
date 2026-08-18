@@ -39,7 +39,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     const fetchProjects = async () => {
         setIsLoading(true)
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api/openmemory'
             const res = await fetch(`${API_BASE_URL}/dashboard/projects`)
             if (res.ok) {
                 const data = await res.json()

@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const BACKEND = (process.env.OPENMEMORY_API_URL || 'http://127.0.0.1:9432').replace(/\/+$/, '')
+const BACKEND = (process.env.OPENMEMORY_API_URL || 'http://127.0.0.1:8080').replace(/\/+$/, '')
 const API_KEY = process.env.OPENMEMORY_API_KEY || process.env.OM_API_KEY || ''
 
 async function proxy(req: NextRequest, ctx: { params: Promise<{ path?: string[] }> }) {

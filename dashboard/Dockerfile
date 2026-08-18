@@ -3,12 +3,6 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Build-time public vars for Next.js client bundle
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
-ARG NEXT_PUBLIC_API_KEY=
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
-
 # Install dependencies
 COPY package*.json ./
 RUN npm install
@@ -23,11 +17,6 @@ RUN npm run build
 FROM node:20-alpine AS production
 
 WORKDIR /app
-
-ARG NEXT_PUBLIC_API_URL=http://localhost:8080
-ARG NEXT_PUBLIC_API_KEY=
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
 
 # Install only production dependencies
 COPY --from=builder /app/package.json ./package.json

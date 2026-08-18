@@ -139,14 +139,11 @@ services:
     build:
       context: ./dashboard
       dockerfile: Dockerfile
-      args:
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
-        - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
     ports:
       - '3000:3000'
     environment:
-      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8080}
-      - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY:-}
+      - OPENMEMORY_API_URL=${OPENMEMORY_API_URL:-http://openmemory:8080}
+      - OPENMEMORY_API_KEY=${OM_API_KEY:-}
     depends_on:
       openmemory:
         condition: service_healthy
