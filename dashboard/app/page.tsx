@@ -10,7 +10,6 @@ import {
     Tooltip,
     Legend,
 } from "chart.js"
-import Sidebar from "@/components/sidebar"
 import { API_BASE_URL, getHeaders } from "@/lib/api"
 import { StatCard } from "@/components/dashboard/StatCard"
 import { HealthMetric } from "@/components/dashboard/HealthMetric"
@@ -210,12 +209,10 @@ export default function Dashboard() {
 
     return (
         <div className="min-h-screen bg-black text-[#e6e6e6]">
-            <Sidebar />
-
-            <div className="p-6 ml-24">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-4xl font-bold text-[#f4f4f5]">Dashboard</h1>
-                    <div className="flex gap-2">
+            <div className="p-2 md:p-6">
+                <div className="flex flex-col gap-4 mb-8 sm:flex-row sm:items-center sm:justify-between">
+                    <h1 className="text-2xl font-bold text-[#f4f4f5] md:text-4xl">Dashboard</h1>
+                    <div className="flex gap-2 overflow-x-auto pb-1">
                         {timePeriods.map((period) => (
                             <button
                                 key={period.value}
@@ -232,7 +229,7 @@ export default function Dashboard() {
                 </div>
 
                 { }
-                <div className="grid grid-cols-4 gap-4 mb-6 md:grid-cols-7">
+                <div className="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4 xl:grid-cols-7 xl:gap-4">
                     <StatCard
                         label="Total Memories"
                         value={healthMetrics.totalMemories?.toLocaleString() || "0"}
@@ -278,7 +275,7 @@ export default function Dashboard() {
                 </div>
 
                 { }
-                <div className="grid grid-cols-2 gap-6 mb-6">
+                <div className="grid grid-cols-1 gap-6 mb-6 xl:grid-cols-2">
                     { }
                     <div className="bg-transparent rounded-xl p-6 border border-[#27272a] hover:border-zinc-600 transition-colors duration-200">
                         <div className="flex items-center justify-between mb-4">
@@ -386,7 +383,7 @@ export default function Dashboard() {
                                 }}
                             />
                         </div>
-                        <div className="flex gap-3 text-xs text-[#8a8a8a] mt-4 pt-4 border-t border-[#27272a] hover:border-zinc-600 transition-colors duration-200">
+                        <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs text-[#8a8a8a] mt-4 pt-4 border-t border-[#27272a] hover:border-zinc-600 transition-colors duration-200">
                             <div className="flex items-center gap-1">
                                 <div className="w-3 h-3 rounded" style={{ backgroundColor: sectorColors.semantic }} />
                                 semantic
@@ -408,7 +405,7 @@ export default function Dashboard() {
                                 reflective
                             </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-2 mt-4">
+                        <div className="grid grid-cols-2 gap-2 mt-4 sm:grid-cols-5">
                             <div className="bg-transparent rounded p-2 border border-[#27272a] hover:border-zinc-600 transition-colors duration-200 text-center">
                                 <p className="text-xs text-[#8a8a8a] mb-1">Peak QPS</p>
                                 <p className="text-lg font-bold text-[#f4f4f5]">{qpsStats.peakQps || 0}</p>
@@ -516,7 +513,7 @@ export default function Dashboard() {
                                 }}
                             />
                         </div>
-                        <div className="flex gap-3 text-xs text-[#8a8a8a] mt-4 pt-4 border-t border-[#27272a] hover:border-zinc-600 transition-colors duration-200">
+                        <div className="flex flex-wrap gap-x-3 gap-y-2 text-xs text-[#8a8a8a] mt-4 pt-4 border-t border-[#27272a] hover:border-zinc-600 transition-colors duration-200">
                             <div className="flex items-center gap-1">
                                 <div className="w-3 h-3 rounded bg-[#22c55e]" />
                                 decay cycles
@@ -530,7 +527,7 @@ export default function Dashboard() {
                                 consolidations
                             </div>
                         </div>
-                        <div className="grid grid-cols-5 gap-2 mt-4">
+                        <div className="grid grid-cols-2 gap-2 mt-4 sm:grid-cols-5">
                             <div className="bg-transparent rounded p-2 border border-[#27272a] hover:border-zinc-600 transition-colors duration-200 text-center">
                                 <p className="text-xs text-[#8a8a8a] mb-1">Stability</p>
                                 <p className="text-lg font-bold text-[#22c55e]">{healthMetrics.decayStability || "0"}%</p>
@@ -558,7 +555,7 @@ export default function Dashboard() {
                 { }
                 <div className="mb-6 bg-transparent rounded-xl p-6 border border-[#27272a] hover:border-zinc-600 transition-colors duration-200  transition-all duration-300">
                     <h2 className="text-lg font-semibold text-[#f4f4f5] mb-4">System Health</h2>
-                    <div className="grid grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                         <div className="space-y-4">
                             <HealthMetric label="Memory Usage" value={systemHealth.memoryUsage || 0} />
                         </div>
@@ -609,7 +606,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                     { }
                     <div className="bg-transparent rounded-xl p-6 border border-[#27272a] hover:border-zinc-600 transition-colors duration-200  transition-all duration-300">
                         <div className="flex items-center justify-between mb-4">
@@ -671,7 +668,7 @@ export default function Dashboard() {
                                         <span className="text-[#e6e6e6] font-medium">{log.event}</span>
                                         <span className="text-xs text-[#6b7280]">{log.time}</span>
                                     </div>
-                                    <div className="flex gap-3 text-xs text-[#8a8a8a]">
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#8a8a8a]">
                                         <span>Sector: <span className="text-[#9ca3af]">{log.sector}</span></span>
                                         <span>Salience: <span className={
                                             log.level === "Critical" ? "text-[#f87171]" :

@@ -6,33 +6,33 @@ This app is the optional OpenMemory dashboard UI.
 
 - a separate Next.js app in `dashboard/`
 - designed to talk to an OpenMemory backend over HTTP
-- not bundled into the bare `packages/openmemory-js` npm install
+- not bundled into the root `openmemory` npm package
 
-If you are running OpenMemory without the dashboard, you only need the backend in `packages/openmemory-js`.
+If you are running OpenMemory without the dashboard, you only need the root package.
 
 ## Backend requirement
 
 Start the backend first:
 
-```bash
-cd packages/openmemory-js
-npm install
-npm run dev
+```powershell
+pnpm install
+pnpm build
+node dist/server/index.js
 ```
 
 By default the dashboard calls its same-origin server-side proxy at `/api/openmemory`, which forwards requests to the OpenMemory backend.
 Configure the backend URL and optional API key in `.env.local`:
 
 ```env
-OPENMEMORY_API_URL=http://localhost:8080
+OPENMEMORY_API_URL=http://127.0.0.1:7331
 # OPENMEMORY_API_KEY=your-secret-api-key
 ```
 
-This keeps authenticated backend API keys on the server. For local development only, you can still use browser-direct configuration with `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY`, but `NEXT_PUBLIC_*` values are public in the browser bundle.
+This keeps authenticated backend API keys on the server. The settings screen is intentionally read-only; configure secrets in the dashboard deployment environment.
 
 ## Run the dashboard locally
 
-```bash
+```powershell
 cd dashboard
 npm install
 npm run dev
@@ -40,12 +40,23 @@ npm run dev
 
 Then open <http://localhost:3000>.
 
-## Docker
+For a production build:
 
-If you want the full local stack, you can also run OpenMemory with Docker and enable the dashboard/UI profile from the repository root.
+```powershell
+npm run build
+node node_modules/next/dist/bin/next start -H 127.0.0.1 -p 3000
+```
+
+## Hydrograph behavior
+
+- dashboard reads use `/v1/stats`, `/v1/timeline`, `/v1/recall`, and `/v1/worlds`
+- new memories use immutable `/v1/ingest`
+- edit/delete controls are intentionally absent; corrections are new superseding observations
+- project discovery reads recursive ProjectWorld metadata
+- the server-side compatibility proxy keeps API keys out of browser code
 
 ## Related docs
 
 - `README.md` — top-level project overview
 - `dashboard/CHAT_SETUP.md` — dashboard-to-backend setup details
-- `packages/openmemory-js/README.md` — backend / SDK docs
+- `README.md` — backend / SDK docs

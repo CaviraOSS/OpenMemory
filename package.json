@@ -1,0 +1,53 @@
+{
+    "name": "openmemory",
+    "version": "0.0.0-phase.1",
+    "description": "OpenMemory Hydrograph TypeScript package: library, CLI, self-hosted API server, and benchmark harness.",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "bin": {
+        "openmemory": "dist/cli/index.js"
+    },
+    "files": [
+        "dist",
+        "README.md",
+        "docs"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs');fs.mkdirSync('dist/stores/sqlite',{recursive:true});fs.copyFileSync('src/stores/sqlite/schema.sql','dist/stores/sqlite/schema.sql')\"",
+        "dev": "tsx src/cli/index.ts status",
+        "test": "vitest run --config vitest.config.ts",
+        "bench": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --no-resume",
+        "bench:full": "tsx benchmarks/src/official.ts --providers=openmemory --per-category=3 --no-resume",
+        "bench:ci": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --run-id=ci-smoke --out=benchmarks/runs/ci-smoke --no-resume --require-all --gate --no-color",
+        "bench:ci:full": "tsx benchmarks/src/official.ts --providers=openmemory --per-category=3 --run-id=ci-public --out=benchmarks/runs/ci-public --no-resume --require-all --gate --no-color",
+        "bench:data": "tsx benchmarks/src/cli.ts data",
+        "bench:public": "pnpm bench:data && pnpm bench:ci:full",
+        "bench:core": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --run-id=core-smoke --out=benchmarks/runs/core-smoke --no-resume --require-all --gate --no-color",
+        "bench:compare": "tsx benchmarks/src/official.ts --providers=openmemory,supermemory,mem0,graphiti,cognee --per-category=1 --no-resume --require-all",
+        "bench:judge": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --answerer=openai:gpt-4.1-mini --judge=openai:gpt-4.1 --no-resume",
+        "bench:judge:codex": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --answerer=codex:gpt-5.4-mini --judge=codex:gpt-5.6-terra --no-resume",
+        "bench:test": "vitest run --config benchmarks/vitest.config.ts",
+        "bench:typecheck": "tsc --noEmit -p benchmarks/tsconfig.json",
+        "serve": "tsx src/server/index.ts",
+        "typecheck": "tsc --noEmit -p tsconfig.json",
+        "release:check": "pnpm typecheck && pnpm test && pnpm bench:typecheck && pnpm bench:test && pnpm bench:ci && pnpm build"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/node": "^20.19.25",
+        "@types/turndown": "^5.0.6",
+        "tsx": "^4.20.6",
+        "typescript": "^5.9.3",
+        "vitest": "^2.1.9"
+    },
+    "dependencies": {
+        "@aws-sdk/client-bedrock-runtime": "^3.1093.0",
+        "@modelcontextprotocol/sdk": "^1.29.0",
+        "better-sqlite3": "^12.11.1",
+        "mammoth": "^1.12.0",
+        "pdf-parse": "^2.4.5",
+        "turndown": "^7.2.4",
+        "zod": "^4.4.3"
+    }
+}

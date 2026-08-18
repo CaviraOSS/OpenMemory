@@ -41,9 +41,9 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className="fixed top-0 left-0 h-screen z-50 space-y-4 p-2 text-stone-400">
-      <div className="h-full bg-stone-950 rounded-xl p-2 flex flex-col justify-between">
-        <div className="h-fit flex flex-col space-y-2 items-center">
+    <aside className="fixed bottom-0 left-0 right-0 z-50 p-2 text-stone-400 md:top-0 md:right-auto md:h-screen">
+      <div className="w-full bg-stone-950 rounded-xl border border-stone-900 p-2 flex flex-row justify-between md:h-full md:flex-col md:border-0">
+        <div className="hidden h-fit flex-col space-y-2 items-center md:flex">
           <div className="relative group">
             <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 whitespace-nowrap bg-stone-800 text-stone-200 px-2 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
               OpenMemory
@@ -60,10 +60,10 @@ export default function Sidebar() {
           </div>
         </div>
 
-        <div className="h-fit flex flex-col space-y-2 items-center">
+        <div className="h-fit flex flex-row items-center justify-around w-full md:w-auto md:flex-col md:space-y-2">
           {navItems.map((item, index) => (
             <div key={item.path} className={`relative group ${pathname === item.path ? 'bg-stone-900 rounded-lg border border-stone-800/80' : ''}`}>
-              <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 whitespace-nowrap bg-stone-800 text-stone-200 px-2 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <span className="hidden absolute left-full ml-4 top-1/2 -translate-y-1/2 whitespace-nowrap bg-stone-800 text-stone-200 px-2 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none md:block">
                 {item.label}
               </span>
               <Link href={item.path}>
@@ -75,7 +75,7 @@ export default function Sidebar() {
           ))}
         </div>
 
-        <div className="h-fit flex flex-col space-y-2 items-center">
+        <div className="hidden h-fit flex-col space-y-2 items-center md:flex">
           <Image
             src="/favicon.ico"
             alt="pfp"

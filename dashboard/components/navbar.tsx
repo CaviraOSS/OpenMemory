@@ -37,25 +37,25 @@ export default function Navbar() {
     }
 
     return (
-        <nav className="fixed top-0 w-full p-2 pl-20 z-40">
+        <nav className="fixed top-0 w-full p-2 z-40 md:pl-20">
             <div className="bg-stone-950 rounded-xl p-2 flex items-center justify-between border border-stone-900 shadow-xl">
                 <div className="flex items-center">
-                    <button className="rounded-full size-9 my-1 mr-4 flex items-center justify-between hover:bg-stone-900 hover:text-stone-200 duration-300 transition-all text-stone-500">
+                    <button className="rounded-full size-9 my-1 mr-1 flex items-center justify-between hover:bg-stone-900 hover:text-stone-200 duration-300 transition-all text-stone-500 md:mr-4">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-6 mx-auto">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12H12m-8.25 5.25h16.5" />
                         </svg>
                     </button>
                     
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         <div className="relative space-x-2 flex items-center hover:bg-stone-900 rounded-lg w-fit p-1 px-2 cursor-pointer transition-colors group">
-                            <h1 className="text-lg text-stone-200 font-medium">OpenMemory</h1>
+                            <h1 className="text-sm text-stone-200 font-medium sm:text-lg">OpenMemory</h1>
                             <span className="text-[10px] bg-sky-500/10 text-sky-500 border border-sky-500/20 px-1.5 rounded uppercase tracking-wider font-bold">OSS</span>
                         </div>
 
-                        <div className="h-6 w-[1px] bg-stone-800"></div>
+                        <div className="hidden h-6 w-[1px] bg-stone-800 sm:block"></div>
 
                         {/* Project Selector for scoping memories and analytics */}
-                        <div className="flex items-center gap-2">
+                        <div className="hidden items-center gap-2 sm:flex">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-4 text-stone-500">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z" />
                             </svg>
@@ -73,7 +73,7 @@ export default function Navbar() {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 mr-3">
+                <div className="flex items-center gap-1 md:gap-2 md:mr-3">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-900/50 border border-stone-800">
                         <div className="relative flex items-center">
                             <div className={`w-2 h-2 rounded-full ${backendStatus === 'online' ? 'bg-green-500 animate-pulse' :
@@ -82,13 +82,13 @@ export default function Navbar() {
                                 }`}>
                             </div>
                         </div>
-                        <span className="text-xs text-stone-400 font-medium">
+                        <span className="hidden text-xs text-stone-400 font-medium sm:inline">
                             {backendStatus === 'online' ? 'System Active' :
                                 backendStatus === 'offline' ? 'Connection Lost' :
                                     'Checking...'}
                         </span>
                     </div>
-                    <button className="rounded-xl p-2 flex justify-center hover:bg-stone-900/50 hover:text-stone-300 border border-stone-800 transition-all group">
+                    <button className="hidden rounded-xl p-2 justify-center hover:bg-stone-900/50 hover:text-stone-300 border border-stone-800 transition-all group sm:flex">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className="size-5 group-hover:rotate-90 transition-transform duration-300">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                         </svg>

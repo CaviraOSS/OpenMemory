@@ -1,0 +1,10 @@
+packages:
+  - .
+
+onlyBuiltDependencies:
+  - esbuild
+  - better-sqlite3
+
+allowBuilds:
+  esbuild: true
+  better-sqlite3: true

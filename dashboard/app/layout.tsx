@@ -37,7 +37,7 @@ export default function RootLayout({
                 <ProjectProvider>
                     <Sidebar />
                     <Navbar />
-                    <main className="ml-20 mt-20 p-4 min-h-screen transition-all duration-300">
+                    <main className="mt-20 p-3 pb-24 min-h-screen transition-all duration-300 md:ml-20 md:p-4 md:pb-4">
                         {children}
                     </main>
                 </ProjectProvider>
