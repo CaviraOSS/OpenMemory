@@ -1,9 +1,12 @@
 # 🚧 This project is currently being rewritten.
 
 Expect breaking changes and potential bugs.
-### Contributers needed
-To contribute, visit https://github.com/CaviraOSS/OpenMemory/tree/rewrite branch.
-If you find an issue, please open a GitHub issue with details so it can be tracked and resolved.
+🚀 **We’re actively accepting volunteers!**
+
+We’re looking for **developers, social media volunteers, designers, content creators, community helpers, and more.** If you’d like to contribute and be part of what we’re building, we’d love to have you!
+
+📩 **Interested?** Reach out at **[nullure@cavira.app](mailto:nullure@cavira.app)**
+
 ## OpenMemory
 
 > **Real long-term memory for AI agents. Not RAG. Not a vector DB. Self-hosted, Python + Node.**
