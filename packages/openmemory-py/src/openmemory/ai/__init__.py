@@ -6,5 +6,6 @@ from .aws import AwsAdapter
 from .synthetic import SyntheticAdapter
 from .siray import SirayAdapter
 from .minimax import MiniMaxAdapter
+from .orcarouter import OrcaRouterAdapter
 
-__all__ = ["AIAdapter", "OpenAIAdapter", "OllamaAdapter", "GeminiAdapter", "AwsAdapter", "SyntheticAdapter", "SirayAdapter", "MiniMaxAdapter"]
+__all__ = ["AIAdapter", "OpenAIAdapter", "OllamaAdapter", "GeminiAdapter", "AwsAdapter", "SyntheticAdapter", "SirayAdapter", "MiniMaxAdapter", "OrcaRouterAdapter"]

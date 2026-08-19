@@ -54,6 +54,7 @@ const get_defaults = (): model_cfg => ({
         gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         siray: "text-embedding-3-small",
+        orcarouter: "orcarouter/auto",
         local: "all-MiniLM-L6-v2",
     },
     semantic: {
@@ -62,6 +63,7 @@ const get_defaults = (): model_cfg => ({
         gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
         siray: "text-embedding-3-small",
+        orcarouter: "orcarouter/auto",
         local: "all-MiniLM-L6-v2",
     },
     procedural: {
@@ -69,6 +71,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        orcarouter: "orcarouter/auto",
         local: "all-MiniLM-L6-v2",
     },
     emotional: {
@@ -76,6 +79,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-small",
         gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        orcarouter: "orcarouter/auto",
         local: "all-MiniLM-L6-v2",
     },
     reflective: {
@@ -83,6 +87,7 @@ const get_defaults = (): model_cfg => ({
         openai: "text-embedding-3-large",
         gemini: "models/gemini-embedding-001",
         aws: "amazon.titan-embed-text-v2:0",
+        orcarouter: "orcarouter/auto",
         local: "all-mpnet-base-v2",
     },
 });
@@ -93,6 +98,9 @@ export const get_model = (sector: string, provider: string): string => {
     }
     if (provider === "openai" && process.env.OM_OPENAI_MODEL) {
         return process.env.OM_OPENAI_MODEL;
+    }
+    if (provider === "orcarouter" && process.env.OM_ORCAROUTER_EMBEDDING_MODEL) {
+        return process.env.OM_ORCAROUTER_EMBEDDING_MODEL;
     }
 
     const cfg = load_models();

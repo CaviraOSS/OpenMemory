@@ -146,6 +146,8 @@ async function embed_with_provider(
             return gen_syn_emb(t, s);
         case "siray":
             return await emb_siray(t, s);
+        case "orcarouter":
+            return await emb_orcarouter(t, s);
         default:
             throw new Error(`Unknown embedding provider: ${provider}`);
     }
@@ -199,6 +201,9 @@ async function emb_batch_with_fallback(
                     break;
                 case "openai":
                     result = await emb_batch_openai(txts);
+                    break;
+                case "orcarouter":
+                    result = await emb_batch_orcarouter(txts);
                     break;
                 default:
                     result = {};
@@ -424,6 +429,57 @@ async function emb_siray(t: string, s: string): Promise<number[]> {
     return ((await r.json()) as any).data[0].embedding;
 }
 
+async function emb_orcarouter(t: string, s: string): Promise<number[]> {
+    if (!env.orcarouter_key) throw new Error("OrcaRouter key missing");
+    const m = get_model(s, "orcarouter");
+
+    const r = await fetchWithTimeout(
+        `${env.orcarouter_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.orcarouter_key}`,
+            },
+            body: JSON.stringify({
+                input: t,
+                model: env.orcarouter_embedding_model || m,
+                ...(env.vec_dim ? { dimensions: env.vec_dim } : {}),
+            }),
+        },
+    );
+    if (!r.ok) throw new Error(`OrcaRouter: ${r.status}`);
+    return ((await r.json()) as any).data[0].embedding;
+}
+
+async function emb_batch_orcarouter(
+    txts: Record<string, string>,
+): Promise<Record<string, number[]>> {
+    if (!env.orcarouter_key) throw new Error("OrcaRouter key missing");
+    const secs = Object.keys(txts),
+        m = get_model("semantic", "orcarouter");
+    const r = await fetchWithTimeout(
+        `${env.orcarouter_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.orcarouter_key}`,
+            },
+            body: JSON.stringify({
+                input: Object.values(txts),
+                model: env.orcarouter_embedding_model || m,
+                ...(env.vec_dim ? { dimensions: env.vec_dim } : {}),
+            }),
+        },
+    );
+    if (!r.ok) throw new Error(`OrcaRouter batch: ${r.status}`);
+    const d = (await r.json()) as any,
+        out: Record<string, number[]> = {};
+    secs.forEach((s, i) => (out[s] = d.data[i].embedding));
+    return out;
+}
+
 async function emb_local(t: string, s: string): Promise<number[]> {
     if (!env.local_model_path) {
         console.error("[EMBED] Local model missing, using synthetic");
@@ -578,7 +634,9 @@ export async function embedMultiSector(
             const simp = env.embed_mode === "simple";
             if (
                 simp &&
-                (env.emb_kind === "gemini" || env.emb_kind === "openai")
+                (env.emb_kind === "gemini" ||
+                    env.emb_kind === "openai" ||
+                    env.emb_kind === "orcarouter")
             ) {
                 console.error(
                     `[EMBED] Simple mode (1 batch for ${secs.length} sectors)`,
@@ -683,7 +741,9 @@ export const getEmbeddingInfo = () => {
         mode: env.embed_mode,
         batch_support:
             env.embed_mode === "simple" &&
-            (env.emb_kind === "gemini" || env.emb_kind === "openai"),
+            (env.emb_kind === "gemini" ||
+                env.emb_kind === "openai" ||
+                env.emb_kind === "orcarouter"),
         advanced_parallel: env.adv_embed_parallel,
         embed_delay_ms: env.embed_delay_ms,
     };
@@ -719,6 +779,17 @@ export const getEmbeddingInfo = () => {
             procedural: get_model("procedural", "siray"),
             emotional: get_model("emotional", "siray"),
             reflective: get_model("reflective", "siray"),
+        };
+    } else if (env.emb_kind === "orcarouter") {
+        i.configured = !!env.orcarouter_key;
+        i.base_url = env.orcarouter_base_url;
+        i.model_override = env.orcarouter_embedding_model || null;
+        i.models = {
+            episodic: get_model("episodic", "orcarouter"),
+            semantic: get_model("semantic", "orcarouter"),
+            procedural: get_model("procedural", "orcarouter"),
+            emotional: get_model("emotional", "orcarouter"),
+            reflective: get_model("reflective", "orcarouter"),
         };
     } else if (env.emb_kind === "ollama") {
         i.configured = true;

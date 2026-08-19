@@ -63,6 +63,14 @@ export const env = {
         process.env.OM_SIRAY_BASE_URL,
         "https://api.siray.ai/v1",
     ),
+    orcarouter_key:
+        process.env.ORCAROUTER_API_KEY || process.env.OM_ORCAROUTER_API_KEY || "",
+    orcarouter_base_url: str(
+        process.env.OM_ORCAROUTER_BASE_URL,
+        "https://api.orcarouter.ai/v1",
+    ),
+    orcarouter_model: process.env.OM_ORCAROUTER_MODEL,
+    orcarouter_embedding_model: process.env.OM_ORCAROUTER_EMBEDDING_MODEL,
     ollama_url: str(
         process.env.OLLAMA_URL || process.env.OM_OLLAMA_URL,
         "http://localhost:11434",

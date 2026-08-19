@@ -68,6 +68,11 @@ class EnvConfig:
         self.minimax_model = get("ai", "minimax_model", "OM_MINIMAX_MODEL", None)
         self.minimax_embedding_model = os.getenv("OM_MINIMAX_EMBEDDING_MODEL")
 
+        self.orcarouter_key = get("ai", "orcarouter_key", "ORCAROUTER_API_KEY", "") or os.getenv("OM_ORCAROUTER_API_KEY")
+        self.orcarouter_base_url = get("ai", "orcarouter_base", "OM_ORCAROUTER_BASE_URL", "https://api.orcarouter.ai/v1")
+        self.orcarouter_model = get("ai", "orcarouter_model", "OM_ORCAROUTER_MODEL", None)
+        self.orcarouter_embedding_model = os.getenv("OM_ORCAROUTER_EMBEDDING_MODEL")
+
         self.vec_dim = int(num(os.getenv("OM_VEC_DIM"), 1536))
         self.min_score = num(os.getenv("OM_MIN_SCORE"), 0.3)
         self.keyword_boost = num(os.getenv("OM_KEYWORD_BOOST"), 2.5)
