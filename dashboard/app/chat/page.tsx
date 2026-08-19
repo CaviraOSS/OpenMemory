@@ -118,22 +118,6 @@ export default function ChatPage() {
         }
     }
 
-    const addMemoryToBag = async (memory: MemoryReference) => {
-        try {
-            await fetch(`${API_BASE_URL}/memory/reinforce`, {
-                method: "POST",
-                headers: getHeaders(),
-                body: JSON.stringify({
-                    id: memory.id,
-                    boost: 0.1
-                })
-            })
-            console.log("Memory reinforced:", memory.id)
-        } catch (error) {
-            console.error("Error reinforcing memory:", error)
-        }
-    }
-
     return (
         <div className="flex flex-col min-h-screen w-full" suppressHydrationWarning>
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 mt-6 mb-16" suppressHydrationWarning>
@@ -253,16 +237,6 @@ export default function ChatPage() {
                                                         {memory.content}
                                                     </p>
                                                 </div>
-                                                <button
-                                                    onClick={() => addMemoryToBag(memory)}
-                                                    className="shrink-0 h-9 w-9 inline-flex items-center justify-center rounded-xl bg-stone-900/70 border border-zinc-800 text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
-                                                    aria-label="Add to bag"
-                                                    title="Add to bag"
-                                                >
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M19 12H5" />
-                                                    </svg>
-                                                </button>
                                             </div>
                                         </div>
                                     </div>

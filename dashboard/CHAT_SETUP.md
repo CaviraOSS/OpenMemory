@@ -6,9 +6,8 @@ The chat interface is now connected to the OpenMemory backend and can query memo
 
 ✅ **Memory Querying**: Searches your memory database for relevant content
 ✅ **Salience-based Results**: Shows top memories ranked by relevance
-✅ **Memory Reinforcement**: Click the + button to boost memory importance
+✅ **Read-only Memory References**: Shows the memories used to generate each response
 ✅ **Real-time Updates**: Live connection to backend API
-✅ **Action Buttons**: Quick actions after assistant responses
 
 ## Setup Instructions
 
@@ -99,19 +98,17 @@ curl -X POST http://localhost:8080/memory/ingest \
 4. **Results**: Top 5 memories returned with salience scores
 5. **Response**: Chat generates answer based on retrieved memories
 
-### Memory Reinforcement
+### Memory References
 
-Clicking the **+** button on a memory card:
-
-- Sends POST to `/memory/reinforce`
-- Increases memory salience by 0.1
-- Makes it more likely to appear in future queries
+Memory cards shown beside a chat response are read-only references. Their salience is
+updated by the backend from observed evidence, so the dashboard does not expose
+manual reinforcement controls.
 
 ## Current Features
 
 ✅ Real-time memory querying
 ✅ Salience-based ranking
-✅ Memory reinforcement (boost)
+✅ Read-only memory references
 ✅ Sector classification display
 ✅ Error handling with backend status
 
@@ -149,7 +146,6 @@ Clicking the **+** button on a memory card:
 ```typescript
 POST /memory/query      // Search memories
 POST /memory/add        // Add new memory
-POST /memory/reinforce  // Boost memory salience
 GET  /memory/all        // List all memories
 GET  /memory/:id        // Get specific memory
 ```
