@@ -16,6 +16,8 @@
 
 export { create_memory, createMemory } from './core/create_memory.js';
 export type {
+    decay_cycle_params,
+    decay_cycle_result,
     embedding_provider,
     ingest_result,
     memory_config,
@@ -26,9 +28,11 @@ export type {
     open_memory,
     public_recall_query,
     recall_mode,
+    reinforcement_params,
     timeline_params,
     world_list_params,
 } from './core/create_memory.js';
+export type { decay_policy, decay_projection, decay_tier } from './core/memory/decay_engine.js';
 export * from './core/connectors/index.js';
 export * from './core/project/index.js';
 export * from './core/i18n/index.js';

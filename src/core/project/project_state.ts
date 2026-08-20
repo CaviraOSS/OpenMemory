@@ -19,7 +19,7 @@ import type { Connector } from '../connectors/connector.js';
 import type { HydroNode } from '../types/hydro_node.js';
 import type { ProjectWorld, project_source_summary, project_world_kind } from './project_world.js';
 
-export type project_event_kind = 'architecture' | 'decision' | 'requirement' | 'goal' | 'constraint' | 'task' | 'bug' | 'failure' | 'preference' | 'convention' | 'deployment' | 'risk' | 'question' | 'reference' | 'agent_state' | 'code_fact' | 'manual_fact';
+export type project_event_kind = 'architecture' | 'decision' | 'requirement' | 'goal' | 'constraint' | 'task' | 'bug' | 'failure' | 'preference' | 'convention' | 'deployment' | 'risk' | 'question' | 'reference' | 'agent_state' | 'session_turn' | 'code_fact' | 'manual_fact' | 'skill' | 'asset';
 
 export type project_event = {
     id?: string;
@@ -96,12 +96,15 @@ export class project_state {
     readonly goal_nodes = new Set<string>();
     readonly constraint_nodes = new Set<string>();
     readonly deployment_nodes = new Set<string>();
+    readonly skill_nodes = new Set<string>();
+    readonly session_nodes = new Set<string>();
+    readonly asset_nodes = new Set<string>();
     agent: agent_continuity_state = {
         last_active_task: null, current_plan: [], pending_questions: [], files_touched: [], proposed_changes: [],
         rejected_approaches: [], test_results: [], known_failures: [], next_actions: [], updated_at: 0,
     };
 
-    constructor(readonly project: ProjectWorld) {}
+    constructor(readonly project: ProjectWorld) { }
 
     record(node: HydroNode, event: project_event, event_id: string): void {
         const topic = event.topic ?? event.kind;
@@ -116,7 +119,10 @@ export class project_state {
                                 : event.kind === 'goal' ? this.goal_nodes
                                     : event.kind === 'constraint' || event.kind === 'requirement' ? this.constraint_nodes
                                         : event.kind === 'deployment' ? this.deployment_nodes
-                                            : event.kind === 'code_fact' ? this.code_nodes : null;
+                                            : event.kind === 'code_fact' ? this.code_nodes
+                                                : event.kind === 'skill' ? this.skill_nodes
+                                                    : event.kind === 'session_turn' ? this.session_nodes
+                                                        : event.kind === 'asset' ? this.asset_nodes : null;
         target?.add(node.id);
         if (event.kind === 'agent_state') this.agent = {
             last_active_task: event.topic ?? event.text,

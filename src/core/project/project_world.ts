@@ -78,11 +78,13 @@ export type project_world_kind =
     | 'constraints'
     | 'questions'
     | 'risks'
-    | 'references';
+    | 'references'
+    | 'skills'
+    | 'assets';
 
 export const project_world_kinds: project_world_kind[] = [
     'repositories', 'documents', 'issues', 'deployments', 'decisions', 'agent_sessions', 'architecture', 'tasks',
-    'conventions', 'failures', 'goals', 'constraints', 'questions', 'risks', 'references',
+    'conventions', 'failures', 'goals', 'constraints', 'questions', 'risks', 'references', 'skills', 'assets',
 ];
 
 export type project_config = {

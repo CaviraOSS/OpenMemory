@@ -26,9 +26,12 @@ const event_world: Record<project_event['kind'], project_world_kind> = {
     task: 'tasks', bug: 'failures', failure: 'failures', preference: 'conventions', convention: 'conventions',
     deployment: 'deployments', risk: 'risks', question: 'questions', reference: 'references', agent_state: 'agent_sessions',
     code_fact: 'repositories', manual_fact: 'documents',
+    skill: 'skills',
+    session_turn: 'agent_sessions',
+    asset: 'assets',
 };
 
-const replace_by_default = new Set<project_event['kind']>(['architecture', 'decision', 'requirement', 'goal', 'constraint', 'task', 'preference', 'convention', 'deployment', 'agent_state', 'code_fact']);
+const replace_by_default = new Set<project_event['kind']>(['architecture', 'decision', 'requirement', 'goal', 'constraint', 'task', 'preference', 'convention', 'deployment', 'agent_state', 'code_fact', 'skill', 'asset']);
 
 const event_plan = (project: ProjectWorld, state: project_state, event: project_event, at: number): { plan: HydrographImportPlan; event_id: string; key: string } => {
     const topic = event.topic ?? event.kind;
@@ -54,7 +57,8 @@ const event_plan = (project: ProjectWorld, state: project_state, event: project_
         world_key: `project:${project.project_id}:${world_kind}`,
         zone: event.subjective ? 'endocortex' : 'exocortex',
         facet: event.kind === 'failure' || event.kind === 'bug' || event.kind === 'agent_state' ? 'reflective'
-            : event.kind === 'code_fact' ? 'procedural' : 'semantic',
+            : event.kind === 'session_turn' ? 'episodic'
+            : event.kind === 'code_fact' || event.kind === 'skill' ? 'procedural' : 'semantic',
         valid_from: event.valid_from ?? event.observed_at ?? event.at ?? at,
         valid_to: null,
         observed_at: event.observed_at ?? event.at ?? at,

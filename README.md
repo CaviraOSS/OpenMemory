@@ -103,6 +103,8 @@ await memory.getEntity(entity_id);
 await memory.resolveEntity(entity_mention);
 await memory.getTimeline({ valid_time, recorded_time });
 await memory.getStats();
+await memory.runDecay({ now: Date.now(), limit: 256 });
+await memory.reinforce(memory_id, { at: Date.now() });
 await memory.close();
 ```
 
@@ -122,11 +124,34 @@ const memory = await createMemory({
   enable_cold_log: false,
   enable_consolidation: false,
   benchmark_mode: false,
+  decay_policy: {
+    hot_lambda: 0.005,
+    warm_lambda: 0.02,
+    cold_lambda: 0.05,
+    activation_floor: 0.05,
+    reinforcement_gain: 0.2,
+  },
 });
 ```
 
 Defaults use an in-memory store, a `memory` world, a 2,048-token context budget,
 `0.5` strict confidence, and `0.6` grounding threshold.
+
+## Memory decay
+
+Associative recall projects age-sensitive activation without mutating memory.
+Applications can persist that projection through deterministic, cursor-based
+`runDecay()` cycles and explicitly reinforce useful memories with diminishing
+returns through `reinforce()`. Decay updates only the mutable activation
+envelope: content, vectors, provenance, valid-time history, and content hashes
+remain unchanged. Default hot, warm, and cold rates are `0.005`, `0.02`, and
+`0.05` per day, adjusted by retention, confidence, grounding, conflict, and
+reinforcement. `runDecay()` processes at most 256 nodes by default and returns a
+`next_cursor` for the following batch. Cycles are idempotent at the same
+timestamp and audited when using SQLite. OpenMemory does not start a hidden
+maintenance timer. Decay-aware associative ranking is enabled when
+`decay_policy` is supplied; default ranking remains unchanged until an official
+quality A/B justifies enabling it globally.
 
 ## Real embeddings
 
@@ -205,6 +230,14 @@ code facts by source snapshot freshness, tracks contradictions, and returns
 token-budgeted handoff packets for agents. See
 [docs/project-memory.md](docs/project-memory.md).
 
+Conversations, curated procedures, documents, and repositories also become a
+governed four-asset catalog: Chat Memory, Skills, LLM-Wiki, and CodeGraph.
+Assets have immutable versions, lifecycle approval, owner/team/ACL policy,
+agent/task/framework bindings, injection modes, expiry, and explainable
+token-budgeted loadouts. Portable manifests expose MCP discovery metadata and an
+optional A2A 1.0-compatible Agent Card. See
+[docs/agent-assets.md](docs/agent-assets.md).
+
 ## MCP integration
 
 Run OpenMemory as a local stdio MCP server for coding and IDE agents:
@@ -219,7 +252,7 @@ Or expose Streamable HTTP beside the self-hosted API:
 openmemory serve --db ./openmemory.db --mcp-http
 ```
 
-MCP provides eight high-level tools, nine readable resources, and five agent
+MCP provides thirteen high-level tools, thirteen readable resources, and five agent
 workflow prompts. Project/user permissions, recall gates, token budgets,
 read-only mode, connector dry-runs, and JSONL audit logging are enforced by the
 shared runtime. See [docs/mcp.md](docs/mcp.md).
@@ -232,6 +265,27 @@ selection, activity timelines, decay views, settings status, and memory-aware
 chat. It is responsive on mobile and desktop and talks to the root server
 through a same-origin compatibility proxy. See
 [dashboard/README.md](dashboard/README.md).
+
+## VS Code extension
+
+The native extension under [apps/vscode-extension](apps/vscode-extension)
+provides an activity-bar memory browser, status bar, selection/note ingestion,
+recall, project context, explanation, reinforcement, and explicit decay
+maintenance. Explicit AI change sessions capture bounded, redacted patches from
+Copilot, Codex, Claude, Cursor, Windsurf, and other coding agents, including
+direct workspace writes. Because VS Code does not expose edit-origin identity,
+automatic heuristic candidates are opt-in, marked low-confidence, and always
+reviewed before ingestion. It talks to the same local engine through stable CLI
+JSON rather than maintaining a second client implementation.
+
+```powershell
+pnpm extension:check
+pnpm extension:build
+pnpm extension:package
+```
+
+Set `openmemory.cliPath` to the installed `openmemory` binary. For development,
+build the root package and point it at `dist/cli/index.js`.
 
 ## Multilingual memory
 
@@ -262,13 +316,45 @@ optional provenance-marked display view, never hidden source truth. See
 ## CLI and server
 
 ```powershell
+openmemory init
+openmemory tui
+openmemory detect
+openmemory session discover --from claude-code
+openmemory port --from claude-code --to openmemory --all
+openmemory verify --from codex --sample 10
+openmemory session wiki --from gemini-cli --all --name "Project knowledge"
 openmemory status
-openmemory invariants
-pnpm serve
+openmemory status --memories 20 --json
+openmemory ingest "Remember the rollback procedure" --type procedure
+Get-Content .\notes.md | openmemory ingest --stdin --source notes.md
+openmemory recall "what is the rollback procedure" --mode associative
+openmemory memory list --limit 50
+openmemory maintenance decay --all
+openmemory maintenance reinforce <memory-id>
+openmemory project context "prepare the next release"
+openmemory skill create --name "Release check" --description "Validate releases" --triggers "release checklist" --instructions-json '["Run tests","Build packages"]'
+openmemory skill match "run the release checklist" --agent reviewer
+openmemory asset list
+openmemory asset loadout "prepare the release" --agent reviewer --framework codex
+openmemory agent manifest reviewer --framework codex --query "prepare the release"
+openmemory code impact createMemory
+openmemory session import ./history/codex-session.json
+openmemory agent preflight "prepare the next release" --json
+openmemory serve --mcp-http
 ```
 
-Set `OPENMEMORY_STORE=sqlite` and `OPENMEMORY_DB_PATH=./openmemory.db` to run the
-CLI or server against SQLite. Otherwise they run in-memory.
+The CLI defaults to `.openmemory/project.db` in the detected workspace and
+emits stable JSON whenever stdout is not a TTY or `--json` is supplied. Use
+`--db`, `--project`, `--user`, and `--cwd` to override scope. Commands never
+prompt unless `--interactive` is explicitly enabled. `memory list`, status
+snapshots, and stdin ingestion are the stable native-client contract used by
+the VS Code extension.
+
+The session porter detects local Claude Code, Codex, and OpenCode history and
+imports selected conversations as governed Chat Memory. Source adapters are
+read-only; unchanged native sessions skip, changed sessions create immutable
+asset versions, and `--jsonl` exposes progress for automation. See
+[docs/session-porter.md](docs/session-porter.md).
 
 ## Development
 

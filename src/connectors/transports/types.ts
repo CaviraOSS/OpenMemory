@@ -38,8 +38,10 @@ export type source_symbol = {
     name: string;
     kind: 'class' | 'interface' | 'type' | 'enum' | 'function' | 'method' | 'variable' | 'module' | 'heading' | 'table' | 'route' | 'unknown';
     line: number;
+    end_line: number;
     signature: string;
     exported: boolean;
+    calls: string[];
 };
 
 export type file_role = 'source' | 'test' | 'documentation' | 'configuration' | 'build' | 'workflow' | 'data' | 'migration' | 'generated' | 'vendor' | 'asset' | 'unknown';

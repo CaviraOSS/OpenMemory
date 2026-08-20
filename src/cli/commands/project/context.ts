@@ -1,5 +1,5 @@
 import type { cli_command } from '../../context/cli_context.js';
-import { command_flags, flag, positional, require_value, with_project } from '../../context/cli_context.js';
+import { command_flags, flag, list_flag, positional, require_value, with_project } from '../../context/cli_context.js';
 import { badge, status_badge } from '../../theme/badges.js';
 import { emit, section } from '../../output/pretty.js';
 import { panel } from '../../output/panel.js';
@@ -7,14 +7,19 @@ import { table } from '../../output/table.js';
 import { empty_state } from '../../output/empty_state.js';
 
 export const project_context_command: cli_command = async (context) => {
-    command_flags(context, ['task']);
+    command_flags(context, ['task', 'agent', 'framework', 'task-id', 'teams', 'roles']);
     const task = require_value(positional(context) ?? flag(context, 'task'), 'task');
-    const packet = await with_project(context, (project) => project.getProjectContext(context.project_id, task, context.token_budget));
+    const packet = await with_project(context, (project) => project.getProjectContext(
+        context.project_id, task, context.token_budget, flag(context, 'agent'), flag(context, 'framework'),
+        { user_id: context.user_id, team_ids: list_flag(context, 'teams'), roles: list_flag(context, 'roles'), task_id: flag(context, 'task-id') },
+    ));
     const result = {
         ok: true, schema: 'openmemory.project-context.v1', project_id: context.project_id, task,
         project_summary: packet.project_summary, current_goal: packet.current_goal, hard_constraints: packet.hard_constraints,
         relevant_architecture: packet.relevant_architecture, relevant_files: packet.relevant_files,
         active_decisions: packet.active_decisions, open_tasks: packet.open_tasks, known_failures: packet.known_failures,
+        matched_skills: packet.matched_skills,
+        asset_loadout: packet.asset_loadout,
         conflicts: packet.contradictions, suggested_next_steps: packet.suggested_next_steps, citations: packet.citations, debug_trace: packet.debug_trace,
     };
     emit(context, result, () => {
@@ -26,6 +31,7 @@ export const project_context_command: cli_command = async (context) => {
         if (result.active_decisions.length) blocks.push('', section(context, 'Active Decisions', table(result.active_decisions.map((item) => ({ status: badge(item.current ? 'ACTIVE' : 'SUPERSEDED', true, context.colors), decision: item.decision, reason: item.rationale ?? '—' })), [{ key: 'status', label: 'STATUS', width: 13 }, { key: 'decision', label: 'DECISION', min: 15 }, { key: 'reason', label: 'REASON', min: 10 }], context.colors, context.terminal_width)));
         if (result.open_tasks.length) blocks.push('', section(context, 'Open Tasks', result.open_tasks.map((item) => `${badge(status_badge(item.status), true, context.colors)} ${item.task}`).join('\n')));
         if (result.known_failures.length) blocks.push('', section(context, 'Known Failures', result.known_failures.map((item) => `${context.colors.danger('FAILED')} ${item}`).join('\n')));
+        if (result.matched_skills.length) blocks.push('', section(context, 'Matched Skills', result.matched_skills.map((item) => `${context.colors.info('SKILL')} ${item.skill.name} v${item.skill.version} · ${item.matched_triggers.join(', ')}`).join('\n')));
         if (result.conflicts.length) blocks.push('', panel(`${result.conflicts.length} unresolved conflict${result.conflicts.length === 1 ? '' : 's'}`, context.colors, { title: 'Conflicts', kind: 'danger', width: context.terminal_width }));
         if (result.suggested_next_steps.length) blocks.push('', section(context, 'Next Steps', result.suggested_next_steps.map((item, index) => `${index + 1}. ${item}`).join('\n')));
         if (blocks.length === 1) blocks.push('', empty_state('memories', context.colors, context.terminal_width));

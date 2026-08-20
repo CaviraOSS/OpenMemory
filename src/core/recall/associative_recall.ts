@@ -33,6 +33,7 @@
 
 import { compute_activation } from '../math/activation.js';
 import { clamp01, sigmoid } from '../math/utility.js';
+import { project_node_decay, type decay_policy } from '../memory/decay_engine.js';
 import type { HydroEdge } from '../types/hydro_edge.js';
 import type { HydroNode } from '../types/hydro_node.js';
 import type { GateContext, RecallLabel } from '../types/recall_mode.js';
@@ -110,6 +111,7 @@ export type AssociativeDeps = RecallDeps & {
     spread?: ActivationSpreadOptions;
     hopfield?: { enabled?: boolean; beta?: number };
     diversity?: { lambda?: number };
+    decay_policy?: Partial<decay_policy>;
 };
 
 export type AssociativeBreakdown = {
@@ -461,8 +463,11 @@ export function associative_recall(
         const pressure = clamp01(deps.contradiction_pressure_of?.(node.id) ?? 0);
 
         const age_days = Math.max(0, (at - node.temporal.observed_at) / day_ms);
+        const memory_strength = deps.decay_policy
+            ? project_node_decay(node, at, deps.decay_policy).activation
+            : node.state.salience;
         const actr_raw = compute_activation([age_days + 1], {
-            context_association: node.state.salience,
+            context_association: 0.5 * (node.state.salience + memory_strength),
             task_relevance: 0.5 * (vector + lexical),
             grounding_relevance: node.grounding.grounding_score,
             contradiction_penalty: pressure,

@@ -1,10 +1,15 @@
 packages:
   - .
+  - apps/vscode-extension
 
 onlyBuiltDependencies:
   - esbuild
   - better-sqlite3
+  - '@vscode/vsce-sign'
+  - keytar
 
 allowBuilds:
   esbuild: true
   better-sqlite3: true
+  '@vscode/vsce-sign': true
+  keytar: true

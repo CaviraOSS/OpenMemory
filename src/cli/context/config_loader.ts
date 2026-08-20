@@ -9,8 +9,8 @@ export type local_cli_config = {
     connectors?: Record<string, Record<string, unknown>>;
 };
 
-const bool_flags = new Set(['json', 'pretty', 'compact', 'no-color', 'silent', 'interactive', 'dry-run', 'help', 'debug', 'mcp-http', 'read-only']);
-const global_flags = new Set(['db', 'project', 'user', 'json', 'pretty', 'compact', 'no-color', 'silent', 'interactive', 'dry-run', 'token-budget', 'cwd', 'help', 'debug']);
+const bool_flags = new Set(['json', 'jsonl', 'pretty', 'compact', 'no-color', 'silent', 'interactive', 'dry-run', 'help', 'version', 'debug', 'mcp-http', 'read-only', 'all', 'stdin', 'force']);
+const global_flags = new Set(['db', 'project', 'user', 'json', 'jsonl', 'pretty', 'compact', 'no-color', 'silent', 'interactive', 'dry-run', 'token-budget', 'cwd', 'help', 'version', 'debug']);
 
 export function parse_argv(argv: string[]): parsed_cli {
     const flags = new Map<string, cli_value>();
@@ -28,7 +28,7 @@ export function parse_argv(argv: string[]): parsed_cli {
         const prior = flags.get(key);
         flags.set(key, prior === undefined ? value : Array.isArray(prior) ? [...prior, String(value)] : [String(prior), String(value)]);
     }
-    const group = ['project', 'connectors', 'agent'].includes(words[0]) && words[1] ? `${words.shift()}:${words.shift()}` : words.shift() ?? 'status';
+    const group = ['project', 'connectors', 'agent', 'memory', 'maintenance', 'skill', 'code', 'session', 'asset'].includes(words[0]) && words[1] ? `${words.shift()}:${words.shift()}` : words.shift() ?? 'status';
     return { command: group, flags, positionals: words };
 }
 

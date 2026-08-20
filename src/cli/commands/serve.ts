@@ -58,12 +58,15 @@ export const serve_command: cli_command = async (context) => {
         pid: process.pid,
         ...(config.mcp_http ? { mcp_url: `http://${config.host}:${address.port}/mcp` } : {}),
     };
-    emit(context, result, () => panel('', context.colors, { title: 'OpenMemory server', kind: 'success', width: context.terminal_width, rows: [
-        ['Address', result.url], ['Database', result.db_path], ['Project', context.project_id], ['Auth', config.api_key ? 'enabled' : 'disabled'], ['MCP HTTP', config.mcp_http ? result.mcp_url : 'disabled'],
-    ] }));
+    emit(context, result, () => panel('', context.colors, {
+        title: 'OpenMemory server', kind: 'success', width: context.terminal_width, rows: [
+            ['Address', result.url], ['Database', result.db_path], ['Project', context.project_id], ['Auth', config.api_key ? 'enabled' : 'disabled'], ['MCP HTTP', config.mcp_http ? result.mcp_url : 'disabled'],
+        ]
+    }));
     await new Promise<void>((resolve) => {
         const stop = () => server.close(() => resolve());
         process.once('SIGINT', stop);
         process.once('SIGTERM', stop);
     });
+    await memory.close();
 };

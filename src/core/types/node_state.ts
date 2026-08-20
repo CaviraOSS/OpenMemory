@@ -31,14 +31,20 @@ export type NodeStatus =
 
 export type NodeState = {
     status: NodeStatus;
-    
+
     confidence: number;
-    
+
     salience: number;
-    
+
     activation: number;
-    
+
     decay_rate: number;
+
+    decay_updated_at?: number | null;
+
+    last_reinforced_at?: number | null;
+
+    reinforcement_count?: number;
 };
 
 export function default_node_state(): NodeState {
@@ -48,5 +54,8 @@ export function default_node_state(): NodeState {
         salience: 0.5,
         activation: 0.5,
         decay_rate: 0.05,
+        decay_updated_at: null,
+        last_reinforced_at: null,
+        reinforcement_count: 0,
     };
 }

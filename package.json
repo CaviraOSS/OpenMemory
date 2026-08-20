@@ -15,7 +15,7 @@
     ],
     "scripts": {
         "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs');fs.mkdirSync('dist/stores/sqlite',{recursive:true});fs.copyFileSync('src/stores/sqlite/schema.sql','dist/stores/sqlite/schema.sql')\"",
-        "dev": "tsx src/cli/index.ts status",
+        "dev": "node --import tsx src/cli/index.ts status",
         "test": "vitest run --config vitest.config.ts",
         "bench": "tsx benchmarks/src/cli.ts run --providers=openmemory --datasets=smoke --no-resume",
         "bench:full": "tsx benchmarks/src/official.ts --providers=openmemory --per-category=3 --no-resume",
@@ -30,8 +30,11 @@
         "bench:test": "vitest run --config benchmarks/vitest.config.ts",
         "bench:typecheck": "tsc --noEmit -p benchmarks/tsconfig.json",
         "serve": "tsx src/server/index.ts",
+        "extension:check": "pnpm --dir apps/vscode-extension check",
+        "extension:build": "pnpm --dir apps/vscode-extension compile",
+        "extension:package": "pnpm --dir apps/vscode-extension package",
         "typecheck": "tsc --noEmit -p tsconfig.json",
-        "release:check": "pnpm typecheck && pnpm test && pnpm bench:typecheck && pnpm bench:test && pnpm bench:ci && pnpm build"
+        "release:check": "pnpm typecheck && pnpm extension:check && pnpm test && pnpm bench:typecheck && pnpm bench:test && pnpm bench:ci && pnpm build && pnpm extension:build"
     },
     "devDependencies": {
         "@types/better-sqlite3": "^7.6.13",

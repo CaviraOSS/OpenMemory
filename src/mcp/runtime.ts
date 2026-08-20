@@ -13,6 +13,10 @@ export type mcp_runtime_config = {
     tenant_id?: string;
     user_id?: string;
     project_id?: string | null;
+    team_ids?: readonly string[];
+    roles?: readonly string[];
+    agent_id?: string | null;
+    framework?: string | null;
     cwd?: string;
     read_only?: boolean;
     allowed_tools?: readonly mcp_tool_name[];
@@ -52,6 +56,10 @@ export class mcp_runtime {
         this.access = {
             user_id: config.user_id ?? 'default',
             project_id,
+            team_ids: config.team_ids ?? [],
+            roles: config.roles ?? [],
+            agent_id: config.agent_id ?? null,
+            framework: config.framework ?? null,
             read_only: config.read_only ?? false,
             allowed_tools: create_tool_allowlist(config.allowed_tools),
         };
@@ -76,6 +84,7 @@ export class mcp_runtime {
             name,
             description,
             connector_registry: this.connector_registry,
+            readonly: this.access.read_only,
         });
         await manager.createProject({ tenant_id: this.tenant_id, project_id: id, name, description });
         this.projects.set(id, manager);

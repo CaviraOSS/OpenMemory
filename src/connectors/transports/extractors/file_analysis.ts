@@ -103,12 +103,24 @@ function symbols_for(text: string, language: string): source_symbol[] {
                 name: match[1].trim(),
                 kind: item.kind,
                 line: before.split('\n').length,
+                end_line: before.split('\n').length,
                 signature,
                 exported: item.exported ?? /\b(export|public|pub)\b/.test(signature),
+                calls: [],
             });
         }
     }
-    return symbols.slice(0, 2_000);
+    const lines = text.split(/\r?\n/);
+    const ignored = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', 'throw', 'new', 'typeof', 'await', 'function', 'super', 'this']);
+    const ordered = symbols.sort((left, right) => left.line - right.line || left.name.localeCompare(right.name)).slice(0, 2_000);
+    return ordered.map((symbol, index) => {
+        const end_line = Math.max(symbol.line, Math.min(lines.length, (ordered[index + 1]?.line ?? lines.length + 1) - 1));
+        const body = lines.slice(symbol.line - 1, end_line).join('\n');
+        const calls = unique([...body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)]
+            .map((match) => match[1])
+            .filter((name) => name !== symbol.name && !ignored.has(name)));
+        return { ...symbol, end_line, calls: calls.slice(0, 500) };
+    });
 }
 
 function manifest_metadata(path: string, text: string): Record<string, unknown> {

@@ -29,7 +29,7 @@ const database = () => {
 };
 
 async function fixture(config: mcp_server_config = {}) {
-    const resolved_config = { env: {}, ...config };
+    const resolved_config: mcp_server_config = { env: { NODE_ENV: 'test' }, ...config };
     const mcp = create_openmemory_mcp(resolved_config);
     const [client_transport, server_transport] = in_memory_transport.createLinkedPair();
     const client = new mcp_client({ name: 'openmemory-phase27-test', version: '1.0.0' });
@@ -64,13 +64,13 @@ describe('phase 27 MCP integration', () => {
         const address = server.address() as AddressInfo;
         const client = new mcp_client({ name: 'http-test', version: '1.0.0' });
         await client.connect(new streamable_http_client_transport(new URL(`http://127.0.0.1:${address.port}/mcp`)));
-        expect((await client.listTools()).tools).toHaveLength(8);
+        expect((await client.listTools()).tools).toHaveLength(13);
         await client.close().catch(() => undefined);
         await new Promise<void>((resolve) => server.close(() => resolve()));
         await mcp.close();
     });
 
-    it('3. advertises only the eight high-level tools', async () => {
+    it('3. advertises only the high-level tools', async () => {
         const { client } = await fixture();
         expect((await client.listTools()).tools.map((tool) => tool.name).sort()).toEqual([...mcp_tool_names].sort());
     });
@@ -94,7 +94,7 @@ describe('phase 27 MCP integration', () => {
         for (const mode of ['strict', 'historical', 'associative', 'world_grounded'] as const) {
             const result = await client.callTool({ name: 'openmemory_recall', arguments: { query: 'build pnpm', mode, token_budget: 256 } });
             expect(result.isError).not.toBe(true);
-            expect(result.content[0]).toMatchObject({ type: 'text' });
+            expect((result.content as Array<{ type: string }>)[0]).toMatchObject({ type: 'text' });
         }
     });
 
@@ -134,8 +134,10 @@ describe('phase 27 MCP integration', () => {
         expect(templates.resourceTemplates.map((resource) => resource.uriTemplate).sort()).toEqual([
             'openmemory://entity/{entity_id}', 'openmemory://memory/{node_id}',
             'openmemory://project/{project_id}/conflicts', 'openmemory://project/{project_id}/current-context',
+            'openmemory://project/{project_id}/asset/{asset_id}', 'openmemory://project/{project_id}/assets',
+            'openmemory://project/{project_id}/agent/{agent_id}/manifest',
             'openmemory://project/{project_id}/decisions', 'openmemory://project/{project_id}/summary',
-            'openmemory://project/{project_id}/tasks', 'openmemory://world/{world_id}',
+            'openmemory://project/{project_id}/skills', 'openmemory://project/{project_id}/tasks', 'openmemory://world/{world_id}',
         ].sort());
         const summary = await client.readResource({ uri: 'openmemory://project/alpha/summary' });
         expect(JSON.parse((summary.contents[0] as { text: string }).text).project_id).toBe('alpha');
@@ -157,6 +159,9 @@ describe('phase 27 MCP integration', () => {
         const result = await client.callTool({ name: 'openmemory_ingest', arguments: { text: 'blocked', source: 'test' } });
         expect(result.isError).toBe(true);
         expect(runtime.audit.entries().at(-1)).toMatchObject({ tool: 'openmemory_ingest', outcome: 'denied' });
+        const asset = await client.callTool({ name: 'openmemory_manage_asset', arguments: { action: 'register', type: 'skill', name: 'blocked', description: 'blocked', source_type: 'test', content_ref: 'blocked' } });
+        expect(asset.isError).toBe(true);
+        expect(runtime.audit.entries().at(-1)).toMatchObject({ tool: 'openmemory_manage_asset', outcome: 'denied' });
     });
 
     it('11. filters permission-denied memory from recall', async () => {
@@ -193,5 +198,75 @@ describe('phase 27 MCP integration', () => {
         });
         expect(structured(result).debug_trace).toMatchObject({ token_budget: 128, within_budget: true });
         expect(structured(result).debug_trace.tokens_used).toBeLessThanOrEqual(128);
+    });
+
+    it('creates, binds, matches, injects, and lists project Skills', async () => {
+        const { client } = await fixture({ project_id: 'alpha' });
+        const created = await client.callTool({
+            name: 'openmemory_manage_skill', arguments: {
+                action: 'create', project_id: 'alpha', name: 'Release check', description: 'Validate releases',
+                triggers: ['release checklist'], instructions: ['Run tests', 'Build packages'], validation: ['Tests pass'],
+            },
+        });
+        const skill_id = structured(created).skill.skill_id as string;
+        await client.callTool({ name: 'openmemory_manage_skill', arguments: { action: 'bind', project_id: 'alpha', skill_id, agent_ids: ['reviewer'] } });
+        const matched = await client.callTool({ name: 'openmemory_match_skills', arguments: { project_id: 'alpha', query: 'run the release checklist', agent_id: 'reviewer' } });
+        expect(structured(matched).matches[0].skill).toMatchObject({ skill_id, version: 2, agent_ids: ['reviewer'] });
+        const context = await client.callTool({ name: 'openmemory_project_context', arguments: { project_id: 'alpha', task: 'run the release checklist', mode: 'review', agent_id: 'reviewer' } });
+        expect(structured(context).matched_skills[0].skill.skill_id).toBe(skill_id);
+        const skills = await client.readResource({ uri: 'openmemory://project/alpha/skills' });
+        expect(JSON.parse((skills.contents[0] as { text: string }).text)[0]).toMatchObject({ skill_id, version: 2 });
+    });
+
+    it('exposes project code graph queries without a second index service', async () => {
+        const { client, runtime } = await fixture({ project_id: 'alpha' });
+        const project = await runtime.project('alpha');
+        await project.ingestProjectEvent('alpha', {
+            kind: 'code_fact', topic: 'src/run.ts', text: 'run source', source_type: 'github', file_path: 'src/run.ts',
+            metadata: {
+                analysis: {
+                    role: 'source', language: 'TypeScript', symbols: [
+                        { name: 'run', kind: 'function', line: 1, end_line: 2, signature: 'function run()', exported: true, calls: ['validate'] },
+                        { name: 'validate', kind: 'function', line: 3, end_line: 4, signature: 'function validate()', exported: false, calls: [] },
+                    ]
+                }
+            },
+        });
+        const result = await client.callTool({ name: 'openmemory_code_graph', arguments: { action: 'impact', project_id: 'alpha', symbol: 'validate' } });
+        expect(structured(result).impact).toEqual([
+            expect.objectContaining({ symbol: expect.objectContaining({ name: 'validate' }), depth: 0 }),
+            expect.objectContaining({ symbol: expect.objectContaining({ name: 'run' }), depth: 1 }),
+        ]);
+    });
+
+    it('governs, filters, and assembles framework-portable memory asset loadouts', async () => {
+        const { client, runtime } = await fixture({ project_id: 'alpha', user_id: 'alice', agent_id: 'builder', framework: 'codex', team_ids: ['core'], roles: ['developer'] });
+        const registered = await client.callTool({
+            name: 'openmemory_manage_asset', arguments: {
+                action: 'register', project_id: 'alpha', type: 'llm_wiki', name: 'Architecture wiki', description: 'Project architecture and decisions',
+                source_type: 'docs', content_ref: 'openmemory://project/alpha/wiki/architecture', status: 'approved', visibility: 'team', team_ids: ['core'],
+                bindings: [{ target_type: 'framework', target_id: 'codex', injection_mode: 'tool', priority: 0.8 }],
+            }
+        });
+        const asset_id = structured(registered).asset.asset_id as string;
+        expect(structured(registered).asset.owner_id).toBe('alice');
+        const loadout = await client.callTool({ name: 'openmemory_asset_catalog', arguments: { action: 'loadout', project_id: 'alpha', query: 'architecture decisions', agent_id: 'builder', framework: 'codex' } });
+        expect(structured(loadout).selected[0]).toMatchObject({ asset: { asset_id, type: 'llm_wiki' }, binding: { injection_mode: 'tool' }, annotations: { audience: ['assistant'], priority: 0.8 } });
+        const escalated = await client.callTool({ name: 'openmemory_asset_catalog', arguments: { action: 'loadout', project_id: 'alpha', query: 'architecture', agent_id: 'reviewer' } });
+        expect(escalated.isError).toBe(true);
+
+        await (await runtime.project('alpha')).registerAsset('alpha', {
+            type: 'chat_memory', name: 'Private session', description: 'Private user history', owner_id: 'bob', source_type: 'session',
+            content_ref: 'openmemory://project/alpha/session/private', status: 'approved', visibility: 'private',
+        });
+        const resources = await client.readResource({ uri: 'openmemory://project/alpha/assets' });
+        const visible = JSON.parse((resources.contents[0] as { text: string }).text) as Array<{ asset_id: string }>;
+        expect(visible.map((asset) => asset.asset_id)).toContain(asset_id);
+        expect(visible).toHaveLength(1);
+        const manifest = await client.readResource({ uri: 'openmemory://project/alpha/agent/builder/manifest' });
+        expect(JSON.parse((manifest.contents[0] as { text: string }).text)).toMatchObject({
+            schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1', agent: { id: 'builder', framework: 'codex' },
+        });
+        expect(runtime.audit.entries().map((entry) => entry.tool)).toEqual(expect.arrayContaining(['openmemory_manage_asset', 'openmemory_asset_catalog']));
     });
 });

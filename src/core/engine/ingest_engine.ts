@@ -354,7 +354,10 @@ export class IngestEngine {
             },
             state: default_node_state(),
             vectors: { semantic: parsed.event.vector ?? null, type_vector: null, world_vector: world.world_vector },
-            provenance: manual_provenance(parsed.event.source?.id ?? parsed.event.user_id, parsed.observed_at),
+            provenance: {
+                ...manual_provenance(parsed.event.source?.id ?? parsed.event.user_id, parsed.observed_at),
+                source_trace: [{ source_id: parsed.event.source?.id ?? parsed.event.user_id, ref: parsed.event.source_ref ?? null, at: parsed.observed_at }],
+            },
             metadata: { ...(parsed.event.metadata ?? {}), ...(parsed.event.conversation_id ? { conversation_id: parsed.event.conversation_id } : {}) },
         };
         return create_hydro_node(input);

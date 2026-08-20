@@ -25,6 +25,13 @@ import type { NodeQueryOptions, StrictQueryOptions } from './sqlite/queries.js';
 
 export type StoreKind = 'sqlite';
 
+export type memory_maintenance_event = {
+    kind: 'decay' | 'reinforce';
+    at: number;
+    node_ids: string[];
+    details?: Record<string, unknown>;
+};
+
 export interface MemoryStore {
     readonly kind: StoreKind;
     transaction<T>(operation: () => T): T;
@@ -32,6 +39,7 @@ export interface MemoryStore {
     load_node(node_id: string): HydroNode | null;
     load_edge(edge_id: string): HydroEdge | null;
     save_batch(nodes: readonly HydroNode[], edges?: readonly HydroEdge[]): void;
+    persist_maintenance(nodes: readonly HydroNode[], event: memory_maintenance_event): void;
     persist_ingest(result: IngestResult): void;
     execute_edge_transaction(edge: HydroEdge, registry?: EdgeRegistry): EdgeExecutionResult;
     query_current_truth(options: NodeQueryOptions): HydroNode[];

@@ -11,6 +11,31 @@ export const project_context_schema = {
     files: z.array(z.string().trim().min(1)).max(100).optional(),
     mode: z.enum(['coding', 'debugging', 'planning', 'review']),
     token_budget,
+    agent_id: optional_text,
+    framework: optional_text,
+    task_id: optional_text,
+};
+
+export const match_skills_schema = {
+    project_id,
+    query: z.string().trim().min(1),
+    agent_id: optional_text,
+    limit: z.number().int().min(1).max(100).optional(),
+};
+
+export const manage_skill_schema = {
+    action: z.enum(['create', 'bind', 'archive']),
+    project_id: z.string().trim().min(1),
+    skill_id: optional_text,
+    name: optional_text,
+    description: optional_text,
+    triggers: z.array(z.string().trim().min(1)).max(100).optional(),
+    instructions: z.array(z.string().trim().min(1)).max(200).optional(),
+    validation: z.array(z.string().trim().min(1)).max(100).optional(),
+    resources: z.array(z.object({ path: z.string().trim().min(1), description: optional_text, checksum: optional_text })).max(100).optional(),
+    agent_ids: z.array(z.string().trim().min(1)).max(100).optional(),
+    visibility: z.enum(['private', 'project', 'team', 'restricted']).optional(),
+    owner: optional_text,
 };
 
 export const recall_schema = {
@@ -63,4 +88,44 @@ export const sync_connector_schema = {
     connector_id: z.string().trim().min(1),
     project_id,
     dry_run: z.boolean().optional().default(true),
+};
+
+export const code_graph_schema = {
+    action: z.enum(['search', 'callers', 'callees', 'impact']),
+    project_id,
+    query: optional_text,
+    symbol: optional_text,
+    limit: z.number().int().min(1).max(200).optional(),
+    max_depth: z.number().int().min(1).max(20).optional(),
+};
+
+const asset_acl = z.object({
+    subject_type: z.enum(['user', 'team', 'role', 'agent', 'task', 'framework']),
+    subject_id: z.string().trim().min(1),
+    permissions: z.array(z.enum(['read', 'use', 'assign', 'share', 'manage'])).min(1).max(5),
+    effect: z.enum(['allow', 'deny']),
+});
+
+const asset_binding = z.object({
+    target_type: z.enum(['agent', 'task', 'framework']), target_id: z.string().trim().min(1),
+    injection_mode: z.enum(['direct', 'summary', 'tool', 'reference']), priority: z.number().min(0).max(1),
+    required: z.boolean().optional(), enabled: z.boolean().optional(), created_by: optional_text,
+});
+
+export const asset_catalog_schema = {
+    action: z.enum(['list', 'get', 'loadout']), project_id, asset_id: optional_text, query: optional_text,
+    agent_id: optional_text, task_id: optional_text, framework: optional_text, include_unbound: z.boolean().optional(),
+    asset_types: z.array(z.enum(['chat_memory', 'skill', 'llm_wiki', 'code_graph'])).max(4).optional(), token_budget,
+};
+
+export const manage_asset_schema = {
+    action: z.enum(['register', 'govern']), project_id, asset_id: optional_text,
+    type: z.enum(['chat_memory', 'skill', 'llm_wiki', 'code_graph']).optional(), name: optional_text, description: optional_text,
+    source_type: optional_text, source_ref: optional_text, content_ref: optional_text,
+    status: z.enum(['draft', 'candidate', 'approved', 'deprecated', 'archived', 'failed']).optional(),
+    visibility: z.enum(['private', 'project', 'team', 'restricted', 'agent', 'task']).optional(),
+    team_ids: z.array(z.string().trim().min(1)).max(100).optional(), acl: z.array(asset_acl).max(200).optional(),
+    bindings: z.array(asset_binding).max(200).optional(), confidence: z.number().min(0).max(1).optional(),
+    expires_at: z.number().finite().optional(), labels: z.array(z.string().trim().min(1)).max(100).optional(),
+    payload: z.record(z.string(), z.unknown()).optional(), metadata: z.record(z.string(), z.unknown()).optional(),
 };

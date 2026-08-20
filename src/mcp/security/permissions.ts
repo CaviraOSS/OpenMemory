@@ -6,9 +6,23 @@ import type { mcp_tool_name } from './tool_allowlist.js';
 export type mcp_access = {
     user_id: string;
     project_id: string | null;
+    team_ids: readonly string[];
+    roles: readonly string[];
+    agent_id: string | null;
+    framework: string | null;
     read_only: boolean;
     allowed_tools: ReadonlySet<mcp_tool_name>;
 };
+
+export function resolve_agent(access: mcp_access, requested?: string): string | undefined {
+    if (access.agent_id && requested && requested !== access.agent_id) throw new Error(`permission denied for agent: ${requested}`);
+    return requested ?? access.agent_id ?? undefined;
+}
+
+export function resolve_framework(access: mcp_access, requested?: string): string | undefined {
+    if (access.framework && requested && requested.toLocaleLowerCase() !== access.framework.toLocaleLowerCase()) throw new Error(`permission denied for framework: ${requested}`);
+    return requested ?? access.framework ?? undefined;
+}
 
 export function assert_tool_allowed(access: mcp_access, tool: mcp_tool_name): void {
     if (!access.allowed_tools.has(tool)) throw new Error(`MCP tool is not allowed: ${tool}`);

@@ -12,6 +12,9 @@ import { register_project_context_resource } from './resources/project_context.j
 import { register_project_summary_resource } from './resources/project_summary.js';
 import { register_projects_resource } from './resources/projects.js';
 import { register_tasks_resource } from './resources/tasks.js';
+import { register_skills_resource } from './resources/skills.js';
+import { register_assets_resources } from './resources/assets.js';
+import { register_agent_manifest_resource } from './resources/agent_manifest.js';
 import { register_world_resource } from './resources/world.js';
 import { mcp_runtime, type mcp_runtime_config } from './runtime.js';
 import { register_explain_tool } from './tools/explain.js';
@@ -22,6 +25,11 @@ import { register_remember_decision_tool } from './tools/remember_decision.js';
 import { register_report_conflicts_tool } from './tools/report_conflicts.js';
 import { register_sync_connector_tool } from './tools/sync_connector.js';
 import { register_update_task_state_tool } from './tools/update_task_state.js';
+import { register_match_skills_tool } from './tools/match_skills.js';
+import { register_manage_skill_tool } from './tools/manage_skill.js';
+import { register_code_graph_tool } from './tools/code_graph.js';
+import { register_asset_catalog_tool } from './tools/asset_catalog.js';
+import { register_manage_asset_tool } from './tools/manage_asset.js';
 
 export const mcp_server_name = 'openmemory-hydrograph';
 export const mcp_server_version = '0.0.0-phase.27';
@@ -38,6 +46,11 @@ const tools = {
     openmemory_explain: register_explain_tool,
     openmemory_report_conflicts: register_report_conflicts_tool,
     openmemory_sync_connector: register_sync_connector_tool,
+    openmemory_match_skills: register_match_skills_tool,
+    openmemory_manage_skill: register_manage_skill_tool,
+    openmemory_code_graph: register_code_graph_tool,
+    openmemory_asset_catalog: register_asset_catalog_tool,
+    openmemory_manage_asset: register_manage_asset_tool,
 } as const;
 
 export function create_openmemory_mcp(config: mcp_server_config = {}): openmemory_mcp {
@@ -51,6 +64,9 @@ export function create_openmemory_mcp(config: mcp_server_config = {}): openmemor
     register_project_context_resource(server, runtime);
     register_decisions_resource(server, runtime);
     register_tasks_resource(server, runtime);
+    register_skills_resource(server, runtime);
+    register_assets_resources(server, runtime);
+    register_agent_manifest_resource(server, runtime);
     register_conflicts_resource(server, runtime);
     register_entity_resource(server, runtime);
     register_world_resource(server, runtime);

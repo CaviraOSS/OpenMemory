@@ -7,6 +7,11 @@ export const mcp_tool_names = [
     'openmemory_explain',
     'openmemory_report_conflicts',
     'openmemory_sync_connector',
+    'openmemory_match_skills',
+    'openmemory_manage_skill',
+    'openmemory_code_graph',
+    'openmemory_asset_catalog',
+    'openmemory_manage_asset',
 ] as const;
 
 export type mcp_tool_name = typeof mcp_tool_names[number];

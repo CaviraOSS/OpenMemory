@@ -21,3 +21,4 @@ export * from './procedure_builder.js';
 export * from './reflection_builder.js';
 export * from './consolidation.js';
 export * from './working_memory.js';
+export * from './decay_engine.js';

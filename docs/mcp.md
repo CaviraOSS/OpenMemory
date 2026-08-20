@@ -41,7 +41,7 @@ token or `X-API-Key` as `/v1/*`. `OPENMEMORY_MCP_HTTP=true` also enables it for
 
 ## Tools
 
-The deny-by-default allowlist contains exactly eight high-level tools:
+The deny-by-default allowlist contains exactly thirteen high-level tools:
 
 - `openmemory_project_context`
 - `openmemory_recall`
@@ -51,10 +51,25 @@ The deny-by-default allowlist contains exactly eight high-level tools:
 - `openmemory_explain`
 - `openmemory_report_conflicts`
 - `openmemory_sync_connector`
+- `openmemory_match_skills`
+- `openmemory_manage_skill`
+- `openmemory_code_graph`
+- `openmemory_asset_catalog`
+- `openmemory_manage_asset`
 
 Recall delegates to Hydrograph modes and their temporal, contract,
 contradiction, grounding, confidence, world, and permission gates. Connector
 sync defaults to `dry_run: true`. Read-only mode rejects write-capable tools.
+Skill matching can filter an agent loadout; Skill management creates immutable
+versions, bindings, or archive versions. CodeGraph is read-only and provides
+symbol search, callers, callees, and reverse impact paths from persisted source
+snapshots.
+
+Asset catalog calls discover governed Chat Memory, Skill, LLM-Wiki, and
+CodeGraph records or assemble a target-specific loadout. Asset management is a
+write tool, requires owner or explicit `manage` ACL, and is blocked by MCP
+read-only mode. Runtime configuration fixes user/team/role/agent/framework
+identity; tool arguments cannot impersonate another configured agent.
 
 ## Resources
 
@@ -63,6 +78,10 @@ sync defaults to `dry_run: true`. Read-only mode rejects write-capable tools.
 - `openmemory://project/{project_id}/current-context`
 - `openmemory://project/{project_id}/decisions`
 - `openmemory://project/{project_id}/tasks`
+- `openmemory://project/{project_id}/skills`
+- `openmemory://project/{project_id}/assets`
+- `openmemory://project/{project_id}/asset/{asset_id}`
+- `openmemory://project/{project_id}/agent/{agent_id}/manifest`
 - `openmemory://project/{project_id}/conflicts`
 - `openmemory://entity/{entity_id}`
 - `openmemory://world/{world_id}`

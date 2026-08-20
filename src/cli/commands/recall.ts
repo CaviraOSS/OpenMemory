@@ -15,22 +15,24 @@
  */
 
 import type { cli_command } from '../context/cli_context.js';
-import { command_flags, flag, mode_flag, number_flag, positional, require_value, time_flag, with_memory } from '../context/cli_context.js';
+import { command_flags, flag, mode_flag, number_flag, positional, require_value, time_flag, with_read_memory } from '../context/cli_context.js';
 import { badge } from '../theme/badges.js';
 import { emit, section } from '../output/pretty.js';
 import { panel } from '../output/panel.js';
 import { table } from '../output/table.js';
+import { resolve_project_scope } from '../context/project_scope.js';
 
 export const recall_command: cli_command = async (context) => {
     command_flags(context, ['query', 'mode', 'valid-time', 'recorded-time', 'at', 'k', 'world']);
     const query = require_value(positional(context) ?? flag(context, 'query'), 'recall query');
     const mode = mode_flag(context);
-    const raw = await with_memory(context, async (memory) => {
-        const worlds = await memory.listWorlds();
-        const root = worlds.find((world) => world.metadata.hierarchy === 'project' && world.metadata.project_id === context.project_id);
-        return memory.recall({ text: query, mode, token_budget: context.token_budget, k: number_flag(context, 'k'), world_id: flag(context, 'world') ?? root?.id,
+    const raw = await with_read_memory(context, async (memory) => {
+        const scope = await resolve_project_scope(memory, context.project_id);
+        return memory.recall({
+            text: query, mode, token_budget: context.token_budget, k: number_flag(context, 'k'), world_id: flag(context, 'world') ?? scope.root?.id,
             valid_time: time_flag(context, 'valid-time'), recorded_time: time_flag(context, 'recorded-time'), at: time_flag(context, 'at'),
-            permission_context: { user_id: context.user_id, project_ids: [context.project_id] } });
+            permission_context: { user_id: context.user_id, project_ids: [context.project_id] }
+        });
     });
     const source = raw as Record<string, any>;
     const values: any[] = Array.isArray(source.items) ? source.items : Array.isArray(source.timeline?.entries) ? source.timeline.entries : [];

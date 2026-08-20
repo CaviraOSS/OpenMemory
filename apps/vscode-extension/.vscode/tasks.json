@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "OpenMemory: build extension",
+      "type": "shell",
+      "command": "pnpm compile",
+      "problemMatcher": "$tsc",
+      "group": "build"
+    },
+    {
+      "label": "OpenMemory: watch extension",
+      "type": "shell",
+      "command": "pnpm watch",
+      "isBackground": true,
+      "problemMatcher": "$tsc-watch"
+    }
+  ]
+}

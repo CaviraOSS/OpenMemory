@@ -100,7 +100,7 @@ describe('connector catalog and file intelligence', () => {
             "import type { Config } from '@scope/config';",
             'export interface source_config { root: string }',
             'export class repository_source {}',
-            'export const create_source = () => readFile;',
+            "export const create_source = () => readFile('source.txt');",
         ].join('\n');
         const analysis = analyze_file('src/repository.ts', source);
         expect(analysis.language).toBe('TypeScript');
@@ -109,6 +109,7 @@ describe('connector catalog and file intelligence', () => {
         expect(analysis.dependencies).toEqual(expect.arrayContaining(['node:fs', '@scope/config']));
         expect(analysis.exports).toEqual(expect.arrayContaining(['source_config', 'repository_source', 'create_source']));
         expect(analysis.symbols.some((item) => item.kind === 'class' && item.line === 4)).toBe(true);
+        expect(analysis.symbols.find((item) => item.name === 'create_source')).toMatchObject({ calls: ['readFile'], end_line: 5 });
         const manifest = analyze_file('package.json', JSON.stringify({ name: 'openmemory', scripts: { test: 'vitest' }, dependencies: { zod: '1' } }));
         expect(manifest.role).toBe('configuration');
         expect(manifest.metadata).toMatchObject({ package_name: 'openmemory', scripts: { test: 'vitest' } });

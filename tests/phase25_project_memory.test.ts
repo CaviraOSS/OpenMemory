@@ -58,6 +58,7 @@ describe('phase 25 project-wide agent memory', () => {
         expect(node?.metadata.project_id).toBe('alpha');
         expect(world?.scope_path).toContain('repositories');
         expect(manager.getProject('alpha').linked_sources[0]).toMatchObject({ connector_id: 'github', current_ref: 'abc123' });
+        expect(await manager.listAssets('alpha')).toEqual([expect.objectContaining({ type: 'code_graph', status: 'candidate', source_ref: 'abc123' })]);
         await manager.close();
     });
 
@@ -69,6 +70,7 @@ describe('phase 25 project-wide agent memory', () => {
         const worlds = await manager.memory.listWorlds();
         expect(report.node_ids.length).toBeGreaterThan(1);
         expect(worlds.some((world) => world.name === 'Architecture guide' && world.parent_world_id === manager.getProject('alpha').world_ids.documents)).toBe(true);
+        expect(await manager.listAssets('alpha')).toEqual([expect.objectContaining({ type: 'llm_wiki', status: 'candidate' })]);
         await manager.close();
     });
 
@@ -222,5 +224,138 @@ describe('phase 25 project-wide agent memory', () => {
         expect(packet.suggested_next_steps).toContain('Reopen the project database');
         expect(packet.known_failures).toContain('State must not live only in chat');
         await reopened.close();
+    });
+
+    it('versions, binds, matches, archives, and recovers project skills', async () => {
+        const dir = mkdtempSync(join(tmpdir(), 'openmemory-skills-'));
+        dirs.push(dir);
+        const db_path = join(dir, 'project.db');
+        const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        const created = await first.createSkill('alpha', {
+            name: 'Release check', description: 'Validate a release before publishing.',
+            triggers: ['release checklist', 'publish package'],
+            instructions: ['Run the full test suite', 'Build all packages', 'Inspect package contents'],
+            validation: ['All tests pass', 'Package contains only intended files'],
+            resources: [{ path: 'README.md', description: 'Release commands' }], visibility: 'project', owner: 'alice', at: jan,
+        });
+        const revised = await first.createSkill('alpha', {
+            ...created, owner: created.owner ?? undefined, description: 'Validate and package a release before publishing.',
+            instructions: [...created.instructions, 'Run a package smoke test'], at: mar,
+        });
+        const bound = await first.bindSkill('alpha', created.skill_id, ['reviewer'], mar + 1);
+        expect(revised.version).toBe(2);
+        expect(bound).toMatchObject({ version: 3, agent_ids: ['reviewer'] });
+        expect(await first.getAsset('alpha', `asset:skill:${created.skill_id}`)).toMatchObject({ type: 'skill', status: 'approved', version: 3, bindings: [expect.objectContaining({ target_id: 'reviewer', injection_mode: 'direct' })] });
+        expect(await first.matchSkills('alpha', 'prepare the release checklist', 'reviewer')).toEqual([
+            expect.objectContaining({ skill: expect.objectContaining({ skill_id: created.skill_id, version: 3 }), matched_triggers: ['release checklist'] }),
+        ]);
+        expect(await first.matchSkills('alpha', 'prepare the release checklist', 'builder')).toEqual([]);
+        await first.close();
+
+        const reopened = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        expect(await reopened.getSkill('alpha', created.skill_id)).toMatchObject({ version: 3, agent_ids: ['reviewer'], status: 'active' });
+        const archived = await reopened.archiveSkill('alpha', created.skill_id, apr);
+        expect(archived).toMatchObject({ version: 4, status: 'archived', agent_ids: [] });
+        expect(await reopened.listSkills('alpha')).toEqual([]);
+        expect(await reopened.listSkills('alpha', true)).toEqual([expect.objectContaining({ skill_id: created.skill_id, status: 'archived' })]);
+        await reopened.close();
+    });
+
+    it('searches code symbols and traces callers, callees, and impact paths', async () => {
+        const manager = await createProjectMemory(config());
+        await manager.ingestProjectEvent('alpha', {
+            kind: 'code_fact', topic: 'src/release.ts', text: 'release implementation', at: jan, source_type: 'github', file_path: 'src/release.ts',
+            metadata: { analysis: { role: 'source', language: 'TypeScript', symbols: [
+                { name: 'publish', kind: 'function', line: 1, end_line: 3, signature: 'function publish()', exported: true, calls: ['validate'] },
+                { name: 'validate', kind: 'function', line: 4, end_line: 6, signature: 'function validate()', exported: false, calls: ['checkTests'] },
+                { name: 'checkTests', kind: 'function', line: 7, end_line: 8, signature: 'function checkTests()', exported: false, calls: [] },
+            ] } },
+        });
+        expect(await manager.searchCodeSymbols('alpha', 'valid')).toEqual([expect.objectContaining({ name: 'validate', file_path: 'src/release.ts' })]);
+        expect(await manager.getCodeCallers('alpha', 'validate')).toEqual([expect.objectContaining({ caller: expect.objectContaining({ name: 'publish' }) })]);
+        expect(await manager.getCodeCallees('alpha', 'validate')).toEqual([expect.objectContaining({ callee: expect.objectContaining({ name: 'checkTests' }) })]);
+        expect(await manager.getCodeImpact('alpha', 'checkTests')).toEqual([
+            expect.objectContaining({ symbol: expect.objectContaining({ name: 'checkTests' }), depth: 0 }),
+            expect.objectContaining({ symbol: expect.objectContaining({ name: 'validate' }), depth: 1, via: 'checkTests' }),
+            expect.objectContaining({ symbol: expect.objectContaining({ name: 'publish' }), depth: 2, via: 'validate' }),
+        ]);
+        await manager.close();
+    });
+
+    it('imports past agent sessions with exact order, timestamps, and restart recovery', async () => {
+        const dir = mkdtempSync(join(tmpdir(), 'openmemory-sessions-'));
+        dirs.push(dir);
+        const db_path = join(dir, 'project.db');
+        const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        const imported = await first.importSession('alpha', {
+            session_id: 'codex-42', agent_id: 'builder', provider: 'codex', started_at: jan, source_ref: 'history/codex-42.json',
+            messages: [
+                { role: 'user', content: 'Implement project Skills.', at: jan },
+                { role: 'assistant', content: 'I added immutable Skill versions.', at: jan + 10 },
+                { role: 'tool', name: 'vitest', tool_call_id: 'call-1', content: '17 tests passed.', at: jan + 20 },
+            ],
+        });
+        expect(imported).toMatchObject({ message_count: 3, started_at: jan, ended_at: jan + 20, provider: 'codex' });
+        expect(await first.getAsset('alpha', 'asset:chat_memory:codex-42')).toMatchObject({ type: 'chat_memory', status: 'candidate', visibility: 'agent' });
+        const turn = await first.explainProjectMemory('alpha', imported.node_ids[2]);
+        expect(turn.node).toMatchObject({ content: { raw: '17 tests passed.' }, metadata: { session_role: 'tool', session_sequence: 2, tool_call_id: 'call-1' } });
+        await first.close();
+
+        const reopened = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        expect(await reopened.listSessions('alpha')).toEqual([expect.objectContaining({ session_id: 'codex-42', message_count: 3, node_ids: expect.arrayContaining(imported.node_ids) })]);
+        await expect(reopened.importSession('alpha', {
+            session_id: 'codex-42', agent_id: 'builder', provider: 'codex', messages: [{ role: 'user', content: 'duplicate' }],
+        })).rejects.toThrow('already imported');
+        await expect(reopened.importSession('alpha', { session_id: 'bad', agent_id: 'builder', provider: 'codex', messages: [
+            { role: 'user', content: 'later', at: mar }, { role: 'assistant', content: 'earlier', at: jan },
+        ] })).rejects.toThrow('timestamps must be monotonic');
+        await reopened.close();
+    });
+
+    it('governs four asset types with lifecycle, deny-first ACLs, bindings, and loadout budgets', async () => {
+        const dir = mkdtempSync(join(tmpdir(), 'openmemory-assets-'));
+        dirs.push(dir);
+        const db_path = join(dir, 'project.db');
+        const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        const base = {
+            owner_id: 'alice', source_type: 'test', visibility: 'project' as const, status: 'approved' as const,
+            bindings: [{ target_type: 'agent' as const, target_id: 'builder', injection_mode: 'reference' as const, priority: 0.8, required: false, enabled: true, created_by: 'alice' }],
+        };
+        const chat = await first.registerAsset('alpha', { ...base, type: 'chat_memory', name: 'Prior sessions', description: 'Prior implementation context', content_ref: 'openmemory://project/alpha/sessions' });
+        const skill = await first.registerAsset('alpha', { ...base, type: 'skill', name: 'Release check', description: 'Run the release checklist', content_ref: 'openmemory://project/alpha/skills/release', payload: { instructions: ['Run tests'] } });
+        await first.registerAsset('alpha', { ...base, type: 'llm_wiki', name: 'Architecture wiki', description: 'Project architecture', content_ref: 'openmemory://project/alpha/wiki', status: 'candidate' });
+        const graph = await first.registerAsset('alpha', {
+            ...base, type: 'code_graph', name: 'Code graph', description: 'Symbols and impact paths', content_ref: 'openmemory://project/alpha/code-graph',
+            acl: [{ subject_type: 'agent', subject_id: 'builder', permissions: ['use'], effect: 'deny' }],
+        });
+        const loadout = await first.resolveAssetLoadout('alpha', { query: 'release architecture', user_id: 'bob', agent_id: 'builder', framework: 'codex', token_budget: 512 });
+        expect(loadout.selected.map((item) => item.asset.asset_id)).toEqual([skill.asset_id, chat.asset_id]);
+        expect(loadout.excluded).toEqual(expect.arrayContaining([
+            { asset_id: graph.asset_id, reason: 'denied by agent:builder' },
+            expect.objectContaining({ reason: 'asset status is candidate' }),
+        ]));
+        expect(loadout.selected.every((item) => item.annotations.audience[0] === 'assistant')).toBe(true);
+        expect(loadout.within_budget).toBe(true);
+        expect(await first.decideAssetAccess('alpha', skill.asset_id, { user_id: 'bob', agent_id: 'builder' }, 'manage')).toMatchObject({ allowed: false, reason: 'manage requires owner or explicit ACL' });
+        await expect(first.registerAsset('alpha', { ...base, type: 'unknown' as 'skill', name: 'Bad', description: 'Bad type', content_ref: 'bad' })).rejects.toThrow('asset type must be one of');
+        await expect(first.governAsset('alpha', skill.asset_id, { status: 'draft' })).rejects.toThrow('approved -> draft');
+        await first.close();
+
+        const reopened = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
+        expect((await reopened.getProject('alpha')).world_ids.assets).toBeTruthy();
+        expect(await reopened.listAssets('alpha')).toHaveLength(4);
+        expect(await reopened.getAsset('alpha', skill.asset_id)).toMatchObject({ version: 1, status: 'approved', type: 'skill' });
+        const manifest = await reopened.buildAgentManifest('alpha', {
+            agent_id: 'builder', framework: 'codex', query: 'release architecture', user_id: 'bob', token_budget: 512,
+            interface_url: 'https://agents.example.test/a2a',
+        });
+        await reopened.close();
+        expect(manifest).toMatchObject({
+            schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1',
+            agent: { id: 'builder', framework: 'codex' }, capabilities: { mcp: true, a2a_agent_card: true },
+            a2a_extension: { uri: 'https://openmemory.dev/extensions/memory-assets/v1' },
+            agent_card: { supportedInterfaces: [{ protocolBinding: 'HTTP+JSON', protocolVersion: '1.0' }] },
+        });
+        expect(manifest.agent_card?.skills.map((value) => value.id)).toContain(skill.asset_id);
     });
 });

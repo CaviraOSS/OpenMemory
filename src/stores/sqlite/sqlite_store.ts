@@ -26,7 +26,7 @@ import type { Entity } from '../../core/types/entity.js';
 import type { HydroEdge } from '../../core/types/hydro_edge.js';
 import type { HydroNode } from '../../core/types/hydro_node.js';
 import type { World } from '../../core/types/world.js';
-import type { MemoryStore, StoreKind } from '../index.js';
+import type { MemoryStore, StoreKind, memory_maintenance_event } from '../index.js';
 import { check_sqlite_integrity, decode_node_safely, type IntegrityIssue, type IntegrityReport } from './integrity.js';
 import { apply_migrations } from './migrations.js';
 import { queries, type NodeQueryOptions, type StrictQueryOptions } from './queries.js';
@@ -241,6 +241,24 @@ export class SqliteStore implements MemoryStore {
         this.transaction(() => {
             for (const node of nodes) this.save_node_internal(node);
             for (const edge of edges) this.save_edge(edge);
+        });
+    }
+
+    persist_maintenance(nodes: readonly HydroNode[], event: memory_maintenance_event): void {
+        this.transaction(() => {
+            for (const node of nodes) this.save_node_internal(node);
+            this.prepare(`INSERT INTO audit_log
+                (tenant_id, user_id, edge_id, edge_type, at, affected_node_ids_json, summary, audit_json)
+                VALUES (?, ?, NULL, ?, ?, ?, ?, ?)`)
+                .run(
+                    this.tenant_id,
+                    this.user_id,
+                    event.kind,
+                    event.at,
+                    JSON.stringify(event.node_ids),
+                    `${event.kind} updated ${event.node_ids.length} node(s)`,
+                    JSON.stringify(event),
+                );
         });
     }
 

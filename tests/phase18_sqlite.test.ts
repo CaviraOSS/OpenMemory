@@ -111,6 +111,21 @@ describe('phase 18 SQLite persistence', () => {
         store.close();
     });
 
+    it('persists decay envelope updates with an audit event', () => {
+        const store = new SqliteStore(':memory:');
+        const original = node('decay', 'A memory that can decay');
+        store.save_node(original);
+        const version = { ...original, state: { ...original.state, activation: 0.25, decay_updated_at: mar } };
+        store.persist_maintenance([version], { kind: 'decay', at: mar, node_ids: [original.id], details: { tier: 'cold' } });
+
+        expect(store.load_node(original.id)?.state.activation).toBe(0.25);
+        expect(store.load_node(original.id)?.content_hash).toBe(original.content_hash);
+        const audit = store.database.prepare(`SELECT edge_type, affected_node_ids_json FROM audit_log WHERE edge_type='decay'`).get() as { edge_type: string; affected_node_ids_json: string };
+        expect(audit.edge_type).toBe('decay');
+        expect(JSON.parse(audit.affected_node_ids_json)).toEqual([original.id]);
+        store.close();
+    });
+
     it('3. queries current truth efficiently', () => {
         const store = new SqliteStore(':memory:');
         const old = node('old', 'I prefer tea');

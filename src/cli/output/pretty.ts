@@ -1,17 +1,12 @@
 import type { cli_context } from '../context/cli_context.js';
 import { render_json } from './json.js';
 
-export const openmemory_art = [
-    '  ___  ____  _____ _   _ __  __ _____ __  __  ___  ______   __',
-    ' / _ \\|  _ \\| ____| \\ | |  \\/  | ____|  \\/  |/ _ \\|  _ \\ \\ / /',
-    '| | | | |_) |  _| |  \\| | |\\/| |  _| | |\\/| | | | | |_) |\\ V /',
-    '| |_| |  __/| |___| |\\  | |  | | |___| |  | | |_| |  _ <  | |',
-    ' \\___/|_|   |_____|_| \\_|_|  |_|_____|_|  |_|\\___/|_| \\_\\ |_|',
-];
-
 export function banner(context: cli_context): string {
-    const art = openmemory_art.map((line, index) => index < 2 ? context.colors.info(line) : index === 2 ? context.colors.subtitle(line) : context.colors.danger(line)).join('\n');
-    return `${art}\n${context.colors.brand('  OpenMemory')} ${context.colors.muted('· Hydrograph memory for agents')}`;
+    return [
+        `${context.colors.brand('╭┬╮')}  ${context.colors.title('OpenMemory')}`,
+        `${context.colors.brand('├┼┤')}  ${context.colors.subtitle('Hydrograph memory for agents')}`,
+        `${context.colors.brand('╰┴╯')}  ${context.colors.muted('Local-first · project-scoped · immutable')}`,
+    ].join('\n');
 }
 
 export function emit(context: cli_context, value: unknown, human: () => string): void {

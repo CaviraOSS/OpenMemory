@@ -43,6 +43,7 @@ export type MemoryEvent = {
     zone?: Zone;
     external?: boolean;
     source?: GroundingSource;
+    source_ref?: string;
     grounding_ref?: string;
     facet_hint?: FacetName;
     entity_hints?: EntityMention[];

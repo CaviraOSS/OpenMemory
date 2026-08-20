@@ -20,6 +20,7 @@ import { insert_edge } from './edges/edge_runtime.js';
 import { hydrograph_invariants } from './invariants.js';
 import { MemorySketches } from './math/sketches.js';
 import { create_hydro_edge, DurableGraph } from './memory/durable_graph.js';
+import { decay_node, project_node_decay, reinforce_node, type decay_policy, type decay_tier } from './memory/decay_engine.js';
 import { InMemoryRecallIndex } from './recall/candidate_selection.js';
 import { associative_recall, type AssociativeRecallResult } from './recall/associative_recall.js';
 import { grounded_recall, type GroundedRecallResult } from './recall/grounded_recall.js';
@@ -77,6 +78,30 @@ export type memory_config = {
     enable_transliteration?: boolean;
     multilingual_embedding_provider?: multilingual_embedding_provider;
     fallback_language?: language_code;
+    decay_policy?: Partial<decay_policy>;
+};
+
+export type decay_cycle_params = {
+    now?: number;
+    world_id?: string;
+    limit?: number;
+    after_id?: string;
+    min_change?: number;
+};
+
+export type decay_cycle_result = {
+    at: number;
+    scanned: number;
+    updated: number;
+    node_ids: string[];
+    next_cursor: string | null;
+    complete: boolean;
+    tiers: Record<decay_tier, number>;
+};
+
+export type reinforcement_params = {
+    at?: number;
+    amount?: number;
 };
 
 export type public_recall_query = {
@@ -146,6 +171,8 @@ export interface open_memory {
     getStats(): Promise<memory_stats>;
     recallMultilingual(query: crosslingual_recall_query): Promise<crosslingual_recall_result>;
     applyImportPlan(plan: HydrographImportPlan): Promise<hydrograph_import_result>;
+    runDecay(params?: decay_cycle_params): Promise<decay_cycle_result>;
+    reinforce(id: string, params?: reinforcement_params): Promise<HydroNode>;
     close(): Promise<void>;
     status(): { name: 'openmemory-hydrograph'; phase: 'phase-19-public-api'; ready: boolean; store: memory_store_kind };
     invariants(): readonly string[];
@@ -286,7 +313,28 @@ export function create_memory(config: memory_config = {}): open_memory {
         contradiction_pressure_of: (id: string) => engine.graph.get_node(id)?.state.status === 'contradicted' ? 1 : 0,
         unresolved_contradiction: (id: string) => engine.graph.get_node(id)?.state.status === 'contradicted',
         sketch_relevance_of: (_node: HydroNode, terms: readonly string[]) => engine.sketches.relevance('patterns', terms),
+        decay_policy: cfg.decay_policy,
     });
+
+    const commit_node_versions = (
+        nodes: readonly HydroNode[],
+        event: { kind: 'decay' | 'reinforce'; at: number; details?: Record<string, unknown> },
+    ) => {
+        if (!nodes.length) return;
+        const graph_checkpoint = engine.graph.checkpoint();
+        const index_checkpoint = engine.index.checkpoint();
+        try {
+            const versions = nodes.map((node) => engine.graph.apply_node_version(node));
+            for (const node of versions) engine.index.add(node);
+            store?.persist_maintenance(versions, { ...event, node_ids: versions.map((node) => node.id) });
+            engine.graph.commit(graph_checkpoint);
+            engine.index.commit(index_checkpoint);
+        } catch (error) {
+            engine.graph.rollback(graph_checkpoint);
+            engine.index.rollback(index_checkpoint);
+            throw error;
+        }
+    };
 
     const import_transaction = () => new IngestTransaction({
         graph: engine.graph,
@@ -496,6 +544,7 @@ export function create_memory(config: memory_config = {}): open_memory {
         },
         async applyImportPlan(plan) {
             ensure_open();
+            if (config.readonly === true) throw new Error('connector import is unavailable in readonly mode');
             if (!plan.connector_id || !plan.source_type || !plan.sync_item_id) throw new Error('connector plan identity is required');
             for (const node of plan.nodes_to_create) {
                 if (!node.source_type || !node.external_id || !node.recorded_at || !node.provenance) {
@@ -704,6 +753,58 @@ export function create_memory(config: memory_config = {}): open_memory {
                     entity_ids: engine.resolver.entity_list().filter((entity) => !before_entities.has(entity.id)).map((entity) => entity.id),
                 };
             });
+        },
+        async runDecay(params = {}) {
+            ensure_open();
+            if (config.readonly === true) throw new Error('decay maintenance is unavailable in readonly mode');
+            const at = params.now ?? Date.now();
+            if (!Number.isFinite(at)) throw new Error('decay time must be finite');
+            const limit = params.limit ?? 256;
+            if (!Number.isInteger(limit) || limit < 1 || limit > 10_000) throw new Error('decay limit must be an integer between 1 and 10000');
+            const min_change = params.min_change ?? 1e-6;
+            if (!Number.isFinite(min_change) || min_change < 0 || min_change > 1) throw new Error('min_change must be between 0 and 1');
+            const decay_world_ids = params.world_id === undefined
+                ? null
+                : new Set(engine.worlds.query_world_subtree(params.world_id).world_ids);
+            const candidates = engine.graph.node_list()
+                .filter((node) => decay_world_ids === null || decay_world_ids.has(node.world.world_id))
+                .filter((node) => params.after_id === undefined || node.id.localeCompare(params.after_id) > 0)
+                .sort((left, right) => left.id.localeCompare(right.id));
+            const batch = candidates.slice(0, limit);
+            const tiers: Record<decay_tier, number> = { hot: 0, warm: 0, cold: 0 };
+            const changed: HydroNode[] = [];
+            for (const node of batch) {
+                const version = decay_node(node, at, cfg.decay_policy);
+                const projection = project_node_decay(version, at, cfg.decay_policy);
+                tiers[projection.tier]++;
+                if (Math.abs(version.state.activation - node.state.activation) >= min_change ||
+                    Math.abs(version.state.decay_rate - node.state.decay_rate) >= min_change) changed.push(version);
+            }
+            commit_node_versions(changed, { kind: 'decay', at, details: { tiers, scanned: batch.length } });
+            const complete = candidates.length <= limit;
+            return {
+                at,
+                scanned: batch.length,
+                updated: changed.length,
+                node_ids: changed.map((node) => node.id),
+                next_cursor: complete ? null : batch.at(-1)?.id ?? null,
+                complete,
+                tiers,
+            };
+        },
+        async reinforce(id, params = {}) {
+            ensure_open();
+            if (config.readonly === true) throw new Error('reinforcement is unavailable in readonly mode');
+            const node = engine.graph.get_node(id);
+            if (!node) throw new Error(`memory ${id} was not found`);
+            const at = params.at ?? Date.now();
+            const version = reinforce_node(node, at, params.amount, cfg.decay_policy);
+            commit_node_versions([version], {
+                kind: 'reinforce',
+                at: version.state.last_reinforced_at ?? at,
+                details: { amount: params.amount ?? cfg.decay_policy?.reinforcement_gain ?? 0.2 },
+            });
+            return engine.graph.get_node(id) as HydroNode;
         },
         async close() {
             if (closed) return;

@@ -21,6 +21,8 @@ import { get_project_tasks, type project_task } from './project_tasks.js';
 import { recall_project_memory, type project_citation, type project_contradiction_warning, type project_recalled_memory } from './project_recall.js';
 import type { ProjectWorld } from './project_world.js';
 import type { project_state } from './project_state.js';
+import type { project_skill_match } from './project_skills.js';
+import type { memory_asset_loadout } from './project_assets.js';
 
 export type project_context_packet = {
     project_summary: string;
@@ -31,6 +33,8 @@ export type project_context_packet = {
     active_decisions: project_decision[];
     open_tasks: project_task[];
     known_failures: string[];
+    matched_skills: project_skill_match[];
+    asset_loadout: memory_asset_loadout | null;
     retrieved_memories: project_recalled_memory[];
     contradictions: project_contradiction_warning[];
     citations: project_citation[];
@@ -43,7 +47,7 @@ const texts = async (memory: open_memory, ids: Iterable<string>): Promise<string
     return values.flatMap((item) => item.node && item.node.state.status === 'active' ? [item.node.content.raw] : []);
 };
 
-export async function get_project_context_packet(memory: open_memory, project: ProjectWorld, state: project_state, task: string, token_budget = 2048): Promise<project_context_packet> {
+export async function get_project_context_packet(memory: open_memory, project: ProjectWorld, state: project_state, task: string, token_budget = 2048, skill_matches: project_skill_match[] = [], asset_loadout: memory_asset_loadout | null = null): Promise<project_context_packet> {
     const recalled = await recall_project_memory(memory, project, state, { text: task, token_budget, k: 50 }, 'project_planning');
     const code = await recall_project_memory(memory, project, state, { text: task, token_budget, k: 50 }, 'project_code');
     const decisions = (await get_project_decisions(memory, state)).filter((item) => item.current);
@@ -61,6 +65,8 @@ export async function get_project_context_packet(memory: open_memory, project: P
         active_decisions: decisions,
         open_tasks: tasks,
         known_failures: failures,
+        matched_skills: [],
+        asset_loadout: asset_loadout ? { ...asset_loadout, selected: [], tokens_used: 0 } : null,
         retrieved_memories: [...recalled.memories, ...code.memories],
         contradictions: recalled.contradictions,
         citations: [...recalled.citations, ...code.citations],
@@ -79,6 +85,24 @@ export async function get_project_context_packet(memory: open_memory, project: P
         suggested_next_steps: packet.suggested_next_steps,
     }));
     let used = Math.min(fixed, token_budget);
+    if (asset_loadout && packet.asset_loadout) {
+        for (const item of asset_loadout.selected) {
+            if (used + item.estimated_tokens > token_budget) {
+                packet.asset_loadout.excluded.push({ asset_id: item.asset.asset_id, reason: 'project context token budget exceeded' });
+                continue;
+            }
+            packet.asset_loadout.selected.push(item);
+            packet.asset_loadout.tokens_used += item.estimated_tokens;
+            used += item.estimated_tokens;
+        }
+        packet.asset_loadout.within_budget = used <= token_budget;
+    }
+    for (const match of skill_matches) {
+        const cost = count_tokens(JSON.stringify(match));
+        if (used + cost > token_budget) continue;
+        packet.matched_skills.push(match);
+        used += cost;
+    }
     const selected: project_recalled_memory[] = [];
     for (const memory_item of packet.retrieved_memories) {
         const cost = count_tokens(memory_item.node.content.summary || memory_item.node.content.raw);

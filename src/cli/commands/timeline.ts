@@ -15,22 +15,27 @@
  */
 
 import type { cli_command } from '../context/cli_context.js';
-import { command_flags, flag, positional, require_value, time_flag, with_memory } from '../context/cli_context.js';
+import { command_flags, flag, positional, require_value, time_flag, with_read_memory } from '../context/cli_context.js';
 import { emit } from '../output/pretty.js';
 import { panel } from '../output/panel.js';
 import { badge } from '../theme/badges.js';
+import { resolve_project_scope } from '../context/project_scope.js';
 
 export const timeline_command: cli_command = async (context) => {
     command_flags(context, ['entity', 'memory', 'valid-time', 'recorded-time']);
     const id = require_value(positional(context) ?? flag(context, 'entity') ?? flag(context, 'memory') ?? context.project_id, 'entity, memory, or project');
-    const result = await with_memory(context, async (memory) => {
+    const result = await with_read_memory(context, async (memory) => {
+        const scope = await resolve_project_scope(memory, context.project_id);
         const entity = await memory.getEntity(id);
-        return memory.getTimeline({
-            text: entity ? undefined : id,
+        const recalled = await memory.recall({
+            mode: 'historical', now: Date.now(), text: entity ? '' : id, world_id: scope.root?.id,
             entity_names: entity ? [entity.canonical_name] : undefined,
             valid_time: time_flag(context, 'valid-time'),
             recorded_time: time_flag(context, 'recorded-time'),
+            permission_context: { user_id: context.user_id, project_ids: [context.project_id] },
         });
+        if (!('timeline' in recalled)) throw new Error('historical timeline was not returned');
+        return recalled;
     });
     const entries = result.timeline.entries.map((entry) => ({ at: entry.node.temporal.recorded_at, status: entry.node.temporal.superseded_at ? 'SUPERSEDED' : entry.node.state.status === 'active' ? 'ACTIVE' : entry.node.state.status.toUpperCase(), text: entry.node.content.raw, id: entry.node.id }));
     emit(context, { ok: true, target: id, entries, trace: result.trace }, () => [

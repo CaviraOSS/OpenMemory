@@ -8,3 +8,7 @@ export * from './project_decisions.js';
 export * from './project_tasks.js';
 export * from './project_code_index.js';
 export * from './project_conventions.js';
+export * from './project_skills.js';
+export * from './project_sessions.js';
+export * from './project_assets.js';
+export * from './project_agent_manifest.js';

@@ -157,6 +157,7 @@ export async function recall_project_memory(memory: open_memory, project: Projec
     const categories = mode_categories[mode];
     const raw_nodes = nodes_from_raw(raw).filter(({ node }) => {
         const kind = String(node.metadata.project_event_kind ?? (node.metadata.project_id ? 'connector' : ''));
+        if (kind === 'asset') return false;
         const category_allowed = !categories || categories.has(kind) || (mode === 'project_code' && Boolean(node.facets.procedural));
         return category_allowed && (mode !== 'project_strict' || relevant_to(node, query.text));
     });

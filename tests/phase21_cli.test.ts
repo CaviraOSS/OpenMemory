@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,13 +10,34 @@ const entry = join(root, 'src', 'cli', 'index.ts');
 const dirs: string[] = [];
 const children: ChildProcess[] = [];
 
-afterEach(async () => {
-    await Promise.all(children.splice(0).map((child) => {
-        if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+const bounded = async (operation: Promise<unknown>, timeout_ms: number): Promise<void> => {
+    let timer: NodeJS.Timeout | undefined;
+    await Promise.race([
+        operation,
+        new Promise<void>((resolve_timeout) => { timer = setTimeout(resolve_timeout, timeout_ms); }),
+    ]).finally(() => { if (timer) clearTimeout(timer); });
+};
+
+const stop_child = async (child: ChildProcess): Promise<void> => {
+    if (child.exitCode === null && child.signalCode === null) {
         const exited = new Promise<void>((resolve_exit) => child.once('exit', () => resolve_exit()));
-        if (!child.killed) child.kill();
-        return exited;
-    }));
+        if (process.platform === 'win32' && child.pid) {
+            const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+            await bounded(new Promise<void>((resolve_killer) => {
+                killer.once('close', () => resolve_killer());
+                killer.once('error', () => resolve_killer());
+            }), 3_000);
+            if (killer.exitCode === null) { killer.kill(); killer.unref(); }
+        } else if (!child.killed) child.kill('SIGTERM');
+        await bounded(exited, 3_000);
+    }
+    child.stdout?.destroy();
+    child.stderr?.destroy();
+    child.unref();
+};
+
+afterEach(async () => {
+    await Promise.all(children.splice(0).map(stop_child));
     for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -26,17 +47,29 @@ const workspace = () => {
     return { dir, db: join(dir, 'memory.db') };
 };
 
-function run(args: string[], env: NodeJS.ProcessEnv = {}) {
+function run(args: string[], env: Record<string, string | undefined> = {}, input?: string) {
     const result = spawnSync(process.execPath, ['--import', 'tsx', entry, ...args], {
         cwd: root,
         env: { ...process.env, NO_COLOR: '1', ...env },
         encoding: 'utf8',
+        input,
     });
     return {
         status: result.status,
         stdout: result.stdout,
         stderr: result.stderr,
         body: result.stdout.trim() ? JSON.parse(result.stdout) as Record<string, any> : null,
+    };
+}
+
+function run_jsonl(args: string[], env: Record<string, string | undefined> = {}) {
+    const result = spawnSync(process.execPath, ['--import', 'tsx', entry, ...args], {
+        cwd: root, env: { ...process.env, NO_COLOR: '1', ...env }, encoding: 'utf8',
+    });
+    return {
+        status: result.status,
+        stderr: result.stderr,
+        lines: result.stdout.trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line) as Record<string, any>),
     };
 }
 
@@ -71,6 +104,7 @@ describe('phase 21 cli', () => {
         expect(result.status).toBe(0);
         expect(result.body?.name).toBe('openmemory');
         expect(result.stderr).not.toMatch(/\u001b\[/);
+        expect(run(['--version']).body).toMatchObject({ name: 'openmemory', version: pkg.version });
     });
 
     it('2. starts the shared API server with the selected database', async () => {
@@ -86,8 +120,9 @@ describe('phase 21 cli', () => {
         expect(ready.ready).toBe(true);
         expect(ready.db_path).toBe(db);
         expect(health.data.ok).toBe(true);
-        child.kill('SIGTERM');
-    });
+        await stop_child(child);
+        children.splice(children.indexOf(child), 1);
+    }, 20_000);
 
     it('3. ingests into SQLite and emits readable JSON', () => {
         const { db } = workspace();
@@ -96,6 +131,40 @@ describe('phase 21 cli', () => {
         expect(result.body?.node.content.raw).toBe('I prefer tea');
         expect(result.stdout).toContain('\n  "node"');
         expect(existsSync(db)).toBe(true);
+    });
+
+    it('initializes the database and project hierarchy together', () => {
+        const { db } = workspace();
+        const initialized = run(['init', '--project', 'alpha', '--db', db]);
+        const status = run(['status', '--project', 'alpha', '--db', db]);
+        expect(initialized.status).toBe(0);
+        expect(status.body?.project).toMatchObject({ id: 'alpha', initialized: true });
+        expect(status.body?.memory.worlds).toBeGreaterThan(1);
+    });
+
+    it('doctor diagnoses a fresh workspace without creating its database', () => {
+        const { db } = workspace();
+        const result = run(['doctor', '--db', db]);
+        expect(result.status).toBe(0);
+        expect(result.body?.checks.find((item: { check: string }) => item.check === 'database')).toMatchObject({ status: 'warn' });
+        expect(existsSync(db)).toBe(false);
+    });
+
+    it('ingests large editor selections from stdin', () => {
+        const { db } = workspace();
+        const text = `Selected implementation\n${'const value = 1;\n'.repeat(1_000)}`;
+        const result = run(['ingest', '--stdin', '--source', 'vscode-selection', '--db', db], {}, text);
+        expect(result.status).toBe(0);
+        expect(result.body?.node.content.raw).toBe(text.trim());
+    });
+
+    it('persists structured native-client metadata without overriding scope', () => {
+        const { db } = workspace();
+        const metadata = JSON.stringify({ change_id: 'change-1', agent: 'copilot', attribution_confidence: 'explicit', files: ['src/a.ts'], project_id: 'wrong' });
+        const result = run(['ingest', '--stdin', '--source', 'vscode-agent:copilot', '--type', 'agent_change', '--metadata-json', metadata, '--db', db], {}, 'Copilot changed src/a.ts');
+        expect(result.status).toBe(0);
+        expect(result.body?.node.metadata).toMatchObject({ change_id: 'change-1', agent: 'copilot', attribution_confidence: 'explicit', files: ['src/a.ts'], project_id: expect.any(String), memory_type: 'agent_change' });
+        expect(result.body?.node.metadata.project_id).not.toBe('wrong');
     });
 
     it('4. recalls strict and historical truth from the same database path', () => {
@@ -136,10 +205,138 @@ describe('phase 21 cli', () => {
         const ingested = run(['ingest', '--user', 'u1', '--text', 'I prefer tea', '--db', db]);
         const explained = run(['explain', '--id', ingested.body?.node.id, '--db', db]);
         const status = run(['status', '--db', db]);
+        const status_with_memories = run(['status', '--memories', '1', '--db', db]);
         expect(status.status).toBe(0);
         expect(status.body?.db_path).toBe(db);
         expect(status.body?.memory.nodes).toBe(1);
+        expect(status_with_memories.body?.recent_memories).toHaveLength(1);
+        expect(status_with_memories.body?.recent_memories[0].id).toBe(ingested.body?.memory_id);
         expect(explained.body?.node.content.raw).toBe('I prefer tea');
+    });
+
+    it('lists project memories for native clients', () => {
+        const { db } = workspace();
+        const first = run(['ingest', '--user', 'u1', '--text', 'Remember the release checklist', '--db', db]);
+        run(['ingest', '--user', 'u1', '--text', 'Remember the migration plan', '--db', db]);
+        const listed = run(['memory', 'list', '--limit', '1', '--db', db]);
+        expect(listed.status).toBe(0);
+        expect(listed.body).toMatchObject({ ok: true, count: 1, limit: 1 });
+        expect(listed.body?.memories[0]).toMatchObject({ status: 'active', grounded: false });
+        expect(typeof listed.body?.memories[0].id).toBe('string');
+        expect(first.body?.memory_id).toBeTruthy();
+    });
+
+    it('runs decay maintenance and reinforces a persisted memory', () => {
+        const { db } = workspace();
+        const jan = String(Date.UTC(2026, 0, 1));
+        const mar = String(Date.UTC(2026, 2, 1));
+        const ingested = run(['ingest', '--user', 'u1', '--text', 'Keep the rollback procedure', '--at', jan, '--db', db]);
+        const decay = run(['maintenance', 'decay', '--at', mar, '--all', '--db', db]);
+        const reinforced = run(['maintenance', 'reinforce', ingested.body?.memory_id, '--at', mar, '--db', db]);
+        expect(decay.status).toBe(0);
+        expect(decay.body).toMatchObject({ ok: true, complete: true, scanned: 1, updated: 1 });
+        expect(reinforced.status).toBe(0);
+        expect(reinforced.body?.reinforcement_count).toBe(1);
+        expect(reinforced.body?.activation).toBeGreaterThan(0);
+    });
+
+    it('manages reusable Skills and imports past agent sessions', () => {
+        const { dir, db } = workspace();
+        const created = run([
+            'skill', 'create', '--project', 'alpha', '--db', db, '--name', 'Release check', '--description', 'Validate releases',
+            '--triggers', 'release checklist,publish package', '--instructions-json', '["Run tests","Build packages"]', '--validation-json', '["Tests pass"]',
+        ]);
+        const skill_id = created.body?.skill.skill_id;
+        const bound = run(['skill', 'bind', skill_id, '--agents', 'reviewer', '--project', 'alpha', '--db', db]);
+        const matched = run(['skill', 'match', 'run the release checklist', '--agent', 'reviewer', '--project', 'alpha', '--db', db]);
+        const context = run(['project', 'context', 'run the release checklist', '--agent', 'reviewer', '--project', 'alpha', '--db', db]);
+        expect(created.status).toBe(0);
+        expect(bound.body?.skill).toMatchObject({ version: 2, agent_ids: ['reviewer'] });
+        expect(matched.body?.matches[0].skill.skill_id).toBe(skill_id);
+        expect(context.body?.matched_skills[0].skill.skill_id).toBe(skill_id);
+        expect(context.body?.asset_loadout.selected[0].asset.type).toBe('skill');
+
+        const registered = run([
+            'asset', 'register', '--project', 'alpha', '--db', db, '--type', 'llm_wiki', '--name', 'Architecture wiki',
+            '--description', 'Project architecture', '--owner', 'alice', '--source-type', 'docs',
+            '--content-ref', 'openmemory://project/alpha/wiki/architecture', '--status', 'approved', '--visibility', 'project',
+            '--frameworks', 'vscode', '--mode', 'tool', '--priority', '0.8',
+        ]);
+        const asset_id = registered.body?.asset.asset_id;
+        const loadout = run(['asset', 'loadout', 'architecture release', '--agent', 'reviewer', '--framework', 'vscode', '--project', 'alpha', '--db', db]);
+        const manifest = run(['agent', 'manifest', 'reviewer', '--query', 'architecture release', '--framework', 'vscode', '--project', 'alpha', '--db', db]);
+        expect(registered.status).toBe(0);
+        expect(loadout.body?.selected.map((item: { asset: { asset_id: string } }) => item.asset.asset_id)).toContain(asset_id);
+        expect(manifest.body?.manifest).toMatchObject({ schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1', agent: { id: 'reviewer', framework: 'vscode' } });
+
+        const session_path = join(dir, 'session.json');
+        writeFileSync(session_path, JSON.stringify({
+            session_id: 'codex-42', agent_id: 'builder', provider: 'codex', started_at: 100,
+            messages: [{ role: 'user', content: 'Implement Skills.' }, { role: 'assistant', content: 'Skills implemented.' }],
+        }));
+        const imported = run(['session', 'import', session_path, '--project', 'alpha', '--db', db]);
+        const sessions = run(['session', 'list', '--project', 'alpha', '--db', db]);
+        expect(imported.body?.session).toMatchObject({ session_id: 'codex-42', message_count: 2, started_at: 100, ended_at: 101 });
+        expect(sessions.body?.sessions).toEqual([expect.objectContaining({ session_id: 'codex-42', message_count: 2 })]);
+    });
+
+    it('detects, previews, ports, updates, verifies, and streams coding-harness sessions', () => {
+        const { dir, db } = workspace();
+        const source = join(dir, 'claude-projects');
+        const session_path = join(source, 'session.jsonl');
+        mkdirSync(source, { recursive: true });
+        const turns: Array<Record<string, unknown>> = [
+            { type: 'user', sessionId: 'claude-native-1', cwd: dir, timestamp: '2026-01-01T00:00:00Z', message: { role: 'user', content: 'Build the CLI porter' } },
+            { type: 'assistant', sessionId: 'claude-native-1', cwd: dir, timestamp: '2026-01-01T00:00:01Z', message: { role: 'assistant', content: 'Porter built' } },
+        ];
+        writeFileSync(session_path, turns.map((turn) => JSON.stringify(turn)).join('\n'));
+        const env = { OPENMEMORY_CLAUDE_PROJECTS: source, OPENMEMORY_CODEX_SESSIONS: join(dir, 'missing-codex'), OPENCODE_DB: join(dir, 'missing-opencode.db'), PATH: '' };
+        const detected = run(['detect', '--project', 'alpha', '--db', db], env);
+        const discovered = run(['session', 'discover', '--from', 'claude-code', '--project', 'alpha', '--db', db], env);
+        const first = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        const duplicate = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        turns.push({ type: 'user', sessionId: 'claude-native-1', cwd: dir, timestamp: '2026-01-01T00:00:02Z', message: { role: 'user', content: 'Add regression tests' } });
+        writeFileSync(session_path, turns.map((turn) => JSON.stringify(turn)).join('\n'));
+        const updated = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        const verified = run(['verify', '--from', 'claude-code', '--sample', '1', '--project', 'alpha', '--db', db], env);
+        const streamed = run_jsonl(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--force', '--jsonl', '--project', 'alpha', '--db', db], env);
+
+        expect(detected.body?.harnesses.find((item: { harness: string }) => item.harness === 'claude-code')).toMatchObject({ installed: true, can_import: true, source_path: source });
+        expect(discovered.body).toMatchObject({ harness: 'claude-code', count: 1, projects: [expect.objectContaining({ cwd: dir })] });
+        expect(first.body?.counts).toMatchObject({ created: 1, updated: 0, skipped: 0, errors: 0 });
+        expect(duplicate.body?.counts).toMatchObject({ created: 0, updated: 0, skipped: 1, errors: 0 });
+        expect(updated.body?.counts).toMatchObject({ created: 0, updated: 1, skipped: 0, errors: 0 });
+        expect(verified.body).toMatchObject({ ok: true, discovered: 1, verified: 1, failures: [] });
+        expect(streamed.status).toBe(0);
+        expect(streamed.lines.some((line) => line.type === 'import:progress')).toBe(true);
+        expect(streamed.lines.at(-1)).toMatchObject({ type: 'summary', counts: { updated: 1, errors: 0 } });
+    });
+
+    it('keeps project reads, ingest, and maintenance isolated', () => {
+        const { db } = workspace();
+        expect(run(['project', 'init', '--project', 'alpha', '--db', db]).status).toBe(0);
+        expect(run(['project', 'init', '--project', 'beta', '--db', db]).status).toBe(0);
+        const alpha = run(['ingest', '--project', 'alpha', '--text', 'Alpha uses port 7331', '--source', 'alpha.md', '--db', db]);
+        const beta = run(['ingest', '--project', 'beta', '--text', 'Beta uses port 8443', '--source', 'beta.md', '--db', db]);
+        const alpha_list = run(['memory', 'list', '--project', 'alpha', '--db', db]);
+        const alpha_recall = run(['recall', 'which port does Alpha use', '--mode', 'associative', '--project', 'alpha', '--db', db]);
+        const wrong_project = run(['memory', 'list', '--project', 'missing', '--db', db]);
+        const cross_explain = run(['explain', beta.body?.memory_id, '--project', 'alpha', '--db', db]);
+        const cross_reinforce = run(['maintenance', 'reinforce', beta.body?.memory_id, '--project', 'alpha', '--db', db]);
+        const decay = run(['maintenance', 'decay', '--all', '--project', 'alpha', '--db', db]);
+        const alpha_explain = run(['explain', alpha.body?.memory_id, '--project', 'alpha', '--db', db]);
+        const beta_explain = run(['explain', beta.body?.memory_id, '--project', 'beta', '--db', db]);
+
+        expect(alpha_list.body?.memories.map((item: { id: string }) => item.id)).toEqual([alpha.body?.memory_id]);
+        expect(alpha_list.body?.memories[0].source).toBe('alpha.md');
+        expect(alpha_recall.body?.hits.some((hit: { id: string }) => hit.id === alpha.body?.memory_id)).toBe(true);
+        expect(wrong_project.status).toBe(2);
+        expect(JSON.parse(wrong_project.stderr).error.code).toBe('project_not_found');
+        expect(cross_explain.status).toBe(2);
+        expect(cross_reinforce.status).toBe(2);
+        expect(decay.body).toMatchObject({ scanned: 1, updated: 1 });
+        expect(alpha_explain.body?.node.state.decay_updated_at).not.toBeNull();
+        expect(beta_explain.body?.node.state.decay_updated_at).toBeNull();
     });
 
     it('returns useful JSON errors and nonzero status', () => {

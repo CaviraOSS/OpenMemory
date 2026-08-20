@@ -1,0 +1,335 @@
+{
+    "name": "openmemory-vscode",
+    "displayName": "OpenMemory",
+    "description": "Native Hydrograph memory workflows for VS Code",
+    "version": "0.2.0",
+    "publisher": "CaviraOSS",
+    "license": "UNLICENSED",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/CaviraOSS/OpenMemory"
+    },
+    "engines": {
+        "vscode": "^1.96.0"
+    },
+    "extensionKind": [
+        "workspace"
+    ],
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": false,
+            "description": "OpenMemory executes the configured local CLI and writes workspace-scoped memory. Trust the workspace before enabling it."
+        }
+    },
+    "categories": [
+        "AI",
+        "Other"
+    ],
+    "keywords": [
+        "memory",
+        "ai",
+        "agents",
+        "mcp",
+        "hydrograph"
+    ],
+    "main": "./dist/extension.js",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "files": [
+        "dist",
+        "media",
+        "README.md",
+        "CHANGELOG.md"
+    ],
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "openmemory",
+                    "title": "OpenMemory",
+                    "icon": "media/openmemory.svg"
+                }
+            ]
+        },
+        "views": {
+            "openmemory": [
+                {
+                    "id": "openmemory.memories",
+                    "name": "Memories"
+                }
+            ]
+        },
+        "viewsWelcome": [
+            {
+                "view": "openmemory.memories",
+                "contents": "No memories are loaded for this workspace.\n[Initialize OpenMemory](command:openmemory.initialize)\n[Remember a quick note](command:openmemory.quickNote)"
+            }
+        ],
+        "commands": [
+            {
+                "command": "openmemory.refresh",
+                "title": "Refresh Memories",
+                "category": "OpenMemory",
+                "icon": "$(refresh)"
+            },
+            {
+                "command": "openmemory.initialize",
+                "title": "Initialize Workspace Memory",
+                "category": "OpenMemory",
+                "icon": "$(database)"
+            },
+            {
+                "command": "openmemory.rememberSelection",
+                "title": "Remember Selection",
+                "category": "OpenMemory",
+                "icon": "$(bookmark)"
+            },
+            {
+                "command": "openmemory.quickNote",
+                "title": "Remember a Quick Note",
+                "category": "OpenMemory",
+                "icon": "$(edit)"
+            },
+            {
+                "command": "openmemory.recall",
+                "title": "Recall Context",
+                "category": "OpenMemory",
+                "icon": "$(search)"
+            },
+            {
+                "command": "openmemory.projectContext",
+                "title": "Build Project Context",
+                "category": "OpenMemory",
+                "icon": "$(repo)"
+            },
+            {
+                "command": "openmemory.explain",
+                "title": "Explain Memory",
+                "category": "OpenMemory",
+                "icon": "$(inspect)"
+            },
+            {
+                "command": "openmemory.reinforce",
+                "title": "Reinforce Memory",
+                "category": "OpenMemory",
+                "icon": "$(arrow-up)"
+            },
+            {
+                "command": "openmemory.runDecay",
+                "title": "Run Decay Maintenance",
+                "category": "OpenMemory",
+                "icon": "$(history)"
+            },
+            {
+                "command": "openmemory.startAgentSession",
+                "title": "Start AI Change Session",
+                "category": "OpenMemory",
+                "icon": "$(record)"
+            },
+            {
+                "command": "openmemory.stopAgentSession",
+                "title": "Stop AI Change Session",
+                "category": "OpenMemory",
+                "icon": "$(debug-stop)"
+            },
+            {
+                "command": "openmemory.reviewAgentChanges",
+                "title": "Review AI Change Candidates",
+                "category": "OpenMemory",
+                "icon": "$(diff)"
+            },
+            {
+                "command": "openmemory.discardAgentChanges",
+                "title": "Discard Pending AI Change Candidates",
+                "category": "OpenMemory",
+                "icon": "$(trash)"
+            },
+            {
+                "command": "openmemory.importSessions",
+                "title": "Import Coding Sessions",
+                "category": "OpenMemory",
+                "icon": "$(repo-pull)"
+            },
+            {
+                "command": "openmemory.openSettings",
+                "title": "Open Settings",
+                "category": "OpenMemory",
+                "icon": "$(gear)"
+            },
+            {
+                "command": "openmemory.showActions",
+                "title": "Manage OpenMemory",
+                "category": "OpenMemory"
+            },
+            {
+                "command": "openmemory.openOutput",
+                "title": "Open Output",
+                "category": "OpenMemory"
+            }
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "openmemory.importSessions",
+                    "when": "view == openmemory.memories",
+                    "group": "navigation@1"
+                },
+                {
+                    "command": "openmemory.quickNote",
+                    "when": "view == openmemory.memories",
+                    "group": "navigation@2"
+                },
+                {
+                    "command": "openmemory.refresh",
+                    "when": "view == openmemory.memories",
+                    "group": "navigation@3"
+                }
+            ],
+            "view/item/context": [
+                {
+                    "command": "openmemory.explain",
+                    "when": "view == openmemory.memories && viewItem == openmemory.memory",
+                    "group": "inline@1"
+                },
+                {
+                    "command": "openmemory.reinforce",
+                    "when": "view == openmemory.memories && viewItem == openmemory.memory",
+                    "group": "inline@2"
+                }
+            ],
+            "editor/context": [
+                {
+                    "command": "openmemory.rememberSelection",
+                    "when": "editorHasSelection",
+                    "group": "navigation@20"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "OpenMemory",
+            "properties": {
+                "openmemory.cliPath": {
+                    "type": "string",
+                    "default": "openmemory",
+                    "scope": "resource",
+                    "restricted": true,
+                    "description": "OpenMemory CLI executable or JavaScript entry path."
+                },
+                "openmemory.database": {
+                    "type": "string",
+                    "default": ".openmemory/project.db",
+                    "scope": "resource",
+                    "description": "Workspace-relative or absolute SQLite database path."
+                },
+                "openmemory.project": {
+                    "type": "string",
+                    "default": "current",
+                    "scope": "resource",
+                    "description": "Project ID used to scope memory operations."
+                },
+                "openmemory.user": {
+                    "type": "string",
+                    "default": "default",
+                    "scope": "resource",
+                    "description": "User ID supplied to OpenMemory recall and ingest gates."
+                },
+                "openmemory.agentId": {
+                    "type": "string",
+                    "default": "",
+                    "scope": "resource",
+                    "description": "Agent identity used to resolve governed memory asset bindings for project context."
+                },
+                "openmemory.framework": {
+                    "type": "string",
+                    "default": "vscode",
+                    "scope": "resource",
+                    "description": "Agent framework identity used to resolve portable memory asset bindings."
+                },
+                "openmemory.recallMode": {
+                    "type": "string",
+                    "enum": [
+                        "strict",
+                        "associative",
+                        "historical",
+                        "world_grounded"
+                    ],
+                    "default": "associative",
+                    "scope": "resource",
+                    "description": "Default recall mode for the Recall Context command."
+                },
+                "openmemory.listLimit": {
+                    "type": "number",
+                    "default": 50,
+                    "minimum": 1,
+                    "maximum": 200,
+                    "scope": "resource",
+                    "description": "Maximum memories shown in the activity-bar view."
+                },
+                "openmemory.autoRefresh": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Refresh the memory view after explicit OpenMemory writes."
+                },
+                "openmemory.agentChanges.heuristicDetection": {
+                    "type": "boolean",
+                    "default": false,
+                    "scope": "resource",
+                    "description": "Queue low-confidence editor change candidates when a known AI coding extension is installed. Off by default; candidates are never auto-recorded."
+                },
+                "openmemory.agentChanges.autoRecordExplicit": {
+                    "type": "boolean",
+                    "default": true,
+                    "scope": "resource",
+                    "description": "Record explicitly started AI change sessions when they are stopped."
+                },
+                "openmemory.agentChanges.quietPeriodMs": {
+                    "type": "number",
+                    "default": 3000,
+                    "minimum": 500,
+                    "maximum": 30000,
+                    "scope": "resource",
+                    "description": "Quiet period used to coalesce heuristic document changes."
+                },
+                "openmemory.agentChanges.maxPatchBytes": {
+                    "type": "number",
+                    "default": 65536,
+                    "minimum": 4096,
+                    "maximum": 524288,
+                    "scope": "resource",
+                    "description": "Maximum redacted patch bytes stored for one AI change set."
+                },
+                "openmemory.agentChanges.maxDocumentBytes": {
+                    "type": "number",
+                    "default": 1000000,
+                    "minimum": 16384,
+                    "maximum": 10000000,
+                    "scope": "resource",
+                    "description": "Maximum text document size eligible for change tracking."
+                },
+                "openmemory.agentChanges.maxSessionSnapshotBytes": {
+                    "type": "number",
+                    "default": 33554432,
+                    "minimum": 1048576,
+                    "maximum": 268435456,
+                    "scope": "resource",
+                    "description": "Maximum in-memory baseline bytes for an explicit AI change session. Baselines are discarded when the session stops and are never persisted."
+                }
+            }
+        }
+    },
+    "scripts": {
+        "check": "tsc --noEmit -p tsconfig.json",
+        "compile": "node esbuild.mjs",
+        "watch": "node esbuild.mjs --watch",
+        "package": "pnpm compile && vsce package --no-dependencies --skip-license",
+        "vscode:prepublish": "pnpm compile"
+    },
+    "devDependencies": {
+        "@types/node": "^22.10.0",
+        "@types/vscode": "^1.96.0",
+        "@vscode/vsce": "^3.2.1",
+        "esbuild": "^0.24.2",
+        "typescript": "^5.9.3"
+    }
+}
