@@ -168,7 +168,7 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         label: 'Embedding Provider',
         description: 'AI provider for generating embeddings (used in SMART/DEEP tiers)',
         type: 'select',
-        options: ['openai', 'gemini', 'aws', 'ollama', 'local', 'synthetic']
+        options: ['openai', 'gemini', 'aws', 'ollama', 'local', 'synthetic', 'orcarouter']
     },
     OM_VEC_DIM: {
         category: 'Embeddings',
@@ -211,6 +211,20 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         type: 'text',
         placeholder: 'text-embedding-3-small'
     },
+    OM_ORCAROUTER_BASE_URL: {
+        category: 'Embeddings',
+        label: 'OrcaRouter Base URL',
+        description: 'OrcaRouter OpenAI-compatible API endpoint',
+        type: 'text',
+        placeholder: 'https://api.orcarouter.ai/v1'
+    },
+    OM_ORCAROUTER_EMBEDDING_MODEL: {
+        category: 'Embeddings',
+        label: 'OrcaRouter Model Override',
+        description: 'Override default embedding model for all sectors',
+        type: 'text',
+        placeholder: 'orcarouter/auto'
+    },
     OM_MAX_PAYLOAD_SIZE: {
         category: 'Embeddings',
         label: 'Max Payload Size (bytes)',
@@ -224,6 +238,13 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         description: 'API key for OpenAI embeddings',
         type: 'password',
         placeholder: 'sk-...'
+    },
+    ORCAROUTER_API_KEY: {
+        category: 'API Keys',
+        label: 'OrcaRouter API Key',
+        description: 'API key for OrcaRouter embeddings (sk-orca-...)',
+        type: 'password',
+        placeholder: 'sk-orca-...'
     },
     GEMINI_API_KEY: {
         category: 'API Keys',

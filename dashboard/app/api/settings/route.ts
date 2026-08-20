@@ -50,6 +50,7 @@ export async function GET() {
         if (masked.GEMINI_API_KEY) masked.GEMINI_API_KEY = '***'
         if (masked.AWS_SECRET_ACCESS_KEY) masked.AWS_SECRET_ACCESS_KEY = "***"
         if (masked.OM_API_KEY) masked.OM_API_KEY = '***'
+        if (masked.ORCAROUTER_API_KEY) masked.ORCAROUTER_API_KEY = '***'
 
         return NextResponse.json({
             exists: true,
