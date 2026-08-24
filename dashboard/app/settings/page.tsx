@@ -239,6 +239,13 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         type: 'password',
         placeholder: 'sk-...'
     },
+    DASHSCOPE_API_KEY: {
+        category: 'API Keys',
+        label: 'DashScope API Key',
+        description: 'API key for Alibaba Cloud Model Studio (Bailian)',
+        type: 'password',
+        placeholder: 'sk-...'
+    },
     ORCAROUTER_API_KEY: {
         category: 'API Keys',
         label: 'OrcaRouter API Key',
@@ -651,4 +658,3 @@ export default function settings() {
         </div>
     )
 }
-

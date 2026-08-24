@@ -47,7 +47,11 @@ class EnvConfig:
         self.max_context_tokens = int(get("context", "max_tokens", "OM_MAX_CONTEXT_TOKENS", 2048))
         self.decay_half_life = float(get("decay", "half_life_days", "OM_DECAY_HALF_LIFE", 14))
         self.decay_lambda = num(os.getenv("OM_DECAY_LAMBDA"), 0.02)
-        self.openai_key = get("ai", "openai_key", "OPENAI_API_KEY", "") or os.getenv("OM_OPENAI_API_KEY")
+        self.openai_key = (
+            get("ai", "openai_key", "OPENAI_API_KEY", "")
+            or os.getenv("OM_OPENAI_API_KEY")
+            or os.getenv("DASHSCOPE_API_KEY")
+        )
         self.openai_base_url = get("ai", "openai_base", "OM_OPENAI_BASE_URL", "https://api.openai.com/v1")
         self.openai_model = get("ai", "openai_model", "OM_OPENAI_MODEL", None)
 

@@ -46,7 +46,10 @@ export const env = {
     adv_embed_parallel: bool(process.env.OM_ADV_EMBED_PARALLEL),
     embed_delay_ms: num(process.env.OM_EMBED_DELAY_MS, 200),
     openai_key:
-        process.env.OPENAI_API_KEY || process.env.OM_OPENAI_API_KEY || "",
+        process.env.OPENAI_API_KEY ||
+        process.env.OM_OPENAI_API_KEY ||
+        process.env.DASHSCOPE_API_KEY ||
+        "",
     openai_base_url: str(
         process.env.OM_OPENAI_BASE_URL,
         "https://api.openai.com/v1",
