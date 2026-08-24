@@ -155,6 +155,7 @@ async function embed_with_provider(
 
 async function get_sem_emb(t: string, s: string): Promise<number[]> {
     const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
+    let lastError: unknown = new Error("No embedding provider configured");
 
     for (let i = 0; i < providers.length; i++) {
         const provider = providers[i];
@@ -167,6 +168,7 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
             }
             return result;
         } catch (e) {
+            lastError = e;
             const errMsg = e instanceof Error ? e.message : String(e);
             const nextProvider = providers[i + 1];
 
@@ -176,20 +178,21 @@ async function get_sem_emb(t: string, s: string): Promise<number[]> {
                 );
             } else {
                 console.error(
-                    `[EMBED] All providers failed. Last error (${provider}): ${errMsg}. Using synthetic.`,
+                    `[EMBED] All providers failed. Last error (${provider}): ${errMsg}.`,
                 );
-                return gen_syn_emb(t, s);
+                throw e;
             }
         }
     }
 
-    return gen_syn_emb(t, s);
+    throw lastError;
 }
 
 async function emb_batch_with_fallback(
     txts: Record<string, string>,
 ): Promise<Record<string, number[]>> {
     const providers = [...new Set([env.emb_kind, ...env.embedding_fallback])];
+    let lastError: unknown = new Error("No embedding provider configured");
 
     for (let i = 0; i < providers.length; i++) {
         const provider = providers[i];
@@ -218,6 +221,7 @@ async function emb_batch_with_fallback(
             }
             return result;
         } catch (e) {
+            lastError = e;
             const errMsg = e instanceof Error ? e.message : String(e);
             const nextProvider = providers[i + 1];
 
@@ -227,23 +231,14 @@ async function emb_batch_with_fallback(
                 );
             } else {
                 console.error(
-                    `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}. Using synthetic.`,
+                    `[EMBED] All providers failed for batch. Last error (${provider}): ${errMsg}.`,
                 );
-
-                const result: Record<string, number[]> = {};
-                for (const [s, t] of Object.entries(txts)) {
-                    result[s] = gen_syn_emb(t, s);
-                }
-                return result;
+                throw e;
             }
         }
     }
 
-    const result: Record<string, number[]> = {};
-    for (const [s, t] of Object.entries(txts)) {
-        result[s] = gen_syn_emb(t, s);
-    }
-    return result;
+    throw lastError;
 }
 
 async function emb_openai(t: string, s: string): Promise<number[]> {

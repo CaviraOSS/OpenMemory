@@ -38,7 +38,7 @@ export const env = {
         | "auto",
     compression_min_length: num(process.env.OM_COMPRESSION_MIN_LENGTH, 100),
     emb_kind: str(process.env.OM_EMBEDDINGS, "synthetic"),
-    embedding_fallback: str(process.env.OM_EMBEDDING_FALLBACK, "synthetic")
+    embedding_fallback: (process.env.OM_EMBEDDING_FALLBACK ?? "synthetic")
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean),
