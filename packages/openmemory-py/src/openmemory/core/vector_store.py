@@ -90,13 +90,29 @@ class SQLiteVectorStore(VectorStore):
 import os
 
 def get_vector_store() -> VectorStore:
-    backend = os.getenv("OPENMEMORY_VECTOR_STORE", "sqlite")
+    backend = (
+        os.getenv("OM_VECTOR_BACKEND")
+        or os.getenv("OPENMEMORY_VECTOR_STORE")
+        or "sqlite"
+    ).strip().lower()
 
     if backend == "postgres":
         dsn = os.getenv("OPENMEMORY_PG_DSN", "postgresql://user:pass@localhost:5432/db")
         from .vector.postgres import PostgresVectorStore
         logger.info(f"Using PostgresVectorStore at {dsn}")
         return PostgresVectorStore(dsn)
+
+    elif backend == "qdrant":
+        url = (
+            os.getenv("OM_QDRANT_URL")
+            or os.getenv("QDRANT_URL")
+            or "http://localhost:6333"
+        )
+        api_key = os.getenv("OM_QDRANT_API_KEY") or os.getenv("QDRANT_API_KEY") or None
+        prefix = os.getenv("OM_QDRANT_COLLECTION_PREFIX", "openmemory_")
+        from .vector.qdrant import QdrantVectorStore
+        logger.info(f"Using QdrantVectorStore at {url}")
+        return QdrantVectorStore(url, api_key=api_key, collection_prefix=prefix)
 
     elif backend == "valkey" or backend == "redis":
         url = os.getenv("OPENMEMORY_REDIS_URL", "redis://localhost:6379/0")

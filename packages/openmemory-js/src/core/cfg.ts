@@ -32,10 +32,7 @@ export const env = {
     rate_limit_max_requests: num(process.env.OM_RATE_LIMIT_MAX_REQUESTS, 100),
     compression_enabled: bool(process.env.OM_COMPRESSION_ENABLED),
     compression_algorithm: str(process.env.OM_COMPRESSION_ALGORITHM, "auto") as
-        | "semantic"
-        | "syntactic"
-        | "aggressive"
-        | "auto",
+        "semantic" | "syntactic" | "aggressive" | "auto",
     compression_min_length: num(process.env.OM_COMPRESSION_MIN_LENGTH, 100),
     emb_kind: str(process.env.OM_EMBEDDINGS, "synthetic"),
     embedding_fallback: str(process.env.OM_EMBEDDING_FALLBACK, "synthetic")
@@ -64,7 +61,9 @@ export const env = {
         "https://api.siray.ai/v1",
     ),
     orcarouter_key:
-        process.env.ORCAROUTER_API_KEY || process.env.OM_ORCAROUTER_API_KEY || "",
+        process.env.ORCAROUTER_API_KEY ||
+        process.env.OM_ORCAROUTER_API_KEY ||
+        "",
     orcarouter_base_url: str(
         process.env.OM_ORCAROUTER_BASE_URL,
         "https://api.orcarouter.ai/v1",
@@ -90,13 +89,20 @@ export const env = {
         process.env.OM_METADATA_BACKEND,
         "sqlite",
     ).toLowerCase(),
-    vector_backend: str(
-        process.env.OM_VECTOR_BACKEND,
-        "postgres",
-    ).toLowerCase(),
+    vector_backend: str(process.env.OM_VECTOR_BACKEND, "sqlite").toLowerCase(),
     valkey_host: str(process.env.OM_VALKEY_HOST, "localhost"),
     valkey_port: num(process.env.OM_VALKEY_PORT, 6379),
     valkey_password: process.env.OM_VALKEY_PASSWORD,
+    qdrant_url: str(
+        process.env.OM_QDRANT_URL || process.env.QDRANT_URL,
+        "http://localhost:6333",
+    ),
+    qdrant_api_key:
+        process.env.OM_QDRANT_API_KEY || process.env.QDRANT_API_KEY || "",
+    qdrantCollectionPrefix: str(
+        process.env.OM_QDRANT_COLLECTION_PREFIX,
+        "openmemory_",
+    ),
     ide_mode: bool(process.env.OM_IDE_MODE),
     ide_allowed_origins: str(
         process.env.OM_IDE_ALLOWED_ORIGINS,

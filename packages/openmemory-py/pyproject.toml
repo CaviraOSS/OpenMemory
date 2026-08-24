@@ -22,6 +22,9 @@ dependencies = [
     "mammoth>=1.6",
     "markdownify>=0.11",
     "openai>=1.0",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+    "qdrant-client>=1.19.0",
 ]
 
 [tool.hatch.build.targets.wheel]

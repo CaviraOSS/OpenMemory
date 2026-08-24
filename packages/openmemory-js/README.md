@@ -117,8 +117,13 @@ OM_PG_USER=postgres
 OM_PG_PASSWORD=...
 
 # vector backend (optional)
-OM_VECTOR_BACKEND=valkey             # default uses metadata backend
+OM_VECTOR_BACKEND=sqlite             # sqlite | postgres | valkey | qdrant
+# valkey
 OM_VALKEY_URL=redis://localhost:6379
+# qdrant
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+OM_QDRANT_COLLECTION_PREFIX=openmemory_
 ```
 
 ### programmatic usage

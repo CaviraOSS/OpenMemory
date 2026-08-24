@@ -6,6 +6,7 @@ import path from "node:path";
 import { VectorStore } from "./vector_store";
 import { PostgresVectorStore } from "./vector/postgres";
 import { ValkeyVectorStore } from "./vector/valkey";
+import { QdrantVectorStore } from "./vector/qdrant";
 import {
     assertSafeIdentifier,
     DbInitError,
@@ -261,7 +262,10 @@ if (is_pg) {
         );
         ready = true;
 
-        if (env.vector_backend === "valkey") {
+        if (env.vector_backend === "qdrant") {
+            vector_store = new QdrantVectorStore();
+            console.error("[DB] Using Qdrant VectorStore");
+        } else if (env.vector_backend === "valkey") {
             vector_store = new ValkeyVectorStore();
             console.error("[DB] Using Valkey VectorStore");
         } else {
@@ -644,7 +648,10 @@ if (is_pg) {
     get_async = one;
     all_async = many;
 
-    if (env.vector_backend === "valkey") {
+    if (env.vector_backend === "qdrant") {
+        vector_store = new QdrantVectorStore();
+        console.error("[DB] Using Qdrant VectorStore");
+    } else if (env.vector_backend === "valkey") {
         vector_store = new ValkeyVectorStore();
         console.error("[DB] Using Valkey VectorStore");
     } else {

@@ -135,7 +135,27 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         label: 'Vector Store Backend',
         description: 'Storage backend for vector embeddings',
         type: 'select',
-        options: ['sqlite', 'pgvector', 'weaviate']
+        options: ['sqlite', 'pgvector', 'valkey', 'qdrant', 'weaviate']
+    },
+    OM_QDRANT_URL: {
+        category: 'Vectors',
+        label: 'Qdrant URL',
+        description: 'Qdrant server URL (if using Qdrant)',
+        type: 'text',
+        placeholder: 'http://localhost:6333'
+    },
+    OM_QDRANT_API_KEY: {
+        category: 'Vectors',
+        label: 'Qdrant API Key',
+        description: 'Authentication key for Qdrant (if enabled)',
+        type: 'password'
+    },
+    OM_QDRANT_COLLECTION_PREFIX: {
+        category: 'Vectors',
+        label: 'Qdrant Collection Prefix',
+        description: 'Prefix for Qdrant collections (one per sector)',
+        type: 'text',
+        placeholder: 'openmemory_'
     },
     OM_VECTOR_TABLE: {
         category: 'Vectors',
