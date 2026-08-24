@@ -612,7 +612,7 @@ If `type="factual"` returns no results:
 
 Ensure environment variables are set:
 - Postgres: `OM_PG_HOST`, `OM_PG_DB`, `OM_PG_USER`, `OM_PG_PASSWORD`
-- Embeddings: `OPENAI_API_KEY` (or relevant provider key, e.g. `ORCAROUTER_API_KEY`)
+- Embeddings: `OPENAI_API_KEY` (or a compatible provider key such as `DASHSCOPE_API_KEY` or `ORCAROUTER_API_KEY`)
 
 ## Performance
 

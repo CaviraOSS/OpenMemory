@@ -97,6 +97,11 @@ OM_EMBEDDINGS=ollama                 # synthetic | openai | gemini | ollama
 OM_OLLAMA_URL=http://localhost:11434
 OM_OLLAMA_MODEL=embeddinggemma       # or nomic-embed-text, mxbai-embed-large
 
+# Alibaba Cloud Model Studio / Bailian through its OpenAI-compatible endpoint
+# DASHSCOPE_API_KEY=your-dashscope-api-key
+# OM_OPENAI_BASE_URL=https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
+# OM_OPENAI_MODEL=text-embedding-v4
+
 # openai
 OPENAI_API_KEY=sk-...
 OM_OPENAI_MODEL=text-embedding-3-small

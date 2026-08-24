@@ -36,6 +36,7 @@ services:
       # OpenAI Provider
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OM_OPENAI_API_KEY=${OM_OPENAI_API_KEY:-}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-}
       - OM_OPENAI_BASE_URL=${OM_OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OM_OPENAI_MODEL=${OM_OPENAI_MODEL:-}
 
