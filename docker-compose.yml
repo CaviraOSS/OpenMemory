@@ -77,9 +77,12 @@ services:
       - OM_PG_TABLE=${OM_PG_TABLE:-openmemory_memories}
       - OM_PG_SSL=${OM_PG_SSL:-disable}
 
-      # Vector Backend (follows OM_METADATA_BACKEND unless set to 'valkey')
+      # Vector Backend (follows OM_METADATA_BACKEND unless set to 'valkey' or 'qdrant')
       - OM_VECTOR_BACKEND=${OM_VECTOR_BACKEND:-sqlite}
       - OM_VECTOR_TABLE=${OM_VECTOR_TABLE:-openmemory_vectors}
+      - OM_QDRANT_URL=${OM_QDRANT_URL:-http://qdrant:6333}
+      - OM_QDRANT_API_KEY=${OM_QDRANT_API_KEY:-}
+      - OM_QDRANT_COLLECTION_PREFIX=${OM_QDRANT_COLLECTION_PREFIX:-openmemory_}
       - OM_WEAVIATE_URL=${OM_WEAVIATE_URL:-}
       - OM_WEAVIATE_API_KEY=${OM_WEAVIATE_API_KEY:-}
       - OM_WEAVIATE_CLASS=${OM_WEAVIATE_CLASS:-OpenMemory}
@@ -156,9 +159,24 @@ services:
       retries: 3
       start_period: 30s
 
+  # Optional: Qdrant for vector storage
+  # Set OM_VECTOR_BACKEND=qdrant in your .env (and OM_QDRANT_URL if needed).
+  # qdrant:
+  #   image: qdrant/qdrant:v1.19.0
+  #   ports:
+  #     - '6333:6333'
+  #   volumes:
+  #     - qdrant_data:/qdrant/storage
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ['CMD', 'curl', '-f', 'http://localhost:6333/healthz']
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+
   # Optional: Valkey for high-performance vector storage
   # Uncomment to use Valkey instead of SQLite/PostgreSQL for vectors
-  # Don't forget to set OM_VECTOR_BACKEND=valkey in your .env
   # valkey:
   #   image: valkey/valkey:8.0
   #   ports:
@@ -176,6 +194,9 @@ services:
 volumes:
   openmemory_data:
     driver: local
+  # Uncomment if using Qdrant
+  # qdrant_data:
+  #   driver: local
   # Uncomment if using Valkey
   # valkey_data:
   #   driver: local

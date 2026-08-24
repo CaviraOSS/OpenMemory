@@ -35,12 +35,24 @@ class Memory:
 
     async def delete(self, memory_id: str):
         q.del_mem(memory_id)
+        from .core.vector_store import vector_store as store
+        try:
+            await store.deleteVectors(memory_id)
+        except Exception as e:
+            logger.warning(f"vector cleanup failed for {memory_id}: {e}")
         clear_cache()
 
     async def delete_all(self, user_id: str = None):
         uid = user_id or self.default_user
         if uid:
+            ids = [r["id"] for r in q.all_mem_by_user(uid, 1_000_000, 0)]
             q.del_mem_by_user(uid)
+            from .core.vector_store import vector_store as store
+            for mid in ids:
+                try:
+                    await store.deleteVectors(mid)
+                except Exception as e:
+                    logger.warning(f"vector cleanup failed for {mid}: {e}")
             clear_cache(uid)
         else:
             # If no user_id is provided at all, clear everything? 
