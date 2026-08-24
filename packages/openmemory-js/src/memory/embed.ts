@@ -109,14 +109,20 @@ export async function embedQueryForAllSectors(
         return result;
     }
 
-    if (env.emb_kind === "gemini" && env.gemini_key) {
+    if (
+        env.embed_mode === "simple" &&
+        (env.emb_kind === "gemini" ||
+            env.emb_kind === "openai" ||
+            env.emb_kind === "openrouter" ||
+            env.emb_kind === "orcarouter")
+    ) {
         try {
             const txts: Record<string, string> = {};
             for (const s of sectors) txts[s] = query;
-            return await emb_gemini(txts);
+            return await emb_batch_with_fallback(txts);
         } catch (e) {
             console.error(
-                `[EMBED] Gemini batch failed, falling back to sequential: ${e}`,
+                `[EMBED] Batch query embedding failed, falling back to sequential: ${e}`,
             );
         }
     }
@@ -134,6 +140,8 @@ async function embed_with_provider(
     switch (provider) {
         case "openai":
             return await emb_openai(t, s);
+        case "openrouter":
+            return await emb_openrouter(t, s);
         case "gemini":
             return (await emb_gemini({ [s]: t }))[s];
         case "ollama":
@@ -204,6 +212,9 @@ async function emb_batch_with_fallback(
                     break;
                 case "openai":
                     result = await emb_batch_openai(txts);
+                    break;
+                case "openrouter":
+                    result = await emb_batch_openrouter(txts);
                     break;
                 case "orcarouter":
                     result = await emb_batch_orcarouter(txts);
@@ -288,6 +299,58 @@ async function emb_batch_openai(
     const d = (await r.json()) as any,
         out: Record<string, number[]> = {};
     secs.forEach((s, i) => (out[s] = d.data[i].embedding));
+    return out;
+}
+
+async function emb_openrouter(t: string, s: string): Promise<number[]> {
+    if (!env.openrouter_key) throw new Error("OpenRouter key missing");
+    const m = get_model(s, "openrouter");
+    const r = await fetchWithTimeout(
+        `${env.openrouter_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.openrouter_key}`,
+            },
+            body: JSON.stringify({
+                input: t,
+                model: env.openrouter_embedding_model || m,
+                ...(env.vec_dim ? { dimensions: env.vec_dim } : {}),
+            }),
+        },
+    );
+    if (!r.ok) throw new Error(`OpenRouter: ${r.status}`);
+    return ((await r.json()) as any).data[0].embedding;
+}
+
+async function emb_batch_openrouter(
+    txts: Record<string, string>,
+): Promise<Record<string, number[]>> {
+    if (!env.openrouter_key) throw new Error("OpenRouter key missing");
+    const secs = Object.keys(txts),
+        m = get_model("semantic", "openrouter");
+    const r = await fetchWithTimeout(
+        `${env.openrouter_base_url.replace(/\/$/, "")}/embeddings`,
+        {
+            method: "POST",
+            headers: {
+                "content-type": "application/json",
+                authorization: `Bearer ${env.openrouter_key}`,
+            },
+            body: JSON.stringify({
+                input: Object.values(txts),
+                model: env.openrouter_embedding_model || m,
+                ...(env.vec_dim ? { dimensions: env.vec_dim } : {}),
+            }),
+        },
+    );
+    if (!r.ok) throw new Error(`OpenRouter batch: ${r.status}`);
+    const d = (await r.json()) as any,
+        out: Record<string, number[]> = {};
+    secs.forEach((sector, index) => {
+        out[sector] = d.data[index].embedding;
+    });
     return out;
 }
 
@@ -631,6 +694,7 @@ export async function embedMultiSector(
                 simp &&
                 (env.emb_kind === "gemini" ||
                     env.emb_kind === "openai" ||
+                    env.emb_kind === "openrouter" ||
                     env.emb_kind === "orcarouter")
             ) {
                 console.error(
@@ -738,6 +802,7 @@ export const getEmbeddingInfo = () => {
             env.embed_mode === "simple" &&
             (env.emb_kind === "gemini" ||
                 env.emb_kind === "openai" ||
+                env.emb_kind === "openrouter" ||
                 env.emb_kind === "orcarouter"),
         advanced_parallel: env.adv_embed_parallel,
         embed_delay_ms: env.embed_delay_ms,
@@ -753,6 +818,18 @@ export const getEmbeddingInfo = () => {
             procedural: get_model("procedural", "openai"),
             emotional: get_model("emotional", "openai"),
             reflective: get_model("reflective", "openai"),
+        };
+    } else if (env.emb_kind === "openrouter") {
+        i.configured = !!env.openrouter_key;
+        i.base_url = env.openrouter_base_url;
+        i.model_override = env.openrouter_embedding_model || null;
+        i.batch_api = env.embed_mode === "simple";
+        i.models = {
+            episodic: get_model("episodic", "openrouter"),
+            semantic: get_model("semantic", "openrouter"),
+            procedural: get_model("procedural", "openrouter"),
+            emotional: get_model("emotional", "openrouter"),
+            reflective: get_model("reflective", "openrouter"),
         };
     } else if (env.emb_kind === "gemini") {
         i.configured = !!env.gemini_key;

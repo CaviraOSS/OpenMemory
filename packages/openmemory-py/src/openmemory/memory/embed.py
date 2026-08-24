@@ -21,12 +21,15 @@ from ..ai.aws import AwsAdapter
 from ..ai.synthetic import SyntheticAdapter
 from ..ai.minimax import MiniMaxAdapter
 from ..ai.orcarouter import OrcaRouterAdapter
+from ..ai.openrouter import OpenRouterAdapter
 
 async def emb_dispatch(provider: str, t: str, s: str) -> List[float]:
     if provider == "synthetic":
         return await SyntheticAdapter(env.vec_dim or 768).embed(t, model=s)
     if provider == "openai":
         return await OpenAIAdapter().embed(t, model=env.openai_model)
+    if provider == "openrouter":
+        return await OpenRouterAdapter().embed(t, model=env.openrouter_embedding_model)
     if provider == "ollama":
         return await OllamaAdapter().embed(t, model=env.ollama_embedding_model)
     if provider == "gemini":

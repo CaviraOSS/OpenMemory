@@ -308,7 +308,7 @@ results = mem.search("allergies", user_id="user123")
   “Waypoint” traces that show exactly which nodes were used in context.
 
 - **Embeddings**  
-  OpenAI, Gemini, Ollama, AWS, [OrcaRouter](https://www.orcarouter.ai), synthetic fallback.
+  OpenAI, [OpenRouter](https://openrouter.ai), Gemini, Ollama, AWS, [OrcaRouter](https://www.orcarouter.ai), synthetic fallback.
 
 - **Integrations**  
   LangChain, CrewAI, AutoGen, Streamlit, MCP, VS Code, IDEs.

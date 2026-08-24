@@ -55,6 +55,11 @@ class EnvConfig:
         self.openai_base_url = get("ai", "openai_base", "OM_OPENAI_BASE_URL", "https://api.openai.com/v1")
         self.openai_model = get("ai", "openai_model", "OM_OPENAI_MODEL", None)
 
+        self.openrouter_key = get("ai", "openrouter_key", "OPENROUTER_API_KEY", "") or os.getenv("OM_OPENROUTER_API_KEY")
+        self.openrouter_base_url = get("ai", "openrouter_base", "OM_OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+        self.openrouter_model = get("ai", "openrouter_model", "OM_OPENROUTER_MODEL", None)
+        self.openrouter_embedding_model = os.getenv("OM_OPENROUTER_EMBEDDING_MODEL")
+
         self.ollama_url = get("ai", "ollama_url", "OLLAMA_URL", "http://localhost:11434")
 
         self.emb_kind = get("ai", "embedding_provider", "OM_EMBED_KIND", "synthetic")

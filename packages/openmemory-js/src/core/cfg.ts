@@ -52,6 +52,16 @@ export const env = {
         "https://api.openai.com/v1",
     ),
     openai_model: process.env.OM_OPENAI_MODEL,
+    openrouter_key:
+        process.env.OPENROUTER_API_KEY ||
+        process.env.OM_OPENROUTER_API_KEY ||
+        "",
+    openrouter_base_url: str(
+        process.env.OM_OPENROUTER_BASE_URL,
+        "https://openrouter.ai/api/v1",
+    ),
+    openrouter_model: process.env.OM_OPENROUTER_MODEL,
+    openrouter_embedding_model: process.env.OM_OPENROUTER_EMBEDDING_MODEL,
     gemini_key:
         process.env.GEMINI_API_KEY || process.env.OM_GEMINI_API_KEY || "",
     AWS_REGION: process.env.AWS_REGION || "",
