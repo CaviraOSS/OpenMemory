@@ -455,7 +455,13 @@ export function extract_essence(
 
     selected.sort((a, b) => a.idx - b.idx);
 
-    return selected.map((s) => s.text).join(" ");
+    const essence = selected.map((s) => s.text).join(" ");
+
+    // A single sentence can be longer than max_len, especially for text that
+    // does not put whitespace after punctuation. In that case no sentence is
+    // selected, but summary mode must never replace the source with an empty
+    // string.
+    return essence || raw.slice(0, max_len);
 }
 export function compute_token_overlap(
     q_toks: Set<string>,
