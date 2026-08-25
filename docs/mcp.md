@@ -38,7 +38,7 @@ Configure your MCP client (`.mcp.json` for Cursor/Windsurf, or Claude settings):
 #### Environment Variables
 
 - `OM_METADATA_BACKEND`: Database type (`sqlite` or `postgres`)
-- `OM_EMBEDDINGS`: Embedding provider (`openai`, `aws`, `ollama`, `synthetic`, `orcarouter`)
+- `OM_EMBEDDINGS`: Embedding provider (`openai`, `openrouter`, `aws`, `ollama`, `synthetic`, `orcarouter`)
 - Database credentials (if using Postgres): `OM_PG_HOST`, `OM_PG_DB`, `OM_PG_USER`, `OM_PG_PASSWORD`
 
 ## Memory Systems
@@ -612,7 +612,7 @@ If `type="factual"` returns no results:
 
 Ensure environment variables are set:
 - Postgres: `OM_PG_HOST`, `OM_PG_DB`, `OM_PG_USER`, `OM_PG_PASSWORD`
-- Embeddings: `OPENAI_API_KEY` (or a compatible provider key such as `DASHSCOPE_API_KEY` or `ORCAROUTER_API_KEY`)
+- Embeddings: `OPENAI_API_KEY` (or a compatible provider key such as `OPENROUTER_API_KEY`, `DASHSCOPE_API_KEY`, or `ORCAROUTER_API_KEY`)
 
 ## Performance
 

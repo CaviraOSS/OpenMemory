@@ -188,7 +188,7 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         label: 'Embedding Provider',
         description: 'AI provider for generating embeddings (used in SMART/DEEP tiers)',
         type: 'select',
-        options: ['openai', 'gemini', 'aws', 'ollama', 'local', 'synthetic', 'orcarouter']
+        options: ['openai', 'openrouter', 'gemini', 'aws', 'ollama', 'local', 'synthetic', 'orcarouter']
     },
     OM_VEC_DIM: {
         category: 'Embeddings',
@@ -231,6 +231,20 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         type: 'text',
         placeholder: 'text-embedding-3-small'
     },
+    OM_OPENROUTER_BASE_URL: {
+        category: 'Embeddings',
+        label: 'OpenRouter Base URL',
+        description: 'OpenRouter OpenAI-compatible API endpoint',
+        type: 'text',
+        placeholder: 'https://openrouter.ai/api/v1'
+    },
+    OM_OPENROUTER_EMBEDDING_MODEL: {
+        category: 'Embeddings',
+        label: 'OpenRouter Model Override',
+        description: 'Override the default OpenRouter embedding model',
+        type: 'text',
+        placeholder: 'openai/text-embedding-3-small'
+    },
     OM_ORCAROUTER_BASE_URL: {
         category: 'Embeddings',
         label: 'OrcaRouter Base URL',
@@ -258,6 +272,13 @@ const SETTING_METADATA: Record<string, SettingInfo> = {
         description: 'API key for OpenAI embeddings',
         type: 'password',
         placeholder: 'sk-...'
+    },
+    OPENROUTER_API_KEY: {
+        category: 'API Keys',
+        label: 'OpenRouter API Key',
+        description: 'API key for OpenRouter embeddings',
+        type: 'password',
+        placeholder: 'sk-or-v1-...'
     },
     DASHSCOPE_API_KEY: {
         category: 'API Keys',

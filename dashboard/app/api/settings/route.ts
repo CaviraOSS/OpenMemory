@@ -47,6 +47,8 @@ export async function GET() {
 
         const masked = { ...settings }
         if (masked.OPENAI_API_KEY) masked.OPENAI_API_KEY = '***'
+        if (masked.OPENROUTER_API_KEY) masked.OPENROUTER_API_KEY = '***'
+        if (masked.OM_OPENROUTER_API_KEY) masked.OM_OPENROUTER_API_KEY = '***'
         if (masked.DASHSCOPE_API_KEY) masked.DASHSCOPE_API_KEY = '***'
         if (masked.GEMINI_API_KEY) masked.GEMINI_API_KEY = '***'
         if (masked.AWS_SECRET_ACCESS_KEY) masked.AWS_SECRET_ACCESS_KEY = "***"

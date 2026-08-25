@@ -93,7 +93,7 @@ OM_DB_PATH=./data/om.db              # sqlite file path (default: ./data/openmem
 OM_DB_URL=sqlite://:memory:          # or use in-memory db
 
 # embeddings
-OM_EMBEDDINGS=ollama                 # synthetic | openai | gemini | ollama
+OM_EMBEDDINGS=ollama                 # synthetic | openai | openrouter | gemini | ollama
 OM_OLLAMA_URL=http://localhost:11434
 OM_OLLAMA_MODEL=embeddinggemma       # or nomic-embed-text, mxbai-embed-large
 
@@ -101,6 +101,11 @@ OM_OLLAMA_MODEL=embeddinggemma       # or nomic-embed-text, mxbai-embed-large
 # DASHSCOPE_API_KEY=your-dashscope-api-key
 # OM_OPENAI_BASE_URL=https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1
 # OM_OPENAI_MODEL=text-embedding-v4
+
+# OpenRouter through its OpenAI-compatible endpoint
+# OPENROUTER_API_KEY=sk-or-v1-...
+# OM_OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+# OM_OPENROUTER_EMBEDDING_MODEL=openai/text-embedding-3-small
 
 # openai
 OPENAI_API_KEY=sk-...

@@ -8,6 +8,7 @@
 episodic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
+  openrouter: openai/text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
@@ -16,6 +17,7 @@ episodic:
 semantic:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
+  openrouter: openai/text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
@@ -24,6 +26,7 @@ semantic:
 procedural:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
+  openrouter: openai/text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
@@ -32,6 +35,7 @@ procedural:
 emotional:
   ollama: nomic-embed-text
   openai: text-embedding-3-small
+  openrouter: openai/text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
   local: all-MiniLM-L6-v2
@@ -40,6 +44,7 @@ emotional:
 reflective:
   ollama: nomic-embed-text
   openai: text-embedding-3-large
+  openrouter: openai/text-embedding-3-small
   gemini: models/gemini-embedding-001
   aws: amazon.titan-embed-text-v2:0
   local: all-mpnet-base-v2
@@ -61,4 +66,3 @@ reflective:
 
 #AWS models:
 # - amazon.titan-embed-text-v2:0 (1024d, 512d, 256)
-
