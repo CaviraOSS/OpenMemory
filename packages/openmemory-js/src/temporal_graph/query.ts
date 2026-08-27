@@ -9,6 +9,7 @@ export const query_facts_at_time = async (opts: {
     object?: string;
     at?: Date;
     min_confidence?: number;
+    limit?: number;
 }): Promise<TemporalFact[]> => {
     const {
         user_id,
@@ -18,6 +19,7 @@ export const query_facts_at_time = async (opts: {
         object,
         at = new Date(),
         min_confidence = 0.1,
+        limit,
     } = opts;
     const timestamp = at.getTime();
     const conditions: string[] = [];
@@ -58,12 +60,17 @@ export const query_facts_at_time = async (opts: {
         params.push(min_confidence);
     }
 
-    const sql = `
+    let sql = `
         SELECT id, user_id, project_id, subject, predicate, object, valid_from, valid_to, confidence, last_updated, metadata
         FROM temporal_facts
         WHERE ${conditions.join(" AND ")}
         ORDER BY confidence DESC, valid_from DESC
     `;
+    if (typeof limit === "number" && Number.isFinite(limit)) {
+        const n = Math.max(1, Math.min(Math.floor(limit), 32));
+        sql += " LIMIT ?";
+        params.push(n);
+    }
 
     const rows = await all_async(sql, params);
     return rows.map((row) => ({
