@@ -520,6 +520,42 @@ async def expand_via_waypoints(ids: List[str], max_exp: int = 10):
             cnt += 1
     return exp
 
+async def _reinforce_query_hits(top: List[Dict[str, Any]]) -> None:
+    """Post-hit reinforcement (salience bump, waypoint/associative propagation,
+    regeneration re-embed). Maintenance work, not part of producing the ranked
+    hits.
+
+    `hsg_query` used to await this on the request path, so a handful of extra
+    DB round-trips (and an embed network call per hit when regeneration is on)
+    stacked on top of the multi-sector embed + vector search and blew the MCP
+    fail-soft query budget, surfacing a perfectly good search as a timeout. It
+    now runs fire-and-forget; each write is independently guarded so a failure
+    on one hit never reaches the request path.
+    """
+    for r in top:
+        rsal = await applyRetrievalTraceReinforcementToMemory(r["id"], r["salience"])
+        now = int(time.time()*1000)
+        db.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (rsal, now, r["id"]))
+        if len(r["path"]) > 1:
+            wps_rows = db.fetchall("SELECT dst_id, weight FROM waypoints WHERE src_id=?", (r["id"],))
+            wps = [{"target_id": row["dst_id"], "weight": row["weight"]} for row in wps_rows]
+
+            pru = await propagateAssociativeReinforcementToLinkedNodes(r["id"], rsal, wps)
+            for u in pru:
+                linked_mem = q.get_mem(u["node_id"])
+                if linked_mem:
+                    time_diff = (now - linked_mem["last_seen_at"]) / 86400000.0
+                    decay_fact = math.exp(-0.02 * time_diff)
+                    ctx_boost = HYBRID_PARAMS["gamma"] * (rsal - (linked_mem["salience"] or 0)) * decay_fact
+                    new_sal = max(0.0, min(1.0, (linked_mem["salience"] or 0) + ctx_boost))
+                    db.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (new_sal, now, u["node_id"]))
+
+        try:
+            await on_query_hit(r["id"], r["primary_sector"], lambda t: embed_for_sector(t, r["primary_sector"]))
+        except Exception:
+            pass
+
+
 async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict[str, Any]]:
     start_q = time.time()
     inc_q()
@@ -635,25 +671,12 @@ async def hsg_query(qt: str, k: int = 10, f: Dict[str, Any] = None) -> List[Dict
 
         res_list.sort(key=lambda x: x["score"], reverse=True)
         top = res_list[:k]
-        for r in top:
-             rsal = await applyRetrievalTraceReinforcementToMemory(r["id"], r["salience"])
-             now = int(time.time()*1000)
-             db.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (rsal, now, r["id"]))
-             if len(r["path"]) > 1:
-                 wps_rows = db.fetchall("SELECT dst_id, weight FROM waypoints WHERE src_id=?", (r["id"],))
-                 wps = [{"target_id": row["dst_id"], "weight": row["weight"]} for row in wps_rows]
 
-                 pru = await propagateAssociativeReinforcementToLinkedNodes(r["id"], rsal, wps)
-                 for u in pru:
-                     linked_mem = q.get_mem(u["node_id"])
-                     if linked_mem:
-                         time_diff = (now - linked_mem["last_seen_at"]) / 86400000.0
-                         decay_fact = math.exp(-0.02 * time_diff)
-                         ctx_boost = HYBRID_PARAMS["gamma"] * (rsal - (linked_mem["salience"] or 0)) * decay_fact
-                         new_sal = max(0.0, min(1.0, (linked_mem["salience"] or 0) + ctx_boost))
-                         db.execute("UPDATE memories SET salience=?, last_seen_at=? WHERE id=?", (new_sal, now, u["node_id"]))
-
-             await on_query_hit(r["id"], r["primary_sector"], lambda t: embed_for_sector(t, r["primary_sector"]))
+        # Reinforcement is off the request path: return the hits as soon as
+        # ranking + caching is done. The tail work runs in the background and
+        # must never be able to blow the MCP query budget.
+        _task = asyncio.create_task(_reinforce_query_hits(top))
+        _task.add_done_callback(lambda t: t.exception())
 
         cache[cache_key] = {"r": top, "t": time.time()*1000}
         return top
