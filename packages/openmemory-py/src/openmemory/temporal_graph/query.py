@@ -1,10 +1,11 @@
+import asyncio
 import time
 import json
 from typing import List, Dict, Any, Optional
 
 from ..core.db import db
 
-async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional[str] = None, subject_object: Optional[str] = None, at: int = None, min_confidence: float = 0.1, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional[str] = None, subject_object: Optional[str] = None, at: int = None, min_confidence: float = 0.1, user_id: Optional[str] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
     ts = at if at is not None else int(time.time()*1000)
     conds = ["(valid_from <= ? AND (valid_to IS NULL OR valid_to >= ?))"]
     params = [ts, ts]
@@ -31,7 +32,13 @@ async def query_facts_at_time(subject: Optional[str] = None, predicate: Optional
         WHERE {' AND '.join(conds)}
         ORDER BY confidence DESC, valid_from DESC
     """
-    rows = db.fetchall(sql, tuple(params))
+    if limit is not None:
+        n = max(1, min(int(limit), 32))
+        sql = sql.rstrip() + "\n        LIMIT ?"
+        params.append(n)
+    # db.fetchall is sync sqlite; run it off the event loop so MCP
+    # asyncio.wait_for can actually fire on a locked/slow database.
+    rows = await asyncio.to_thread(db.fetchall, sql, tuple(params))
     return [format_fact(r) for r in rows]
 
 async def get_current_fact(subject: str, predicate: str) -> Optional[Dict[str, Any]]:

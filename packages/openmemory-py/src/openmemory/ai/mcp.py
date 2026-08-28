@@ -1,5 +1,6 @@
 
 import asyncio
+import os
 import json
 import traceback
 import sys
@@ -8,8 +9,13 @@ try:
     from mcp.server import Server, NotificationOptions
     from mcp.server.stdio import stdio_server
     from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
+    try:
+        from mcp.types import CallToolResult
+    except ImportError:
+        CallToolResult = None
 except ImportError:
     Server = None
+    CallToolResult = None
 
 from ..main import Memory
 from ..core.config import env
@@ -17,6 +23,34 @@ from ..temporal_graph.store import insert_fact
 from ..temporal_graph.query import query_facts_at_time
 
 mem = Memory()
+
+MCP_QUERY_TIMEOUT_S = 8.0
+
+def _query_timeout_s() -> float:
+    raw = None
+    try:
+        raw = os.environ.get("OM_MCP_QUERY_TIMEOUT_MS")
+        if raw:
+            ms = float(raw)
+            if ms > 0:
+                return ms / 1000.0
+    except (TypeError, ValueError):
+        pass
+    return MCP_QUERY_TIMEOUT_S
+
+def _has_fact_pattern(fp: dict | None) -> bool:
+    if not fp:
+        return False
+    return bool(fp.get("subject") or fp.get("predicate") or fp.get("object"))
+
+def _tool_error(msg: str):
+    """Return an MCP tool error (isError=true), matching the JS path."""
+    if CallToolResult is not None:
+        return CallToolResult(
+            content=[TextContent(type="text", text=msg)],
+            isError=True,
+        )
+    raise RuntimeError(msg)
 
 async def run_mcp_server():
     if not Server:
@@ -120,7 +154,7 @@ async def run_mcp_server():
         ]
 
     @server.call_tool()
-    async def handle_call_tool(name: str, arguments: dict | None) -> list[TextContent | ImageContent | EmbeddedResource]:
+    async def handle_call_tool(name: str, arguments: dict | None):
         args = arguments or {}
 
         try:
@@ -138,44 +172,99 @@ async def run_mcp_server():
                 at_ts = int(at_date.timestamp() * 1000)
                 
                 results = {"type": qtype, "query": q}
-                
-                # contextual (hsg) query
+                warnings = []
+                top_k = int(limit or 10)
+                if top_k < 1:
+                    top_k = 1
+                if top_k > 32:
+                    top_k = 32
+                timeout_s = _query_timeout_s()
+
+                # contextual (hsg) query — fail-soft so a hung embed cannot
+                # kill the MCP session. Default type is contextual.
                 if qtype in ["contextual", "unified"]:
                     filters = {}
                     if sector: filters["sector"] = sector
-                    
-                    contextual = await mem.search(q, user_id=uid, limit=limit, **filters)
-                    results["contextual"] = [{
-                        "source": "hsg",
-                        "id": m.get("id"),
-                        "score": round(m.get("score", 0), 4),
-                        "primary_sector": m.get("primary_sector"),
-                        "salience": round(m.get("salience", 0), 4),
-                        "content": m.get("content")
-                    } for m in contextual]
-                
+                    try:
+                        contextual = await asyncio.wait_for(
+                            mem.search(q, user_id=uid, limit=top_k, **filters),
+                            timeout=timeout_s,
+                        )
+                        results["contextual"] = [{
+                            "source": "hsg",
+                            "id": m.get("id"),
+                            "score": round(m.get("score", 0), 4),
+                            "primary_sector": m.get("primary_sector"),
+                            "salience": round(m.get("salience", 0), 4),
+                            "content": m.get("content")
+                        } for m in contextual]
+                    except asyncio.TimeoutError:
+                        msg = f"HSG contextual search timed out after {int(timeout_s * 1000)}ms"
+                        if qtype == "contextual":
+                            return _tool_error(f"openmemory_query failed: {msg}")
+                        warnings.append(f"contextual search failed: {msg}")
+                        results["contextual"] = []
+                        results["contextual_error"] = msg
+                    except Exception as e:
+                        msg = str(e) or "HSG contextual search failed"
+                        if qtype == "contextual":
+                            return _tool_error(f"openmemory_query failed: {msg}")
+                        warnings.append(f"contextual search failed: {msg}")
+                        results["contextual"] = []
+                        results["contextual_error"] = msg
+
                 # temporal fact query
                 if qtype in ["factual", "unified"]:
-                    facts = await query_facts_at_time(
-                        subject=fact_pattern.get("subject"),
-                        predicate=fact_pattern.get("predicate"),
-                        obj=fact_pattern.get("object"),
-                        at_time=at_ts,
-                        min_confidence=0.0,
-                        user_id=uid
-                    )
-                    results["factual"] = [{
-                        "source": "temporal",
-                        "id": f["id"],
-                        "subject": f["subject"],
-                        "predicate": f["predicate"],
-                        "object": f["object"],
-                        "valid_from": f["valid_from"],
-                        "valid_to": f.get("valid_to"),
-                        "confidence": round(f["confidence"], 4),
-                        "content": f"{f['subject']} {f['predicate']} {f['object']}"
-                    } for f in facts]
-                
+                    fp = fact_pattern or {}
+                    patterned = _has_fact_pattern(fp)
+                    fact_limit = max(top_k, 32) if patterned else top_k
+                    try:
+                        facts = await asyncio.wait_for(
+                            query_facts_at_time(
+                                subject=fp.get("subject"),
+                                predicate=fp.get("predicate"),
+                                subject_object=fp.get("object"),
+                                at=at_ts,
+                                min_confidence=0.0,
+                                user_id=uid,
+                                limit=fact_limit,
+                            ),
+                            timeout=timeout_s,
+                        )
+                        results["factual"] = [{
+                            "source": "temporal",
+                            "id": f["id"],
+                            "subject": f["subject"],
+                            "predicate": f["predicate"],
+                            "object": f["object"],
+                            "valid_from": f["valid_from"],
+                            "valid_to": f.get("valid_to"),
+                            "confidence": round(f["confidence"], 4),
+                            "content": f"{f['subject']} {f['predicate']} {f['object']}"
+                        } for f in facts]
+                        if not patterned:
+                            results["factual_capped"] = top_k
+                            warnings.append(
+                                f"factual results capped at k={top_k}; pass fact_pattern to narrow the graph scan"
+                            )
+                    except asyncio.TimeoutError:
+                        msg = f"temporal fact query timed out after {int(timeout_s * 1000)}ms"
+                        if qtype == "factual":
+                            return _tool_error(f"openmemory_query failed: {msg}")
+                        warnings.append(f"factual search failed: {msg}")
+                        results["factual"] = []
+                        results["factual_error"] = msg
+                    except Exception as e:
+                        msg = str(e) or "temporal fact query failed"
+                        if qtype == "factual":
+                            return _tool_error(f"openmemory_query failed: {msg}")
+                        warnings.append(f"factual search failed: {msg}")
+                        results["factual"] = []
+                        results["factual_error"] = msg
+
+                if warnings:
+                    results["warnings"] = warnings
+
                 # build summary
                 if qtype == "contextual":
                     count = len(results.get("contextual", []))
@@ -187,6 +276,9 @@ async def run_mcp_server():
                     ctx_count = len(results.get("contextual", []))
                     fact_count = len(results.get("factual", []))
                     summary = f"Found {ctx_count} contextual memories and {fact_count} temporal facts"
+
+                if warnings:
+                    summary = "\n".join(f"Warning: {w}" for w in warnings) + "\n\n" + summary
 
                 return [
                     TextContent(type="text", text=summary),
@@ -298,7 +390,7 @@ async def run_mcp_server():
 
         except Exception as e:
             traceback.print_exc(file=sys.stderr)
-            return [TextContent(type="text", text=f"Error: {str(e)}")]
+            return _tool_error(f"Error: {str(e)}")
 
     async with stdio_server() as (read, write):
         await server.run(read, write, NotificationOptions(), raise_exceptions=False)

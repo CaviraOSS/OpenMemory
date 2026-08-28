@@ -31,6 +31,55 @@ const sec_enum = z.enum([
 const trunc = (val: string, max = 200) =>
     val.length <= max ? val : `${val.slice(0, max).trimEnd()}...`;
 
+/** Cap HSG / unbounded graph work so a hung embed or huge scan cannot drop Streamable HTTP. */
+const query_timeout_ms = () => {
+    const n = Number(process.env.OM_MCP_QUERY_TIMEOUT_MS);
+    return Number.isFinite(n) && n > 0 ? n : 8_000;
+};
+
+const with_timeout = async <T>(
+    p: Promise<T>,
+    ms: number,
+    label: string,
+): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+        return await Promise.race([
+            p,
+            new Promise<T>((_, reject) => {
+                timer = setTimeout(
+                    () =>
+                        reject(
+                            new Error(
+                                `${label} timed out after ${ms}ms; try a tighter query or type=factual with fact_pattern`,
+                            ),
+                        ),
+                    ms,
+                );
+                if (typeof (timer as NodeJS.Timeout).unref === "function") {
+                    (timer as NodeJS.Timeout).unref();
+                }
+            }),
+        ]);
+    } finally {
+        if (timer) clearTimeout(timer);
+        // Timed-out work may still reject later; swallow so the HTTP
+        // session is not taken down by an unhandled rejection.
+        p.catch(() => {});
+    }
+};
+
+const tool_error = (msg: string) => ({
+    content: [{ type: "text" as const, text: msg }],
+    isError: true as const,
+});
+
+const has_fact_pattern = (fp?: {
+    subject?: string;
+    predicate?: string;
+    object?: string;
+}) => Boolean(fp?.subject || fp?.predicate || fp?.object);
+
 const build_mem_snap = (row: mem_row) => ({
     id: row.id,
     primary_sector: row.primary_sector,
@@ -140,7 +189,7 @@ export const create_mcp_srv = (tenant?: string) => {
                 .optional()
                 .default("contextual")
                 .describe(
-                    "Query type: 'contextual' for HSG semantic search (default), 'factual' for temporal fact queries, 'unified' for both",
+                    "Query type: 'contextual' for HSG semantic search (default; fails soft on embed/search errors), 'factual' for temporal fact queries (pass fact_pattern or results are capped at k), 'unified' for both",
                 ),
             fact_pattern: z
                 .object({
@@ -179,7 +228,9 @@ export const create_mcp_srv = (tenant?: string) => {
                 .min(1)
                 .max(32)
                 .default(8)
-                .describe("Maximum results to return (for HSG queries)"),
+                .describe(
+                    "Maximum results to return. Applies to HSG queries and to factual queries that omit fact_pattern",
+                ),
             sector: sec_enum
                 .optional()
                 .describe(
@@ -221,6 +272,8 @@ export const create_mcp_srv = (tenant?: string) => {
             const proj = uid(project_id);
             const results: any = { type, query };
             const at_date = at ? new Date(at) : new Date();
+            const top_k = k ?? 8;
+            const warnings: string[] = [];
 
             if (type === "contextual" || type === "unified") {
                 const flt =
@@ -237,43 +290,86 @@ export const create_mcp_srv = (tenant?: string) => {
                           }
                         : undefined;
 
-                const matches = await hsg_query(query, k ?? 8, flt);
-                results.contextual = matches.map((m: any) => ({
-                    source: "hsg",
-                    id: m.id,
-                    score: Number(m.score.toFixed(4)),
-                    primary_sector: m.primary_sector,
-                    sectors: m.sectors,
-                    salience: Number(m.salience.toFixed(4)),
-                    last_seen_at: m.last_seen_at,
-                    path: m.path,
-                    content: m.content,
-                }));
+                try {
+                    const matches = await with_timeout(
+                        hsg_query(query, top_k, flt),
+                        query_timeout_ms(),
+                        "openmemory_query HSG search",
+                    );
+                    results.contextual = matches.map((m: any) => ({
+                        source: "hsg",
+                        id: m.id,
+                        score: Number(m.score.toFixed(4)),
+                        primary_sector: m.primary_sector,
+                        sectors: m.sectors,
+                        salience: Number(m.salience.toFixed(4)),
+                        last_seen_at: m.last_seen_at,
+                        path: m.path,
+                        content: m.content,
+                    }));
+                } catch (err: any) {
+                    const msg = err?.message || "HSG contextual search failed";
+                    // Default type is contextual: never let a hung/failed
+                    // embed drop the Streamable HTTP POST. Unified can still
+                    // return facts; pure contextual surfaces a tool error.
+                    if (type === "contextual") {
+                        return tool_error(`openmemory_query failed: ${msg}`);
+                    }
+                    warnings.push(`contextual search failed: ${msg}`);
+                    results.contextual = [];
+                    results.contextual_error = msg;
+                }
             }
 
             if (type === "factual" || type === "unified") {
-                const facts = await query_facts_at_time({
-                    user_id: u ?? "anonymous",
-                    project_id: proj,
-                    subject: fact_pattern?.subject,
-                    predicate: fact_pattern?.predicate,
-                    object: fact_pattern?.object,
-                    at: at_date,
-                    min_confidence: 0.0,
-                });
+                const patterned = has_fact_pattern(fact_pattern);
+                try {
+                    const facts = await with_timeout(
+                        query_facts_at_time({
+                            user_id: u ?? "anonymous",
+                            project_id: proj,
+                            subject: fact_pattern?.subject,
+                            predicate: fact_pattern?.predicate,
+                            object: fact_pattern?.object,
+                            at: at_date,
+                            min_confidence: 0.0,
+                            // Unpatterned dumps can exceed 1MB and stall the
+                            // MCP session; always cap, tighter without a pattern.
+                            limit: patterned ? Math.max(top_k, 32) : top_k,
+                        }),
+                        query_timeout_ms(),
+                        "openmemory_query factual search",
+                    );
 
-                results.factual = facts.map((f: any) => ({
-                    source: "temporal",
-                    id: f.id,
-                    subject: f.subject,
-                    predicate: f.predicate,
-                    object: f.object,
-                    valid_from: f.valid_from,
-                    valid_to: f.valid_to,
-                    confidence: Number(f.confidence.toFixed(4)),
-                    content: `${f.subject} ${f.predicate} ${f.object}`,
-                }));
+                    results.factual = facts.map((f: any) => ({
+                        source: "temporal",
+                        id: f.id,
+                        subject: f.subject,
+                        predicate: f.predicate,
+                        object: f.object,
+                        valid_from: f.valid_from,
+                        valid_to: f.valid_to,
+                        confidence: Number(f.confidence.toFixed(4)),
+                        content: `${f.subject} ${f.predicate} ${f.object}`,
+                    }));
+                    if (!patterned) {
+                        results.factual_capped = top_k;
+                        warnings.push(
+                            `factual results capped at k=${top_k}; pass fact_pattern to narrow the graph scan`,
+                        );
+                    }
+                } catch (err: any) {
+                    const msg = err?.message || "temporal fact query failed";
+                    if (type === "factual") {
+                        return tool_error(`openmemory_query failed: ${msg}`);
+                    }
+                    warnings.push(`factual search failed: ${msg}`);
+                    results.factual = [];
+                    results.factual_error = msg;
+                }
             }
+
+            if (warnings.length) results.warnings = warnings;
 
             let summ = "";
             if (type === "contextual") {
@@ -314,6 +410,13 @@ export const create_mcp_srv = (tenant?: string) => {
                 if (ctx_count === 0 && fact_count === 0) {
                     summ = "No results found in either system.";
                 }
+            }
+
+            if (warnings.length) {
+                summ =
+                    warnings.map((w) => `Warning: ${w}`).join("\n") +
+                    "\n\n" +
+                    summ;
             }
 
             return {
