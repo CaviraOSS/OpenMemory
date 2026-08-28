@@ -835,6 +835,88 @@ const get_sal = async (id: string, def_sal: number): Promise<number> => {
     sal_cache.set(id, { s, t: Date.now() });
     return s;
 };
+/**
+ * Post-hit reinforcement: salience/feedback bump, waypoint + associative
+ * reinforcement, and regeneration/re-embed. These are maintenance work, not
+ * part of producing the ranked hits.
+ *
+ * They were previously awaited on the request path of `hsg_query`, which meant
+ * a handful of extra DB round-trips (and, when regeneration is on, an embed
+ * network call per hit) stacked on top of the 5-sector embed + vector search.
+ * That tail did not fit inside the MCP fail-soft query budget, so a perfectly
+ * good search would surface as "HSG search timed out after 8000ms".
+ *
+ * `hsg_query` now returns as soon as ranking + caching is done and runs this
+ * fire-and-forget. Each write is independently guarded so a failure in one hit
+ * cannot surface on the request path.
+ */
+async function reinforce_query_hits(
+    top: hsg_q_result[],
+    tids: string[],
+): Promise<void> {
+    for (const r of top) {
+        const cur_fb = (await q.get_mem.get(r.id))?.feedback_score || 0;
+        const new_fb = cur_fb * 0.9 + r.score * 0.1;
+        await q.upd_feedback.run(r.id, new_fb);
+    }
+
+    for (let i = 0; i < tids.length; i++) {
+        for (let j = i + 1; j < tids.length; j++) {
+            const [a, b] = [tids[i], tids[j]].sort();
+            coact_buf.push([a, b]);
+        }
+    }
+
+    for (const r of top) {
+        const rsal = await applyRetrievalTraceReinforcementToMemory(
+            r.id,
+            r.salience,
+        );
+        await q.upd_seen.run(r.id, Date.now(), rsal, Date.now());
+        if (r.path.length > 1) {
+            await reinforce_waypoints(r.path);
+            const wps = await q.get_waypoints_by_src.all(r.id);
+            const lns = wps.map((wp: any) => ({
+                target_id: wp.dst_id,
+                weight: wp.weight,
+            }));
+            const pru =
+                await propagateAssociativeReinforcementToLinkedNodes(
+                    r.id,
+                    rsal,
+                    lns,
+                );
+            for (const u of pru) {
+                const linked_mem = await q.get_mem.get(u.node_id);
+                if (linked_mem) {
+                    const time_diff =
+                        (Date.now() - linked_mem.last_seen_at) / 86400000;
+                    const decay_fact = Math.exp(-0.02 * time_diff);
+                    const ctx_boost =
+                        hybrid_params.gamma *
+                        (rsal - linked_mem.salience) *
+                        decay_fact;
+                    const new_sal = Math.max(
+                        0,
+                        Math.min(1, linked_mem.salience + ctx_boost),
+                    );
+                    await q.upd_seen.run(
+                        u.node_id,
+                        Date.now(),
+                        new_sal,
+                        Date.now(),
+                    );
+                }
+            }
+        }
+    }
+
+    for (const r of top) {
+        await on_query_hit(r.id, r.primary_sector, (text) =>
+            embedForSector(text, r.primary_sector),
+        );
+    }
+}
 export async function hsg_query(
     qt: string,
     k = 10,
@@ -1043,67 +1125,11 @@ export async function hsg_query(
         const top = top_cands.slice(0, k);
         const tids = top.map((r) => r.id);
 
-        for (const r of top) {
-            const cur_fb = (await q.get_mem.get(r.id))?.feedback_score || 0;
-            const new_fb = cur_fb * 0.9 + r.score * 0.1;
-            await q.upd_feedback.run(r.id, new_fb);
-        }
-
-        for (let i = 0; i < tids.length; i++) {
-            for (let j = i + 1; j < tids.length; j++) {
-                const [a, b] = [tids[i], tids[j]].sort();
-                coact_buf.push([a, b]);
-            }
-        }
-        for (const r of top) {
-            const rsal = await applyRetrievalTraceReinforcementToMemory(
-                r.id,
-                r.salience,
-            );
-            await q.upd_seen.run(r.id, Date.now(), rsal, Date.now());
-            if (r.path.length > 1) {
-                await reinforce_waypoints(r.path);
-                const wps = await q.get_waypoints_by_src.all(r.id);
-                const lns = wps.map((wp: any) => ({
-                    target_id: wp.dst_id,
-                    weight: wp.weight,
-                }));
-                const pru =
-                    await propagateAssociativeReinforcementToLinkedNodes(
-                        r.id,
-                        rsal,
-                        lns,
-                    );
-                for (const u of pru) {
-                    const linked_mem = await q.get_mem.get(u.node_id);
-                    if (linked_mem) {
-                        const time_diff =
-                            (Date.now() - linked_mem.last_seen_at) / 86400000;
-                        const decay_fact = Math.exp(-0.02 * time_diff);
-                        const ctx_boost =
-                            hybrid_params.gamma *
-                            (rsal - linked_mem.salience) *
-                            decay_fact;
-                        const new_sal = Math.max(
-                            0,
-                            Math.min(1, linked_mem.salience + ctx_boost),
-                        );
-                        await q.upd_seen.run(
-                            u.node_id,
-                            Date.now(),
-                            new_sal,
-                            Date.now(),
-                        );
-                    }
-                }
-            }
-        }
-
-        for (const r of top) {
-            on_query_hit(r.id, r.primary_sector, (text) =>
-                embedForSector(text, r.primary_sector),
-            ).catch(() => {});
-        }
+        // Reinforcement is off the request path: return the hits as soon as
+        // ranking + caching is done. The tail work (feedback/salience bumps,
+        // waypoint + associative propagation, regeneration re-embeds) runs in
+        // the background and must never be able to blow the MCP query budget.
+        reinforce_query_hits(top, tids).catch(() => {});
 
         cache.set(h, { r: top, t: Date.now() });
         return top;
