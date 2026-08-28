@@ -34,7 +34,7 @@ const trunc = (val: string, max = 200) =>
 /** Cap HSG / unbounded graph work so a hung embed or huge scan cannot drop Streamable HTTP. */
 const query_timeout_ms = () => {
     const n = Number(process.env.OM_MCP_QUERY_TIMEOUT_MS);
-    return Number.isFinite(n) && n > 0 ? n : 12_000;
+    return Number.isFinite(n) && n > 0 ? n : 8_000;
 };
 
 const with_timeout = async <T>(

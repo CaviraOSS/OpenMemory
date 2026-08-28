@@ -9,8 +9,13 @@ try:
     from mcp.server import Server, NotificationOptions
     from mcp.server.stdio import stdio_server
     from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
+    try:
+        from mcp.types import CallToolResult
+    except ImportError:
+        CallToolResult = None
 except ImportError:
     Server = None
+    CallToolResult = None
 
 from ..main import Memory
 from ..core.config import env
@@ -19,7 +24,7 @@ from ..temporal_graph.query import query_facts_at_time
 
 mem = Memory()
 
-MCP_QUERY_TIMEOUT_S = 12.0
+MCP_QUERY_TIMEOUT_S = 8.0
 
 def _query_timeout_s() -> float:
     raw = None
@@ -37,6 +42,15 @@ def _has_fact_pattern(fp: dict | None) -> bool:
     if not fp:
         return False
     return bool(fp.get("subject") or fp.get("predicate") or fp.get("object"))
+
+def _tool_error(msg: str):
+    """Return an MCP tool error (isError=true), matching the JS path."""
+    if CallToolResult is not None:
+        return CallToolResult(
+            content=[TextContent(type="text", text=msg)],
+            isError=True,
+        )
+    raise RuntimeError(msg)
 
 async def run_mcp_server():
     if not Server:
@@ -140,7 +154,7 @@ async def run_mcp_server():
         ]
 
     @server.call_tool()
-    async def handle_call_tool(name: str, arguments: dict | None) -> list[TextContent | ImageContent | EmbeddedResource]:
+    async def handle_call_tool(name: str, arguments: dict | None):
         args = arguments or {}
 
         try:
@@ -187,14 +201,14 @@ async def run_mcp_server():
                     except asyncio.TimeoutError:
                         msg = f"HSG contextual search timed out after {int(timeout_s * 1000)}ms"
                         if qtype == "contextual":
-                            return [TextContent(type="text", text=f"openmemory_query failed: {msg}")]
+                            return _tool_error(f"openmemory_query failed: {msg}")
                         warnings.append(f"contextual search failed: {msg}")
                         results["contextual"] = []
                         results["contextual_error"] = msg
                     except Exception as e:
                         msg = str(e) or "HSG contextual search failed"
                         if qtype == "contextual":
-                            return [TextContent(type="text", text=f"openmemory_query failed: {msg}")]
+                            return _tool_error(f"openmemory_query failed: {msg}")
                         warnings.append(f"contextual search failed: {msg}")
                         results["contextual"] = []
                         results["contextual_error"] = msg
@@ -236,14 +250,14 @@ async def run_mcp_server():
                     except asyncio.TimeoutError:
                         msg = f"temporal fact query timed out after {int(timeout_s * 1000)}ms"
                         if qtype == "factual":
-                            return [TextContent(type="text", text=f"openmemory_query failed: {msg}")]
+                            return _tool_error(f"openmemory_query failed: {msg}")
                         warnings.append(f"factual search failed: {msg}")
                         results["factual"] = []
                         results["factual_error"] = msg
                     except Exception as e:
                         msg = str(e) or "temporal fact query failed"
                         if qtype == "factual":
-                            return [TextContent(type="text", text=f"openmemory_query failed: {msg}")]
+                            return _tool_error(f"openmemory_query failed: {msg}")
                         warnings.append(f"factual search failed: {msg}")
                         results["factual"] = []
                         results["factual_error"] = msg
@@ -376,7 +390,7 @@ async def run_mcp_server():
 
         except Exception as e:
             traceback.print_exc(file=sys.stderr)
-            return [TextContent(type="text", text=f"Error: {str(e)}")]
+            return _tool_error(f"Error: {str(e)}")
 
     async with stdio_server() as (read, write):
         await server.run(read, write, NotificationOptions(), raise_exceptions=False)
