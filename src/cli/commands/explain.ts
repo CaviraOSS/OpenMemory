@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/cli/commands/explain.ts
- *  usage : inspect a node and executable edge trace
+ *  usage : implements the LongMemory explain component
  */
 
 import type { cli_command } from '../context/cli_context.js';
@@ -31,7 +29,7 @@ export const explain_command: cli_command = async (context) => {
         if (explanation.node && !scope.legacy && !scope.world_ids.has(explanation.node.world.world_id)) throw new cli_error('memory_not_found', `Memory not found in project ${context.project_id}: ${id}`, exit_codes.validation, { id, project_id: context.project_id });
         return explanation;
     });
-    if (!result.node) throw new cli_error('memory_not_found', `Memory not found: ${id}`, exit_codes.validation, { id }, 'openmemory recall "your query"', 'Use an existing memory ID.');
+    if (!result.node) throw new cli_error('memory_not_found', `Memory not found: ${id}`, exit_codes.validation, { id }, 'longmemory recall "your query"', 'Use an existing memory ID.');
     emit(context, { ok: true, ...result }, () => [
         panel(result.node!.content.raw, context.colors, { title: 'Memory explanation', kind: 'info', width: context.terminal_width, rows: [['ID', id], ['World', result.node!.world.world_id], ['Status', result.node!.state.status]] }), '',
         context.colors.title('Why recalled'), tree([

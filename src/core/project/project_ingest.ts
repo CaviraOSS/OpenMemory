@@ -1,21 +1,19 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/project/project_ingest.ts
- *  usage : project events and connector plans into scoped Hydrograph plans
+ *  usage : implements the LongMemory project ingest component
  */
 
 import { hash_canonical } from '../hash/content_hash.js';
-import type { open_memory } from '../create_memory.js';
+import type { long_memory } from '../create_memory.js';
 import { sync_connector, type connector_sync_options, type connector_sync_report } from '../connectors/connector_ingest.js';
 import type { HydrographImportPlan, planned_node } from '../connectors/source_event.js';
 import { project_contract_to_memory, project_permission, type ProjectWorld, type project_world_kind } from './project_world.js';
@@ -128,7 +126,7 @@ const event_plan = (project: ProjectWorld, state: project_state, event: project_
     return { plan, event_id, key };
 };
 
-export async function ingest_project_event(memory: open_memory, project: ProjectWorld, state: project_state, event: project_event): Promise<string> {
+export async function ingest_project_event(memory: long_memory, project: ProjectWorld, state: project_state, event: project_event): Promise<string> {
     const at = event.at ?? Date.now();
     const built = event_plan(project, state, event, at);
     const result = await memory.applyImportPlan(built.plan);
@@ -177,7 +175,7 @@ export function scope_connector_plan(project: ProjectWorld, link: project_source
     };
 }
 
-export async function sync_project_source(memory: open_memory, project: ProjectWorld, state: project_state, link: project_source_link, options: connector_sync_options = {}): Promise<connector_sync_report> {
+export async function sync_project_source(memory: long_memory, project: ProjectWorld, state: project_state, link: project_source_link, options: connector_sync_options = {}): Promise<connector_sync_report> {
     const report = await sync_connector(link.connector, memory, {
         ...options,
         default_permission: project_permission(project.project_id),

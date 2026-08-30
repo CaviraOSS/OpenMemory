@@ -1,5 +1,19 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/runtime.ts
+ *  usage : implements the LongMemory runtime component
+ */
+
 import { basename, resolve } from 'node:path';
-import { create_memory, type open_memory } from '../core/create_memory.js';
+import { create_memory, type long_memory } from '../core/create_memory.js';
 import type { ConnectorRegistry } from '../core/connectors/connector_registry.js';
 import { project_memory } from '../core/project/project_memory.js';
 import { mcp_audit_log } from './security/audit.js';
@@ -8,7 +22,7 @@ import { create_tool_allowlist, type mcp_tool_name } from './security/tool_allow
 import type { mcp_access } from './security/permissions.js';
 
 export type mcp_runtime_config = {
-    memory?: open_memory;
+    memory?: long_memory;
     db_path?: string;
     tenant_id?: string;
     user_id?: string;
@@ -29,7 +43,7 @@ export type mcp_runtime_config = {
 const current_project = (cwd: string) => basename(resolve(cwd)).toLowerCase().replace(/[^a-z0-9._-]+/g, '-') || 'current';
 
 export class mcp_runtime {
-    readonly memory: open_memory;
+    readonly memory: long_memory;
     readonly access: mcp_access;
     readonly audit: mcp_audit_log;
     readonly cwd: string;
@@ -76,7 +90,7 @@ export class mcp_runtime {
             throw new Error(`MCP server is read-only; unknown project cannot be created: ${id}`);
         }
         const name = root?.name ?? id;
-        const description = String(root?.metadata.description ?? `OpenMemory project ${id}`);
+        const description = String(root?.metadata.description ?? `LongMemory project ${id}`);
         const manager = new project_memory({
             memory: this.memory,
             tenant_id: this.tenant_id,

@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/server/config.ts
- *  usage : self-hosted api environment configuration
+ *  usage : implements the LongMemory config component
  */
 
 import type { memory_config } from '../core/create_memory.js';
@@ -61,36 +59,36 @@ const bool_alias = (env: NodeJS.ProcessEnv, keys: string[], fallback: boolean) =
 };
 
 export function load_server_config(env: NodeJS.ProcessEnv = process.env): server_config {
-    const embeddings = create_embedding_environment(env, { logger: (message) => console.warn(`[openmemory] ${message}`) });
+    const embeddings = create_embedding_environment(env, { logger: (message) => console.warn(`[longmemory] ${message}`) });
     return {
-        host: first(env, 'OPENMEMORY_HOST', 'OM_HOST') || '127.0.0.1',
-        port: num_alias(env, ['OPENMEMORY_PORT', 'OM_PORT'], 7331, 0, 65_535),
-        api_key: first(env, 'OPENMEMORY_API_KEY', 'OM_API_KEY') || null,
-        mcp_http: bool(env, 'OPENMEMORY_MCP_HTTP', false),
-        max_payload_size: num_alias(env, ['OPENMEMORY_MAX_PAYLOAD_SIZE', 'OM_MAX_PAYLOAD_SIZE'], 1_048_576, 1_024, 1_073_741_824),
+        host: first(env, 'LONGMEMORY_HOST', 'OM_HOST') || '127.0.0.1',
+        port: num_alias(env, ['LONGMEMORY_PORT', 'OM_PORT'], 7331, 0, 65_535),
+        api_key: first(env, 'LONGMEMORY_API_KEY', 'OM_API_KEY') || null,
+        mcp_http: bool(env, 'LONGMEMORY_MCP_HTTP', false),
+        max_payload_size: num_alias(env, ['LONGMEMORY_MAX_PAYLOAD_SIZE', 'OM_MAX_PAYLOAD_SIZE'], 1_048_576, 1_024, 1_073_741_824),
         rate_limit: {
-            enabled: bool_alias(env, ['OPENMEMORY_RATE_LIMIT_ENABLED', 'OM_RATE_LIMIT_ENABLED'], false),
-            window_ms: num_alias(env, ['OPENMEMORY_RATE_LIMIT_WINDOW_MS', 'OM_RATE_LIMIT_WINDOW_MS'], 60_000, 1_000, 86_400_000),
-            max_requests: num_alias(env, ['OPENMEMORY_RATE_LIMIT_MAX_REQUESTS', 'OM_RATE_LIMIT_MAX_REQUESTS'], 100, 1, 1_000_000),
+            enabled: bool_alias(env, ['LONGMEMORY_RATE_LIMIT_ENABLED', 'OM_RATE_LIMIT_ENABLED'], false),
+            window_ms: num_alias(env, ['LONGMEMORY_RATE_LIMIT_WINDOW_MS', 'OM_RATE_LIMIT_WINDOW_MS'], 60_000, 1_000, 86_400_000),
+            max_requests: num_alias(env, ['LONGMEMORY_RATE_LIMIT_MAX_REQUESTS', 'OM_RATE_LIMIT_MAX_REQUESTS'], 100, 1, 1_000_000),
         },
-        log_auth: bool_alias(env, ['OPENMEMORY_LOG_AUTH', 'OM_LOG_AUTH'], false),
-        telemetry: bool_alias(env, ['OPENMEMORY_TELEMETRY', 'OM_TELEMETRY'], true),
-        allowed_origins: (first(env, 'OPENMEMORY_ALLOWED_ORIGINS', 'OM_IDE_ALLOWED_ORIGINS') ?? '').split(',').map((value) => value.trim()).filter(Boolean),
-        max_active_requests: num_alias(env, ['OPENMEMORY_MAX_ACTIVE_REQUESTS', 'OM_MAX_ACTIVE'], 64, 1, 100_000),
+        log_auth: bool_alias(env, ['LONGMEMORY_LOG_AUTH', 'OM_LOG_AUTH'], false),
+        telemetry: bool_alias(env, ['LONGMEMORY_TELEMETRY', 'OM_TELEMETRY'], true),
+        allowed_origins: (first(env, 'LONGMEMORY_ALLOWED_ORIGINS', 'OM_IDE_ALLOWED_ORIGINS') ?? '').split(',').map((value) => value.trim()).filter(Boolean),
+        max_active_requests: num_alias(env, ['LONGMEMORY_MAX_ACTIVE_REQUESTS', 'OM_MAX_ACTIVE'], 64, 1, 100_000),
         embedding: embeddings?.config ?? null,
         memory: {
             store: 'sqlite',
-            db_path: first(env, 'OPENMEMORY_DB_PATH', 'OM_DB_PATH') || './openmemory.db',
-            enable_cold_log: bool(env, 'OPENMEMORY_ENABLE_COLD_LOG', false),
-            enable_consolidation: bool_alias(env, ['OPENMEMORY_ENABLE_CONSOLIDATION', 'OM_AUTO_REFLECT'], false),
-            max_context_tokens: num_alias(env, ['OPENMEMORY_MAX_CONTEXT_TOKENS'], 2_048, 64, 1_000_000),
-            strict_confidence_threshold: num_alias(env, ['OPENMEMORY_STRICT_CONFIDENCE_THRESHOLD'], 0.5, 0, 1),
-            grounding_threshold: num_alias(env, ['OPENMEMORY_GROUNDING_THRESHOLD'], 0.6, 0, 1),
-            ...(first(env, 'OPENMEMORY_DEFAULT_LANGUAGE') ? { default_language: first(env, 'OPENMEMORY_DEFAULT_LANGUAGE') as memory_config['default_language'] } : {}),
-            ...(first(env, 'OPENMEMORY_OUTPUT_LANGUAGE') ? { output_language: first(env, 'OPENMEMORY_OUTPUT_LANGUAGE') as memory_config['output_language'] } : {}),
-            preserve_original_text: bool_alias(env, ['OPENMEMORY_PRESERVE_ORIGINAL_TEXT'], true),
-            enable_translation: bool_alias(env, ['OPENMEMORY_ENABLE_TRANSLATION'], false),
-            enable_transliteration: bool_alias(env, ['OPENMEMORY_ENABLE_TRANSLITERATION'], true),
+            db_path: first(env, 'LONGMEMORY_DB_PATH', 'OM_DB_PATH') || './longmemory.db',
+            enable_cold_log: bool(env, 'LONGMEMORY_ENABLE_COLD_LOG', false),
+            enable_consolidation: bool_alias(env, ['LONGMEMORY_ENABLE_CONSOLIDATION', 'OM_AUTO_REFLECT'], false),
+            max_context_tokens: num_alias(env, ['LONGMEMORY_MAX_CONTEXT_TOKENS'], 2_048, 64, 1_000_000),
+            strict_confidence_threshold: num_alias(env, ['LONGMEMORY_STRICT_CONFIDENCE_THRESHOLD'], 0.5, 0, 1),
+            grounding_threshold: num_alias(env, ['LONGMEMORY_GROUNDING_THRESHOLD'], 0.6, 0, 1),
+            ...(first(env, 'LONGMEMORY_DEFAULT_LANGUAGE') ? { default_language: first(env, 'LONGMEMORY_DEFAULT_LANGUAGE') as memory_config['default_language'] } : {}),
+            ...(first(env, 'LONGMEMORY_OUTPUT_LANGUAGE') ? { output_language: first(env, 'LONGMEMORY_OUTPUT_LANGUAGE') as memory_config['output_language'] } : {}),
+            preserve_original_text: bool_alias(env, ['LONGMEMORY_PRESERVE_ORIGINAL_TEXT'], true),
+            enable_translation: bool_alias(env, ['LONGMEMORY_ENABLE_TRANSLATION'], false),
+            enable_transliteration: bool_alias(env, ['LONGMEMORY_ENABLE_TRANSLITERATION'], true),
             ...(embeddings ? {
                 embedding_provider: embeddings.embedding_provider,
                 multilingual_embedding_provider: embeddings.multilingual_embedding_provider,

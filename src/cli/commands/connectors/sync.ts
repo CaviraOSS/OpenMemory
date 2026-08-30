@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/connectors/sync.ts
+ *  usage : implements the LongMemory sync component
+ */
+
 import { existsSync } from 'node:fs';
 import { createMemory as create_memory } from '../../../core/create_memory.js';
 import { project_memory } from '../../../core/project/project_memory.js';
@@ -16,7 +30,7 @@ export const connectors_sync_command: cli_command = async (context) => {
     command_flags(context, []);
     const id = require_value(positional(context), 'connector id');
     const config = load_local_config(detect_cwd_project(context.cwd).root).connectors?.[id];
-    if (!config) throw new cli_error('connector_not_configured', `Connector is not configured: ${id}`, exit_codes.connector, {}, `openmemory connectors add ${id}`);
+    if (!config) throw new cli_error('connector_not_configured', `Connector is not configured: ${id}`, exit_codes.connector, {}, `longmemory connectors add ${id}`);
     const progress = new progress_bar(context, `Syncing ${id}`, 1); progress.update(0);
     const sync = async (manager: project_memory) => {
         await manager.linkSourceToProject(context.project_id, { connector_id: id, config });
@@ -24,7 +38,7 @@ export const connectors_sync_command: cli_command = async (context) => {
     };
     let report;
     if (context.dry_run) {
-        if (!existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run requires an initialized project database', exit_codes.database, {}, 'openmemory project init');
+        if (!existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run requires an initialized project database', exit_codes.database, {}, 'longmemory project init');
         const memory = create_memory({ store: 'sqlite', db_path: context.db_path, user_id: context.user_id, readonly: true });
         const manager = new project_memory({ memory, tenant_id: 'default', project_id: context.project_id, name: context.project_name, connector_registry: default_connector_registry });
         try { await manager.createProject({ tenant_id: 'default', project_id: context.project_id, name: context.project_name }); report = await sync(manager); }

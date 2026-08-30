@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/connectors/add.ts
+ *  usage : implements the LongMemory add component
+ */
+
 import { connector_definitions, default_connector_registry } from '../../../connectors/registry.js';
 import { detect_cwd_project } from '../../context/cwd_project.js';
 import { load_local_config, save_local_config } from '../../context/config_loader.js';
@@ -10,7 +24,7 @@ import { panel } from '../../output/panel.js';
 export const connectors_add_command: cli_command = async (context) => {
     command_flags(context, ['config', 'set']);
     const id = require_value(positional(context), 'connector id');
-    if (!default_connector_registry.has(id)) throw new cli_error('connector_not_found', `Unknown connector: ${id}`, exit_codes.validation, {}, 'openmemory connectors list');
+    if (!default_connector_registry.has(id)) throw new cli_error('connector_not_found', `Unknown connector: ${id}`, exit_codes.validation, {}, 'longmemory connectors list');
     let connector_config: Record<string, unknown> = {};
     const raw = flag(context, 'config');
     if (raw) {
@@ -25,7 +39,7 @@ export const connectors_add_command: cli_command = async (context) => {
     }
     const definition = connector_definitions.find((item) => item.id === id)!;
     const missing = definition.required_config.filter((key) => connector_config[key] === undefined);
-    if (missing.length) throw new cli_error('validation_error', `Missing connector config: ${missing.join(', ')}`, exit_codes.validation, { required: definition.required_config }, `openmemory connectors add ${id} --set ${missing[0]}=value`);
+    if (missing.length) throw new cli_error('validation_error', `Missing connector config: ${missing.join(', ')}`, exit_codes.validation, { required: definition.required_config }, `longmemory connectors add ${id} --set ${missing[0]}=value`);
     const root = detect_cwd_project(context.cwd).root;
     const local = load_local_config(root);
     const next = { ...local, connectors: { ...(local.connectors ?? {}), [id]: connector_config } };

@@ -1,13 +1,13 @@
 {
-    "name": "openmemory-vscode",
-    "displayName": "OpenMemory",
+    "name": "longmemory-vscode",
+    "displayName": "LongMemory",
     "description": "Native Hydrograph memory workflows for VS Code",
     "version": "0.2.0",
     "publisher": "CaviraOSS",
     "license": "UNLICENSED",
     "repository": {
         "type": "git",
-        "url": "https://github.com/CaviraOSS/OpenMemory"
+        "url": "https://github.com/CaviraOSS/LongMemory"
     },
     "engines": {
         "vscode": "^1.96.0"
@@ -18,7 +18,7 @@
     "capabilities": {
         "untrustedWorkspaces": {
             "supported": false,
-            "description": "OpenMemory executes the configured local CLI and writes workspace-scoped memory. Trust the workspace before enabling it."
+            "description": "LongMemory executes the configured local CLI and writes workspace-scoped memory. Trust the workspace before enabling it."
         }
     },
     "categories": [
@@ -46,207 +46,207 @@
         "viewsContainers": {
             "activitybar": [
                 {
-                    "id": "openmemory",
-                    "title": "OpenMemory",
-                    "icon": "media/openmemory.svg"
+                    "id": "longmemory",
+                    "title": "LongMemory",
+                    "icon": "media/longmemory.svg"
                 }
             ]
         },
         "views": {
-            "openmemory": [
+            "longmemory": [
                 {
-                    "id": "openmemory.memories",
+                    "id": "longmemory.memories",
                     "name": "Memories"
                 }
             ]
         },
         "viewsWelcome": [
             {
-                "view": "openmemory.memories",
-                "contents": "No memories are loaded for this workspace.\n[Initialize OpenMemory](command:openmemory.initialize)\n[Remember a quick note](command:openmemory.quickNote)"
+                "view": "longmemory.memories",
+                "contents": "No memories are loaded for this workspace.\n[Initialize LongMemory](command:longmemory.initialize)\n[Remember a quick note](command:longmemory.quickNote)"
             }
         ],
         "commands": [
             {
-                "command": "openmemory.refresh",
+                "command": "longmemory.refresh",
                 "title": "Refresh Memories",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(refresh)"
             },
             {
-                "command": "openmemory.initialize",
+                "command": "longmemory.initialize",
                 "title": "Initialize Workspace Memory",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(database)"
             },
             {
-                "command": "openmemory.rememberSelection",
+                "command": "longmemory.rememberSelection",
                 "title": "Remember Selection",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(bookmark)"
             },
             {
-                "command": "openmemory.quickNote",
+                "command": "longmemory.quickNote",
                 "title": "Remember a Quick Note",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(edit)"
             },
             {
-                "command": "openmemory.recall",
+                "command": "longmemory.recall",
                 "title": "Recall Context",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(search)"
             },
             {
-                "command": "openmemory.projectContext",
+                "command": "longmemory.projectContext",
                 "title": "Build Project Context",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(repo)"
             },
             {
-                "command": "openmemory.explain",
+                "command": "longmemory.explain",
                 "title": "Explain Memory",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(inspect)"
             },
             {
-                "command": "openmemory.reinforce",
+                "command": "longmemory.reinforce",
                 "title": "Reinforce Memory",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(arrow-up)"
             },
             {
-                "command": "openmemory.runDecay",
+                "command": "longmemory.runDecay",
                 "title": "Run Decay Maintenance",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(history)"
             },
             {
-                "command": "openmemory.startAgentSession",
+                "command": "longmemory.startAgentSession",
                 "title": "Start AI Change Session",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(record)"
             },
             {
-                "command": "openmemory.stopAgentSession",
+                "command": "longmemory.stopAgentSession",
                 "title": "Stop AI Change Session",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(debug-stop)"
             },
             {
-                "command": "openmemory.reviewAgentChanges",
+                "command": "longmemory.reviewAgentChanges",
                 "title": "Review AI Change Candidates",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(diff)"
             },
             {
-                "command": "openmemory.discardAgentChanges",
+                "command": "longmemory.discardAgentChanges",
                 "title": "Discard Pending AI Change Candidates",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(trash)"
             },
             {
-                "command": "openmemory.importSessions",
+                "command": "longmemory.importSessions",
                 "title": "Import Coding Sessions",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(repo-pull)"
             },
             {
-                "command": "openmemory.openSettings",
+                "command": "longmemory.openSettings",
                 "title": "Open Settings",
-                "category": "OpenMemory",
+                "category": "LongMemory",
                 "icon": "$(gear)"
             },
             {
-                "command": "openmemory.showActions",
-                "title": "Manage OpenMemory",
-                "category": "OpenMemory"
+                "command": "longmemory.showActions",
+                "title": "Manage LongMemory",
+                "category": "LongMemory"
             },
             {
-                "command": "openmemory.openOutput",
+                "command": "longmemory.openOutput",
                 "title": "Open Output",
-                "category": "OpenMemory"
+                "category": "LongMemory"
             }
         ],
         "menus": {
             "view/title": [
                 {
-                    "command": "openmemory.importSessions",
-                    "when": "view == openmemory.memories",
+                    "command": "longmemory.importSessions",
+                    "when": "view == longmemory.memories",
                     "group": "navigation@1"
                 },
                 {
-                    "command": "openmemory.quickNote",
-                    "when": "view == openmemory.memories",
+                    "command": "longmemory.quickNote",
+                    "when": "view == longmemory.memories",
                     "group": "navigation@2"
                 },
                 {
-                    "command": "openmemory.refresh",
-                    "when": "view == openmemory.memories",
+                    "command": "longmemory.refresh",
+                    "when": "view == longmemory.memories",
                     "group": "navigation@3"
                 }
             ],
             "view/item/context": [
                 {
-                    "command": "openmemory.explain",
-                    "when": "view == openmemory.memories && viewItem == openmemory.memory",
+                    "command": "longmemory.explain",
+                    "when": "view == longmemory.memories && viewItem == longmemory.memory",
                     "group": "inline@1"
                 },
                 {
-                    "command": "openmemory.reinforce",
-                    "when": "view == openmemory.memories && viewItem == openmemory.memory",
+                    "command": "longmemory.reinforce",
+                    "when": "view == longmemory.memories && viewItem == longmemory.memory",
                     "group": "inline@2"
                 }
             ],
             "editor/context": [
                 {
-                    "command": "openmemory.rememberSelection",
+                    "command": "longmemory.rememberSelection",
                     "when": "editorHasSelection",
                     "group": "navigation@20"
                 }
             ]
         },
         "configuration": {
-            "title": "OpenMemory",
+            "title": "LongMemory",
             "properties": {
-                "openmemory.cliPath": {
+                "longmemory.cliPath": {
                     "type": "string",
-                    "default": "openmemory",
+                    "default": "longmemory",
                     "scope": "resource",
                     "restricted": true,
-                    "description": "OpenMemory CLI executable or JavaScript entry path."
+                    "description": "LongMemory CLI executable or JavaScript entry path."
                 },
-                "openmemory.database": {
+                "longmemory.database": {
                     "type": "string",
-                    "default": ".openmemory/project.db",
+                    "default": ".longmemory/project.db",
                     "scope": "resource",
                     "description": "Workspace-relative or absolute SQLite database path."
                 },
-                "openmemory.project": {
+                "longmemory.project": {
                     "type": "string",
                     "default": "current",
                     "scope": "resource",
                     "description": "Project ID used to scope memory operations."
                 },
-                "openmemory.user": {
+                "longmemory.user": {
                     "type": "string",
                     "default": "default",
                     "scope": "resource",
-                    "description": "User ID supplied to OpenMemory recall and ingest gates."
+                    "description": "User ID supplied to LongMemory recall and ingest gates."
                 },
-                "openmemory.agentId": {
+                "longmemory.agentId": {
                     "type": "string",
                     "default": "",
                     "scope": "resource",
                     "description": "Agent identity used to resolve governed memory asset bindings for project context."
                 },
-                "openmemory.framework": {
+                "longmemory.framework": {
                     "type": "string",
                     "default": "vscode",
                     "scope": "resource",
                     "description": "Agent framework identity used to resolve portable memory asset bindings."
                 },
-                "openmemory.recallMode": {
+                "longmemory.recallMode": {
                     "type": "string",
                     "enum": [
                         "strict",
@@ -258,7 +258,7 @@
                     "scope": "resource",
                     "description": "Default recall mode for the Recall Context command."
                 },
-                "openmemory.listLimit": {
+                "longmemory.listLimit": {
                     "type": "number",
                     "default": 50,
                     "minimum": 1,
@@ -266,24 +266,24 @@
                     "scope": "resource",
                     "description": "Maximum memories shown in the activity-bar view."
                 },
-                "openmemory.autoRefresh": {
+                "longmemory.autoRefresh": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Refresh the memory view after explicit OpenMemory writes."
+                    "description": "Refresh the memory view after explicit LongMemory writes."
                 },
-                "openmemory.agentChanges.heuristicDetection": {
+                "longmemory.agentChanges.heuristicDetection": {
                     "type": "boolean",
                     "default": false,
                     "scope": "resource",
                     "description": "Queue low-confidence editor change candidates when a known AI coding extension is installed. Off by default; candidates are never auto-recorded."
                 },
-                "openmemory.agentChanges.autoRecordExplicit": {
+                "longmemory.agentChanges.autoRecordExplicit": {
                     "type": "boolean",
                     "default": true,
                     "scope": "resource",
                     "description": "Record explicitly started AI change sessions when they are stopped."
                 },
-                "openmemory.agentChanges.quietPeriodMs": {
+                "longmemory.agentChanges.quietPeriodMs": {
                     "type": "number",
                     "default": 3000,
                     "minimum": 500,
@@ -291,7 +291,7 @@
                     "scope": "resource",
                     "description": "Quiet period used to coalesce heuristic document changes."
                 },
-                "openmemory.agentChanges.maxPatchBytes": {
+                "longmemory.agentChanges.maxPatchBytes": {
                     "type": "number",
                     "default": 65536,
                     "minimum": 4096,
@@ -299,7 +299,7 @@
                     "scope": "resource",
                     "description": "Maximum redacted patch bytes stored for one AI change set."
                 },
-                "openmemory.agentChanges.maxDocumentBytes": {
+                "longmemory.agentChanges.maxDocumentBytes": {
                     "type": "number",
                     "default": 1000000,
                     "minimum": 16384,
@@ -307,7 +307,7 @@
                     "scope": "resource",
                     "description": "Maximum text document size eligible for change tracking."
                 },
-                "openmemory.agentChanges.maxSessionSnapshotBytes": {
+                "longmemory.agentChanges.maxSessionSnapshotBytes": {
                     "type": "number",
                     "default": 33554432,
                     "minimum": 1048576,

@@ -1,21 +1,19 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/server/app.ts
- *  usage : native http transport over createMemory
+ *  usage : implements the LongMemory app component
  */
 
 import { createServer, type IncomingMessage, type RequestListener, type Server } from 'node:http';
-import { createMemory, type open_memory } from '../core/create_memory.js';
+import { createMemory, type long_memory } from '../core/create_memory.js';
 import { load_server_config, type server_config } from './config.js';
 import { authorize } from './middleware/auth.js';
 import { api_error, clean_error } from './middleware/errors.js';
@@ -35,7 +33,7 @@ import { local_runtime_metrics } from './middleware/telemetry.js';
 import { concurrency_limiter } from './middleware/concurrency.js';
 
 export type route_context = {
-    memory: open_memory;
+    memory: long_memory;
     config: server_config;
     request: IncomingMessage;
     params: Record<string, string>;
@@ -47,8 +45,8 @@ export type route_context = {
 export type route_result = { status?: number; data: unknown };
 export type route_handler = (context: route_context) => Promise<route_result>;
 type route = { method: string; match(path: string): Record<string, string> | null; handler: route_handler };
-export type server_options = { config?: server_config; memory?: open_memory };
-export type open_memory_app = { handler: RequestListener; memory: open_memory; config: server_config; metrics: local_runtime_metrics };
+export type server_options = { config?: server_config; memory?: long_memory };
+export type long_memory_app = { handler: RequestListener; memory: long_memory; config: server_config; metrics: local_runtime_metrics };
 
 const exact = (path: string) => (input: string) => input === path ? {} : null;
 const identified = (base: string) => (input: string) => {
@@ -96,7 +94,7 @@ const write = (response: Parameters<RequestListener>[1], status: number, payload
     response.end(JSON.stringify(payload));
 };
 
-export function create_open_memory_app(options: server_options = {}): open_memory_app {
+export function create_long_memory_app(options: server_options = {}): long_memory_app {
     const config = options.config ?? load_server_config();
     const memory = options.memory ?? createMemory(config.memory);
     const metrics = new local_runtime_metrics(config.telemetry);
@@ -117,9 +115,9 @@ export function create_open_memory_app(options: server_options = {}): open_memor
     const handler: RequestListener = async (request, response) => {
         const started_at = performance.now();
         let route_path = '/';
-        let release = () => {};
+        let release = () => { };
         try {
-            const url = new URL(request.url ?? '/', 'http://openmemory.local');
+            const url = new URL(request.url ?? '/', 'http://longmemory.local');
             route_path = url.pathname;
             if (apply_cors(request, response, config.allowed_origins)) return;
             if (url.pathname.startsWith('/v1/') || url.pathname === '/mcp') {
@@ -128,7 +126,7 @@ export function create_open_memory_app(options: server_options = {}): open_memor
             }
             if (url.pathname === '/mcp' && config.mcp_http) {
                 authorize(request, config.api_key);
-                if (config.log_auth) console.info(`[openmemory] authorized ${request.method} /mcp from ${request.socket.remoteAddress ?? 'unknown'}`);
+                if (config.log_auth) console.info(`[longmemory] authorized ${request.method} /mcp from ${request.socket.remoteAddress ?? 'unknown'}`);
                 await (await mcp_handler()).handler(request, response);
                 metrics.observe('/mcp', response.statusCode, elapsed_ms(started_at));
                 release();
@@ -143,7 +141,7 @@ export function create_open_memory_app(options: server_options = {}): open_memor
             }
             if (url.pathname.startsWith('/v1/')) {
                 authorize(request, config.api_key);
-                if (config.log_auth) console.info(`[openmemory] authorized ${request.method} ${url.pathname} from ${request.socket.remoteAddress ?? 'unknown'}`);
+                if (config.log_auth) console.info(`[longmemory] authorized ${request.method} ${url.pathname} from ${request.socket.remoteAddress ?? 'unknown'}`);
             }
             const body = await read_body(request, config.max_payload_size);
             const result = await selected.item.handler({
@@ -173,8 +171,8 @@ export function create_open_memory_app(options: server_options = {}): open_memor
     return { handler, memory, config, metrics };
 }
 
-export function create_open_memory_server(options: server_options = {}): Server {
-    const app = create_open_memory_app(options);
+export function create_long_memory_server(options: server_options = {}): Server {
+    const app = create_long_memory_app(options);
     const server = createServer(app.handler);
     server.on('close', () => void app.memory.close());
     return server;

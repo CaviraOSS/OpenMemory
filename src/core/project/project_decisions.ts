@@ -1,20 +1,18 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/project/project_decisions.ts
- *  usage : project decision memory views
+ *  usage : implements the LongMemory project decisions component
  */
 
-import type { memory_explanation, open_memory } from '../create_memory.js';
+import type { memory_explanation, long_memory } from '../create_memory.js';
 import type { project_state } from './project_state.js';
 
 export type project_decision = {
@@ -28,7 +26,7 @@ export type project_decision = {
     superseded_by: string | null;
 };
 
-export async function get_project_decisions(memory: open_memory, state: project_state): Promise<project_decision[]> {
+export async function get_project_decisions(memory: long_memory, state: project_state): Promise<project_decision[]> {
     const explanations = await Promise.all([...state.decision_nodes].map((id) => memory.explain(id)));
     return explanations.flatMap((item: memory_explanation) => item.node ? [{
         memory_id: item.node.id,

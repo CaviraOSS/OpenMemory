@@ -1,4 +1,18 @@
-import type { open_memory, recall_mode } from '../../core/create_memory.js';
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/context/cli_context.ts
+ *  usage : implements the LongMemory cli context component
+ */
+
+import type { long_memory, recall_mode } from '../../core/create_memory.js';
 import type { project_memory } from '../../core/project/project_memory.js';
 import { create_embedding_environment } from '../../core/embeddings/environment.js';
 import { existsSync, mkdirSync } from 'node:fs';
@@ -47,7 +61,7 @@ export const flags = (context: cli_context, key: string): string[] => {
 export const has = (context: cli_context, key: string) => has_flag(context.args, key);
 export const positional = (context: cli_context, index = 0) => context.args.positionals[index];
 export const require_value = (value: string | undefined, label: string): string => {
-    if (!value?.trim()) throw new cli_error('validation_error', `${label} is required`, exit_codes.validation, {}, `openmemory help`, `Provide ${label}.`);
+    if (!value?.trim()) throw new cli_error('validation_error', `${label} is required`, exit_codes.validation, {}, `longmemory help`, `Provide ${label}.`);
     return value.trim();
 };
 export const number_flag = (context: cli_context, key: string, fallback?: number) => {
@@ -69,7 +83,7 @@ export const time_flag = (context: cli_context, key: string) => {
 export const list_flag = (context: cli_context, key: string) => (flag(context, key) ?? '').split(',').map((value) => value.trim()).filter(Boolean);
 export const mode_flag = (context: cli_context, fallback?: recall_mode): recall_mode => {
     const mode = flag(context, 'mode') ?? fallback;
-    if (!mode) throw new cli_error('validation_error', '--mode is required', exit_codes.validation, {}, 'openmemory recall "your query" --mode strict');
+    if (!mode) throw new cli_error('validation_error', '--mode is required', exit_codes.validation, {}, 'longmemory recall "your query" --mode strict');
     const modes: recall_mode[] = ['strict', 'historical', 'associative', 'world_grounded'];
     if (!modes.includes(mode as recall_mode)) throw new cli_error('validation_error', `--mode must be one of ${modes.join(', ')}`, exit_codes.validation);
     return mode as recall_mode;
@@ -80,15 +94,15 @@ export const command_flags = (context: cli_context, local: readonly string[]) =>
 };
 
 export const memory_config = (context: cli_context) => {
-    const embeddings = create_embedding_environment(context.env, { logger: (message) => context.io.stderr(`[openmemory] ${message}\n`) });
+    const embeddings = create_embedding_environment(context.env, { logger: (message) => context.io.stderr(`[longmemory] ${message}\n`) });
     return {
         store: 'sqlite' as const, db_path: context.db_path, tenant_id: 'default', user_id: 'default',
         ...(embeddings ? { embedding_provider: embeddings.embedding_provider, multilingual_embedding_provider: embeddings.multilingual_embedding_provider, embedding_dimension: embeddings.embedding_dimension } : {}),
     };
 };
-export async function with_memory<T>(context: cli_context, operation: (memory: open_memory) => Promise<T>): Promise<T> {
+export async function with_memory<T>(context: cli_context, operation: (memory: long_memory) => Promise<T>): Promise<T> {
     const readonly = context.dry_run && context.db_path !== ':memory:';
-    if (readonly && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run reads require an existing database', exit_codes.database, { db_path: context.db_path }, 'openmemory init');
+    if (readonly && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run reads require an existing database', exit_codes.database, { db_path: context.db_path }, 'longmemory init');
     if (!readonly && context.db_path !== ':memory:') mkdirSync(dirname(context.db_path), { recursive: true });
     const { createMemory: create_memory } = await import('../../core/create_memory.js');
     const memory = create_memory({ ...memory_config(context), readonly });
@@ -96,7 +110,7 @@ export async function with_memory<T>(context: cli_context, operation: (memory: o
 }
 export async function with_project<T>(context: cli_context, operation: (project: project_memory) => Promise<T>): Promise<T> {
     const readonly = context.dry_run && context.db_path !== ':memory:';
-    if (readonly && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run reads require an existing project database', exit_codes.database, { db_path: context.db_path }, 'openmemory project init');
+    if (readonly && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'Dry-run reads require an existing project database', exit_codes.database, { db_path: context.db_path }, 'longmemory project init');
     if (!readonly && context.db_path !== ':memory:') mkdirSync(dirname(context.db_path), { recursive: true });
     const [{ createMemory: create_memory }, { project_memory }] = await Promise.all([import('../../core/create_memory.js'), import('../../core/project/project_memory.js')]);
     const memory = create_memory({ ...memory_config(context), readonly });
@@ -106,8 +120,8 @@ export async function with_project<T>(context: cli_context, operation: (project:
         return await operation(project);
     } finally { await project.close(); await memory.close(); }
 }
-export async function with_read_memory<T>(context: cli_context, operation: (memory: open_memory) => Promise<T>): Promise<T> {
-    if (context.db_path !== ':memory:' && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'OpenMemory is not initialized for this workspace', exit_codes.database, { db_path: context.db_path }, 'openmemory init');
+export async function with_read_memory<T>(context: cli_context, operation: (memory: long_memory) => Promise<T>): Promise<T> {
+    if (context.db_path !== ':memory:' && !existsSync(context.db_path)) throw new cli_error('database_not_found', 'LongMemory is not initialized for this workspace', exit_codes.database, { db_path: context.db_path }, 'longmemory init');
     const { createMemory: create_memory } = await import('../../core/create_memory.js');
     const memory = create_memory({ ...memory_config(context), readonly: context.db_path !== ':memory:' });
     try { return await operation(memory); } finally { await memory.close(); }

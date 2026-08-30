@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase13_associative_recall.test.ts
+ *  usage : verifies LongMemory phase13 associative recall.test behavior
+ */
+
 import { describe, expect, it } from 'vitest';
 import {
     associative_recall,
@@ -32,6 +46,7 @@ function make_node(
         facets?: Facets;
         vector?: number[] | null;
         claims?: HydroNodeInput['content']['claims'];
+        metadata?: Record<string, unknown>;
     } = {},
 ) {
     const input: HydroNodeInput = {
@@ -45,6 +60,7 @@ function make_node(
         state: { ...default_node_state(), confidence: 0.9, ...over.state },
         vectors: { semantic: over.vector ?? null, type_vector: null, world_vector: null },
         provenance: manual_provenance('tester', now),
+        metadata: over.metadata,
     };
     return create_hydro_node(input);
 }
@@ -129,6 +145,41 @@ describe('phase 13 associative recall engine', () => {
         expect(res.visited).toContain('C');
         expect(res.visited).not.toContain('D');
         expect(res.activation.has('D')).toBe(false);
+    });
+
+    it('keeps graph seeds sparse and reports matrix diagnostics', () => {
+        const nodes = [
+            make_node('A', 'shared topic alpha'),
+            make_node('B', 'shared topic beta'),
+            make_node('C', 'shared topic gamma'),
+        ];
+        const edges: HydroEdge[] = [edge('e:ab', 'A', 'B'), edge('e:bc', 'B', 'C')];
+        const result = associative_recall({ text: 'Do all shared topic cases work?', now }, { index: new InMemoryRecallIndex(nodes), edges });
+
+        expect(result.trace.spread.seeds).toBe(1);
+        expect(result.trace.spread.seed_density).toBeCloseTo(1 / 3);
+        expect(result.trace.spread.visited).toBeLessThanOrEqual(3);
+        expect(result.trace.matrix.enabled).toBe(true);
+        expect(result.trace.matrix.features).toEqual(expect.arrayContaining(['vector', 'lexical', 'activation']));
+    });
+
+    it('bundles preceding conversation turns for referential evidence', () => {
+        const previous = make_node('previous', 'Caroline: Did you take the nature walk after the road trip?', {
+            metadata: { conversation_id: 'trip', speaker: 'Caroline' },
+        });
+        const answer = make_node('answer', 'Melanie: We just did it yesterday and it was a nice way to relax', {
+            metadata: { conversation_id: 'trip', speaker: 'Melanie' },
+        });
+        const edges: HydroEdge[] = [{ ...edge('e:answer:previous', 'answer', 'previous'), type: 'refers_to' }];
+        const result = associative_recall(
+            { text: 'What did Melanie do to relax?', now, token_budget: 200 },
+            { index: new InMemoryRecallIndex([previous, answer]), edges },
+        );
+        const evidence = result.context.evidence.find((item) => item.id === 'answer');
+
+        expect(evidence?.text).toContain('Did you take the nature walk');
+        expect(evidence?.text).toContain('We just did it yesterday');
+        expect(result.context.bundled_items).toBeGreaterThan(0);
     });
 
     it('5. irrelevant graph neighbourhoods do not flood context', () => {

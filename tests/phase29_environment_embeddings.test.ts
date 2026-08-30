@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase29_environment_embeddings.test.ts
+ *  usage : verifies LongMemory phase29 environment embeddings.test behavior
+ */
+
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -14,7 +28,7 @@ import {
     synthetic_embedding_provider,
     type embedding_provider_config,
 } from '../src/index.js';
-import { create_open_memory_server } from '../src/server/app.js';
+import { create_long_memory_server } from '../src/server/app.js';
 import { load_server_config } from '../src/server/config.js';
 import { concurrency_limiter } from '../src/server/middleware/concurrency.js';
 
@@ -164,9 +178,9 @@ describe('real embedding providers', () => {
 
 describe('embedding environment and Hydrograph integration', () => {
     it('loads archived aliases and new environment names', () => {
-        const loaded = load_embedding_environment({ OM_EMBEDDINGS: 'gemini', OM_EMBEDDING_FALLBACK: 'ollama,synthetic', OM_TIER: 'smart', OM_VEC_DIM: '384', GEMINI_API_KEY: 'key', OPENMEMORY_GEMINI_INPUTS_PER_MINUTE: '90' });
+        const loaded = load_embedding_environment({ OM_EMBEDDINGS: 'gemini', OM_EMBEDDING_FALLBACK: 'ollama,synthetic', OM_TIER: 'smart', OM_VEC_DIM: '384', GEMINI_API_KEY: 'key', LONGMEMORY_GEMINI_INPUTS_PER_MINUTE: '90' });
         expect(loaded).toMatchObject({ provider: 'gemini', fallback: ['ollama', 'synthetic'], tier: 'smart', dimension: 384, gemini_api_key: 'key', gemini_inputs_per_minute: 90 });
-        expect(create_embedding_environment({ OPENMEMORY_EMBEDDING_PROVIDER: 'synthetic', OPENMEMORY_EMBEDDING_DIMENSION: '32' })?.embedding_provider.dimension).toBe(32);
+        expect(create_embedding_environment({ LONGMEMORY_EMBEDDING_PROVIDER: 'synthetic', LONGMEMORY_EMBEDDING_DIMENSION: '32' })?.embedding_provider.dimension).toBe(32);
     });
 
     it('uses configured vector dimensions for ingest, recall, worlds, and sketches', async () => {
@@ -210,7 +224,7 @@ describe('archived server runtime environment features', () => {
     });
 
     async function start(env: NodeJS.ProcessEnv) {
-        const server = create_open_memory_server({ config: load_server_config({ OPENMEMORY_DB_PATH: ':memory:', ...env }) });
+        const server = create_long_memory_server({ config: load_server_config({ LONGMEMORY_DB_PATH: ':memory:', ...env }) });
         servers.push(server);
         await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
         return `http://127.0.0.1:${(server.address() as AddressInfo).port}`;

@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase24_connectors.test.ts
+ *  usage : verifies LongMemory phase24 connectors.test behavior
+ */
+
 import { describe, expect, it } from 'vitest';
 import { createMemory as create_memory } from '../src/index.js';
 import { sync_connector } from '../src/core/connectors/connector_ingest.js';
@@ -120,19 +134,19 @@ describe('phase 24 connector framework', () => {
         const issue_doc = document({ source_type: 'github', external_id: 'github:repo:issue:12', title: 'Broken migration', content: 'Migration is broken', checksum: 'issue-1', metadata: { source_item: { kind: 'issue', metadata: { number: 12 } }, comments: [{ id: 1, body: 'Reproduced', user: { login: 'Ada' }, created_at: '2026-01-01T00:00:00Z' }] } });
         const pr_doc = document({ source_type: 'github', external_id: 'github:repo:pull_request:7', title: 'Fix migration', content: 'Fixes #12', checksum: 'pr-1', metadata: { source_item: { kind: 'pull_request', metadata: { number: 7 } }, pull: { body: 'Fixes #12' } } });
         const commit_doc = document({ source_type: 'github', external_id: 'github:repo:commit:abc', title: 'fix: migration', content: 'fix: migration', checksum: 'commit-1', metadata: { source_item: { kind: 'commit', metadata: { sha: 'abc' } }, commit: { files: [{ filename: 'src/migrate.ts', additions: 4, deletions: 1, status: 'modified' }] } } });
-        const readme_doc = document({ source_type: 'github', external_id: 'github:repo:file:README.md', title: 'README.md', content: '# OpenMemory\nHydrograph memory.', checksum: 'readme-1', metadata: { source_item: { kind: 'file', path: 'README.md', metadata: { sha: 'readme' } } } });
+        const readme_doc = document({ source_type: 'github', external_id: 'github:repo:file:README.md', title: 'README.md', content: '# LongMemory\nHydrograph memory.', checksum: 'readme-1', metadata: { source_item: { kind: 'file', path: 'README.md', metadata: { sha: 'readme' } } } });
         const plans = await Promise.all([
-            map_github_to_hydrograph('github', event(issue_doc, 'issue'), context('github', 'github'), 'CaviraOSS/OpenMemory'),
-            map_github_to_hydrograph('github', event(pr_doc, 'pull_request'), context('github', 'github'), 'CaviraOSS/OpenMemory'),
-            map_github_to_hydrograph('github', event(commit_doc, 'commit'), context('github', 'github'), 'CaviraOSS/OpenMemory'),
-            map_github_to_hydrograph('github', event(readme_doc, 'file'), context('github', 'github'), 'CaviraOSS/OpenMemory'),
+            map_github_to_hydrograph('github', event(issue_doc, 'issue'), context('github', 'github'), 'CaviraOSS/LongMemory'),
+            map_github_to_hydrograph('github', event(pr_doc, 'pull_request'), context('github', 'github'), 'CaviraOSS/LongMemory'),
+            map_github_to_hydrograph('github', event(commit_doc, 'commit'), context('github', 'github'), 'CaviraOSS/LongMemory'),
+            map_github_to_hydrograph('github', event(readme_doc, 'file'), context('github', 'github'), 'CaviraOSS/LongMemory'),
         ]);
         const results = [];
         for (const plan of plans) results.push(await memory.applyImportPlan(plan));
         const ids = results.flatMap((result) => result.node_ids);
         const explanations = await Promise.all(ids.map((id) => memory.explain(id)));
         const edges = explanations.flatMap((item) => [...item.incoming_edges, ...item.outgoing_edges]);
-        expect((await memory.listWorlds()).some((world) => world.name === 'CaviraOSS/OpenMemory')).toBe(true);
+        expect((await memory.listWorlds()).some((world) => world.name === 'CaviraOSS/LongMemory')).toBe(true);
         expect(explanations.some((item) => item.node?.metadata?.issue_comment === true)).toBe(true);
         expect(edges.some((edge) => edge.type === 'supports' && edge.handler.params.relation === 'fixes')).toBe(true);
         expect(edges.some((edge) => edge.type === 'refers_to' && edge.handler.params.relation === 'modifies')).toBe(true);

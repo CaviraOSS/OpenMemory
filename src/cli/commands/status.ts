@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/status.ts
+ *  usage : implements the LongMemory status component
+ */
+
 import { connector_definitions } from '../../connectors/registry.js';
 import type { cli_command } from '../context/cli_context.js';
 import { command_flags, number_flag, with_read_memory } from '../context/cli_context.js';
@@ -39,7 +53,7 @@ export const status_command: cli_command = async (context) => {
         const memory = result.memory;
         return [
             panel('', context.colors, {
-                title: 'OpenMemory Hydrograph', kind: 'info', width: context.terminal_width, rows: [
+                title: 'LongMemory Hydrograph', kind: 'info', width: context.terminal_width, rows: [
                     ['Project', `${result.project.name}${result.project.initialized ? '' : ' (not initialized)'}`], ['Database', result.db_path],
                     ['Mode', 'local'], ['MCP', badge('ACTIVE', true, context.colors)], ['Server', context.colors.muted('offline')],
                 ]
@@ -55,7 +69,7 @@ export const status_command: cli_command = async (context) => {
                 result.unresolved_conflicts ? `${context.colors.warning(icons.warning)} ${result.unresolved_conflicts} unresolved conflicts` : `${icons.success} no unresolved conflicts`,
                 `${context.colors.muted('○')} benchmark not run in this session`,
             ].join('\n')), '',
-            section(context, 'Next', `${context.colors.info('openmemory agent preflight "your task"')}\n${context.colors.info('openmemory project conflicts')}`),
+            section(context, 'Next', `${context.colors.info('longmemory agent preflight "your task"')}\n${context.colors.info('longmemory project conflicts')}`),
         ].join('\n');
     });
 };

@@ -1,20 +1,18 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/project/project_recall.ts
- *  usage : project-scoped recall modes and citations
+ *  usage : implements the LongMemory project recall component
  */
 
-import type { open_memory, public_recall_query } from '../create_memory.js';
+import type { long_memory, public_recall_query } from '../create_memory.js';
 import type { HydroEdge } from '../types/hydro_edge.js';
 import type { HydroNode } from '../types/hydro_node.js';
 import { code_fact_from_node, rank_code_facts, type project_code_fact } from './project_code_index.js';
@@ -121,7 +119,7 @@ const current_ref_for = (state: project_state, node: HydroNode): string | null =
     return matching?.current_ref ?? null;
 };
 
-export async function collect_project_contradictions(memory: open_memory, state: project_state): Promise<project_contradiction_warning[]> {
+export async function collect_project_contradictions(memory: long_memory, state: project_state): Promise<project_contradiction_warning[]> {
     const explanations = await Promise.all([...state.nodes.keys()].map((id) => memory.explain(id)));
     const nodes = new Map(explanations.flatMap((item) => item.node ? [[item.node.id, item.node] as const] : []));
     const edges = new Map<string, HydroEdge>();
@@ -136,7 +134,7 @@ export async function collect_project_contradictions(memory: open_memory, state:
     }));
 }
 
-export async function recall_project_memory(memory: open_memory, project: ProjectWorld, state: project_state, query: project_recall_query, mode: project_recall_mode): Promise<project_recall_result> {
+export async function recall_project_memory(memory: long_memory, project: ProjectWorld, state: project_state, query: project_recall_query, mode: project_recall_mode): Promise<project_recall_result> {
     const now = query.now ?? Date.now();
     const base: public_recall_query = {
         text: query.text,

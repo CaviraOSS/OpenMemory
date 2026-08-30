@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/core/project/project_agent_manifest.ts
+ *  usage : implements the LongMemory project agent manifest component
+ */
+
 import { hash_canonical } from '../hash/content_hash.js';
 import type { project_memory } from './project_memory.js';
 import type { memory_asset_loadout, memory_asset_loadout_input, memory_asset_type } from './project_assets.js';
@@ -12,7 +26,7 @@ export type agent_memory_manifest_input = Omit<memory_asset_loadout_input, 'agen
 };
 
 export type agent_memory_manifest = {
-    schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1';
+    schema: 'https://longmemory.dev/schemas/agent-memory-manifest/v1';
     manifest_id: string;
     version: string;
     generated_at: string;
@@ -32,13 +46,13 @@ export type agent_memory_manifest = {
     };
     loadout: memory_asset_loadout;
     mcp: {
-        catalog_tool: 'openmemory_asset_catalog';
-        context_tool: 'openmemory_project_context';
+        catalog_tool: 'longmemory_asset_catalog';
+        context_tool: 'longmemory_project_context';
         assets_resource: string;
         manifest_resource: string;
     };
     a2a_extension: {
-        uri: 'https://openmemory.dev/extensions/memory-assets/v1';
+        uri: 'https://longmemory.dev/extensions/memory-assets/v1';
         required: false;
         params: { manifest_id: string; project_id: string; asset_types: memory_asset_type[] };
     };
@@ -67,21 +81,21 @@ export async function build_agent_memory_manifest(manager: project_memory, proje
     const asset_types: Record<memory_asset_type, number> = { chat_memory: 0, skill: 0, llm_wiki: 0, code_graph: 0 };
     for (const item of loadout.selected) asset_types[item.asset.type]++;
     const name = input.name?.trim() || agent_id;
-    const description = input.description?.trim() || `OpenMemory-equipped agent for project ${project_id}`;
+    const description = input.description?.trim() || `LongMemory-equipped agent for project ${project_id}`;
     const manifest_id = `agent-memory:${hash_canonical([project_id, agent_id, input.framework ?? null, input.task_id ?? null]).slice(0, 24)}`;
     const version = hash_canonical(loadout.selected.map((item) => [item.asset.asset_id, item.asset.version, item.binding?.target_type, item.binding?.target_id, item.binding?.injection_mode])).slice(0, 16);
-    const extension_uri = 'https://openmemory.dev/extensions/memory-assets/v1' as const;
-    const manifest_resource = `openmemory://project/${encodeURIComponent(project_id)}/agent/${encodeURIComponent(agent_id)}/manifest`;
+    const extension_uri = 'https://longmemory.dev/extensions/memory-assets/v1' as const;
+    const manifest_resource = `longmemory://project/${encodeURIComponent(project_id)}/agent/${encodeURIComponent(agent_id)}/manifest`;
     const skill_assets = loadout.selected.filter((item) => item.asset.type === 'skill');
     return {
-        schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1', manifest_id, version,
+        schema: 'https://longmemory.dev/schemas/agent-memory-manifest/v1', manifest_id, version,
         generated_at: new Date(input.now ?? Date.now()).toISOString(), project_id,
         agent: { id: agent_id, name, description, framework: input.framework ?? null, task_id: input.task_id ?? null },
         capabilities: { asset_types, context_budget: loadout.token_budget, mcp: true, a2a_agent_card: Boolean(input.interface_url) },
         loadout,
         mcp: {
-            catalog_tool: 'openmemory_asset_catalog', context_tool: 'openmemory_project_context',
-            assets_resource: `openmemory://project/${encodeURIComponent(project_id)}/assets`, manifest_resource,
+            catalog_tool: 'longmemory_asset_catalog', context_tool: 'longmemory_project_context',
+            assets_resource: `longmemory://project/${encodeURIComponent(project_id)}/assets`, manifest_resource,
         },
         a2a_extension: { uri: extension_uri, required: false, params: { manifest_id, project_id, asset_types: Object.entries(asset_types).filter(([, count]) => count > 0).map(([type]) => type as memory_asset_type) } },
         agent_card: input.interface_url ? {
@@ -90,7 +104,7 @@ export async function build_agent_memory_manifest(manager: project_memory, proje
             version,
             capabilities: {
                 streaming: false, pushNotifications: false, extendedAgentCard: true,
-                extensions: [{ uri: extension_uri, description: 'Authenticated OpenMemory asset loadout discovery', required: false }],
+                extensions: [{ uri: extension_uri, description: 'Authenticated LongMemory asset loadout discovery', required: false }],
             },
             defaultInputModes: ['text/plain', 'application/json'], defaultOutputModes: ['text/plain', 'application/json'],
             skills: skill_assets.map((item) => ({

@@ -1,0 +1,10 @@
+{
+    "longmemory": {
+        "command": "longmemory",
+        "args": [
+            "mcp",
+            "--project",
+            "current"
+        ]
+    }
+}

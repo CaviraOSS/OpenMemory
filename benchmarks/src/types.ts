@@ -1,8 +1,22 @@
-export type provider_name = "openmemory" | "supermemory" | "mem0" | "graphiti" | "cognee";
-export type dataset_name = "smoke" | "longmemeval" | "locomo";
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/types.ts
+ *  usage : supports LongMemory benchmark types
+ */
+
+export type provider_name = "longmemory" | "supermemory" | "mem0" | "graphiti" | "cognee";
+export type dataset_name = "smoke" | "longmemeval" | "locomo" | "beam-1m" | "beam-10m";
 export type provider_status = "completed" | "partial" | "unavailable" | "failed";
 export type phase_status = "pending" | "running" | "completed" | "failed";
-export type model_provider = "openai" | "anthropic" | "google" | "openai-compatible" | "ollama" | "codex" | "claude-code";
+export type model_provider = "openai" | "anthropic" | "google" | "openai-compatible" | "ollama" | "codex" | "claude-code" | "copilot" | "copilot-answerer" | "copilot-judge";
 
 export type benchmark_event = {
     id: string;
@@ -21,6 +35,7 @@ export type benchmark_case = {
     user_id: string;
     events: benchmark_event[];
     evidence_ids: string[];
+    evidence_unknown?: boolean;
     forbidden_ids: string[];
     question_date?: string;
 };
@@ -193,9 +208,12 @@ export type case_checkpoint = {
     };
     hits?: matched_hit[];
     metrics?: retrieval_metrics[];
+    evidence_ids?: string[];
     stale_leakage?: boolean;
     abstention_correct?: boolean | null;
     context_tokens?: number;
+    write_input_tokens?: number;
+    read_input_tokens?: number;
     cutoff_results?: Record<string, cutoff_judgment>;
 };
 
@@ -248,7 +266,7 @@ export type run_manifest = {
     sample_offset: number;
     matching: { version: 2; lexical_threshold: number; opaque_source_ref_first: true; source_id_first: false };
     context_token_budget: number;
-    openmemory_embedding: {
+    longmemory_embedding: {
         provider: string;
         model: string;
         tier: string;
@@ -256,6 +274,7 @@ export type run_manifest = {
         fallback: string[];
         batch_size: number;
         inputs_per_minute: number;
+        input_cost_per_million_usd: number | null;
     } | null;
     ai: {
         enabled: boolean;
@@ -353,10 +372,51 @@ export type gate_check = {
 };
 
 export type benchmark_report = {
-    schema_version: 1;
+    schema_version: 2;
     run_id: string;
     generated_at: string;
     manifest: run_manifest;
     providers: provider_report[];
+    scorecard: longmemory_scorecard;
     gates: { passed: boolean; checks: gate_check[] };
+};
+
+export type scorecard_metric = {
+    value: number | null;
+    unit: "ratio" | "milliseconds" | "tokens" | "usd";
+    numerator: number | null;
+    denominator: number | null;
+    reason?: string;
+};
+
+export type longmemory_scorecard = {
+    cutoff: number;
+    memory_quality: {
+        longmemeval: scorecard_metric;
+        locomo: scorecard_metric;
+        beam_1m: scorecard_metric;
+        beam_10m: scorecard_metric;
+    };
+    retrieval: {
+        context_recall: scorecard_metric;
+        context_precision: scorecard_metric;
+        evidence_completeness: scorecard_metric;
+    };
+    temporal_memory: {
+        current_fact_accuracy: scorecard_metric;
+        historical_fact_accuracy: scorecard_metric;
+        update_accuracy: scorecard_metric;
+        event_order_accuracy: scorecard_metric;
+    };
+    reliability: {
+        abstention_accuracy: scorecard_metric;
+        contradiction_resolution: scorecard_metric;
+    };
+    efficiency: {
+        p50_retrieval: scorecard_metric;
+        p95_retrieval: scorecard_metric;
+        mean_tokens_retrieved: scorecard_metric;
+        write_cost_per_1k_input_tokens: scorecard_metric;
+        read_cost_per_query: scorecard_metric;
+    };
 };

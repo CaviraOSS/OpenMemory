@@ -1,20 +1,18 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/i18n/crosslingual_recall.ts
- *  usage : original-preserving multilingual recall presentation
+ *  usage : implements the LongMemory crosslingual recall component
  */
 
-import type { open_memory, public_recall_query } from '../create_memory.js';
+import type { long_memory, public_recall_query } from '../create_memory.js';
 import type { HydroNode } from '../types/hydro_node.js';
 import type { language_code } from './language_detection.js';
 import { count_multilingual_tokens } from './multilingual_tokenizer.js';
@@ -121,7 +119,7 @@ export async function format_crosslingual_recall(
     };
 }
 
-export async function crosslingual_recall(memory: open_memory, query: crosslingual_recall_query, options: { query_language: language_code; output_language: language_code; translation_provider?: translation_provider; enable_translation?: boolean }): Promise<crosslingual_recall_result> {
+export async function crosslingual_recall(memory: long_memory, query: crosslingual_recall_query, options: { query_language: language_code; output_language: language_code; translation_provider?: translation_provider; enable_translation?: boolean }): Promise<crosslingual_recall_result> {
     const result = await memory.recall(query);
     return format_crosslingual_recall(result, query, { ...options, enable_translation: options.enable_translation ?? false });
 }

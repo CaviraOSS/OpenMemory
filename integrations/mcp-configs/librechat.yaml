@@ -1,0 +1,26 @@
+#      __                      __  ___                               
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+#                      /____/                                 /____/   
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : integrations/mcp-configs/librechat.yaml
+#  usage : configures the LongMemory mcp-configs integration
+
+mcpSettings:
+  allowedAddresses:
+    - "host.docker.internal:7331"
+
+mcpServers:
+  longmemory:
+    title: LongMemory
+    description: Durable project memory, recall, decisions, and task state.
+    type: streamable-http
+    url: "http://host.docker.internal:7331/mcp"
+    headers:
+      Authorization: "Bearer ${LONGMEMORY_API_KEY}"
+    requiresOAuth: false
+    serverInstructions: true

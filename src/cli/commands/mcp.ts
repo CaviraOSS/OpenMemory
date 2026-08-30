@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/mcp.ts
+ *  usage : implements the LongMemory mcp component
+ */
+
 import { run_mcp_stdio } from '../../mcp/transports/stdio.js';
 import type { cli_command } from '../context/cli_context.js';
 import { command_flags, flag, has } from '../context/cli_context.js';
@@ -15,7 +29,7 @@ export const mcp_command: cli_command = async (context) => {
         db_path: context.db_path,
         project_id: context.project_id,
         user_id: context.user_id,
-        tenant_id: context.env.OPENMEMORY_TENANT_ID?.trim() || 'default',
+        tenant_id: context.env.LONGMEMORY_TENANT_ID?.trim() || 'default',
         read_only: has(context, 'read-only'),
         audit_path: flag(context, 'audit') ?? `${context.db_path}.mcp-audit.jsonl`,
         env: context.env,

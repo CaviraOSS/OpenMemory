@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/project/context.ts
+ *  usage : implements the LongMemory context component
+ */
+
 import type { cli_command } from '../../context/cli_context.js';
 import { command_flags, flag, list_flag, positional, require_value, with_project } from '../../context/cli_context.js';
 import { badge, status_badge } from '../../theme/badges.js';
@@ -14,7 +28,7 @@ export const project_context_command: cli_command = async (context) => {
         { user_id: context.user_id, team_ids: list_flag(context, 'teams'), roles: list_flag(context, 'roles'), task_id: flag(context, 'task-id') },
     ));
     const result = {
-        ok: true, schema: 'openmemory.project-context.v1', project_id: context.project_id, task,
+        ok: true, schema: 'longmemory.project-context.v1', project_id: context.project_id, task,
         project_summary: packet.project_summary, current_goal: packet.current_goal, hard_constraints: packet.hard_constraints,
         relevant_architecture: packet.relevant_architecture, relevant_files: packet.relevant_files,
         active_decisions: packet.active_decisions, open_tasks: packet.open_tasks, known_failures: packet.known_failures,

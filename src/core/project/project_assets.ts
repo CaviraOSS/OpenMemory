@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/core/project/project_assets.ts
+ *  usage : implements the LongMemory project assets component
+ */
+
 import { hash_canonical } from '../hash/content_hash.js';
 import { count_tokens } from '../recall/context_builder.js';
 import type { HydroNode } from '../types/hydro_node.js';
@@ -309,7 +323,7 @@ const context_for = (asset: memory_asset, binding: memory_asset_binding | null):
     const base = { asset_id: asset.asset_id, type: asset.type, name: asset.name, description: asset.description, content_ref: asset.content_ref, version: asset.version };
     if (mode === 'direct') return { ...base, mode, payload: asset.payload };
     if (mode === 'summary') return { ...base, mode, summary: asset.payload.summary ?? asset.description };
-    if (mode === 'tool') return { ...base, mode, instruction: 'Discover and call the referenced OpenMemory tool only when needed.' };
+    if (mode === 'tool') return { ...base, mode, instruction: 'Discover and call the referenced LongMemory tool only when needed.' };
     return { ...base, mode };
 };
 

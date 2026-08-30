@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/src/cli.ts
+ *  usage : supports the LongMemory VS Code extension cli
+ */
+
 import { spawn, type ChildProcess } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { isAbsolute, resolve } from 'node:path';
@@ -14,13 +28,13 @@ type run_options = { input?: string; timeout_ms?: number; resource?: vscode.Uri 
 const workspace_folder = (resource?: vscode.Uri): vscode.WorkspaceFolder => {
     const target = resource ?? vscode.window.activeTextEditor?.document.uri;
     const folder = target ? vscode.workspace.getWorkspaceFolder(target) : vscode.workspace.workspaceFolders?.[0];
-    if (!folder) throw new cli_error('Open a workspace before using OpenMemory.', 'No workspace folder is open.', null);
+    if (!folder) throw new cli_error('Open a workspace before using LongMemory.', 'No workspace folder is open.', null);
     return folder;
 };
 
-const config = (resource?: vscode.Uri) => vscode.workspace.getConfiguration('openmemory', workspace_folder(resource).uri);
+const config = (resource?: vscode.Uri) => vscode.workspace.getConfiguration('longmemory', workspace_folder(resource).uri);
 
-export class openmemory_cli implements vscode.Disposable {
+export class longmemory_cli implements vscode.Disposable {
     private readonly active = new Set<ChildProcess>();
 
     constructor(private readonly output: vscode.OutputChannel) { }
@@ -32,29 +46,31 @@ export class openmemory_cli implements vscode.Disposable {
 
     is_initialized(resource?: vscode.Uri): boolean {
         const root = workspace_folder(resource).uri.fsPath;
-        const database = config(resource).get<string>('database', '.openmemory/project.db').trim();
+        const database = config(resource).get<string>('database', '.longmemory/project.db').trim();
         return database === ':memory:' || existsSync(isAbsolute(database) ? database : resolve(root, database));
     }
 
     async run<T>(command: string[], options: run_options = {}): Promise<T> {
-        if (!vscode.workspace.isTrusted) throw new cli_error('Trust this workspace before running OpenMemory.', 'Workspace Trust is required because OpenMemory executes a local CLI.', null);
+        if (!vscode.workspace.isTrusted) throw new cli_error('Trust this workspace before running LongMemory.', 'Workspace Trust is required because LongMemory executes a local CLI.', null);
         const root = workspace_folder(options.resource).uri.fsPath;
-        const configured = config(options.resource).get<string>('cliPath', 'openmemory').trim() || 'openmemory';
+        const configured = config(options.resource).get<string>('cliPath', 'longmemory').trim() || 'longmemory';
         const cli_path = isAbsolute(configured) ? configured : configured.includes('/') || configured.includes('\\') ? resolve(root, configured) : configured;
-        const executable = cli_path.endsWith('.js') ? process.execPath : process.platform === 'win32' && cli_path === 'openmemory' ? 'openmemory.cmd' : cli_path;
+        const executable = cli_path.endsWith('.js') ? process.execPath : cli_path;
         const prefix = cli_path.endsWith('.js') ? [cli_path] : [];
-        const database = config(options.resource).get<string>('database', '.openmemory/project.db').trim();
+        const needs_shell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(executable);
+        const database = config(options.resource).get<string>('database', '.longmemory/project.db').trim();
         const project = config(options.resource).get<string>('project', 'current').trim() || 'current';
         const user = config(options.resource).get<string>('user', 'default').trim() || 'default';
         const args = [...prefix, ...command, '--json', '--no-color', '--cwd', root, '--project', project, '--user', user, ...(database ? ['--db', database] : [])];
         const group = ['project', 'maintenance', 'memory'].includes(command[0] ?? '') ? command.slice(0, 2) : command.slice(0, 1);
-        this.output.appendLine(`> OpenMemory ${group.join(' ')}${command.length > group.length ? ' [arguments redacted]' : ''}`);
+        this.output.appendLine(`> LongMemory ${group.join(' ')}${command.length > group.length ? ' [arguments redacted]' : ''}`);
 
         return new Promise<T>((resolve_value, reject) => {
             const child = spawn(executable, args, {
                 cwd: root,
                 env: { ...process.env, NO_COLOR: '1' },
                 windowsHide: true,
+                shell: needs_shell,
                 stdio: ['pipe', 'pipe', 'pipe'],
             });
             this.active.add(child);
@@ -65,7 +81,7 @@ export class openmemory_cli implements vscode.Disposable {
                 if (settled) return;
                 settled = true;
                 void this.stop(child).then(() => {
-                    reject(new cli_error('OpenMemory command timed out.', stderr || stdout, null));
+                    reject(new cli_error('LongMemory command timed out.', stderr || stdout, null));
                 });
             }, options.timeout_ms ?? 60_000);
             child.stdout.setEncoding('utf8');
@@ -77,7 +93,7 @@ export class openmemory_cli implements vscode.Disposable {
                 this.active.delete(child);
                 if (settled) return;
                 settled = true;
-                reject(new cli_error(`Unable to start OpenMemory CLI: ${error.message}`, error.stack ?? error.message, null));
+                reject(new cli_error(`Unable to start LongMemory CLI: ${error.message}`, error.stack ?? error.message, null));
             });
             child.once('close', (code) => {
                 clearTimeout(timer);
@@ -86,7 +102,7 @@ export class openmemory_cli implements vscode.Disposable {
                 settled = true;
                 if (stderr.trim()) this.output.appendLine(stderr.trim());
                 if (code !== 0) {
-                    let message = stderr.trim() || `OpenMemory exited with code ${code}`;
+                    let message = stderr.trim() || `LongMemory exited with code ${code}`;
                     try { message = (JSON.parse(stderr) as { error?: { message?: string } }).error?.message ?? message; } catch { }
                     reject(new cli_error(message, stderr || stdout, code));
                     return;
@@ -94,7 +110,7 @@ export class openmemory_cli implements vscode.Disposable {
                 try {
                     resolve_value(JSON.parse(stdout) as T);
                 } catch (error) {
-                    reject(new cli_error('OpenMemory returned invalid JSON.', `${error instanceof Error ? error.message : String(error)}\n${stdout}`, code));
+                    reject(new cli_error('LongMemory returned invalid JSON.', `${error instanceof Error ? error.message : String(error)}\n${stdout}`, code));
                 }
             });
             if (options.input !== undefined) child.stdin.end(options.input);

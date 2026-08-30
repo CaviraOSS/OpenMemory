@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase19_public_api.test.ts
+ *  usage : verifies LongMemory phase19 public api.test behavior
+ */
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -14,7 +28,7 @@ afterEach(() => {
 });
 
 const sqlite_path = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-public-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-public-'));
     dirs.push(dir);
     return join(dir, 'memory.db');
 };

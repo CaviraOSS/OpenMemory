@@ -1,20 +1,18 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/connectors/connector_ingest.ts
- *  usage : incremental, retryable, dry-run connector synchronization
+ *  usage : implements the LongMemory connector ingest component
  */
 
-import type { open_memory } from '../create_memory.js';
+import type { long_memory } from '../create_memory.js';
 import type { Connector } from './connector.js';
 import { public_permission, type connector_permission } from './permission.js';
 import { empty_cursor, type SyncCursor } from './sync_cursor.js';
@@ -53,7 +51,7 @@ export type connector_sync_report = {
     completed_at: number;
 };
 
-export async function sync_connector(connector: Connector, memory: open_memory, options: connector_sync_options = {}): Promise<connector_sync_report> {
+export async function sync_connector(connector: Connector, memory: long_memory, options: connector_sync_options = {}): Promise<connector_sync_report> {
     const now = options.now ?? Date.now;
     const started_at = now();
     const mode = options.mode ?? 'incremental';

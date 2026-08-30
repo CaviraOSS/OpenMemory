@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase23_connector_intelligence.test.ts
+ *  usage : verifies LongMemory phase23 connector intelligence.test behavior
+ */
+
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -22,7 +36,7 @@ afterEach(() => {
 });
 
 const workspace = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-sources-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-sources-'));
     dirs.push(dir);
     return dir;
 };
@@ -35,19 +49,19 @@ const json = (value: unknown, status = 200, headers: Record<string, string> = {}
 function github_fetch() {
     const calls: string[] = [];
     const repository = {
-        id: 1, node_id: 'repo-node', full_name: 'cavira/openmemory', name: 'openmemory', html_url: 'https://github.com/cavira/openmemory',
+        id: 1, node_id: 'repo-node', full_name: 'cavira/longmemory', name: 'longmemory', html_url: 'https://github.com/cavira/longmemory',
         description: 'Hydrograph memory', private: false, fork: false, archived: false, disabled: false, visibility: 'public',
         default_branch: 'main', language: 'TypeScript', topics: ['memory', 'hydrograph'], license: { spdx_id: 'Apache-2.0' },
         owner: { login: 'cavira' }, size: 42, forks_count: 3, stargazers_count: 90, subscribers_count: 7,
         open_issues_count: 4, network_count: 3, has_issues: true, has_projects: true, has_wiki: true, has_pages: false,
-        has_discussions: true, clone_url: 'https://github.com/cavira/openmemory.git', ssh_url: 'git@github.com:cavira/openmemory.git',
-        git_url: 'git://github.com/cavira/openmemory.git', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z', pushed_at: '2026-07-01T00:00:00Z',
+        has_discussions: true, clone_url: 'https://github.com/cavira/longmemory.git', ssh_url: 'git@github.com:cavira/longmemory.git',
+        git_url: 'git://github.com/cavira/longmemory.git', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z', pushed_at: '2026-07-01T00:00:00Z',
     };
     const fetcher: typeof fetch = async (input) => {
         const url = new URL(String(input));
         calls.push(`${url.pathname}${url.search}`);
         const path = url.pathname;
-        if (path === '/repos/cavira/openmemory') return json(repository, 200, { etag: 'repo-v1' });
+        if (path === '/repos/cavira/longmemory') return json(repository, 200, { etag: 'repo-v1' });
         if (path.endsWith('/git/trees/main')) return json({ truncated: false, tree: [
             { path: 'src', type: 'tree', sha: 'dir-sha', mode: '040000', url: 'tree-url' },
             { path: 'src/index.ts', type: 'blob', sha: 'file-sha', mode: '100644', size: 116, url: 'blob-url' },
@@ -55,11 +69,11 @@ function github_fetch() {
         ] });
         if (path.endsWith('/contents/src/index.ts')) return json({
             type: 'file', name: 'index.ts', path: 'src/index.ts', sha: 'file-sha', size: 116, encoding: 'base64',
-            content: Buffer.from("import { createMemory } from './memory.js';\nexport class OpenMemory {}\nexport const run = () => createMemory();\n").toString('base64'),
-            html_url: 'https://github.com/cavira/openmemory/blob/main/src/index.ts', download_url: 'https://raw.example/index.ts', git_url: 'blob-url', url: 'api-url',
+            content: Buffer.from("import { createMemory } from './memory.js';\nexport class LongMemory {}\nexport const run = () => createMemory();\n").toString('base64'),
+            html_url: 'https://github.com/cavira/longmemory/blob/main/src/index.ts', download_url: 'https://raw.example/index.ts', git_url: 'blob-url', url: 'api-url',
         });
         if (path.endsWith('/commits') && url.searchParams.get('path') === 'src/index.ts') return json([{
-            sha: 'commit-sha', html_url: 'https://github.com/cavira/openmemory/commit/commit-sha',
+            sha: 'commit-sha', html_url: 'https://github.com/cavira/longmemory/commit/commit-sha',
             commit: { message: 'feat: source intelligence', author: { name: 'Ada', date: '2026-07-01T00:00:00Z' }, committer: { name: 'Ada', date: '2026-07-01T00:00:00Z' }, verification: { verified: true } },
         }]);
         if (path.endsWith('/languages')) return json({ TypeScript: 1000, Markdown: 200 });
@@ -69,7 +83,7 @@ function github_fetch() {
         if (path.endsWith('/contributors')) return json([{ login: 'ada', id: 2, contributions: 42, type: 'User', avatar_url: 'avatar', html_url: 'profile' }]);
         if (path.endsWith('/issues')) return json([{ number: 12, node_id: 'issue-node', title: 'Track source freshness', body: 'Need cursors', state: 'open', html_url: 'issue-url', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-02T00:00:00Z', labels: [{ name: 'sources' }], assignees: [], user: { login: 'ada' }, comments: 1 }]);
         if (path.endsWith('/pulls')) return json([{ number: 7, node_id: 'pull-node', title: 'Deep GitHub source', body: 'Adds analysis', state: 'open', html_url: 'pull-url', created_at: '2026-06-01T00:00:00Z', updated_at: '2026-06-02T00:00:00Z', labels: [], requested_reviewers: [], base: { label: 'main' }, head: { label: 'sources' } }]);
-        if (path === '/repos/cavira/openmemory/commits') return json([{ sha: 'commit-sha', html_url: 'commit-url', commit: { message: 'feat: source intelligence', author: { date: '2026-07-01T00:00:00Z' }, committer: { date: '2026-07-01T00:00:00Z' } }, parents: [] }]);
+        if (path === '/repos/cavira/longmemory/commits') return json([{ sha: 'commit-sha', html_url: 'commit-url', commit: { message: 'feat: source intelligence', author: { date: '2026-07-01T00:00:00Z' }, committer: { date: '2026-07-01T00:00:00Z' } }, parents: [] }]);
         throw new Error(`unexpected GitHub fixture request: ${url}`);
     };
     return { fetcher, calls };
@@ -110,9 +124,9 @@ describe('connector catalog and file intelligence', () => {
         expect(analysis.exports).toEqual(expect.arrayContaining(['source_config', 'repository_source', 'create_source']));
         expect(analysis.symbols.some((item) => item.kind === 'class' && item.line === 4)).toBe(true);
         expect(analysis.symbols.find((item) => item.name === 'create_source')).toMatchObject({ calls: ['readFile'], end_line: 5 });
-        const manifest = analyze_file('package.json', JSON.stringify({ name: 'openmemory', scripts: { test: 'vitest' }, dependencies: { zod: '1' } }));
+        const manifest = analyze_file('package.json', JSON.stringify({ name: 'longmemory', scripts: { test: 'vitest' }, dependencies: { zod: '1' } }));
         expect(manifest.role).toBe('configuration');
-        expect(manifest.metadata).toMatchObject({ package_name: 'openmemory', scripts: { test: 'vitest' } });
+        expect(manifest.metadata).toMatchObject({ package_name: 'longmemory', scripts: { test: 'vitest' } });
     });
 
     it('lists and analyzes local files without allowing path escape', async () => {
@@ -169,7 +183,7 @@ describe('connector catalog and file intelligence', () => {
 describe('deep GitHub connector', () => {
     it('inventories every repository path with stable metadata', async () => {
         const fixture = github_fetch();
-        const connector = new github_connector({ owner: 'cavira', repo: 'openmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
+        const connector = new github_connector({ owner: 'cavira', repo: 'longmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
         await connector.connect();
         const refs = await connector.listSources({ kinds: ['repository', 'folder', 'file'] });
         const snapshot = await connector.inspectRepository();
@@ -181,7 +195,7 @@ describe('deep GitHub connector', () => {
 
     it('fetches file content with structural analysis and commit history', async () => {
         const fixture = github_fetch();
-        const connector = new github_connector({ owner: 'cavira', repo: 'openmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
+        const connector = new github_connector({ owner: 'cavira', repo: 'longmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
         await connector.connect();
         const refs = await connector.listSources({ kinds: ['file'] });
         const item = refs.find((entry) => entry.metadata.path === 'src/index.ts')!;
@@ -189,14 +203,14 @@ describe('deep GitHub connector', () => {
         const analysis = 'content' in document ? document.metadata.analysis as { language: string; role: string; line_count: number; imports: string[]; exports: string[] } : null;
         expect(analysis).toMatchObject({ language: 'TypeScript', role: 'source', line_count: 4 });
         expect(analysis?.imports).toContain('./memory.js');
-        expect(analysis?.exports).toEqual(expect.arrayContaining(['OpenMemory', 'run']));
+        expect(analysis?.exports).toEqual(expect.arrayContaining(['LongMemory', 'run']));
         expect(document.metadata.commit_history).toEqual([expect.objectContaining({ sha: 'commit-sha', verified: true })]);
-        expect(document.metadata.repository).toMatchObject({ full_name: 'cavira/openmemory', license: { spdx_id: 'Apache-2.0' } });
+        expect(document.metadata.repository).toMatchObject({ full_name: 'cavira/longmemory', license: { spdx_id: 'Apache-2.0' } });
     });
 
     it('builds a rich repository snapshot and lists collaboration objects', async () => {
         const fixture = github_fetch();
-        const connector = new github_connector({ owner: 'cavira', repo: 'openmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
+        const connector = new github_connector({ owner: 'cavira', repo: 'longmemory', fetch: fixture.fetcher, requests_per_second: 10_000 });
         await connector.connect();
         const snapshot = await connector.inspectRepository();
         const collaboration = await connector.listSources({ kinds: ['issue', 'pull_request', 'commit', 'document'], limit: 100 });

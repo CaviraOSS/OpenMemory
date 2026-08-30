@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/core/embeddings/providers.ts
+ *  usage : implements the LongMemory providers component
+ */
+
 import { deterministic_multilingual_embeddings } from '../i18n/multilingual_embeddings.js';
 import type { configured_embedding_provider, embedding_context, embedding_provider_config, embedding_provider_dependencies, embedding_provider_name } from './types.js';
 import { normalize_embedding_vector, request_json } from './utility.js';
@@ -166,7 +180,7 @@ export class ollama_embedding_provider extends remote_provider {
 export class local_http_embedding_provider extends remote_provider {
     readonly name = 'local';
     async embed(text: string): Promise<number[]> {
-        if (!this.config.local_url) throw new Error('local embeddings require OPENMEMORY_LOCAL_EMBEDDING_URL or OM_LOCAL_MODEL_URL');
+        if (!this.config.local_url) throw new Error('local embeddings require LONGMEMORY_LOCAL_EMBEDDING_URL or OM_LOCAL_MODEL_URL');
         const payload = await this.request(this.config.local_url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ input: text, model: this.config.local_model, dimensions: this.dimension }) });
         return normalize_embedding_vector(payload.data?.[0]?.embedding ?? payload.embedding ?? payload.vector, this.dimension);
     }

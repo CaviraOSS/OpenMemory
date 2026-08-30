@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/deepseek_harness.ts
+ *  usage : implements the LongMemory deepseek harness component
+ */
+
 import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
@@ -6,9 +20,9 @@ import { is_directory, is_readable, walk_files } from '../filesystem.js';
 import type { harness_capability, import_adapter, portable_session, portable_turn, session_ref } from '../types.js';
 import { object, text_content, type json } from './shared.js';
 
-const root = (env: NodeJS.ProcessEnv) => env.OPENMEMORY_DEEPSEEK_HARNESS_SESSIONS ?? env.DSH_SESSION_ROOT ?? join(env.DSH_HOME ?? join(env.HOME ?? homedir(), '.dsh'), 'sessions');
+const root = (env: NodeJS.ProcessEnv) => env.LONGMEMORY_DEEPSEEK_HARNESS_SESSIONS ?? env.DSH_SESSION_ROOT ?? join(env.DSH_HOME ?? join(env.HOME ?? homedir(), '.dsh'), 'sessions');
 const raw_records = (path: string): json[] => {
-    if (path.endsWith('.zstd')) throw new Error('DeepSeek Harness Zstandard logs require a raw export or OPENMEMORY_DEEPSEEK_HARNESS_SESSIONS pointing to a compression:none session root');
+    if (path.endsWith('.zstd')) throw new Error('DeepSeek Harness Zstandard logs require a raw export or LONGMEMORY_DEEPSEEK_HARNESS_SESSIONS pointing to a compression:none session root');
     return readFileSync(path, 'utf8').split(/\r?\n/).filter(Boolean).flatMap((line) => { try { return [object(JSON.parse(line))]; } catch { return []; } });
 };
 const chunk_text = (record: json) => text_content(record.data?.chunk?.text ?? record.data?.text ?? record.data?.message ?? record.data?.content);

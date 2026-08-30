@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/core/project/project_skills.ts
+ *  usage : implements the LongMemory project skills component
+ */
+
 import { hash_canonical } from '../hash/content_hash.js';
 import type { HydroNode } from '../types/hydro_node.js';
 import type { project_memory } from './project_memory.js';
@@ -131,7 +145,7 @@ export const create_project_skill = async (manager: project_memory, project_id: 
     await manager.registerAsset(project_id, {
         asset_id: `asset:skill:${skill_id}`, type: 'skill', name, description, owner_id: input.owner ?? prior?.owner ?? 'project',
         source_type: input.source_type ?? 'skill_library', source_ref: input.source_id ?? null,
-        content_ref: `openmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(`asset:skill:${skill_id}`)}`,
+        content_ref: `longmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(`asset:skill:${skill_id}`)}`,
         status: 'approved', visibility: input.visibility ?? prior?.visibility ?? 'project', confidence: 1,
         labels: triggers, payload: { skill_id, triggers, instructions, validation, resources: skill_resources }, at,
         bindings: agent_ids.map((agent_id) => ({
@@ -168,7 +182,7 @@ export const archive_project_skill = async (manager: project_memory, project_id:
     if (asset) await manager.governAsset(project_id, asset_id, { status: 'archived', bindings: [], at });
     else await manager.registerAsset(project_id, {
         asset_id, type: 'skill', name: archived.name, description: archived.description, owner_id: archived.owner ?? 'project',
-        source_type: 'skill_library', content_ref: `openmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
+        source_type: 'skill_library', content_ref: `longmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
         status: 'archived', visibility: archived.visibility, confidence: 1, labels: archived.triggers,
         payload: { skill_id, triggers: archived.triggers, instructions: archived.instructions, validation: archived.validation, resources: archived.resources }, at,
     });

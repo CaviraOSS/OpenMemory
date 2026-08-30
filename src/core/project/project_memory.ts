@@ -1,20 +1,18 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/project/project_memory.ts
- *  usage : public project-scoped Hydrograph orchestration
+ *  usage : implements the LongMemory project memory component
  */
 
-import { create_memory, type memory_explanation, type open_memory } from '../create_memory.js';
+import { create_memory, type memory_explanation, type long_memory } from '../create_memory.js';
 import type { Connector, connector_config } from '../connectors/connector.js';
 import type { ConnectorRegistry } from '../connectors/connector_registry.js';
 import type { connector_sync_options, connector_sync_report } from '../connectors/connector_ingest.js';
@@ -52,7 +50,7 @@ import {
 } from './project_world.js';
 
 export type project_memory_config = project_config & {
-    memory?: open_memory;
+    memory?: long_memory;
     connector_registry?: ConnectorRegistry;
     readonly?: boolean;
 };
@@ -100,7 +98,7 @@ const empty_project = (config: project_config, contract: ProjectMemoryContract, 
 });
 
 export class project_memory {
-    readonly memory: open_memory;
+    readonly memory: long_memory;
     readonly connector_registry: ConnectorRegistry;
     private readonly states = new Map<string, project_state>();
     private readonly owns_memory: boolean;
@@ -237,12 +235,12 @@ export class project_memory {
                     ? `Structured document pages and linkable project knowledge from ${link.label}`
                     : `Repository symbols, files, calls, and impact paths from ${link.label}`,
                 owner_id: 'project', source_type: link.source_type, source_ref: link.current_ref ?? connector_id,
-                content_ref: `openmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
+                content_ref: `longmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
                 status: prior?.status ?? 'candidate', visibility: prior?.visibility ?? 'project', confidence: report.failures.length ? 0.6 : 0.9,
                 labels: [connector_id, link.source_type, link.world_kind],
                 payload: {
                     connector_id, world_id: state.project.world_ids[link.world_kind], snapshot_ref: link.current_ref,
-                    node_count: report.node_ids.length, tool_name: type === 'llm_wiki' ? 'openmemory_project_context' : 'openmemory_code_graph',
+                    node_count: report.node_ids.length, tool_name: type === 'llm_wiki' ? 'longmemory_project_context' : 'longmemory_code_graph',
                 },
                 metadata: { sync_completed_at: report.completed_at, failure_count: report.failures.length }, at: report.completed_at,
             });
@@ -339,11 +337,12 @@ export class project_memory {
     async importSession(project_id: string, input: project_session_input): Promise<project_session> {
         const state = this.state(project_id);
         const session = await import_project_session(this.memory, state.project, state, input);
+        const asset_id = input.asset_id ?? `asset:chat_memory:${session.session_id}`;
         await this.registerAsset(project_id, {
-            asset_id: input.asset_id ?? `asset:chat_memory:${session.session_id}`, type: 'chat_memory', name: input.asset_name ?? `${session.provider} session ${session.session_id}`,
+            asset_id, type: 'chat_memory', name: input.asset_name ?? `${session.provider} session ${session.session_id}`,
             description: `${session.message_count} imported conversation turns for ${session.agent_id}`,
             owner_id: session.agent_id, source_type: session.provider, source_ref: session.source_ref,
-            content_ref: `openmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(`asset:chat_memory:${session.session_id}`)}`,
+            content_ref: `longmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
             status: input.asset_status ?? 'candidate', visibility: input.asset_visibility ?? 'agent', confidence: 0.7, labels: [session.provider, session.agent_id],
             bindings: [{ target_type: 'agent', target_id: session.agent_id, injection_mode: 'summary', priority: 0.6, required: false, enabled: true, created_by: session.agent_id }],
             payload: { session_id: session.session_id, agent_id: session.agent_id, provider: session.provider, message_count: session.message_count, summary: `${session.message_count} imported turns from ${session.provider}` },

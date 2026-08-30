@@ -1,0 +1,19 @@
+{
+    "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+    "name": "longmemory",
+    "version": "0.1.0",
+    "description": "Project-scoped durable memory, recall, Skills, and governed context for AI agents.",
+    "author": {
+        "name": "CaviraOSS",
+        "url": "https://github.com/CaviraOSS"
+    },
+    "homepage": "https://github.com/CaviraOSS/LongMemory",
+    "repository": "https://github.com/CaviraOSS/LongMemory",
+    "license": "MIT",
+    "keywords": [
+        "memory",
+        "mcp",
+        "agents",
+        "openclaw"
+    ]
+}

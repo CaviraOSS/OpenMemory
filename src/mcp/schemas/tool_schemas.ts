@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/schemas/tool_schemas.ts
+ *  usage : implements the LongMemory tool schemas component
+ */
+
 import * as z from 'zod/v4';
 
 const optional_text = z.string().trim().min(1).optional();
@@ -129,3 +143,4 @@ export const manage_asset_schema = {
     expires_at: z.number().finite().optional(), labels: z.array(z.string().trim().min(1)).max(100).optional(),
     payload: z.record(z.string(), z.unknown()).optional(), metadata: z.record(z.string(), z.unknown()).optional(),
 };
+

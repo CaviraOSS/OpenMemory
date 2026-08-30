@@ -1,0 +1,20 @@
+{
+    "name": "longmemory",
+    "interface": {
+        "displayName": "LongMemory"
+    },
+    "plugins": [
+        {
+            "name": "longmemory",
+            "source": {
+                "source": "local",
+                "path": "./integrations/codex-longmemory"
+            },
+            "policy": {
+                "installation": "AVAILABLE",
+                "authentication": "ON_INSTALL"
+            },
+            "category": "Developer Tools"
+        }
+    ]
+}

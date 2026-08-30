@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase28_recovered_features.test.ts
+ *  usage : verifies LongMemory phase28 recovered features.test behavior
+ */
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +27,7 @@ import {
     notion_connector,
     sync_connector,
 } from '../src/index.js';
-import { create_open_memory_server } from '../src/server/app.js';
+import { create_long_memory_server } from '../src/server/app.js';
 import { load_server_config } from '../src/server/config.js';
 
 const dirs: string[] = [];
@@ -25,7 +39,7 @@ afterEach(async () => {
 });
 
 const workspace = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-recovered-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-recovered-'));
     dirs.push(dir);
     return dir;
 };
@@ -118,8 +132,8 @@ describe('recovered provider-native cloud connectors', () => {
 describe('dashboard API support', () => {
     it('lists project worlds for dashboard discovery', async () => {
         const dir = workspace();
-        const config = load_server_config({ OPENMEMORY_DB_PATH: join(dir, 'memory.db') });
-        const server = create_open_memory_server({ config });
+        const config = load_server_config({ LONGMEMORY_DB_PATH: join(dir, 'memory.db') });
+        const server = create_long_memory_server({ config });
         servers.push(server);
         await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
         const address = server.address() as AddressInfo;

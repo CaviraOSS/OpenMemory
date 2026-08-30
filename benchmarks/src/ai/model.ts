@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/ai/model.ts
+ *  usage : supports LongMemory benchmark model
+ */
+
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -104,6 +118,7 @@ export class http_language_model implements language_model {
         if (this.provider === "ollama") return this.ollama(request);
         if (this.provider === "codex") return this.codex(request);
         if (this.provider === "claude-code") return this.claude_code(request);
+        if (this.provider === "copilot" || this.provider === "copilot-answerer" || this.provider === "copilot-judge") return this.copilot(request);
         if (this.provider === "anthropic") return this.anthropic(request);
         if (this.provider === "google") return this.google(request);
         return this.openai(request);
@@ -221,7 +236,7 @@ export class http_language_model implements language_model {
     }
 
     private async codex(request: model_request): Promise<model_response> {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-codex-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-codex-"));
         const output = join(directory, "last-message.txt");
         const schema = join(directory, "schema.json");
         try {
@@ -255,8 +270,40 @@ export class http_language_model implements language_model {
         }
     }
 
+    private async copilot(request: model_request): Promise<model_response> {
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-copilot-"));
+        try {
+            const args = [
+                "-p", prompt_text(request),
+                "--allow-all-tools",
+                "--no-ask-user",
+                "--no-custom-instructions",
+                "--disable-builtin-mcps",
+                "--log-level", "none",
+                "-s",
+                "--output-format", "json",
+                ...(this.model && this.model !== "default" ? ["--model", this.model] : []),
+            ];
+            const invocation = command_invocation(this.config.command ?? "copilot", args);
+            const result = await run_process(invocation.command, invocation.args, "", directory, this.config.timeout_ms);
+            const events = result.stdout.split(/\r?\n/).filter(Boolean).map((line) => { try { return record(JSON.parse(line)); } catch { return null; } }).filter(Boolean) as Array<Record<string, unknown>>;
+            const final = [...events].reverse().find((event) => event.type === "assistant.message" && record(event.data).phase === "final_answer");
+            const text_out = final ? text(record(final.data).content) : "";
+            if (!text_out.trim()) throw new Error("copilot did not produce a final answer");
+            const result_event = [...events].reverse().find((event) => event.type === "result");
+            const usage = result_event ? record(result_event.usage) : {};
+            return {
+                text: text_out.trim(),
+                prompt_tokens: count(usage.promptTokens ?? usage.prompt_tokens),
+                completion_tokens: count(usage.completionTokens ?? usage.completion_tokens) ?? (text_out ? Math.ceil(text_out.length / 4) : 0),
+            };
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    }
+
     private async claude_code(request: model_request): Promise<model_response> {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-claude-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-claude-"));
         try {
             const args = [
                 "-p",

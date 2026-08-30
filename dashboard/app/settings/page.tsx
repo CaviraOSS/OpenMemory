@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : dashboard/app/settings/page.tsx
+ *  usage : supports the LongMemory dashboard page
+ */
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -45,10 +59,10 @@ export default function SettingsPage() {
         setError("")
         try {
             const [runtimeResponse, settingsResponse] = await Promise.all([
-                fetch("/api/openmemory/v1/runtime"),
+                fetch("/api/longmemory/v1/runtime"),
                 fetch("/api/settings"),
             ])
-            if (!runtimeResponse.ok || !settingsResponse.ok) throw new Error("OpenMemory runtime is unavailable")
+            if (!runtimeResponse.ok || !settingsResponse.ok) throw new Error("LongMemory runtime is unavailable")
             const runtimePayload = await runtimeResponse.json()
             const settingsPayload = await settingsResponse.json()
             setRuntime(runtimePayload.data ?? runtimePayload)
@@ -64,15 +78,15 @@ export default function SettingsPage() {
 
     const provider = runtime.features?.embedding_provider ?? "deterministic"
     const settings: Setting[] = [
-        { key: "OPENMEMORY_EMBEDDING_PROVIDER", label: "Embedding provider", value: provider, description: "OpenAI-compatible, Gemini, AWS Bedrock, Ollama, local HTTP, Siray, or synthetic." },
-        { key: "OPENMEMORY_EMBEDDING_TIER", label: "Embedding tier", value: environment.OPENMEMORY_EMBEDDING_TIER || "configured in backend", description: "fast/hybrid stay local; smart blends local and semantic; deep uses semantic vectors." },
-        { key: "OPENMEMORY_EMBEDDING_FALLBACK", label: "Provider fallback", value: environment.OPENMEMORY_EMBEDDING_FALLBACK || "synthetic", description: "Ordered provider chain. Synthetic remains the final local fallback." },
-        { key: "OPENMEMORY_MAX_PAYLOAD_SIZE", label: "Maximum payload", value: bytes(runtime.limits?.max_payload_size), description: "Largest accepted JSON request body." },
-        { key: "OPENMEMORY_MAX_ACTIVE_REQUESTS", label: "Active requests", value: String(runtime.limits?.max_active_requests ?? 0), description: "Concurrent request backpressure limit." },
-        { key: "OPENMEMORY_RATE_LIMIT_ENABLED", label: "Rate limiting", value: runtime.limits?.rate_limit.enabled ? `${runtime.limits.rate_limit.max_requests} / ${duration(runtime.limits.rate_limit.window_ms)}` : "disabled", description: "Fixed-window limit per remote address." },
-        { key: "OPENMEMORY_ALLOWED_ORIGINS", label: "CORS", value: runtime.features?.cors ? "enabled" : "same-origin only", description: "Explicit browser origins accepted by the API." },
-        { key: "OPENMEMORY_MCP_HTTP", label: "MCP HTTP", value: runtime.features?.mcp_http ? "enabled" : "disabled", description: "Streamable HTTP MCP endpoint at /mcp." },
-        { key: "OPENMEMORY_TELEMETRY", label: "Local telemetry", value: runtime.features?.telemetry ? "enabled" : "disabled", description: "In-process request metrics only. No outbound telemetry." },
+        { key: "LONGMEMORY_EMBEDDING_PROVIDER", label: "Embedding provider", value: provider, description: "OpenAI-compatible, Gemini, AWS Bedrock, Ollama, local HTTP, Siray, or synthetic." },
+        { key: "LONGMEMORY_EMBEDDING_TIER", label: "Embedding tier", value: environment.LONGMEMORY_EMBEDDING_TIER || "configured in backend", description: "fast/hybrid stay local; smart blends local and semantic; deep uses semantic vectors." },
+        { key: "LONGMEMORY_EMBEDDING_FALLBACK", label: "Provider fallback", value: environment.LONGMEMORY_EMBEDDING_FALLBACK || "synthetic", description: "Ordered provider chain. Synthetic remains the final local fallback." },
+        { key: "LONGMEMORY_MAX_PAYLOAD_SIZE", label: "Maximum payload", value: bytes(runtime.limits?.max_payload_size), description: "Largest accepted JSON request body." },
+        { key: "LONGMEMORY_MAX_ACTIVE_REQUESTS", label: "Active requests", value: String(runtime.limits?.max_active_requests ?? 0), description: "Concurrent request backpressure limit." },
+        { key: "LONGMEMORY_RATE_LIMIT_ENABLED", label: "Rate limiting", value: runtime.limits?.rate_limit.enabled ? `${runtime.limits.rate_limit.max_requests} / ${duration(runtime.limits.rate_limit.window_ms)}` : "disabled", description: "Fixed-window limit per remote address." },
+        { key: "LONGMEMORY_ALLOWED_ORIGINS", label: "CORS", value: runtime.features?.cors ? "enabled" : "same-origin only", description: "Explicit browser origins accepted by the API." },
+        { key: "LONGMEMORY_MCP_HTTP", label: "MCP HTTP", value: runtime.features?.mcp_http ? "enabled" : "disabled", description: "Streamable HTTP MCP endpoint at /mcp." },
+        { key: "LONGMEMORY_TELEMETRY", label: "Local telemetry", value: runtime.features?.telemetry ? "enabled" : "disabled", description: "In-process request metrics only. No outbound telemetry." },
     ]
 
     if (loading) return <div className="min-h-screen flex items-center justify-center text-stone-400">Loading runtime configuration...</div>
@@ -82,8 +96,8 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500">Runtime</p>
-                    <h1 className="text-2xl font-semibold text-white mt-1">OpenMemory Settings</h1>
-                    <p className="text-sm text-stone-500 mt-2 max-w-2xl">Configuration is read-only here. Change environment variables in the backend deployment and restart OpenMemory.</p>
+                    <h1 className="text-2xl font-semibold text-white mt-1">LongMemory Settings</h1>
+                    <p className="text-sm text-stone-500 mt-2 max-w-2xl">Configuration is read-only here. Change environment variables in the backend deployment and restart LongMemory.</p>
                 </div>
                 <button onClick={() => void load()} className="rounded-xl border border-stone-800 px-4 py-2 text-sm text-stone-300 hover:bg-stone-900 transition-colors">Refresh</button>
             </div>

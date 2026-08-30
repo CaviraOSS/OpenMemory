@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/output/panel.ts
+ *  usage : implements the LongMemory panel component
+ */
+
 import type { cli_colors } from '../theme/colors.js';
 import { pad, repeat, truncate, visible_length, wrap_text } from '../theme/layout.js';
 
@@ -13,7 +27,7 @@ export function panel(content: string | string[], colors: cli_colors, options: p
         : options.kind === 'danger' ? colors.danger : options.kind === 'info' ? colors.info
             : options.kind === 'muted' ? colors.muted : colors.border;
     const chrome = options.chrome !== false;
-    const right = options.mark === false ? '' : `${colors.brand('╭┬╮')} ${colors.muted('OpenMemory')}`;
+    const right = options.mark === false ? '' : `${colors.brand('╭┬╮')} ${colors.muted('LongMemory')}`;
     const title_budget = Math.max(0, inner - (chrome ? 7 : 2) - visible_length(right));
     const title = options.title ? truncate(options.title, title_budget) : '';
     const left = chrome ? `${traffic_dots(colors)}${title ? `  ${colors.title(title)}` : ''}` : title ? colors.title(title) : '';

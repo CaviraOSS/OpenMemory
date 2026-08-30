@@ -1,4 +1,17 @@
 #!/usr/bin/env node
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/cli.ts
+ *  usage : supports LongMemory benchmark cli
+ */
 
 import { resolve } from "node:path";
 import { benchmark_defaults, model_config_from_spec, model_provider_names, provider_names } from "./config";
@@ -30,7 +43,7 @@ const list = (input: string): string[] => input.split(",").map((item) => item.tr
 
 function parse(argv: string[]): cli_options {
     const run_id = argv.map((item) => value(item, "run-id")).find((item) => item !== null) ?? new Date().toISOString().replace(/[:.]/g, "-");
-    let providers: provider_name[] = ["openmemory"];
+    let providers: provider_name[] = ["longmemory"];
     let datasets: dataset_name[] = ["smoke"];
     let per_category = benchmark_defaults.per_category;
     let sample_offset = 0;
@@ -59,7 +72,7 @@ function parse(argv: string[]): cli_options {
             providers = names as provider_name[];
         } else if (datasets_value !== null) {
             const names = list(datasets_value);
-            const unknown = names.find((name) => !["smoke", "longmemeval", "locomo"].includes(name));
+            const unknown = names.find((name) => !["smoke", "longmemeval", "locomo", "beam-1m", "beam-10m"].includes(name));
             if (unknown) throw new Error(`unknown dataset: ${unknown}`);
             datasets = names as dataset_name[];
         } else if (per_category_value !== null) per_category = Number(per_category_value);
@@ -86,7 +99,7 @@ async function main(): Promise<void> {
     const [command = "run", ...argv] = process.argv.slice(2);
     if (command === "help" || command === "--help" || command === "-h") {
         console.log(`
-openmemory bench
+longmemory bench
 
 commands:
     run        execute a benchmark run
@@ -95,8 +108,8 @@ commands:
     models     list answerer/judge model providers
 
 run flags:
-    --providers=<list>     openmemory,supermemory,mem0,graphiti,cognee
-    --datasets=<list>      smoke,longmemeval,locomo
+    --providers=<list>     longmemory (the only supported benchmark target)
+    --datasets=<list>      smoke,longmemeval,locomo,beam-1m,beam-10m
     --per-category=<n>     official cases retained per category
     --sample-offset=<n>    skip n cases per category for deterministic holdouts
     --cutoffs=<list>       retrieval cutoffs, default 1,5,10,20

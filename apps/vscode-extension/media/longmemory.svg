@@ -1,0 +1,19 @@
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : apps/vscode-extension/media/longmemory.svg
+ usage : supports the LongMemory VS Code extension longmemory
+-->
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M8 4.5A3.5 3.5 0 0 0 4.5 8v1.2A3 3 0 0 0 3 11.8 3.2 3.2 0 0 0 6.2 15H8"/>
+  <path d="M16 4.5A3.5 3.5 0 0 1 19.5 8v1.2a3 3 0 0 1 1.5 2.6 3.2 3.2 0 0 1-3.2 3.2H16"/>
+  <path d="M8 3v18M16 3v18M8 8h3M13 8h3M8 13h3M13 13h3M8 18h3M13 18h3"/>
+</svg>

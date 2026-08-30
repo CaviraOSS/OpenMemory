@@ -1,9 +1,23 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : dashboard/app/api/longmemory/[...path]/route.ts
+ *  usage : supports the LongMemory dashboard route
+ */
+
 import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-const backend = (process.env.OPENMEMORY_API_URL || 'http://127.0.0.1:7331').replace(/\/+$/, '')
-const apiKey = process.env.OPENMEMORY_API_KEY || process.env.OM_API_KEY || ''
+const backend = (process.env.LONGMEMORY_API_URL || 'http://127.0.0.1:7331').replace(/\/+$/, '')
+const apiKey = process.env.LONGMEMORY_API_KEY || process.env.OM_API_KEY || ''
 
 type json = Record<string, any>
 

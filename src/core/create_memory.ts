@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/create_memory.ts
- *  usage : public openmemory package facade
+ *  usage : implements the LongMemory create memory component
  */
 
 import { IngestEngine, IngestTransaction, type IngestResult, type MemoryEvent } from './engine/index.js';
@@ -159,7 +157,7 @@ export type memory_stats = {
     closed: boolean;
 };
 
-export interface open_memory {
+export interface long_memory {
     ingest(event: MemoryEvent): Promise<IngestResult>;
     recall(query: public_recall_query): Promise<StrictRecallResult | HistoricalRecallResult | AssociativeRecallResult | GroundedRecallResult>;
     explain(id: string): Promise<memory_explanation>;
@@ -174,7 +172,7 @@ export interface open_memory {
     runDecay(params?: decay_cycle_params): Promise<decay_cycle_result>;
     reinforce(id: string, params?: reinforcement_params): Promise<HydroNode>;
     close(): Promise<void>;
-    status(): { name: 'openmemory-hydrograph'; phase: 'phase-19-public-api'; ready: boolean; store: memory_store_kind };
+    status(): { name: 'longmemory-hydrograph'; phase: 'phase-19-public-api'; ready: boolean; store: memory_store_kind };
     invariants(): readonly string[];
 }
 
@@ -185,7 +183,7 @@ const defaults: Required<Pick<memory_config,
     | 'default_language' | 'preserve_original_text' | 'enable_translation' | 'enable_transliteration' | 'fallback_language'
 >> = {
     store: 'memory',
-    db_path: './openmemory.db',
+    db_path: './longmemory.db',
     default_world: 'memory',
     max_context_tokens: 2048,
     strict_confidence_threshold: 0.5,
@@ -243,7 +241,7 @@ const embed = async (
     return multilingual.embed(text, language);
 });
 
-export function create_memory(config: memory_config = {}): open_memory {
+export function create_memory(config: memory_config = {}): long_memory {
     const cfg = { ...defaults, ...config };
     if (!Number.isInteger(cfg.embedding_cache_size) || cfg.embedding_cache_size < 0) throw new Error('embedding_cache_size must be a non-negative integer');
     const multilingual_embeddings = config.multilingual_embedding_provider ?? new deterministic_multilingual_embeddings(cfg.embedding_dimension);
@@ -304,7 +302,7 @@ export function create_memory(config: memory_config = {}): open_memory {
     const traces = new Map<string, IngestResult>();
     let closed = false;
     const ensure_open = () => {
-        if (closed) throw new Error('openmemory instance is closed');
+        if (closed) throw new Error('longmemory instance is closed');
     };
     const deps = () => ({
         index: engine.index,
@@ -368,7 +366,7 @@ export function create_memory(config: memory_config = {}): open_memory {
         return hydro_edge;
     };
 
-    const api: open_memory = {
+    const api: long_memory = {
         async ingest(event) {
             ensure_open();
             const language = event.language ?? detect_language(event.text).language ?? cfg.default_language;
@@ -812,7 +810,7 @@ export function create_memory(config: memory_config = {}): open_memory {
             store?.close();
             closed = true;
         },
-        status: () => ({ name: 'openmemory-hydrograph', phase: 'phase-19-public-api', ready: !closed, store: cfg.store }),
+        status: () => ({ name: 'longmemory-hydrograph', phase: 'phase-19-public-api', ready: !closed, store: cfg.store }),
         invariants: () => hydrograph_invariants,
     };
     return api;

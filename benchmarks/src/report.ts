@@ -1,8 +1,23 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/report.ts
+ *  usage : supports LongMemory benchmark report
+ */
+
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { benchmark_defaults } from "./config";
 import { aggregate_metrics, latency } from "./metrics";
-import type { benchmark_report, category_report, dataset_report, gate_check, provider_name, provider_report, provider_status, run_checkpoint, run_manifest } from "./types";
+import { build_longmemory_scorecard } from "./scorecard";
+import type { benchmark_report, category_report, dataset_report, gate_check, provider_name, provider_report, provider_status, run_checkpoint, run_manifest, scorecard_metric } from "./types";
 
 export type provider_outcome = {
     name: provider_name;
@@ -135,79 +150,98 @@ export function build_report(run_id: string, manifest: run_manifest, checkpoint:
         }
     }
     return {
-        schema_version: 1,
+        schema_version: 2,
         run_id,
         generated_at: new Date().toISOString(),
         manifest,
         providers,
+        scorecard: build_longmemory_scorecard(manifest, providers.find((provider) => provider.name === "longmemory")),
         gates: { passed: checks.every((check) => check.passed), checks },
     };
 }
 
 const percentage = (value: number): string => `${(value * 100).toFixed(1)}%`;
+const score = (metric: scorecard_metric): string => {
+    if (metric.value === null) return `N/A — ${metric.reason ?? "not measured"}`;
+    if (metric.unit === "ratio") return percentage(metric.value);
+    if (metric.unit === "milliseconds") return `${metric.value.toFixed(1)} ms`;
+    if (metric.unit === "tokens") return metric.value.toFixed(1);
+    return `$${metric.value < 0.0001 ? metric.value.toExponential(3) : metric.value.toFixed(6)}`;
+};
 
 export function markdown(report: benchmark_report): string {
     const environment = report.manifest.environment;
-    const cutoff = primary_cutoff(report.manifest.cutoffs);
+    const card = report.scorecard;
+    const provider = report.providers.find((item) => item.name === "longmemory");
     const lines = [
-        "# OpenMemory Memory Benchmark",
+        "# LongMemory Benchmark Scorecard",
         "",
         `> Run \`${report.run_id}\` | ${report.generated_at}`,
         "",
-        `Benchmark status: **${report.manifest.evaluation_mode.replaceAll("-", " ")}**`,
+        `Status: **${provider?.status ?? "failed"}** | Evaluation: **${report.manifest.evaluation_mode.replaceAll("-", " ")}** | Primary cutoff: **K=${card.cutoff}**`,
         "",
-        `Datasets: ${report.manifest.datasets.join(", ")} | Cases: ${report.manifest.case_ids.length} | Cutoffs: ${report.manifest.cutoffs.join(", ")}`,
-        `Context token budget: ${report.manifest.context_token_budget}`,
+        "### Memory Quality",
         "",
-        `Environment: Node ${environment.node_version} | ${environment.platform} ${environment.os_release} (${environment.architecture}) | ${environment.cpu_model} | ${environment.logical_cpus} logical CPUs | ${environment.total_memory_mb} MiB RAM`,
+        `**LongMemEval:** ${score(card.memory_quality.longmemeval)}`,
         "",
-        "| Provider | Endpoint | Profile | Timeout | Auth configured | Route overrides |",
-        "| --- | --- | --- | ---: | --- | --- |",
-        ...report.manifest.providers.map((provider) => `| ${provider.name} | ${provider.base_url} | ${provider.profile ?? "default"} | ${provider.timeout_ms ?? "default"} | ${provider.authenticated ? "yes" : "no"} | ${Object.entries(provider.routes).map(([name, path]) => `${name}=${path}`).join("<br>") || "none"} |`),
+        `**LoCoMo:** ${score(card.memory_quality.locomo)}`,
         "",
-        `AI evaluation: ${report.manifest.ai.enabled ? `answerer ${report.manifest.ai.answerer?.provider}:${report.manifest.ai.answerer?.model} | judge ${report.manifest.ai.judge?.provider}:${report.manifest.ai.judge?.model} | fresh answer and judgment at every cutoff` : "disabled (deterministic retrieval only)"}`,
+        `**BEAM-1M:** ${score(card.memory_quality.beam_1m)}`,
         "",
-        "## Scoreboard",
+        `**BEAM-10M:** ${score(card.memory_quality.beam_10m)}`,
         "",
-        `| Provider | Status | Questions | Hit@${cutoff} | Answer@${cutoff} | MRR | Search p50 | Search p95 | Context | MemScore |`,
-        "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |",
+        "### Retrieval",
+        "",
+        `**Context recall:** ${score(card.retrieval.context_recall)}`,
+        "",
+        `**Context precision:** ${score(card.retrieval.context_precision)}`,
+        "",
+        `**Evidence completeness:** ${score(card.retrieval.evidence_completeness)}`,
+        "",
+        "### Temporal memory",
+        "",
+        `**Current-fact accuracy:** ${score(card.temporal_memory.current_fact_accuracy)}`,
+        "",
+        `**Historical-fact accuracy:** ${score(card.temporal_memory.historical_fact_accuracy)}`,
+        "",
+        `**Update accuracy:** ${score(card.temporal_memory.update_accuracy)}`,
+        "",
+        `**Event-order accuracy:** ${score(card.temporal_memory.event_order_accuracy)}`,
+        "",
+        "### Reliability",
+        "",
+        `**Abstention accuracy:** ${score(card.reliability.abstention_accuracy)}`,
+        "",
+        `**Contradiction resolution:** ${score(card.reliability.contradiction_resolution)}`,
+        "",
+        "### Efficiency",
+        "",
+        `**p50 retrieval:** ${score(card.efficiency.p50_retrieval)}`,
+        "",
+        `**p95 retrieval:** ${score(card.efficiency.p95_retrieval)}`,
+        "",
+        `**mean tokens retrieved:** ${score(card.efficiency.mean_tokens_retrieved)}`,
+        "",
+        `**write cost / 1K input tokens:** ${score(card.efficiency.write_cost_per_1k_input_tokens)}`,
+        "",
+        `**read cost / query:** ${score(card.efficiency.read_cost_per_query)}`,
+        "",
+        "## Coverage",
+        "",
+        "| Dataset | Completed | Failed |",
+        "| --- | ---: | ---: |",
+        ...(provider?.datasets.map((dataset) => `| ${dataset.dataset} | ${dataset.questions} | ${dataset.failed_questions} |`) ?? []),
+        "",
+        "## Methodology",
+        "",
+        `- LongMemory only; ${report.manifest.case_ids.length} selected questions; evidence metrics use K=${card.cutoff}.`,
+        `- Context budget: ${report.manifest.context_token_budget} tokens. Retrieval values are macro-averaged over evidence-bearing questions.`,
+        `- Answerer: ${report.manifest.ai.answerer ? `${report.manifest.ai.answerer.provider}:${report.manifest.ai.answerer.model}` : "disabled"}.`,
+        `- Judge: ${report.manifest.ai.judge ? `${report.manifest.ai.judge.provider}:${report.manifest.ai.judge.model}` : "disabled"}.`,
+        `- Embeddings: ${report.manifest.longmemory_embedding ? `${report.manifest.longmemory_embedding.provider}:${report.manifest.longmemory_embedding.model}, ${report.manifest.longmemory_embedding.dimension}d, tier ${report.manifest.longmemory_embedding.tier}` : "none"}.`,
+        `- Environment: Node ${environment.node_version}; ${environment.platform} ${environment.os_release} (${environment.architecture}); ${environment.cpu_model}; ${environment.logical_cpus} logical CPUs; ${environment.total_memory_mb} MiB RAM.`,
+        "- BEAM and historical-fact values stay N/A until dedicated datasets are implemented. Dollar values are embedding list-price estimates and stay N/A without an explicit price.",
     ];
-    for (const provider of report.providers) {
-        const metric = provider.metrics.find((value) => value.k === cutoff) ?? provider.metrics.at(-1);
-        const answer_accuracy = provider.answer_accuracy[`top_${cutoff}`];
-        const primary_ai = provider.ai_cutoffs[`top_${cutoff}`];
-        lines.push(`| ${provider.display_name} | ${provider.status} | ${provider.questions} | ${metric ? percentage(metric.hit_rate) : "-"} | ${answer_accuracy === undefined ? "-" : percentage(answer_accuracy)} | ${metric?.mrr.toFixed(3) ?? "-"} | ${provider.latency.search.p50.toFixed(1)} ms | ${provider.latency.search.p95.toFixed(1)} ms | ${(primary_ai?.tokens.context ?? provider.average_context_tokens).toFixed(1)} tok | ${provider.memscore ?? "-"} |`);
-        if (provider.reason) lines.push(`\n> ${provider.display_name}: ${provider.reason}`);
-    }
-    lines.push("", "## Dataset Breakdown", "", `| Provider | Dataset | Completed | Failed | Retrieval N | Hit@${cutoff} | Answer@${cutoff} | MRR | Recall | nDCG |`, "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
-    for (const provider of report.providers) for (const dataset of provider.datasets) {
-        const metric = dataset.metrics.find((value) => value.k === cutoff) ?? dataset.metrics.at(-1);
-        const retrieval = metric && metric.queries > 0 ? metric : undefined;
-        const answer = dataset.answer_accuracy[`top_${cutoff}`];
-        lines.push(`| ${provider.display_name} | ${dataset.dataset} | ${dataset.questions} | ${dataset.failed_questions} | ${metric?.queries ?? 0} | ${retrieval ? percentage(retrieval.hit_rate) : "-"} | ${answer === undefined ? "-" : percentage(answer)} | ${retrieval?.mrr.toFixed(3) ?? "-"} | ${retrieval ? percentage(retrieval.recall) : "-"} | ${retrieval?.ndcg.toFixed(3) ?? "-"} |`);
-    }
-    lines.push("", "## Retrieval by Cutoff", "", "| Provider | K | Queries | Hit@K | Precision | Recall | F1 | MRR | nDCG |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
-    for (const provider of report.providers) for (const metric of provider.metrics) {
-        lines.push(`| ${provider.display_name} | ${metric.k} | ${metric.queries} | ${percentage(metric.hit_rate)} | ${percentage(metric.precision)} | ${percentage(metric.recall)} | ${percentage(metric.f1)} | ${metric.mrr.toFixed(3)} | ${metric.ndcg.toFixed(3)} |`);
-    }
-    if (report.manifest.ai.enabled) {
-        lines.push("", "## AI Answer Evaluation", "", "| Provider | Cutoff | Accuracy | Answer p50 | Judge p50 | Prompt tokens | Context tokens | Completion tokens |", "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
-        for (const provider of report.providers) for (const cutoff of report.manifest.cutoffs) {
-            const value = provider.ai_cutoffs[`top_${cutoff}`];
-            lines.push(`| ${provider.display_name} | ${cutoff} | ${value?.questions ? percentage(value.accuracy) : "-"} | ${value?.questions ? value.answer_latency.p50.toFixed(1) : "-"} ms | ${value?.questions ? value.judge_latency.p50.toFixed(1) : "-"} ms | ${value?.questions ? value.tokens.prompt.toFixed(1) : "-"} | ${value?.questions ? value.tokens.context.toFixed(1) : "-"} | ${value?.questions ? value.tokens.completion.toFixed(1) : "-"} |`);
-        }
-    }
-    lines.push("", "## Category Breakdown", "", `| Provider | Category | Questions | Retrieval N | Hit@${cutoff} | Quality@${cutoff} | Abstention | Stale leakage |`, "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |");
-    for (const provider of report.providers) for (const category of provider.categories) {
-        const metric = category.metrics.find((value) => value.k === cutoff) ?? category.metrics.at(-1);
-        const retrieval = metric && metric.queries > 0 ? metric : undefined;
-        const answer = category.answer_accuracy[`top_${cutoff}`];
-        lines.push(`| ${provider.display_name} | ${category.category} | ${category.questions} | ${metric?.queries ?? 0} | ${retrieval ? percentage(retrieval.hit_rate) : "-"} | ${answer === undefined ? retrieval ? percentage(retrieval.recall) : "-" : percentage(answer)} | ${category.abstention_accuracy === null ? "-" : percentage(category.abstention_accuracy)} | ${percentage(category.stale_leakage_rate)} |`);
-    }
-    lines.push("", "Retrieval N excludes no-evidence abstention cases; `-` means no retrieval query was scored.");
-    lines.push("Latency aggregates include terminally completed cases only; failed phase durations and errors are disclosed below and in `report.json`.");
-    lines.push("", "## Gates", "", "| Provider | Check | Value | Target | Result |", "| --- | --- | ---: | ---: | --- |");
-    for (const check of report.gates.checks) lines.push(`| ${check.provider} | ${check.name} | ${round(check.value)} | ${check.comparator === "gte" ? ">=" : "<="} ${check.target} | ${check.passed ? "pass" : "fail"} |`);
     const terminal_phase = report.manifest.ai.enabled ? "judge" : "evaluate";
     const failed = report.providers.flatMap((provider) => provider.cases.filter((item) => item.phases[terminal_phase].status !== "completed").map((item) => ({ provider: provider.display_name, item })));
     const missing = report.providers.flatMap((provider) => {
@@ -215,15 +249,15 @@ export function markdown(report: benchmark_report): string {
         return report.manifest.case_ids.filter((case_id) => !present.has(case_id)).map((case_id) => ({ provider: provider.display_name, case_id, reason: provider.reason ?? "provider did not start case" }));
     });
     if (failed.length || missing.length) {
-        lines.push("", "## Failures", "", "| Provider | Case | Phase | Duration | Error |", "| --- | --- | --- | ---: | --- |");
+        lines.push("", "## Failures", "", "| Case | Phase | Duration | Error |", "| --- | --- | ---: | --- |");
         for (const failure of failed) {
             const phase = Object.entries(failure.item.phases).find(([, value]) => value.status === "failed");
             const duration = phase?.[1].duration_ms === undefined ? "-" : `${phase[1].duration_ms.toFixed(1)} ms`;
-            lines.push(`| ${failure.provider} | ${failure.item.case_id} | ${phase?.[0] ?? "unknown"} | ${duration} | ${phase?.[1].error ?? "unknown error"} |`);
+            lines.push(`| ${failure.item.case_id} | ${phase?.[0] ?? "unknown"} | ${duration} | ${phase?.[1].error ?? "unknown error"} |`);
         }
-        for (const failure of missing) lines.push(`| ${failure.provider} | ${failure.case_id} | not started | - | ${failure.reason} |`);
+        for (const failure of missing) lines.push(`| ${failure.case_id} | not started | - | ${failure.reason} |`);
     }
-    lines.push("", "Per-case phases, matched evidence, raw provider metadata, errors, and token counts are in `report.json`.", "");
+    lines.push("", "Per-case phases, cutoff metrics, matched evidence, raw metadata, and token counts remain in `report.json`.", "");
     return lines.join("\n");
 }
 

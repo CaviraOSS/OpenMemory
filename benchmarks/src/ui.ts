@@ -1,4 +1,18 @@
-import type { benchmark_report, provider_name } from "./types";
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/ui.ts
+ *  usage : supports LongMemory benchmark ui
+ */
+
+import type { benchmark_report, provider_name, scorecard_metric } from "./types";
 
 const ansi = {
     reset: "\u001b[0m",
@@ -23,7 +37,7 @@ export class terminal_ui {
 
     header(run_id: string, providers: provider_name[], datasets: string[], ai: string | null = null): void {
         console.log("");
-        console.log(this.paint("openmemory bench", "bold"));
+        console.log(this.paint("longmemory bench", "bold"));
         console.log(this.paint("memory-system evaluation", "dim"));
         console.log("");
         console.log(`  run       ${run_id}`);
@@ -39,36 +53,25 @@ export class terminal_ui {
     }
 
     report(report: benchmark_report): void {
-        const rows = report.providers.map((provider) => {
-            const metric = provider.metrics.find((value) => value.k === 5) ?? provider.metrics.at(-1);
-            return [
-                provider.display_name,
-                provider.status,
-                String(provider.questions),
-                metric ? `${(metric.hit_rate * 100).toFixed(1)}%` : "-",
-                provider.answer_accuracy[`top_${report.manifest.cutoffs.includes(5) ? 5 : Math.max(...report.manifest.cutoffs)}`] !== undefined ? `${(provider.answer_accuracy[`top_${report.manifest.cutoffs.includes(5) ? 5 : Math.max(...report.manifest.cutoffs)}`] * 100).toFixed(1)}%` : "-",
-                `${provider.latency.search.p50.toFixed(1)} ms`,
-                `${provider.latency.search.p95.toFixed(1)} ms`,
-                `${(provider.ai_cutoffs[`top_${report.manifest.cutoffs.includes(5) ? 5 : Math.max(...report.manifest.cutoffs)}`]?.tokens.context ?? provider.average_context_tokens).toFixed(1)} tok`,
-                provider.memscore ?? "-",
-            ];
-        });
-        const headers = ["provider", "status", "questions", "hit@5", "answer", "p50", "p95", "context", "memscore"];
-        const widths = headers.map((header, index) => Math.max(header.length, ...rows.map((row) => row[index].length)));
-        const line = (row: string[]): string => `  ${row.map((value, index) => value.padEnd(widths[index])).join("  ")}`;
+        const format = (metric: scorecard_metric): string => {
+            if (metric.value === null) return `N/A (${metric.reason ?? "not measured"})`;
+            if (metric.unit === "ratio") return `${(metric.value * 100).toFixed(1)}%`;
+            if (metric.unit === "milliseconds") return `${metric.value.toFixed(1)} ms`;
+            if (metric.unit === "tokens") return metric.value.toFixed(1);
+            return `$${metric.value < 0.0001 ? metric.value.toExponential(3) : metric.value.toFixed(6)}`;
+        };
+        const section = (title: string, rows: Array<[string, scorecard_metric]>) => {
+            console.log(this.paint(title, "bold"));
+            for (const [label, metric] of rows) console.log(`  ${label.padEnd(30)} ${format(metric)}`);
+            console.log("");
+        };
+        const card = report.scorecard;
         console.log("");
-        console.log(this.paint("scoreboard", "bold"));
-        console.log(line(headers));
-        console.log(`  ${widths.map((width) => "-".repeat(width)).join("  ")}`);
-        for (const row of rows) {
-            const status = row[1];
-            const rendered = row.map((value, index) => {
-                const padded = value.padEnd(widths[index]);
-                return index === 1 ? this.paint(padded, status === "completed" ? "green" : status === "unavailable" ? "yellow" : "red") : padded;
-            });
-            console.log(`  ${rendered.join("  ")}`);
-        }
-        console.log("");
+        section("memory quality", [["LongMemEval", card.memory_quality.longmemeval], ["LoCoMo", card.memory_quality.locomo], ["BEAM-1M", card.memory_quality.beam_1m], ["BEAM-10M", card.memory_quality.beam_10m]]);
+        section("retrieval", [["context recall", card.retrieval.context_recall], ["context precision", card.retrieval.context_precision], ["evidence completeness", card.retrieval.evidence_completeness]]);
+        section("temporal memory", [["current-fact accuracy", card.temporal_memory.current_fact_accuracy], ["historical-fact accuracy", card.temporal_memory.historical_fact_accuracy], ["update accuracy", card.temporal_memory.update_accuracy], ["event-order accuracy", card.temporal_memory.event_order_accuracy]]);
+        section("reliability", [["abstention accuracy", card.reliability.abstention_accuracy], ["contradiction resolution", card.reliability.contradiction_resolution]]);
+        section("efficiency", [["p50 retrieval", card.efficiency.p50_retrieval], ["p95 retrieval", card.efficiency.p95_retrieval], ["mean tokens retrieved", card.efficiency.mean_tokens_retrieved], ["write cost / 1K input tokens", card.efficiency.write_cost_per_1k_input_tokens], ["read cost / query", card.efficiency.read_cost_per_query]]);
         console.log(report.gates.passed ? this.paint("  gates: pass", "green") : this.paint("  gates: fail", "red"));
     }
 }

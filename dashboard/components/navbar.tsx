@@ -1,9 +1,23 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : dashboard/components/navbar.tsx
+ *  usage : supports the LongMemory dashboard navbar
+ */
+
 "use client"
 
 import { useState, useEffect } from "react"
 import { useProject } from "@/lib/project-context"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/openmemory"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "/api/longmemory"
 
 export default function Navbar() {
     const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking')
@@ -48,7 +62,7 @@ export default function Navbar() {
                     
                     <div className="flex items-center gap-2 md:gap-4">
                         <div className="relative space-x-2 flex items-center hover:bg-stone-900 rounded-lg w-fit p-1 px-2 cursor-pointer transition-colors group">
-                            <h1 className="text-sm text-stone-200 font-medium sm:text-lg">OpenMemory</h1>
+                            <h1 className="text-sm text-stone-200 font-medium sm:text-lg">LongMemory</h1>
                             <span className="text-[10px] bg-sky-500/10 text-sky-500 border border-sky-500/20 px-1.5 rounded uppercase tracking-wider font-bold">OSS</span>
                         </div>
 

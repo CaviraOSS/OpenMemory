@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase18_sqlite.test.ts
+ *  usage : verifies LongMemory phase18 sqlite.test behavior
+ */
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -25,7 +39,7 @@ afterEach(() => {
 });
 
 function db_path(): string {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-sqlite-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-sqlite-'));
     dirs.push(dir);
     return join(dir, 'memory.db');
 }

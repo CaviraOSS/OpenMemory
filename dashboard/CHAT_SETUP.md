@@ -1,6 +1,20 @@
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : dashboard/CHAT_SETUP.md
+ usage : supports the LongMemory dashboard chat setup
+-->
+
 # Chat Interface Setup
 
-The chat interface is now connected to the OpenMemory backend and can query memories in real-time.
+The chat interface is now connected to the LongMemory backend and can query memories in real-time.
 
 ## Features
 
@@ -13,10 +27,10 @@ The chat interface is now connected to the OpenMemory backend and can query memo
 
 ### 1. Start the Backend
 
-First, make sure the OpenMemory backend is running:
+First, make sure the LongMemory backend is running:
 
 ```bash
-cd packages/openmemory-js
+cd packages/longmemory-js
 npm install
 npm run dev
 ```
@@ -25,13 +39,13 @@ The backend will start on `http://localhost:8080`
 
 ### 2. Configure Environment (Optional)
 
-The dashboard is pre-configured to use its same-origin server-side proxy at `/api/openmemory`.
+The dashboard is pre-configured to use its same-origin server-side proxy at `/api/longmemory`.
 If your backend runs on a different port, create a `.env.local` file:
 
 ```bash
 # dashboard/.env.local
-OPENMEMORY_API_URL=http://localhost:8080
-# OPENMEMORY_API_KEY=your-secret-api-key
+LONGMEMORY_API_URL=http://localhost:8080
+# LONGMEMORY_API_KEY=your-secret-api-key
 ```
 
 This keeps backend API keys server-side. For local development only, you can set `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_API_KEY` to make the browser call the backend directly, but `NEXT_PUBLIC_*` values are public in the browser bundle.
@@ -66,9 +80,9 @@ curl -X POST http://localhost:8080/memory/add \
 
 ```javascript
 // examples/js-sdk/basic-usage.js
-import OpenMemory from '../../sdk-js/src/index.js';
+import LongMemory from '../../sdk-js/src/index.js';
 
-const om = new OpenMemory('http://localhost:8080');
+const om = new LongMemory('http://localhost:8080');
 
 await om.addMemory({
   content: 'React hooks revolutionized state management',
@@ -138,7 +152,7 @@ manual reinforcement controls.
 ### Connection refused
 
 - Backend not started
-- Wrong port in `.env.local` (`OPENMEMORY_API_URL` for server-side proxy mode, or `NEXT_PUBLIC_API_URL` for browser-direct mode)
+- Wrong port in `.env.local` (`LONGMEMORY_API_URL` for server-side proxy mode, or `NEXT_PUBLIC_API_URL` for browser-direct mode)
 - Firewall blocking connection
 
 ## API Endpoints Used

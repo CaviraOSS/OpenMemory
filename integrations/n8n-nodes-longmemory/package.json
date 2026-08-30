@@ -1,0 +1,46 @@
+{
+    "name": "@cavira/n8n-nodes-longmemory",
+    "version": "0.1.0",
+    "description": "LongMemory community node for n8n workflows and AI agents",
+    "license": "MIT",
+    "homepage": "https://github.com/CaviraOSS/LongMemory",
+    "keywords": [
+        "n8n-community-node-package",
+        "longmemory",
+        "ai-memory"
+    ],
+    "author": {
+        "name": "CaviraOSS",
+        "email": "CaviraOSS@users.noreply.github.com"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/CaviraOSS/LongMemory.git",
+        "directory": "integrations/n8n-nodes-longmemory"
+    },
+    "scripts": {
+        "build": "n8n-node build",
+        "dev": "n8n-node dev",
+        "lint": "n8n-node lint"
+    },
+    "files": [
+        "dist"
+    ],
+    "n8n": {
+        "n8nNodesApiVersion": 1,
+        "strict": true,
+        "credentials": [
+            "dist/credentials/LongMemoryApi.credentials.js"
+        ],
+        "nodes": [
+            "dist/nodes/LongMemory/LongMemory.node.js"
+        ]
+    },
+    "devDependencies": {
+        "@n8n/node-cli": "0.45.5",
+        "typescript": "5.9.3"
+    },
+    "peerDependencies": {
+        "n8n-workflow": "*"
+    }
+}

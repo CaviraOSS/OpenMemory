@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/tools/recall.ts
+ *  usage : implements the LongMemory recall component
+ */
+
 import type { McpServer as mcp_server_sdk } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { mcp_runtime } from '../runtime.js';
 import { recall_schema } from '../schemas/tool_schemas.js';
@@ -18,11 +32,11 @@ const sanitize_recall = (result: unknown): unknown => {
 };
 
 export function register_recall_tool(server: mcp_server_sdk, runtime: mcp_runtime): void {
-    server.registerTool('openmemory_recall', {
+    server.registerTool('longmemory_recall', {
         description: 'Recall memory through the selected Hydrograph mode without bypassing gates.',
         inputSchema: recall_schema,
         annotations: { readOnlyHint: true, idempotentHint: true },
-    }, async (input) => run_audited_tool(runtime, 'openmemory_recall', input, async () => {
+    }, async (input) => run_audited_tool(runtime, 'longmemory_recall', input, async () => {
         const project_id = resolve_project(runtime.access, input.project_id);
         const world_id = project_id ? (await runtime.project(project_id)).getProject(project_id).root_world_id : undefined;
         const result = await runtime.memory.recall({

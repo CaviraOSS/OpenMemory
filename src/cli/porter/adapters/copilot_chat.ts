@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/copilot_chat.ts
+ *  usage : implements the LongMemory copilot chat component
+ */
+
 import { readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { derive_session_preview } from '../preview.js';
@@ -6,7 +20,7 @@ import type { harness_capability, import_adapter, portable_session, portable_tur
 import { editor_storage_roots, object, text_content, type json } from './shared.js';
 
 const roots = (env: NodeJS.ProcessEnv): string[] => {
-    if (env.OPENMEMORY_COPILOT_CHAT_SESSIONS) return [env.OPENMEMORY_COPILOT_CHAT_SESSIONS];
+    if (env.LONGMEMORY_COPILOT_CHAT_SESSIONS) return [env.LONGMEMORY_COPILOT_CHAT_SESSIONS];
     return editor_storage_roots(env).map((root) => join(root, 'workspaceStorage'));
 };
 const response_text = (value: unknown): string => {

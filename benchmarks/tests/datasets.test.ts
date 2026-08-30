@@ -1,8 +1,22 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/tests/datasets.test.ts
+ *  usage : verifies LongMemory datasets.test behavior
+ */
+
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { load_locomo, load_longmemeval, smoke_cases } from "../src/datasets";
+import { load_beam, load_locomo, load_longmemeval, smoke_cases } from "../src/datasets";
 
 const directories: string[] = [];
 
@@ -18,7 +32,7 @@ describe("benchmark datasets", () => {
     });
 
     it("keeps longmemeval evidence ids out of provider event metadata", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-longmem-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-longmem-"));
         directories.push(directory);
         const path = join(directory, "long.json");
         writeFileSync(path, JSON.stringify([{
@@ -38,7 +52,7 @@ describe("benchmark datasets", () => {
     });
 
     it("uses turn-level longmemeval oracle annotations when available", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-longmem-turns-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-longmem-turns-"));
         directories.push(directory);
         const path = join(directory, "long.json");
         writeFileSync(path, JSON.stringify([{
@@ -59,7 +73,7 @@ describe("benchmark datasets", () => {
     });
 
     it("selects deterministic per-category holdouts with sample offsets", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-longmem-offset-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-longmem-offset-"));
         directories.push(directory);
         const path = join(directory, "long.json");
         const entry = (id: string) => ({
@@ -76,8 +90,50 @@ describe("benchmark datasets", () => {
         expect(load_longmemeval(path, 1, 1).cases.map((item) => item.id)).toEqual(["holdout"]);
     });
 
+    it("loads BEAM conversations with normalized events and evidence-unknown questions", () => {
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-beam-"));
+        directories.push(directory);
+        const conversation = join(directory, "1M", "1");
+        mkdirSync(conversation, { recursive: true });
+        writeFileSync(join(conversation, "chat.json"), JSON.stringify([{
+            batch_number: 1,
+            turns: [[
+                { role: "user", id: 0, time_anchor: "March-15-2024", index: "1,1", content: "I need a launch plan ->-> 1,1" },
+                { role: "assistant", id: 1, content: "Here is the plan" },
+            ]],
+        }]));
+        writeFileSync(join(conversation, "probing_questions.json"), JSON.stringify({
+            abstention: [{ question: "What did users say?", ideal_response: "no information", difficulty: "easy" }],
+            event_ordering: [{ question: "What happened first?", ideal_response: "planning", difficulty: "medium" }],
+        }));
+        const loaded = load_beam(directory, "1M", 1);
+        expect(loaded.cases).toHaveLength(2);
+        expect(loaded.cases.map((item) => item.category).sort()).toEqual(["abstention", "event-ordering"]);
+        expect(loaded.cases[0].evidence_unknown).toBe(true);
+        expect(loaded.cases[0].evidence_ids).toEqual([]);
+        expect(loaded.cases[0].events).toHaveLength(2);
+        expect(loaded.cases[0].events[0].text).toBe("I need a launch plan");
+        expect(loaded.cases[0].events[0].timestamp).toBe(Date.parse("March 15 2024"));
+    });
+
+    it("flattens BEAM 10M plan-nested chats", () => {
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-beam10-"));
+        directories.push(directory);
+        const conversation = join(directory, "10M", "2");
+        mkdirSync(conversation, { recursive: true });
+        writeFileSync(join(conversation, "chat.json"), JSON.stringify([
+            { "plan-1": [{ batch_number: 1, turns: [[{ role: "user", content: "plan one" }]] }] },
+            { "plan-2": [{ batch_number: 2, turns: [[{ role: "user", content: "plan two" }]] }] },
+        ]));
+        writeFileSync(join(conversation, "probing_questions.json"), JSON.stringify({ multi_session_reasoning: [{ question: "across plans?", ideal_answer: "both", difficulty: "hard" }] }));
+        const loaded = load_beam(directory, "10M", 5);
+        expect(loaded.cases).toHaveLength(1);
+        expect(loaded.cases[0]).toMatchObject({ dataset: "beam-10m", category: "multi-session", answer: "both" });
+        expect(loaded.cases[0].events.map((event) => event.text)).toEqual(["plan one", "plan two"]);
+    });
+
     it("parses LoCoMo human-readable session timestamps", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-locomo-date-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-locomo-date-"));
         directories.push(directory);
         const path = join(directory, "locomo.json");
         writeFileSync(path, JSON.stringify([{
@@ -89,7 +145,7 @@ describe("benchmark datasets", () => {
     });
 
     it("preserves locomo dialog evidence ids", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-locomo-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-locomo-"));
         directories.push(directory);
         const path = join(directory, "locomo.json");
         writeFileSync(path, JSON.stringify([{
@@ -106,7 +162,7 @@ describe("benchmark datasets", () => {
     });
 
     it("samples LoCoMo categories across distinct conversations", () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-locomo-corpora-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-locomo-corpora-"));
         directories.push(directory);
         const path = join(directory, "locomo.json");
         const entry = (sample_id: string) => ({

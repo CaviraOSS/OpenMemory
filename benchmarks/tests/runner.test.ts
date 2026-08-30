@@ -1,7 +1,22 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/tests/runner.test.ts
+ *  usage : verifies LongMemory runner.test behavior
+ */
+
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { model_config_from_spec } from "../src/config";
 import { run_benchmark } from "../src/runner";
 import { markdown } from "../src/report";
 import type { ai_judge, benchmark_event, benchmark_provider, benchmark_scope, ingest_result, judge_input, language_model, model_config, model_request, model_response, provider_config, search_hit } from "../src/types";
@@ -9,8 +24,8 @@ import type { ai_judge, benchmark_event, benchmark_provider, benchmark_scope, in
 const directories: string[] = [];
 
 class fake_provider implements benchmark_provider {
-    readonly name = "openmemory" as const;
-    readonly display_name = "fake openmemory";
+    readonly name = "longmemory" as const;
+    readonly display_name = "fake longmemory";
     health_calls = 0;
     ingest_calls = 0;
     private events: benchmark_event[] = [];
@@ -75,12 +90,12 @@ afterEach(() => {
 });
 
 describe("benchmark runner", () => {
-    it("builds competitor-only manifests with an OpenMemory embedding environment", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-competitor-"));
+    it("builds competitor-only manifests with an LongMemory embedding environment", async () => {
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-competitor-"));
         directories.push(output_dir);
-        vi.stubEnv("OPENMEMORY_EMBEDDING_PROVIDER", "gemini");
-        vi.stubEnv("OPENMEMORY_EMBEDDING_TIER", "deep");
-        vi.stubEnv("OPENMEMORY_EMBEDDING_DIMENSION", "768");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_PROVIDER", "gemini");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_TIER", "deep");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_DIMENSION", "768");
         const provider = new fake_provider() as benchmark_provider;
         Object.defineProperty(provider, "name", { value: "graphiti" });
         const result = await run_benchmark({
@@ -93,16 +108,16 @@ describe("benchmark runner", () => {
             make_provider: () => provider,
         });
         expect(result.report.providers[0]).toMatchObject({ name: "graphiti", status: "completed" });
-        expect(result.report.manifest.openmemory_embedding?.batch_size).toBe(100);
+        expect(result.report.manifest.longmemory_embedding?.batch_size).toBe(100);
     });
 
     it("checkpoints phases, resumes offline, rejects drift, and supports replacement", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-"));
         directories.push(output_dir);
         const base = {
-            providers: ["openmemory" as const],
+            providers: ["longmemory" as const],
             datasets: ["smoke" as const],
-            configs: { openmemory: { base_url: "embedded://test", api_key: "secret" } },
+            configs: { longmemory: { base_url: "embedded://test", api_key: "secret" } },
             run_id: "runner-test",
             output_dir,
         };
@@ -128,12 +143,12 @@ describe("benchmark runner", () => {
     });
 
     it("reports provider initialization failures", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-failure-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-failure-"));
         directories.push(output_dir);
         const provider = new fake_provider();
         provider.initialize = async () => { throw new Error("configuration failed"); };
         const result = await run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["smoke"],
             run_id: "failure-test",
             output_dir,
@@ -143,15 +158,16 @@ describe("benchmark runner", () => {
         expect(result.report.providers[0]).toMatchObject({ status: "failed", reason: "configuration failed", failed_questions: 11 });
         expect(result.report.gates.passed).toBe(false);
         const report_markdown = markdown(result.report);
-        expect(report_markdown).toContain("| fake openmemory | smoke | 0 | 11 | 0 | - | - | - | - | - |");
-        expect(report_markdown).toContain("| Provider | Case | Phase | Duration | Error |");
+        expect(report_markdown).toContain("**LongMemEval:** N/A — longmemeval was not selected");
+        expect(report_markdown).toContain("| smoke | 0 | 11 |");
+        expect(report_markdown).toContain("| Case | Phase | Duration | Error |");
     });
 
     it("rejects retrieval-only official dataset runs", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-official-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-official-"));
         directories.push(output_dir);
         await expect(run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["longmemeval"],
             per_category: 1,
             output_dir,
@@ -160,11 +176,20 @@ describe("benchmark runner", () => {
         })).rejects.toThrow("require --answerer and --judge");
     });
 
+    it("accepts role-scoped Copilot Luna answerer and judge sessions", async () => {
+        expect(model_config_from_spec("copilot-answerer:gpt-5.6-luna", {})).toMatchObject({ provider: "copilot-answerer", model: "gpt-5.6-luna", api_key: "" });
+        expect(model_config_from_spec("copilot-judge:gpt-5.6-luna", {})).toMatchObject({ provider: "copilot-judge", model: "gpt-5.6-luna", api_key: "" });
+        const answerer = model_config_from_spec("copilot-answerer:gpt-5.6-luna", {});
+        const judge = model_config_from_spec("copilot-judge:gpt-5.6-luna", {});
+        expect(answerer.provider).not.toBe(judge.provider);
+        expect(answerer.model).toBe(judge.model);
+    });
+
     it("requires distinct official answerer and judge models", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-distinct-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-distinct-"));
         directories.push(output_dir);
         await expect(run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["longmemeval"],
             per_category: 1,
             output_dir,
@@ -174,18 +199,22 @@ describe("benchmark runner", () => {
             make_provider: () => new fake_provider(),
             make_model: () => new fake_model(),
             make_judge: () => new fake_judge(),
-        })).rejects.toThrow("distinct answerer and judge");
+        })).rejects.toThrow("distinct answerer and judge model specs");
     });
 
     it("generates and judges a fresh answer at every cutoff", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-judge-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-judge-"));
         directories.push(output_dir);
         const answerer = new fake_model();
         const judge_model = new fake_model();
         const judge = new fake_judge();
+        vi.stubEnv("LONGMEMORY_EMBEDDING_PROVIDER", "synthetic");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_TIER", "deep");
+        vi.stubEnv("BENCH_EMBEDDING_INPUT_COST_PER_MILLION_USD", "0.15");
         const result = await run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["smoke"],
+            configs: { longmemory: { base_url: "embedded://test", profile: "semantic" } },
             run_id: "judge-test",
             output_dir,
             resume: false,
@@ -206,17 +235,28 @@ describe("benchmark runner", () => {
         expect(result.report.providers[0].datasets).toMatchObject([{ dataset: "smoke", questions: 11, failed_questions: 0 }]);
         expect(result.report.providers[0].cases.every((item) => item.dataset === "smoke")).toBe(true);
         expect(result.report.providers[0].cases.every((item) => item.phases.answer.status === "completed" && item.phases.judge.status === "completed")).toBe(true);
+        expect(result.report.schema_version).toBe(2);
+        expect(result.report.scorecard).toMatchObject({
+            cutoff: 5,
+            retrieval: { context_recall: { value: 1 }, evidence_completeness: { value: 1 } },
+            temporal_memory: { current_fact_accuracy: { value: 1 }, historical_fact_accuracy: { value: null }, update_accuracy: { value: 1 }, event_order_accuracy: { value: 1 } },
+            reliability: { abstention_accuracy: { value: 1 }, contradiction_resolution: { value: 0 } },
+            efficiency: { write_cost_per_1k_input_tokens: { value: 0.00015 } },
+        });
+        expect(result.report.scorecard.memory_quality.beam_1m).toMatchObject({ value: null, reason: "beam-1m was not selected" });
+        expect(result.report.scorecard.efficiency.read_cost_per_query.value).toBeGreaterThan(0);
         expect(result.report.gates.passed).toBe(true);
         const report_markdown = markdown(result.report);
-        expect(report_markdown).toContain("AI Answer Evaluation");
-        expect(report_markdown).toContain("## Dataset Breakdown");
-        expect(report_markdown).toContain("| fake openmemory | smoke | 11 | 0 |");
-        expect(report_markdown).toContain("answerer openai:answerer");
+        expect(report_markdown).toContain("### Memory Quality");
+        expect(report_markdown).toContain("### Temporal memory");
+        expect(report_markdown).toContain("**Contradiction resolution:** 0.0%");
+        expect(report_markdown).toContain("| smoke | 11 | 0 |");
+        expect(report_markdown).toContain("Answerer: openai:answerer");
         expect(report_markdown).not.toContain("secret");
     });
 
     it("ingests a shared corpus once for independent questions", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-corpus-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-corpus-"));
         directories.push(output_dir);
         const provider = new fake_provider();
         const shared_events: benchmark_event[] = [{ id: "shared", text: "The shared fact is blue", timestamp: 1, metadata: { dataset: "smoke" } }];
@@ -233,7 +273,7 @@ describe("benchmark runner", () => {
             forbidden_ids: [],
         }));
         const result = await run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["smoke"],
             run_id: "corpus-test",
             output_dir,
@@ -248,7 +288,7 @@ describe("benchmark runner", () => {
     });
 
     it("scores raw retrieval before trimming answer context", async () => {
-        const output_dir = mkdtempSync(join(tmpdir(), "openmemory-bench-raw-retrieval-"));
+        const output_dir = mkdtempSync(join(tmpdir(), "longmemory-bench-raw-retrieval-"));
         directories.push(output_dir);
         const provider = new fake_provider();
         provider.search = async () => [{ text: `${"noise ".repeat(5_000)}The shared fact is blue`, metadata: {} }];
@@ -265,7 +305,7 @@ describe("benchmark runner", () => {
             forbidden_ids: [],
         };
         const result = await run_benchmark({
-            providers: ["openmemory"],
+            providers: ["longmemory"],
             datasets: ["smoke"],
             cutoffs: [1],
             output_dir,

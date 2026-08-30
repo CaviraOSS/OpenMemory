@@ -1,15 +1,29 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/.vscode/tasks.json
+ *  usage : supports the LongMemory VS Code extension tasks
+ */
+
 {
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "OpenMemory: build extension",
+      "label": "LongMemory: build extension",
       "type": "shell",
       "command": "pnpm compile",
       "problemMatcher": "$tsc",
       "group": "build"
     },
     {
-      "label": "OpenMemory: watch extension",
+      "label": "LongMemory: watch extension",
       "type": "shell",
       "command": "pnpm watch",
       "isBackground": true,

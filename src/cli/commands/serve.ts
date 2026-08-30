@@ -1,22 +1,20 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/cli/commands/serve.ts
- *  usage : start the shared self-hosted api server
+ *  usage : implements the LongMemory serve component
  */
 
 import type { AddressInfo } from 'node:net';
 import { createMemory as create_memory } from '../../core/create_memory.js';
-import { create_open_memory_server } from '../../server/app.js';
+import { create_long_memory_server } from '../../server/app.js';
 import { load_server_config } from '../../server/config.js';
 import type { cli_command } from '../context/cli_context.js';
 import { command_flags, flag, has, memory_config, number_flag } from '../context/cli_context.js';
@@ -42,7 +40,7 @@ export const serve_command: cli_command = async (context) => {
         return;
     }
     const memory = create_memory(config.memory);
-    const server = create_open_memory_server({ config, memory });
+    const server = create_long_memory_server({ config, memory });
     await new Promise<void>((resolve, reject) => {
         server.once('error', reject);
         server.listen(config.port, config.host, resolve);
@@ -59,7 +57,7 @@ export const serve_command: cli_command = async (context) => {
         ...(config.mcp_http ? { mcp_url: `http://${config.host}:${address.port}/mcp` } : {}),
     };
     emit(context, result, () => panel('', context.colors, {
-        title: 'OpenMemory server', kind: 'success', width: context.terminal_width, rows: [
+        title: 'LongMemory server', kind: 'success', width: context.terminal_width, rows: [
             ['Address', result.url], ['Database', result.db_path], ['Project', context.project_id], ['Auth', config.api_key ? 'enabled' : 'disabled'], ['MCP HTTP', config.mcp_http ? result.mcp_url : 'disabled'],
         ]
     }));

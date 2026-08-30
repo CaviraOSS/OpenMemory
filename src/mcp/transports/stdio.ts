@@ -1,8 +1,22 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/transports/stdio.ts
+ *  usage : implements the LongMemory stdio component
+ */
+
 import { StdioServerTransport as stdio_server_transport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { Readable, Writable } from 'node:stream';
-import { create_openmemory_mcp, type mcp_server_config } from '../mcp_server.js';
+import { create_longmemory_mcp, type mcp_server_config } from '../mcp_server.js';
 
-export type stdio_mcp = ReturnType<typeof create_openmemory_mcp> & {
+export type stdio_mcp = ReturnType<typeof create_longmemory_mcp> & {
     transport: stdio_server_transport;
     start(): Promise<void>;
     close(): Promise<void>;
@@ -13,7 +27,7 @@ export function create_stdio_mcp(
     input: Readable = process.stdin,
     output: Writable = process.stdout,
 ): stdio_mcp {
-    const mcp = create_openmemory_mcp(config);
+    const mcp = create_longmemory_mcp(config);
     const transport = new stdio_server_transport(input, output);
     return {
         ...mcp,

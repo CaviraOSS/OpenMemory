@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/recall/evidence.ts
- *  usage : dated, status-labelled evidence rendering for answer grounding
+ *  usage : implements the LongMemory evidence component
  */
 
 import { render_claim } from '../engine/claim_extractor.js';
@@ -26,6 +24,7 @@ export type memory_evidence_options = {
     include_time?: boolean;
     include_status?: boolean;
     include_speaker?: boolean;
+    prefer_raw?: boolean;
 };
 
 export type memory_evidence = {
@@ -61,19 +60,33 @@ function claim_body(node: HydroNode, query_terms: readonly string[], max_claims:
     const claims: readonly NodeClaim[] = node.content.claims ?? [];
     if (claims.length === 0) return '';
     const terms = new Set(query_terms.map((term) => term.toLowerCase()));
-    const unique = [...new Set(claims.map((claim) => present_claim(claim)))];
-    const scored = unique.map((text, order) => {
+    const seen = new Set<string>();
+    const unique = claims.map((claim, order) => ({ text: present_claim(claim), order }))
+        .filter((claim) => claim.text && !seen.has(claim.text) && Boolean(seen.add(claim.text)));
+    const scored = unique.map(({ text, order }) => {
         let overlap = 0;
         for (const token of new Set(strict_recall_tokens(text))) if (terms.has(token)) overlap++;
         return { text, overlap, order };
     });
     scored.sort((left, right) => right.overlap - left.overlap || left.order - right.order);
     const relevant = scored.filter((claim) => claim.overlap > 0);
-    return (relevant.length ? relevant : scored).slice(0, max_claims).map((claim) => claim.text).join('; ');
+    const inferential_query = [...terms].some((term) => ['why', 'how', 'career', 'besides', 'activities', 'all', 'always', 'every', 'ever'].includes(term));
+    const neighbour_orders = new Set<number>();
+    if (inferential_query) {
+        for (const claim of relevant) {
+            neighbour_orders.add(claim.order - 1);
+            neighbour_orders.add(claim.order + 1);
+        }
+    }
+    const selected = relevant.length ? [
+        ...relevant,
+        ...scored.filter((claim) => claim.overlap === 0 && neighbour_orders.has(claim.order)).sort((left, right) => left.order - right.order),
+    ] : scored;
+    return selected.slice(0, max_claims).map((claim) => claim.text).join('; ');
 }
 
 export function memory_evidence_text(node: HydroNode, options: memory_evidence_options = {}): string {
-    const body = claim_body(node, options.query_terms ?? [], options.max_claims ?? 8)
+    const body = options.prefer_raw ? node.content.raw : claim_body(node, options.query_terms ?? [], options.max_claims ?? 8)
         || node.content.summary
         || node.content.canonical
         || node.content.raw;

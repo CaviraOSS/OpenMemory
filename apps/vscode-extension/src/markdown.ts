@@ -1,7 +1,21 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/src/markdown.ts
+ *  usage : supports the LongMemory VS Code extension markdown
+ */
+
 import type { project_context_result, recall_result } from './types.js';
 
 export const recall_markdown = (result: recall_result): string => [
-    `# OpenMemory Recall`,
+    `# LongMemory Recall`,
     '',
     `**Query:** ${result.query}`,
     `**Mode:** ${result.mode}`,
@@ -19,7 +33,7 @@ export const recall_markdown = (result: recall_result): string => [
 ].join('\n');
 
 export const context_markdown = (result: project_context_result): string => [
-    '# OpenMemory Project Context',
+    '# LongMemory Project Context',
     '',
     `**Task:** ${result.task}`,
     `**Project:** ${result.project_id}`,

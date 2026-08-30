@@ -1,4 +1,18 @@
-import type { open_memory } from '../../core/create_memory.js';
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/context/project_scope.ts
+ *  usage : implements the LongMemory project scope component
+ */
+
+import type { long_memory } from '../../core/create_memory.js';
 import type { World } from '../../core/types/world.js';
 import { cli_error, exit_codes } from '../output/errors.js';
 
@@ -9,13 +23,13 @@ export type cli_project_scope = {
     legacy: boolean;
 };
 
-export async function resolve_project_scope(memory: open_memory, project_id: string): Promise<cli_project_scope> {
+export async function resolve_project_scope(memory: long_memory, project_id: string): Promise<cli_project_scope> {
     const worlds = await memory.listWorlds();
     const projects = worlds.filter((world) => world.metadata.hierarchy === 'project');
     const root = projects.find((world) => world.metadata.project_id === project_id) ?? null;
     if (!root) {
         if (!projects.length) return { root: null, world_ids: new Set(), initialized: false, legacy: true };
-        throw new cli_error('project_not_found', `Project is not initialized: ${project_id}`, exit_codes.validation, { project_id }, 'openmemory project init', 'Initialize the project or select an existing project ID.');
+        throw new cli_error('project_not_found', `Project is not initialized: ${project_id}`, exit_codes.validation, { project_id }, 'longmemory project init', 'Initialize the project or select an existing project ID.');
     }
     const children = new Map<string, World[]>();
     for (const world of worlds) {
@@ -35,7 +49,7 @@ export async function resolve_project_scope(memory: open_memory, project_id: str
     return { root, world_ids, initialized: true, legacy: false };
 }
 
-export const project_world = async (memory: open_memory, project_id: string, hierarchy = 'agent_sessions'): Promise<World | null> => {
+export const project_world = async (memory: long_memory, project_id: string, hierarchy = 'agent_sessions'): Promise<World | null> => {
     const scope = await resolve_project_scope(memory, project_id);
     if (!scope.root) return null;
     const worlds = await memory.listWorlds();

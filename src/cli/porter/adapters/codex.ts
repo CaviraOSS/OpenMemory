@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/codex.ts
+ *  usage : implements the LongMemory codex component
+ */
+
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -7,7 +21,7 @@ import type { harness_capability, import_adapter, portable_session, portable_tur
 
 type json = Record<string, any>;
 const sessions_root = (env: NodeJS.ProcessEnv): string => {
-    if (env.OPENMEMORY_CODEX_SESSIONS) return env.OPENMEMORY_CODEX_SESSIONS;
+    if (env.LONGMEMORY_CODEX_SESSIONS) return env.LONGMEMORY_CODEX_SESSIONS;
     return join(env.CODEX_HOME ?? join(env.HOME ?? homedir(), '.codex'), 'sessions');
 };
 const epoch = (value: unknown): number | undefined => typeof value === 'number' ? value : typeof value === 'string' && Number.isFinite(Date.parse(value)) ? Date.parse(value) : undefined;

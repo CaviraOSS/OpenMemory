@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/resources/assets.ts
+ *  usage : implements the LongMemory assets component
+ */
+
 import { ResourceTemplate as resource_template } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpServer as mcp_server_sdk } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { mcp_runtime } from '../runtime.js';
@@ -11,7 +25,7 @@ const access = (runtime: mcp_runtime) => ({
 });
 
 export function register_assets_resources(server: mcp_server_sdk, runtime: mcp_runtime): void {
-    server.registerResource('openmemory-project-assets', new resource_template('openmemory://project/{project_id}/assets', { list: undefined }), {
+    server.registerResource('longmemory-project-assets', new resource_template('longmemory://project/{project_id}/assets', { list: undefined }), {
         description: 'Governed memory assets visible to this MCP identity', mimeType: 'application/json',
     }, async (uri, values) => {
         const parsed = project_resource_schema.parse({ project_id: variable(values, 'project_id') });
@@ -21,7 +35,7 @@ export function register_assets_resources(server: mcp_server_sdk, runtime: mcp_r
         for (const asset of await manager.listAssets(project_id)) if ((await manager.decideAssetAccess(project_id, asset.asset_id, access(runtime), 'read')).allowed) assets.push(asset);
         return json_resource(uri, assets);
     });
-    server.registerResource('openmemory-project-asset', new resource_template('openmemory://project/{project_id}/asset/{asset_id}', { list: undefined }), {
+    server.registerResource('longmemory-project-asset', new resource_template('longmemory://project/{project_id}/asset/{asset_id}', { list: undefined }), {
         description: 'One governed memory asset with policy and binding metadata', mimeType: 'application/json',
     }, async (uri, values) => {
         const parsed = project_resource_schema.parse({ project_id: variable(values, 'project_id') });

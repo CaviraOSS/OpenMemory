@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/context/config_loader.ts
+ *  usage : implements the LongMemory config loader component
+ */
+
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { detect_cwd_project } from './cwd_project.js';
@@ -44,14 +58,14 @@ export const assert_known_global = (args: parsed_cli, local: readonly string[]) 
 };
 
 export function load_local_config(root: string): local_cli_config {
-    const path = resolve(root, '.openmemory', 'config.json');
+    const path = resolve(root, '.longmemory', 'config.json');
     if (!existsSync(path)) return {};
     try { return JSON.parse(readFileSync(path, 'utf8')) as local_cli_config; }
-    catch (error) { throw new Error(`invalid OpenMemory config at ${path}: ${error instanceof Error ? error.message : String(error)}`); }
+    catch (error) { throw new Error(`invalid LongMemory config at ${path}: ${error instanceof Error ? error.message : String(error)}`); }
 }
 
 export function save_local_config(root: string, config: local_cli_config): string {
-    const path = resolve(root, '.openmemory', 'config.json');
+    const path = resolve(root, '.longmemory', 'config.json');
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`, 'utf8');
     return path;
@@ -60,17 +74,17 @@ export function save_local_config(root: string, config: local_cli_config): strin
 export function resolved_config(args: parsed_cli, env: NodeJS.ProcessEnv) {
     const detected = detect_cwd_project(flag_value(args, 'cwd') ?? process.cwd());
     const local = load_local_config(detected.root);
-    const budget = Number(flag_value(args, 'token-budget') ?? env.OPENMEMORY_TOKEN_BUDGET ?? local.token_budget ?? 2048);
+    const budget = Number(flag_value(args, 'token-budget') ?? env.LONGMEMORY_TOKEN_BUDGET ?? local.token_budget ?? 2048);
     if (!Number.isInteger(budget) || budget < 64) throw new Error('--token-budget must be an integer of at least 64');
-    const requested_project = flag_value(args, 'project') ?? env.OPENMEMORY_PROJECT_ID ?? local.project_id;
-    const requested_db = flag_value(args, 'db') ?? env.OPENMEMORY_DB_PATH ?? local.db_path ?? '.openmemory/project.db';
+    const requested_project = flag_value(args, 'project') ?? env.LONGMEMORY_PROJECT_ID ?? local.project_id;
+    const requested_db = flag_value(args, 'db') ?? env.LONGMEMORY_DB_PATH ?? local.db_path ?? '.longmemory/project.db';
     return {
         detected, local,
         cwd: detected.cwd,
         db_path: requested_db === ':memory:' ? requested_db : resolve(detected.root, requested_db),
         project_id: !requested_project || requested_project === 'current' ? detected.project_id : requested_project,
         project_name: local.project_name ?? detected.project_name,
-        user_id: flag_value(args, 'user') ?? env.OPENMEMORY_USER_ID ?? local.user_id ?? 'default',
+        user_id: flag_value(args, 'user') ?? env.LONGMEMORY_USER_ID ?? local.user_id ?? 'default',
         token_budget: budget,
     };
 }

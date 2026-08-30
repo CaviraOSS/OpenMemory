@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/porter/tui.ts
+ *  usage : implements the LongMemory tui component
+ */
+
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import type { cli_command } from '../../context/cli_context.js';
@@ -38,13 +52,13 @@ const screen = (context: Parameters<cli_command>[0], phase: number, title: strin
 
 export const tui_command: cli_command = async (context) => {
     command_flags(context, []);
-    if (!context.is_tty) throw new Error('openmemory tui requires an interactive terminal; use detect, session discover, or port for automation');
+    if (!context.is_tty) throw new Error('longmemory tui requires an interactive terminal; use detect, session discover, or port for automation');
     const prompt = createInterface({ input: stdin, output: stdout });
     const ask = (question: string) => prompt.question(`${context.colors.info('❯')} ${question}`);
     try {
         const available = (await detect_harnesses(context.env)).filter((item) => item.can_import);
         if (!available.length) throw new Error('no readable supported AI conversation stores were found');
-        screen(context, 0, 'Conversation Library', 'Choose a local conversation archive. OpenMemory will preview its history before anything is transferred.', {
+        screen(context, 0, 'Conversation Library', 'Choose a local conversation archive. LongMemory will preview its history before anything is transferred.', {
             rows: [
                 ['workspace', context.project_id],
                 ['archives', `${available.length} readable`],

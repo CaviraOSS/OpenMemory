@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : dashboard/components/sidebar.tsx
+ *  usage : supports the LongMemory dashboard sidebar
+ */
+
 "use client"
 
 import { usePathname } from "next/navigation"
@@ -46,7 +60,7 @@ export default function Sidebar() {
         <div className="hidden h-fit flex-col space-y-2 items-center md:flex">
           <div className="relative group">
             <span className="absolute left-full ml-4 top-1/2 -translate-y-1/2 whitespace-nowrap bg-stone-800 text-stone-200 px-2 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-              OpenMemory
+              LongMemory
             </span>
             <button className="rounded-full hover:bg-stone-900 hover:text-stone-200 duration-300 transition-all p-1">
               <Image

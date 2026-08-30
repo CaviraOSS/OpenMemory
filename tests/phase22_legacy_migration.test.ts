@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase22_legacy_migration.test.ts
+ *  usage : verifies LongMemory phase22 legacy migration.test behavior
+ */
+
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -16,7 +30,7 @@ afterEach(() => {
 });
 
 function paths() {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-legacy-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-legacy-'));
     dirs.push(dir);
     return { dir, source: join(dir, 'legacy.json'), destination: join(dir, 'hydro.db'), report: join(dir, 'report.json') };
 }

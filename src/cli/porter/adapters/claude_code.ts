@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/claude_code.ts
+ *  usage : implements the LongMemory claude code component
+ */
+
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { readFileSync, statSync } from 'node:fs';
@@ -7,7 +21,7 @@ import type { harness_capability, import_adapter, portable_session, portable_tur
 
 type json = Record<string, any>;
 
-const projects_root = (env: NodeJS.ProcessEnv): string => env.OPENMEMORY_CLAUDE_PROJECTS
+const projects_root = (env: NodeJS.ProcessEnv): string => env.LONGMEMORY_CLAUDE_PROJECTS
     ?? join(env.CLAUDE_CONFIG_DIR ?? env.HOME ?? homedir(), env.CLAUDE_CONFIG_DIR ? 'projects' : '.claude/projects');
 
 const timestamp = (value: unknown): number | undefined => {

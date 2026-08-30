@@ -1,21 +1,19 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/project/project_context.ts
- *  usage : token-budgeted project handoff packet
+ *  usage : implements the LongMemory project context component
  */
 
 import { count_tokens } from '../recall/context_builder.js';
-import type { open_memory } from '../create_memory.js';
+import type { long_memory } from '../create_memory.js';
 import { get_project_decisions, type project_decision } from './project_decisions.js';
 import { get_project_tasks, type project_task } from './project_tasks.js';
 import { recall_project_memory, type project_citation, type project_contradiction_warning, type project_recalled_memory } from './project_recall.js';
@@ -42,12 +40,12 @@ export type project_context_packet = {
     debug_trace: Record<string, unknown> & { tokens_used: number; token_budget: number; within_budget: boolean };
 };
 
-const texts = async (memory: open_memory, ids: Iterable<string>): Promise<string[]> => {
+const texts = async (memory: long_memory, ids: Iterable<string>): Promise<string[]> => {
     const values = await Promise.all([...ids].map((id) => memory.explain(id)));
     return values.flatMap((item) => item.node && item.node.state.status === 'active' ? [item.node.content.raw] : []);
 };
 
-export async function get_project_context_packet(memory: open_memory, project: ProjectWorld, state: project_state, task: string, token_budget = 2048, skill_matches: project_skill_match[] = [], asset_loadout: memory_asset_loadout | null = null): Promise<project_context_packet> {
+export async function get_project_context_packet(memory: long_memory, project: ProjectWorld, state: project_state, task: string, token_budget = 2048, skill_matches: project_skill_match[] = [], asset_loadout: memory_asset_loadout | null = null): Promise<project_context_packet> {
     const recalled = await recall_project_memory(memory, project, state, { text: task, token_budget, k: 50 }, 'project_planning');
     const code = await recall_project_memory(memory, project, state, { text: task, token_budget, k: 50 }, 'project_code');
     const decisions = (await get_project_decisions(memory, state)).filter((item) => item.current);

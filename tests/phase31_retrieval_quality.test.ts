@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase31_retrieval_quality.test.ts
+ *  usage : verifies LongMemory phase31 retrieval quality.test behavior
+ */
+
 import { describe, expect, it } from 'vitest';
 import {
     associative_recall,
@@ -9,10 +23,12 @@ import {
     InMemoryRecallIndex,
     manual_provenance,
     memory_evidence_text,
+    matrix_fusion,
     memory_status_of,
     parse_temporal_preference,
     rank_indices,
     reciprocal_rank_fusion,
+    select_evidence_set,
     select_diverse,
     type AssociativeScoringWeights,
     type HydroNodeInput,
@@ -55,6 +71,65 @@ const only = (over: Partial<AssociativeScoringWeights>): AssociativeScoringWeigh
 });
 
 describe('phase 31 retrieval quality', () => {
+    it('selects complementary aspects and an exception under a token budget', () => {
+        const items = [
+            { id: 'smooth', score: 1, terms: new Set(['car', 'project', 'smooth']), polarity: 0, cost: 4 },
+            { id: 'duplicate', score: 0.95, terms: new Set(['car', 'project', 'smooth']), polarity: 0, cost: 4 },
+            { id: 'failure', score: 0.7, terms: new Set(['car', 'project', 'issue']), polarity: 1, cost: 4 },
+        ];
+        const selected = select_evidence_set(items, {
+            limit: 2,
+            token_budget: 8,
+            query_terms: ['car', 'project', 'smooth'],
+            exception_query: true,
+            terms: (item) => item.terms,
+            similarity: (left, right) => left.id === right.id || left.id !== 'failure' && right.id !== 'failure' ? 1 : 0,
+            token_cost: (item) => item.cost,
+            polarity: (item) => item.polarity,
+            relevance: (item) => item.score,
+        });
+
+        expect(selected.map((item) => item.id)).toEqual(['smooth', 'failure']);
+    });
+
+    it('calibrates correlated signals while preserving a strong independent channel', () => {
+        const result = matrix_fusion([
+            { name: 'vector', values: [0.51, 0.52, 0.53, 0.75], weight: 0.4 },
+            { name: 'lexical', values: [0.2, 0.4, 0.6, 0.1], weight: 0.35 },
+            { name: 'duplicate', values: [0.2, 0.4, 0.6, 0.1], weight: 0.25 },
+        ]);
+
+        expect(result.scores.every(Number.isFinite)).toBe(true);
+        expect(Math.max(...result.scores)).toBe(1);
+        expect(result.scores[3]).toBe(1);
+        expect(result.covariance).toHaveLength(3);
+    });
+
+    it('never promotes a uniformly weak candidate through covariance rotation', () => {
+        const result = matrix_fusion([
+            { name: 'vector', values: [0.8, 0.6, 0.2], weight: 0.4 },
+            { name: 'lexical', values: [0.9, 0.5, 0.1], weight: 0.35 },
+            { name: 'activation', values: [0.7, 0.4, 0.05], weight: 0.25 },
+        ]);
+
+        expect(result.scores[0]).toBeGreaterThan(result.scores[1]);
+        expect(result.scores[1]).toBeGreaterThan(result.scores[2]);
+    });
+
+    it('handles constant and binary feature columns deterministically', () => {
+        const first = matrix_fusion([
+            { name: 'constant', values: [1, 1, 1], weight: 0.5 },
+            { name: 'speaker', values: [0, 1, 0], weight: 0.5 },
+        ]);
+        const second = matrix_fusion([
+            { name: 'constant', values: [1, 1, 1], weight: 0.5 },
+            { name: 'speaker', values: [0, 1, 0], weight: 0.5 },
+        ]);
+
+        expect([...first.scores]).toEqual([...second.scores]);
+        expect(first.scores[1]).toBeGreaterThan(first.scores[0]);
+    });
+
     it('fuses lexical and vector rankings without comparing incompatible score scales', () => {
         const vector_scores = [0.9, 0.1, 0.5];
         const lexical_scores = [0.2, 0.05, 0.9];
@@ -136,6 +211,19 @@ describe('phase 31 retrieval quality', () => {
 
         const rendered = memory_evidence_text(node, { query_terms: ['window', 'seats'], include_time: false });
         expect(rendered.startsWith('user prefers window seats')).toBe(true);
+        expect(rendered).not.toContain('hotel located_in kyoto');
+    });
+
+    it('keeps complementary clauses after the query-matching claim', () => {
+        const node = make_node('starbucks', "John did not want Starbucks because he preferred beer", {
+            claims: [
+                { kind: 'action', statement: "Why Starbucks", subject: 'john', predicate: 'action', object: 'why starbucks', topic: 'action:john:starbucks' },
+                { kind: 'preference', statement: 'Maybe we can have a beer somewhere', subject: 'john', predicate: 'prefers', object: 'beer', topic: 'preference:john:beer' },
+            ],
+        });
+
+        expect(memory_evidence_text(node, { query_terms: ['why', 'starbucks'], include_time: false }))
+            .toBe('Why Starbucks; john prefers beer');
     });
 
     it('exposes structured dated evidence alongside the context text', () => {

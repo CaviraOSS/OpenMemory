@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/connectors/registry.ts
- *  usage : required connector catalog and factories
+ *  usage : implements the LongMemory registry component
  */
 
 import { ConnectorRegistry } from '../core/connectors/connector_registry.js';
@@ -44,10 +42,10 @@ export type connector_definition = {
 const built_in_connector_definitions: connector_definition[] = [
     { id: 'youtube', name: 'YouTube', source_type: 'youtube', status: 'starter', category: 'web', auth: 'api_key', credential_env: ['YOUTUBE_API_KEY'], documentation_url: 'https://developers.google.com/youtube/v3', required_config: [], maps: ['video metadata', 'transcript segments', 'timestamps', 'channels', 'speakers', 'topics'] },
     { id: 'github', name: 'GitHub', source_type: 'github', status: 'real', category: 'code', auth: 'token', credential_env: ['GITHUB_TOKEN', 'GH_TOKEN'], documentation_url: 'https://docs.github.com/rest', required_config: ['owner', 'repo'], maps: ['repositories', 'README/docs', 'issues', 'pull requests', 'commits', 'files', 'comments'] },
-    { id: 'docs', name: 'Drive / Notion-style documents', source_type: 'document', status: 'starter', category: 'knowledge', auth: 'none', credential_env: [], documentation_url: 'https://github.com/CaviraOSS/OpenMemory/blob/main/docs/connectors.md', required_config: [], maps: ['documents', 'headings', 'sections', 'versions', 'citations'] },
+    { id: 'docs', name: 'Drive / Notion-style documents', source_type: 'document', status: 'starter', category: 'knowledge', auth: 'none', credential_env: [], documentation_url: 'https://github.com/CaviraOSS/LongMemory/blob/main/docs/connectors.md', required_config: [], maps: ['documents', 'headings', 'sections', 'versions', 'citations'] },
     { id: 'markdown', name: 'Markdown files', source_type: 'markdown', status: 'real', category: 'local', auth: 'none', credential_env: [], documentation_url: 'https://spec.commonmark.org/', required_config: ['root'], maps: ['headings', 'sections', 'code fences', 'line citations'] },
     { id: 'pdf', name: 'PDF documents', source_type: 'pdf', status: 'real', category: 'knowledge', auth: 'none', credential_env: [], documentation_url: 'https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/', required_config: ['root'], maps: ['documents', 'pages', 'metadata', 'page citations'] },
-    { id: 'document', name: 'Documents', source_type: 'document', status: 'real', category: 'knowledge', auth: 'none', credential_env: [], documentation_url: 'https://github.com/CaviraOSS/OpenMemory', required_config: ['root'], maps: ['PDF', 'DOCX', 'HTML', 'Markdown', 'text', 'sections', 'citations'] },
+    { id: 'document', name: 'Documents', source_type: 'document', status: 'real', category: 'knowledge', auth: 'none', credential_env: [], documentation_url: 'https://github.com/CaviraOSS/LongMemory', required_config: ['root'], maps: ['PDF', 'DOCX', 'HTML', 'Markdown', 'text', 'sections', 'citations'] },
     { id: 'media', name: 'Audio and video', source_type: 'media', status: 'real', category: 'knowledge', auth: 'api_key', credential_env: ['OPENAI_API_KEY'], documentation_url: 'https://platform.openai.com/docs/guides/speech-to-text', required_config: ['root'], maps: ['audio', 'video', 'transcripts', 'duration', 'language'] },
     { id: 'google_drive', name: 'Google Drive', source_type: 'google_drive', status: 'real', category: 'cloud_storage', auth: 'oauth', credential_env: ['GOOGLE_ACCESS_TOKEN'], documentation_url: 'https://developers.google.com/drive/api/reference/rest/v3', required_config: [], maps: ['files', 'folders', 'native documents', 'binary documents', 'versions'] },
     { id: 'google_sheets', name: 'Google Sheets', source_type: 'google_sheets', status: 'real', category: 'knowledge', auth: 'oauth', credential_env: ['GOOGLE_ACCESS_TOKEN'], documentation_url: 'https://developers.google.com/sheets/api/reference/rest', required_config: [], maps: ['spreadsheets', 'sheets', 'rows', 'formulas', 'metadata'] },

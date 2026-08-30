@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/vscode_extension.test.ts
+ *  usage : verifies LongMemory vscode extension.test behavior
+ */
+
 import { describe, expect, it } from 'vitest';
 import { context_markdown, recall_markdown } from '../apps/vscode-extension/src/markdown.js';
 import { merge_file_change, render_agent_change, render_file_patch, should_capture_path } from '../apps/vscode-extension/src/agent_changes.js';
@@ -6,12 +20,12 @@ import { build_status_bar_model } from '../apps/vscode-extension/src/status_bar_
 describe('VS Code extension rendering', () => {
     it('builds stable manager and AI activity status states', () => {
         const ready = build_status_bar_model({
-            ok: true, project: { id: 'openmemory', name: 'OpenMemory', initialized: true }, db_path: '.openmemory/project.db',
+            ok: true, project: { id: 'longmemory', name: 'LongMemory', initialized: true }, db_path: '.longmemory/project.db',
             memory: { nodes: 12, active: 9, grounded: 4, superseded: 3, worlds: 18 }, recent_memories: [], unresolved_conflicts: 1,
         }, { active: null, pending: 2 });
         expect(ready).toMatchObject({ memory_text: '$(database) Memory 9', memory_severity: 'warning', activity: { text: '$(diff) 2', review: true } });
-        expect(build_status_bar_model(null, { active: 'codex', pending: 0 }, 'OpenMemory is not initialized.')).toMatchObject({ memory_text: '$(database) Memory', memory_severity: 'normal', activity: { text: '$(record) codex', review: false } });
-        expect(build_status_bar_model(null, { active: null, pending: 0 }, 'Unable to start OpenMemory CLI')).toMatchObject({ memory_text: '$(warning) Memory', memory_severity: 'error', activity: null });
+        expect(build_status_bar_model(null, { active: 'codex', pending: 0 }, 'LongMemory is not initialized.')).toMatchObject({ memory_text: '$(database) Memory', memory_severity: 'normal', activity: { text: '$(record) codex', review: false } });
+        expect(build_status_bar_model(null, { active: null, pending: 0 }, 'Unable to start LongMemory CLI')).toMatchObject({ memory_text: '$(warning) Memory', memory_severity: 'error', activity: null });
     });
 
     it('renders recall hits with score, provenance, and memory id', () => {
@@ -30,7 +44,7 @@ describe('VS Code extension rendering', () => {
     it('renders a project brief with constraints, files, and next steps', () => {
         const value = context_markdown({
             ok: true,
-            project_id: 'openmemory',
+            project_id: 'longmemory',
             task: 'ship extension',
             project_summary: 'Hydrograph memory.',
             current_goal: 'Release the extension.',
@@ -41,7 +55,7 @@ describe('VS Code extension rendering', () => {
             open_tasks: [{ task: 'Package VSIX', status: 'open' }],
             known_failures: [],
             matched_skills: [{ score: 2, matched_triggers: ['release'], skill: { skill_id: 'skill:release', name: 'Release check', description: 'Validate the release.', version: 2, instructions: ['Run tests'], validation: ['Tests pass'] } }],
-            asset_loadout: { selected: [{ asset: { asset_id: 'asset:wiki', type: 'llm_wiki', name: 'Architecture wiki', version: 1, content_ref: 'openmemory://wiki' }, binding: { injection_mode: 'tool', priority: 0.8 }, annotations: { audience: ['assistant'], priority: 0.8, last_modified: new Date(0).toISOString() } }], excluded: [], tokens_used: 20, token_budget: 512 },
+            asset_loadout: { selected: [{ asset: { asset_id: 'asset:wiki', type: 'llm_wiki', name: 'Architecture wiki', version: 1, content_ref: 'longmemory://wiki' }, binding: { injection_mode: 'tool', priority: 0.8 }, annotations: { audience: ['assistant'], priority: 0.8, last_modified: new Date(0).toISOString() } }], excluded: [], tokens_used: 20, token_budget: 512 },
             conflicts: [],
             suggested_next_steps: ['Run extension checks.'],
         });

@@ -1,14 +1,28 @@
-# OpenMemory Dashboard
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
 
-This app is the optional OpenMemory dashboard UI.
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : dashboard/README.md
+ usage : supports the LongMemory dashboard readme
+-->
+
+# LongMemory Dashboard
+
+This app is the optional LongMemory dashboard UI.
 
 ## What it is
 
 - a separate Next.js app in `dashboard/`
-- designed to talk to an OpenMemory backend over HTTP
-- not bundled into the root `openmemory` npm package
+- designed to talk to an LongMemory backend over HTTP
+- not bundled into the root `longmemory` npm package
 
-If you are running OpenMemory without the dashboard, you only need the root package.
+If you are running LongMemory without the dashboard, you only need the root package.
 
 ## Backend requirement
 
@@ -20,12 +34,12 @@ pnpm build
 node dist/server/index.js
 ```
 
-By default the dashboard calls its same-origin server-side proxy at `/api/openmemory`, which forwards requests to the OpenMemory backend.
+By default the dashboard calls its same-origin server-side proxy at `/api/longmemory`, which forwards requests to the LongMemory backend.
 Configure the backend URL and optional API key in `.env.local`:
 
 ```env
-OPENMEMORY_API_URL=http://127.0.0.1:7331
-# OPENMEMORY_API_KEY=your-secret-api-key
+LONGMEMORY_API_URL=http://127.0.0.1:7331
+# LONGMEMORY_API_KEY=your-secret-api-key
 ```
 
 This keeps authenticated backend API keys on the server. The settings screen is intentionally read-only; configure secrets in the dashboard deployment environment.

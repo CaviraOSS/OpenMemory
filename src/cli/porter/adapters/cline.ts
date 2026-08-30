@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/cline.ts
+ *  usage : implements the LongMemory cline component
+ */
+
 import { readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { derive_session_preview } from '../preview.js';
@@ -6,7 +20,7 @@ import type { harness_capability, import_adapter, portable_session, portable_tur
 import { editor_storage_roots, object, text_content } from './shared.js';
 
 const editor_roots = (env: NodeJS.ProcessEnv): string[] => {
-    if (env.OPENMEMORY_CLINE_TASKS) return [env.OPENMEMORY_CLINE_TASKS];
+    if (env.LONGMEMORY_CLINE_TASKS) return [env.LONGMEMORY_CLINE_TASKS];
     const extensions = ['saoudrizwan.claude-dev', 'cline.cline'];
     return editor_storage_roots(env).flatMap((root) => extensions.map((extension) => join(root, 'globalStorage', extension, 'tasks')));
 };

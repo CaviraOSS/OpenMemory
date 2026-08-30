@@ -1,13 +1,27 @@
-# OpenMemory Hydrograph
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
 
-OpenMemory is a single TypeScript npm package for durable cognitive memory. The
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : README.md
+ usage : documents LongMemory installation, architecture, and workflows
+-->
+
+# LongMemory Hydrograph
+
+LongMemory is a single TypeScript npm package for durable cognitive memory. The
 same Hydrograph engine powers library imports, the CLI, and the self-hosted HTTP
 server.
 
 ## Install
 
 ```powershell
-pnpm add openmemory
+pnpm add longmemory
 ```
 
 ## In-memory usage
@@ -15,7 +29,7 @@ pnpm add openmemory
 No database or setup is required.
 
 ```ts
-import { createMemory } from "openmemory";
+import { createMemory } from "longmemory";
 
 const memory = await createMemory();
 
@@ -39,11 +53,11 @@ await memory.close();
 ## SQLite usage
 
 ```ts
-import { createMemory } from "openmemory";
+import { createMemory } from "longmemory";
 
 const memory = await createMemory({
   store: "sqlite",
-  db_path: "./openmemory.db",
+  db_path: "./longmemory.db",
   tenant_id: "tenant:default",
   user_id: "user:alice",
   enable_cold_log: true,
@@ -113,7 +127,7 @@ await memory.close();
 ```ts
 const memory = await createMemory({
   store: "memory",
-  db_path: "./openmemory.db",
+  db_path: "./longmemory.db",
   embedding_provider: {
     embed: async (text) => embedding_model.embed(text),
   },
@@ -148,7 +162,7 @@ remain unchanged. Default hot, warm, and cold rates are `0.005`, `0.02`, and
 `0.05` per day, adjusted by retention, confidence, grounding, conflict, and
 reinforcement. `runDecay()` processes at most 256 nodes by default and returns a
 `next_cursor` for the following batch. Cycles are idempotent at the same
-timestamp and audited when using SQLite. OpenMemory does not start a hidden
+timestamp and audited when using SQLite. LongMemory does not start a hidden
 maintenance timer. Decay-aware associative ranking is enabled when
 `decay_policy` is supplied; default ranking remains unchanged until an official
 quality A/B justifies enabling it globally.
@@ -164,16 +178,16 @@ tiers, and ordered fallbacks without bypassing Hydrograph recall gates. See
 ## Connectors
 
 ```ts
-import { createMemory, github_connector, sync_connector } from "openmemory";
+import { createMemory, github_connector, sync_connector } from "longmemory";
 
 const memory = await createMemory({
   store: "sqlite",
-  db_path: "./openmemory.db",
+  db_path: "./longmemory.db",
 });
 
 const github = new github_connector({
   owner: "CaviraOSS",
-  repo: "OpenMemory",
+  repo: "LongMemory",
 });
 
 await github.connect();
@@ -199,18 +213,18 @@ permission, provenance, dry-run, and transactional import-plan boundary.
 ## Project memory
 
 ```ts
-import { createProjectMemory } from "openmemory";
+import { createProjectMemory } from "longmemory";
 
 const projects = await createProjectMemory({
   tenant_id: "tenant:cavira",
   organization_id: "CaviraOSS",
-  project_id: "openmemory",
-  name: "OpenMemory",
+  project_id: "longmemory",
+  name: "LongMemory",
   store: "sqlite",
-  db_path: "./openmemory.db",
+  db_path: "./longmemory.db",
 });
 
-await projects.ingestProjectEvent("openmemory", {
+await projects.ingestProjectEvent("longmemory", {
   kind: "decision",
   topic: "persistence",
   text: "Use SQLite for local-first persistence",
@@ -219,7 +233,7 @@ await projects.ingestProjectEvent("openmemory", {
 });
 
 const handoff = await projects.getProjectContext(
-  "openmemory",
+  "longmemory",
   "continue the current task",
 );
 ```
@@ -240,22 +254,30 @@ optional A2A 1.0-compatible Agent Card. See
 
 ## MCP integration
 
-Run OpenMemory as a local stdio MCP server for coding and IDE agents:
+Run LongMemory as a local stdio MCP server for coding and IDE agents:
 
 ```powershell
-openmemory mcp --db .openmemory/project.db --project current
+longmemory mcp --db .longmemory/project.db --project current
 ```
 
 Or expose Streamable HTTP beside the self-hosted API:
 
 ```powershell
-openmemory serve --db ./openmemory.db --mcp-http
+longmemory serve --db ./longmemory.db --mcp-http
 ```
 
 MCP provides thirteen high-level tools, thirteen readable resources, and five agent
 workflow prompts. Project/user permissions, recall gates, token budgets,
 read-only mode, connector dry-runs, and JSONL audit logging are enforced by the
 shared runtime. See [docs/mcp.md](docs/mcp.md).
+
+Installable integrations live under [integrations](integrations): a native n8n
+community node, an Agent Plugins 1.0 bundle, native Claude Code and Codex
+plugins, a Gemini CLI extension, and MCP configuration packs for Cline,
+Continue, and LibreChat. Runnable native-MCP examples cover CrewAI, AutoGen,
+LangGraph/LangChain, the OpenAI Agents SDK, and PydanticAI. Dify and Flowise
+attach through their native MCP client surfaces, so LongMemory does not
+duplicate its engine inside each host.
 
 ## Dashboard
 
@@ -284,7 +306,7 @@ pnpm extension:build
 pnpm extension:package
 ```
 
-Set `openmemory.cliPath` to the installed `openmemory` binary. For development,
+Set `longmemory.cliPath` to the installed `longmemory` binary. For development,
 build the root package and point it at `dist/cli/index.js`.
 
 ## Multilingual memory
@@ -307,7 +329,7 @@ const result = await memory.recallMultilingual({
 });
 ```
 
-OpenMemory preserves original wording/script, detects code switching, tokenizes
+LongMemory preserves original wording/script, detects code switching, tokenizes
 Indic/Arabic/CJK text, supports conservative cross-script entity aliases, and
 uses multilingual embeddings for cross-language ranking. Translation is an
 optional provenance-marked display view, never hidden source truth. See
@@ -316,34 +338,34 @@ optional provenance-marked display view, never hidden source truth. See
 ## CLI and server
 
 ```powershell
-openmemory init
-openmemory tui
-openmemory detect
-openmemory session discover --from claude-code
-openmemory port --from claude-code --to openmemory --all
-openmemory verify --from codex --sample 10
-openmemory session wiki --from gemini-cli --all --name "Project knowledge"
-openmemory status
-openmemory status --memories 20 --json
-openmemory ingest "Remember the rollback procedure" --type procedure
-Get-Content .\notes.md | openmemory ingest --stdin --source notes.md
-openmemory recall "what is the rollback procedure" --mode associative
-openmemory memory list --limit 50
-openmemory maintenance decay --all
-openmemory maintenance reinforce <memory-id>
-openmemory project context "prepare the next release"
-openmemory skill create --name "Release check" --description "Validate releases" --triggers "release checklist" --instructions-json '["Run tests","Build packages"]'
-openmemory skill match "run the release checklist" --agent reviewer
-openmemory asset list
-openmemory asset loadout "prepare the release" --agent reviewer --framework codex
-openmemory agent manifest reviewer --framework codex --query "prepare the release"
-openmemory code impact createMemory
-openmemory session import ./history/codex-session.json
-openmemory agent preflight "prepare the next release" --json
-openmemory serve --mcp-http
+longmemory init
+longmemory tui
+longmemory detect
+longmemory session discover --from claude-code
+longmemory port --from claude-code --to longmemory --all
+longmemory verify --from codex --sample 10
+longmemory session wiki --from gemini-cli --all --name "Project knowledge"
+longmemory status
+longmemory status --memories 20 --json
+longmemory ingest "Remember the rollback procedure" --type procedure
+Get-Content .\notes.md | longmemory ingest --stdin --source notes.md
+longmemory recall "what is the rollback procedure" --mode associative
+longmemory memory list --limit 50
+longmemory maintenance decay --all
+longmemory maintenance reinforce <memory-id>
+longmemory project context "prepare the next release"
+longmemory skill create --name "Release check" --description "Validate releases" --triggers "release checklist" --instructions-json '["Run tests","Build packages"]'
+longmemory skill match "run the release checklist" --agent reviewer
+longmemory asset list
+longmemory asset loadout "prepare the release" --agent reviewer --framework codex
+longmemory agent manifest reviewer --framework codex --query "prepare the release"
+longmemory code impact createMemory
+longmemory session import ./history/codex-session.json
+longmemory agent preflight "prepare the next release" --json
+longmemory serve --mcp-http
 ```
 
-The CLI defaults to `.openmemory/project.db` in the detected workspace and
+The CLI defaults to `.longmemory/project.db` in the detected workspace and
 emits stable JSON whenever stdout is not a TTY or `--json` is supplied. Use
 `--db`, `--project`, `--user`, and `--cwd` to override scope. Commands never
 prompt unless `--interactive` is explicitly enabled. `memory list`, status
@@ -366,4 +388,4 @@ pnpm typecheck
 pnpm release:check
 ```
 
-OpenMemory itself is the SDK; there is no separate SDK package.
+LongMemory itself is the SDK; there is no separate SDK package.

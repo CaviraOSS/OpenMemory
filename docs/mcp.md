@@ -1,13 +1,27 @@
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : docs/mcp.md
+ usage : documents LongMemory mcp
+-->
+
 # MCP integration
 
-OpenMemory exposes one high-level Model Context Protocol server over the same
+LongMemory exposes one high-level Model Context Protocol server over the same
 `createMemory` engine used by the package, CLI, REST API, projects, and
 connectors. It supports local stdio and remote Streamable HTTP transports.
 
 ## Local stdio
 
 ```powershell
-openmemory mcp --db .openmemory/project.db --project current
+longmemory mcp --db .longmemory/project.db --project current
 ```
 
 An MCP client can launch the same command directly:
@@ -15,9 +29,9 @@ An MCP client can launch the same command directly:
 ```json
 {
   "mcpServers": {
-    "openmemory": {
-      "command": "openmemory",
-      "args": ["mcp", "--db", ".openmemory/project.db", "--project", "current"]
+    "longmemory": {
+      "command": "longmemory",
+      "args": ["mcp", "--db", ".longmemory/project.db", "--project", "current"]
     }
   }
 }
@@ -31,31 +45,31 @@ Use `--audit <path>` to override the default
 ## Streamable HTTP
 
 ```powershell
-openmemory serve --db ./openmemory.db --mcp-http
+longmemory serve --db ./longmemory.db --mcp-http
 ```
 
 The endpoint is `http://127.0.0.1:7331/mcp`. REST and MCP share one in-process
-memory engine. When `OPENMEMORY_API_KEY` is set, MCP requires the same bearer
-token or `X-API-Key` as `/v1/*`. `OPENMEMORY_MCP_HTTP=true` also enables it for
+memory engine. When `LONGMEMORY_API_KEY` is set, MCP requires the same bearer
+token or `X-API-Key` as `/v1/*`. `LONGMEMORY_MCP_HTTP=true` also enables it for
 `pnpm serve`.
 
 ## Tools
 
 The deny-by-default allowlist contains exactly thirteen high-level tools:
 
-- `openmemory_project_context`
-- `openmemory_recall`
-- `openmemory_ingest`
-- `openmemory_remember_decision`
-- `openmemory_update_task_state`
-- `openmemory_explain`
-- `openmemory_report_conflicts`
-- `openmemory_sync_connector`
-- `openmemory_match_skills`
-- `openmemory_manage_skill`
-- `openmemory_code_graph`
-- `openmemory_asset_catalog`
-- `openmemory_manage_asset`
+- `longmemory_project_context`
+- `longmemory_recall`
+- `longmemory_ingest`
+- `longmemory_remember_decision`
+- `longmemory_update_task_state`
+- `longmemory_explain`
+- `longmemory_report_conflicts`
+- `longmemory_sync_connector`
+- `longmemory_match_skills`
+- `longmemory_manage_skill`
+- `longmemory_code_graph`
+- `longmemory_asset_catalog`
+- `longmemory_manage_asset`
 
 Recall delegates to Hydrograph modes and their temporal, contract,
 contradiction, grounding, confidence, world, and permission gates. Connector
@@ -73,19 +87,19 @@ identity; tool arguments cannot impersonate another configured agent.
 
 ## Resources
 
-- `openmemory://projects`
-- `openmemory://project/{project_id}/summary`
-- `openmemory://project/{project_id}/current-context`
-- `openmemory://project/{project_id}/decisions`
-- `openmemory://project/{project_id}/tasks`
-- `openmemory://project/{project_id}/skills`
-- `openmemory://project/{project_id}/assets`
-- `openmemory://project/{project_id}/asset/{asset_id}`
-- `openmemory://project/{project_id}/agent/{agent_id}/manifest`
-- `openmemory://project/{project_id}/conflicts`
-- `openmemory://entity/{entity_id}`
-- `openmemory://world/{world_id}`
-- `openmemory://memory/{node_id}`
+- `longmemory://projects`
+- `longmemory://project/{project_id}/summary`
+- `longmemory://project/{project_id}/current-context`
+- `longmemory://project/{project_id}/decisions`
+- `longmemory://project/{project_id}/tasks`
+- `longmemory://project/{project_id}/skills`
+- `longmemory://project/{project_id}/assets`
+- `longmemory://project/{project_id}/asset/{asset_id}`
+- `longmemory://project/{project_id}/agent/{agent_id}/manifest`
+- `longmemory://project/{project_id}/conflicts`
+- `longmemory://entity/{entity_id}`
+- `longmemory://world/{world_id}`
+- `longmemory://memory/{node_id}`
 
 Direct memory, entity, and world reads enforce configured user and project
 scope. Denied candidates are removed from MCP diagnostic traces as well as
@@ -93,23 +107,23 @@ result items.
 
 ## Prompts
 
-- `openmemory_before_coding`
-- `openmemory_after_coding`
-- `openmemory_debug_session`
-- `openmemory_project_handoff`
-- `openmemory_architecture_context`
+- `longmemory_before_coding`
+- `longmemory_after_coding`
+- `longmemory_debug_session`
+- `longmemory_project_handoff`
+- `longmemory_architecture_context`
 
 Prompts never interpolate connector content as instructions. Retrieved memory
-must remain delimited as untrusted `<openmemory-data>` evidence.
+must remain delimited as untrusted `<longmemory-data>` evidence.
 
 ## Programmatic server
 
 ```ts
-import { create_openmemory_mcp } from "openmemory";
+import { create_longmemory_mcp } from "longmemory";
 
-const { server, runtime } = create_openmemory_mcp({
-  db_path: "./openmemory.db",
-  project_id: "openmemory",
+const { server, runtime } = create_longmemory_mcp({
+  db_path: "./longmemory.db",
+  project_id: "longmemory",
   user_id: "agent:local",
   read_only: true,
 });

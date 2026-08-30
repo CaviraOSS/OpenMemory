@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase25_project_memory.test.ts
+ *  usage : verifies LongMemory phase25 project memory.test behavior
+ */
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -48,8 +62,8 @@ describe('phase 25 project-wide agent memory', () => {
         const manager = await createProjectMemory(config());
         const github = new mock_connector('github', 'GitHub mock', 'github', 'repository');
         await manager.linkSourceToProject('alpha', {
-            connector_id: 'github', connector: github, label: 'CaviraOSS/OpenMemory', current_ref: 'abc123',
-            config: { documents: [source_document({ source_type: 'github', external_id: 'repo-1', title: 'CaviraOSS/OpenMemory', content: '# OpenMemory\nProject repository.', metadata: { repository: 'CaviraOSS/OpenMemory', commit: 'abc123' } })] },
+            connector_id: 'github', connector: github, label: 'CaviraOSS/LongMemory', current_ref: 'abc123',
+            config: { documents: [source_document({ source_type: 'github', external_id: 'repo-1', title: 'CaviraOSS/LongMemory', content: '# LongMemory\nProject repository.', metadata: { repository: 'CaviraOSS/LongMemory', commit: 'abc123' } })] },
         });
         const report = await manager.syncProjectSource('alpha', 'github');
         const node = (await manager.explainProjectMemory('alpha', report.node_ids[0])).node;
@@ -121,7 +135,7 @@ describe('phase 25 project-wide agent memory', () => {
         const manager = await createProjectMemory(config());
         await manager.ingestProjectEvent('alpha', { kind: 'goal', text: 'Finish connector migration', topic: 'release', at: jan, subjective: true });
         await manager.ingestProjectEvent('alpha', { kind: 'constraint', text: 'Do not bypass Hydrograph plans', at: jan, source_type: 'user_message' });
-        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', text: 'Project exports createProjectMemory from src/index.ts', topic: 'src/index.ts', at: jan, source_type: 'github', repo: 'CaviraOSS/OpenMemory', branch: 'main', commit: 'abc123', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'file-1' });
+        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', text: 'Project exports createProjectMemory from src/index.ts', topic: 'src/index.ts', at: jan, source_type: 'github', repo: 'CaviraOSS/LongMemory', branch: 'main', commit: 'abc123', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'file-1' });
         await manager.ingestProjectEvent('alpha', { kind: 'failure', text: 'Previous fix failed because cursor state was overwritten', at: mar, subjective: true });
         await manager.ingestProjectEvent('alpha', { kind: 'agent_state', topic: 'Implement project memory', text: 'Agent is implementing project memory', at: mar, subjective: true, files_touched: ['src/core/project/project_memory.ts'], alternatives_rejected: ['Global unscoped memory'], next_actions: ['Run project acceptance tests'], metadata: { current_plan: ['Implement APIs', 'Validate isolation'], known_failures: ['Cursor overwrite regression'], test_results: ['Connector tests passed'] } });
         const packet = await manager.getProjectContext('alpha', 'continue implementing project memory', 800);
@@ -158,9 +172,9 @@ describe('phase 25 project-wide agent memory', () => {
 
     it('11. preserves commit, path, line, and checksum provenance on code facts', async () => {
         const manager = await createProjectMemory(config());
-        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', text: 'createProjectMemory is exported here', at: jan, source_type: 'github', external_id: 'file:src/index.ts', url: 'https://github.test/blob/abc/src/index.ts#L30-L35', repo: 'CaviraOSS/OpenMemory', branch: 'main', commit: 'abc', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'sha-file' });
+        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', text: 'createProjectMemory is exported here', at: jan, source_type: 'github', external_id: 'file:src/index.ts', url: 'https://github.test/blob/abc/src/index.ts#L30-L35', repo: 'CaviraOSS/LongMemory', branch: 'main', commit: 'abc', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'sha-file' });
         const result = await manager.recallProject('alpha', { text: 'createProjectMemory exported', now: apr }, 'project_code');
-        expect(result.code_facts[0]).toMatchObject({ repo: 'CaviraOSS/OpenMemory', branch: 'main', commit: 'abc', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'sha-file' });
+        expect(result.code_facts[0]).toMatchObject({ repo: 'CaviraOSS/LongMemory', branch: 'main', commit: 'abc', file_path: 'src/index.ts', line_start: 30, line_end: 35, checksum: 'sha-file' });
         expect(result.citations[0]).toMatchObject({ commit: 'abc', file_path: 'src/index.ts', line_start: 30, line_end: 35 });
         await manager.close();
     });
@@ -168,9 +182,9 @@ describe('phase 25 project-wide agent memory', () => {
     it('12. downranks stale code facts when the linked repo ref changes', async () => {
         const manager = await createProjectMemory(config());
         const github = new mock_connector('github', 'GitHub mock', 'github');
-        await manager.linkSourceToProject('alpha', { connector_id: 'github', connector: github, label: 'CaviraOSS/OpenMemory', current_ref: 'new-commit', config: { documents: [] } });
-        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', topic: 'old-file', text: 'Handler lives in src/old.ts', at: jan, source_type: 'github', repo: 'CaviraOSS/OpenMemory', commit: 'old-commit', file_path: 'src/old.ts' });
-        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', topic: 'new-file', text: 'Handler lives in src/new.ts', at: mar, source_type: 'github', repo: 'CaviraOSS/OpenMemory', commit: 'new-commit', file_path: 'src/new.ts' });
+        await manager.linkSourceToProject('alpha', { connector_id: 'github', connector: github, label: 'CaviraOSS/LongMemory', current_ref: 'new-commit', config: { documents: [] } });
+        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', topic: 'old-file', text: 'Handler lives in src/old.ts', at: jan, source_type: 'github', repo: 'CaviraOSS/LongMemory', commit: 'old-commit', file_path: 'src/old.ts' });
+        await manager.ingestProjectEvent('alpha', { kind: 'code_fact', topic: 'new-file', text: 'Handler lives in src/new.ts', at: mar, source_type: 'github', repo: 'CaviraOSS/LongMemory', commit: 'new-commit', file_path: 'src/new.ts' });
         const result = await manager.recallProject('alpha', { text: 'Handler lives', now: apr }, 'project_code');
         expect(result.code_facts[0]).toMatchObject({ file_path: 'src/new.ts', stale: false, freshness_score: 1 });
         expect(result.code_facts.find((item) => item.file_path === 'src/old.ts')).toMatchObject({ stale: true, freshness_score: 0.2 });
@@ -208,7 +222,7 @@ describe('phase 25 project-wide agent memory', () => {
     });
 
     it('recovers project summaries and agent handoff after SQLite reopen', async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'openmemory-project-'));
+        const dir = mkdtempSync(join(tmpdir(), 'longmemory-project-'));
         dirs.push(dir);
         const db_path = join(dir, 'project.db');
         const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
@@ -227,7 +241,7 @@ describe('phase 25 project-wide agent memory', () => {
     });
 
     it('versions, binds, matches, archives, and recovers project skills', async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'openmemory-skills-'));
+        const dir = mkdtempSync(join(tmpdir(), 'longmemory-skills-'));
         dirs.push(dir);
         const db_path = join(dir, 'project.db');
         const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
@@ -283,7 +297,7 @@ describe('phase 25 project-wide agent memory', () => {
     });
 
     it('imports past agent sessions with exact order, timestamps, and restart recovery', async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'openmemory-sessions-'));
+        const dir = mkdtempSync(join(tmpdir(), 'longmemory-sessions-'));
         dirs.push(dir);
         const db_path = join(dir, 'project.db');
         const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
@@ -313,7 +327,7 @@ describe('phase 25 project-wide agent memory', () => {
     });
 
     it('governs four asset types with lifecycle, deny-first ACLs, bindings, and loadout budgets', async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'openmemory-assets-'));
+        const dir = mkdtempSync(join(tmpdir(), 'longmemory-assets-'));
         dirs.push(dir);
         const db_path = join(dir, 'project.db');
         const first = await createProjectMemory({ ...config(), store: 'sqlite', db_path });
@@ -321,11 +335,11 @@ describe('phase 25 project-wide agent memory', () => {
             owner_id: 'alice', source_type: 'test', visibility: 'project' as const, status: 'approved' as const,
             bindings: [{ target_type: 'agent' as const, target_id: 'builder', injection_mode: 'reference' as const, priority: 0.8, required: false, enabled: true, created_by: 'alice' }],
         };
-        const chat = await first.registerAsset('alpha', { ...base, type: 'chat_memory', name: 'Prior sessions', description: 'Prior implementation context', content_ref: 'openmemory://project/alpha/sessions' });
-        const skill = await first.registerAsset('alpha', { ...base, type: 'skill', name: 'Release check', description: 'Run the release checklist', content_ref: 'openmemory://project/alpha/skills/release', payload: { instructions: ['Run tests'] } });
-        await first.registerAsset('alpha', { ...base, type: 'llm_wiki', name: 'Architecture wiki', description: 'Project architecture', content_ref: 'openmemory://project/alpha/wiki', status: 'candidate' });
+        const chat = await first.registerAsset('alpha', { ...base, type: 'chat_memory', name: 'Prior sessions', description: 'Prior implementation context', content_ref: 'longmemory://project/alpha/sessions' });
+        const skill = await first.registerAsset('alpha', { ...base, type: 'skill', name: 'Release check', description: 'Run the release checklist', content_ref: 'longmemory://project/alpha/skills/release', payload: { instructions: ['Run tests'] } });
+        await first.registerAsset('alpha', { ...base, type: 'llm_wiki', name: 'Architecture wiki', description: 'Project architecture', content_ref: 'longmemory://project/alpha/wiki', status: 'candidate' });
         const graph = await first.registerAsset('alpha', {
-            ...base, type: 'code_graph', name: 'Code graph', description: 'Symbols and impact paths', content_ref: 'openmemory://project/alpha/code-graph',
+            ...base, type: 'code_graph', name: 'Code graph', description: 'Symbols and impact paths', content_ref: 'longmemory://project/alpha/code-graph',
             acl: [{ subject_type: 'agent', subject_id: 'builder', permissions: ['use'], effect: 'deny' }],
         });
         const loadout = await first.resolveAssetLoadout('alpha', { query: 'release architecture', user_id: 'bob', agent_id: 'builder', framework: 'codex', token_budget: 512 });
@@ -351,9 +365,9 @@ describe('phase 25 project-wide agent memory', () => {
         });
         await reopened.close();
         expect(manifest).toMatchObject({
-            schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1',
+            schema: 'https://longmemory.dev/schemas/agent-memory-manifest/v1',
             agent: { id: 'builder', framework: 'codex' }, capabilities: { mcp: true, a2a_agent_card: true },
-            a2a_extension: { uri: 'https://openmemory.dev/extensions/memory-assets/v1' },
+            a2a_extension: { uri: 'https://longmemory.dev/extensions/memory-assets/v1' },
             agent_card: { supportedInterfaces: [{ protocolBinding: 'HTTP+JSON', protocolVersion: '1.0' }] },
         });
         expect(manifest.agent_card?.skills.map((value) => value.id)).toContain(skill.asset_id);

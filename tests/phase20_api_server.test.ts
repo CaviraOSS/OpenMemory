@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase20_api_server.test.ts
+ *  usage : verifies LongMemory phase20 api server.test behavior
+ */
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -5,7 +19,7 @@ import { join } from 'node:path';
 import type { Server } from 'node:http';
 import { afterEach, describe, expect, it } from 'vitest';
 import { load_server_config } from '../src/server/config.js';
-import { create_open_memory_server } from '../src/server/app.js';
+import { create_long_memory_server } from '../src/server/app.js';
 
 const jan = Date.UTC(2026, 0, 1);
 const mar = Date.UTC(2026, 2, 1);
@@ -21,13 +35,13 @@ afterEach(async () => {
 });
 
 async function start(api_key?: string) {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-server-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-server-'));
     dirs.push(dir);
     const config = load_server_config({
-        OPENMEMORY_DB_PATH: join(dir, 'memory.db'),
-        ...(api_key ? { OPENMEMORY_API_KEY: api_key } : {}),
+        LONGMEMORY_DB_PATH: join(dir, 'memory.db'),
+        ...(api_key ? { LONGMEMORY_API_KEY: api_key } : {}),
     });
-    const server = create_open_memory_server({ config });
+    const server = create_long_memory_server({ config });
     servers.push(server);
     await new Promise<void>((resolve, reject) => {
         server.once('error', reject);

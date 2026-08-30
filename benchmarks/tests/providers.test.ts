@@ -1,6 +1,20 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/tests/providers.test.ts
+ *  usage : verifies LongMemory providers.test behavior
+ */
+
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cognee_provider, graphiti_provider, mem0_provider, openmemory_provider, supermemory_provider } from "../src/providers";
+import { cognee_provider, graphiti_provider, mem0_provider, longmemory_provider, supermemory_provider } from "../src/providers";
 import { provider_config_from_env } from "../src/config";
 import type { benchmark_event, benchmark_provider, benchmark_scope } from "../src/types";
 
@@ -53,8 +67,8 @@ describe("provider contracts", () => {
         expect(provider_config_from_env("supermemory", { SUPERMEMORY_API_KEY: "standard", BENCH_SUPERMEMORY_API_KEY: "benchmark" }).api_key).toBe("benchmark");
     });
 
-    it("configures the OpenMemory embedding batch size", () => {
-        expect(provider_config_from_env("openmemory", { BENCH_OPENMEMORY_EMBEDDING_BATCH_SIZE: "64" }).embedding_batch_size).toBe(64);
+    it("configures the LongMemory embedding batch size", () => {
+        expect(provider_config_from_env("longmemory", { BENCH_LONGMEMORY_EMBEDDING_BATCH_SIZE: "64" }).embedding_batch_size).toBe(64);
     });
 
     it("configures Mem0 Platform and Zep Cloud from standard keys", () => {
@@ -73,34 +87,41 @@ describe("provider contracts", () => {
         expect(provider_config_from_env("mem0", { MEM0_API_KEY: "standard", BENCH_MEM0_API_KEY: "" }).api_key).toBe("standard");
     });
 
-    it("uses the real embedded openmemory engine", async () => {
-        const provider = new openmemory_provider();
-        await provider.initialize({ base_url: "embedded://openmemory" });
+    it("uses the real embedded longmemory engine", async () => {
+        const provider = new longmemory_provider();
+        await provider.initialize({ base_url: "embedded://longmemory" });
         await lifecycle(provider);
     });
 
     it("rejects semantic embedding fallback in official provider mode", async () => {
         const url = await start_server((_request, response) => respond(response, { error: "unavailable" }, 503));
-        vi.stubEnv("OPENMEMORY_EMBEDDING_PROVIDER", "local");
-        vi.stubEnv("OPENMEMORY_EMBEDDING_TIER", "deep");
-        vi.stubEnv("OPENMEMORY_EMBEDDING_DIMENSION", "8");
-        vi.stubEnv("OPENMEMORY_LOCAL_EMBEDDING_URL", `${url}/embed`);
-        vi.stubEnv("OPENMEMORY_EMBEDDING_FALLBACK", "synthetic");
-        vi.stubEnv("OPENMEMORY_EMBEDDING_MAX_RETRIES", "0");
-        const provider = new openmemory_provider();
-        await provider.initialize({ base_url: "embedded://openmemory", profile: "semantic" });
+        vi.stubEnv("LONGMEMORY_EMBEDDING_PROVIDER", "local");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_TIER", "deep");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_DIMENSION", "8");
+        vi.stubEnv("LONGMEMORY_LOCAL_EMBEDDING_URL", `${url}/embed`);
+        vi.stubEnv("LONGMEMORY_EMBEDDING_FALLBACK", "synthetic");
+        vi.stubEnv("LONGMEMORY_EMBEDDING_MAX_RETRIES", "0");
+        const provider = new longmemory_provider();
+        await provider.initialize({ base_url: "embedded://longmemory", profile: "semantic" });
         await expect(provider.ingest(events, scope)).rejects.toThrow("semantic embedding fallback is not valid");
         await provider.close();
     });
 
-    it("returns derived OpenMemory facets instead of exact raw turns", async () => {
-        const provider = new openmemory_provider();
-        await provider.initialize({ base_url: "embedded://openmemory" });
+    it("returns derived LongMemory facets instead of exact raw turns", async () => {
+        const provider = new longmemory_provider();
+        await provider.initialize({ base_url: "embedded://longmemory" });
         await provider.reset(scope);
         await provider.ingest([{ id: "procedure", text: "First deploy the API, then verify health, finally monitor errors", timestamp: Date.UTC(2026, 0, 1), metadata: { dataset: "smoke" } }], scope);
         const hits = await provider.search("How should the API be deployed?", 5, scope);
         expect(hits[0]?.text.toLowerCase()).toContain("first deploy the api");
         expect(hits[0]?.text).not.toBe("First deploy the API, then verify health, finally monitor errors");
+        expect(hits[0]?.metadata.recall_diagnostics).toMatchObject({
+            retrieved: 1,
+            admitted: 1,
+            spread: { seeds: 1, seed_density: 1 },
+            matrix: { enabled: false },
+            bundled_items: 0,
+        });
         await provider.close();
     });
 

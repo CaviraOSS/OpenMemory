@@ -1,4 +1,16 @@
--- OpenMemory Hydrograph SQLite schema, migration version 1.
+--      __                      __  ___                               
+--     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+--    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+--   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+--  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+--                      /____/                                 /____/   
+--
+--  cavira oss (c) 2026  -  nullure (c) 2026
+--  ----------------------------------------------------------
+--  file  : src/stores/sqlite/schema.sql
+--  usage : implements the LongMemory schema component
+
+-- LongMemory Hydrograph SQLite schema, migration version 1.
 
 CREATE TABLE IF NOT EXISTS migrations (
     version INTEGER PRIMARY KEY,

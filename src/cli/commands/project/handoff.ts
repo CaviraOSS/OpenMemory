@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/commands/project/handoff.ts
+ *  usage : implements the LongMemory handoff component
+ */
+
 import type { cli_command } from '../../context/cli_context.js';
 import { command_flags, flag, positional, with_project } from '../../context/cli_context.js';
 import { emit, section } from '../../output/pretty.js';
@@ -8,7 +22,7 @@ export const project_handoff_command: cli_command = async (context) => {
     const task = positional(context) ?? flag(context, 'task') ?? 'continue current project work';
     const packet = await with_project(context, (project) => project.getProjectContext(context.project_id, task, context.token_budget));
     const result = {
-        ok: true, schema: 'openmemory.project-handoff.v1', project_id: context.project_id, task,
+        ok: true, schema: 'longmemory.project-handoff.v1', project_id: context.project_id, task,
         working_on: packet.current_goal ?? task,
         changed_recently: packet.retrieved_memories.slice(0, 8).map((item) => item.node.content.summary || item.node.content.raw),
         decisions: packet.active_decisions, failures: packet.known_failures, conflicts: packet.contradictions,

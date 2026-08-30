@@ -1,0 +1,15 @@
+{
+    "name": "longmemory",
+    "version": "0.1.0",
+    "contextFileName": "GEMINI.md",
+    "mcpServers": {
+        "longmemory": {
+            "command": "longmemory",
+            "args": [
+                "mcp",
+                "--project",
+                "current"
+            ]
+        }
+    }
+}

@@ -1,3 +1,17 @@
+<!--
+     __                      __  ___                               
+    / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+   / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+
+ cavira oss (c) 2026  -  nullure (c) 2026
+ ==========================================================
+ file  : apps/vscode-extension/CHANGELOG.md
+ usage : supports the LongMemory VS Code extension changelog
+-->
+
 # Changelog
 
 ## 0.2.0
@@ -13,7 +27,7 @@
 
 - Native memory tree and status bar.
 - Explicit remember, recall, explain, reinforce, decay, and project-context commands.
-- Local-first transport over the stable OpenMemory CLI JSON contract.
+- Local-first transport over the stable LongMemory CLI JSON contract.
 - Explicit AI change sessions for Copilot, Codex, Claude, Cursor, Windsurf, and
   other agents, including direct workspace file writes.
 - Review-only opt-in heuristic candidates with honest attribution confidence.

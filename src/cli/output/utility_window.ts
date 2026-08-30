@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/output/utility_window.ts
+ *  usage : implements the LongMemory utility window component
+ */
+
 import type { cli_colors } from '../theme/colors.js';
 import { pad, repeat, truncate, visible_length, wrap_text } from '../theme/layout.js';
 import { traffic_dots } from './panel.js';
@@ -15,7 +29,7 @@ export type utility_window_options = {
 export function utility_window(content: string | string[], colors: cli_colors, options: utility_window_options = {}): string {
     const width = Math.max(36, options.width ?? 80);
     const inner = width - 4;
-    const title = truncate(options.title ?? 'OpenMemory Transfer', inner - 10);
+    const title = truncate(options.title ?? 'LongMemory Transfer', inner - 10);
     const titlebar = `${traffic_dots(colors)}  ${colors.title(title)}`;
     const phases = options.phases ?? ['Library', 'Review', 'Transfer'];
     const active = Math.max(0, Math.min(options.phase ?? 0, phases.length - 1));
@@ -25,7 +39,7 @@ export function utility_window(content: string | string[], colors: cli_colors, o
         return `${marker} ${text}`;
     }).join(colors.dim('  ›  '));
     const mark = [
-        `${colors.brand('╭┬╮')}  ${colors.title('OpenMemory')}`,
+        `${colors.brand('╭┬╮')}  ${colors.title('LongMemory')}`,
         `${colors.brand('├┼┤')}  ${colors.subtitle('Conversation Transfer')}`,
         `${colors.brand('╰┴╯')}  ${colors.muted('Local-first memory for agents')}`,
     ];

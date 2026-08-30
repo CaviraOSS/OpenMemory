@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/tests/ai.test.ts
+ *  usage : verifies LongMemory ai.test behavior
+ */
+
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
@@ -89,7 +103,7 @@ describe("AI model clients", () => {
     });
 
     it("runs Codex and Claude Code through non-interactive local CLI contracts", async () => {
-        const directory = mkdtempSync(join(tmpdir(), "openmemory-cli-models-"));
+        const directory = mkdtempSync(join(tmpdir(), "longmemory-cli-models-"));
         directories.push(directory);
         const command = join(directory, "fake-cli.js");
         writeFileSync(command, `
@@ -105,6 +119,12 @@ describe("AI model clients", () => {
                 const output = args[args.indexOf("--output-last-message") + 1];
                 fs.writeFileSync(output, args.includes("--output-schema") ? '{"score":1,"label":"correct","explanation":"codex"}' : "codex answer");
                 process.stdout.write(JSON.stringify({ type: "turn.completed", usage: { input_tokens: 14, output_tokens: 5 } }) + "\\n");
+                return;
+            }
+            if (args.includes("--no-custom-instructions")) {
+                if (!args.includes("--disable-builtin-mcps") || !args.includes("--output-format") || !args.includes("gpt-5.6-luna")) process.exit(14);
+                process.stdout.write(JSON.stringify({ type: "assistant.message", data: { phase: "final_answer", content: '{"score":1,"label":"correct","explanation":"copilot"}' } }) + "\\n");
+                process.stdout.write(JSON.stringify({ type: "result", usage: { completionTokens: 7 } }) + "\\n");
                 return;
             }
             if (input !== "answer" && input !== "judge") process.exit(13);
@@ -124,6 +144,12 @@ describe("AI model clients", () => {
         const claude = new http_language_model(claude_config);
         expect(await claude.generate({ system: "system", user: "answer" })).toMatchObject({ text: "claude answer", prompt_tokens: 10, completion_tokens: 3 });
         expect((await claude.generate({ user: "judge", json: true })).text).toContain('"label":"correct"');
+
+        const copilot_config = { ...config("copilot", "gpt-5.6-luna", ""), command };
+        const copilot = new http_language_model(copilot_config);
+        expect(await copilot.generate({ user: "judge", json: true })).toMatchObject({
+            text: '{"score":1,"label":"correct","explanation":"copilot"}', prompt_tokens: null, completion_tokens: 7,
+        });
     });
 
     it("configures local providers without API keys", () => {
@@ -132,6 +158,9 @@ describe("AI model clients", () => {
         expect(model_config_from_spec("codex:gpt-test", { BENCH_CODEX_COMMAND: "codex-custom" })).toMatchObject({ provider: "codex", model: "gpt-test", command: "codex-custom", api_key: "" });
         expect(() => model_config_from_spec("codex:default", {})).toThrow("explicit model");
         expect(model_config_from_spec("claude-code:sonnet", { BENCH_CLAUDE_CODE_COMMAND: "claude-custom" })).toMatchObject({ provider: "claude-code", command: "claude-custom", api_key: "" });
+        expect(model_config_from_spec("copilot:gpt-5.6-luna", { BENCH_COPILOT_COMMAND: "copilot-custom" })).toMatchObject({ provider: "copilot", command: "copilot-custom", api_key: "" });
+        expect(model_config_from_spec("copilot-answerer:gpt-5.6-luna", { BENCH_COPILOT_ANSWERER_COMMAND: "copilot-a" })).toMatchObject({ provider: "copilot-answerer", command: "copilot-a", api_key: "" });
+        expect(model_config_from_spec("copilot-judge:gpt-5.6-luna", { BENCH_COPILOT_JUDGE_COMMAND: "copilot-j" })).toMatchObject({ provider: "copilot-judge", command: "copilot-j", api_key: "" });
     });
 });
 
@@ -142,6 +171,14 @@ describe("AI prompts and judge parsing", () => {
         expect(prompt.system).toContain("only retrieved memories");
         expect(judge_rules("abstention")).toContain("abstention");
         expect(judge_rules("knowledge-update")).toContain("latest value");
+    });
+
+    it("gives open-domain and adversarial questions explicit policies", () => {
+        const open = build_answer_prompt({ ...smoke_cases[0], category: "open-domain" }, []);
+        const adversarial = build_answer_prompt({ ...smoke_cases[0], category: "adversarial" }, []);
+
+        expect(open.system).toContain("ordinary general knowledge");
+        expect(adversarial.system).toContain("does not establish that person's own reaction");
     });
 
     it("parses structured and fallback verdicts", () => {

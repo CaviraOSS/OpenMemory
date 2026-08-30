@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/cli_app.ts
+ *  usage : implements the LongMemory cli app component
+ */
+
 import { create_cli_context, default_io, type cli_command, type cli_io } from './context/cli_context.js';
 import { parse_argv } from './context/config_loader.js';
 import { render_error, cli_error, exit_codes } from './output/errors.js';
@@ -61,9 +75,9 @@ const commands = new Map<string, cli_command_loader>([
 
 const help = {
     ok: true,
-    name: 'openmemory',
+    name: 'longmemory',
     subtitle: 'Hydrograph memory for agents',
-    usage: 'openmemory <command> [arguments] [flags]',
+    usage: 'longmemory <command> [arguments] [flags]',
     global_flags: ['--db <path>', '--project <id>', '--user <id>', '--json', '--jsonl', '--pretty', '--compact', '--no-color', '--silent', '--interactive', '--dry-run', '--token-budget <number>', '--cwd <path>'],
     commands: [
         'status', 'init', 'doctor', 'serve [--host <host>] [--port <port>] [--mcp-http]', 'mcp [--read-only]',
@@ -76,16 +90,16 @@ const help = {
         'session <import|list|discover|wiki>',
         'asset <register|govern|list|loadout>',
         'connectors <list|add|sync|status>', 'agent <preflight|context|after-run|remember-failure|manifest>',
-        'detect', 'port --from <harness> --to openmemory (--all | --id <id>...) [--force] [--jsonl]',
+        'detect', 'port --from <harness> --to longmemory (--all | --id <id>...) [--force] [--jsonl]',
         'session wiki --from <harness> (--all | --id <id>...) [--name <name>] [--agent <id>]',
         'verify --from <harness> [--sample <n>]', 'tui',
     ],
 };
 
 const human_help = (context: ReturnType<typeof create_cli_context>) => [
-    banner(context), '', panel('Fast local memory for coding agents and terminal-first developers.', context.colors, { title: 'openmemory', kind: 'info', width: context.terminal_width }), '',
-    context.colors.title('Usage'), '  openmemory <command> [arguments] [flags]', '', context.colors.title('Start here'),
-    '  openmemory tui', '  openmemory detect', '  openmemory project context "your task"', '  openmemory agent preflight "your task" --json', '',
+    banner(context), '', panel('Fast local memory for coding agents and terminal-first developers.', context.colors, { title: 'longmemory', kind: 'info', width: context.terminal_width }), '',
+    context.colors.title('Usage'), '  longmemory <command> [arguments] [flags]', '', context.colors.title('Start here'),
+    '  longmemory tui', '  longmemory detect', '  longmemory project context "your task"', '  longmemory agent preflight "your task" --json', '',
     context.colors.title('Commands'), ...help.commands.map((command) => `  ${context.colors.info(command)}`), '',
     context.colors.muted('Run with --json for stable machine output. Interactive prompts are opt-in only.'),
 ].join('\n');
@@ -98,7 +112,7 @@ export async function run_cli_app(argv = process.argv.slice(2), env: NodeJS.Proc
         const args = parse_argv(resolve_cli_argv(argv, io.terminal ?? Boolean(process.stdout.isTTY)));
         context = create_cli_context(args, env, io);
         if (args.command === 'version' || args.flags.has('version')) {
-            emit(context, { ok: true, name: package_json.name, version: package_json.version }, () => `openmemory ${package_json.version}`);
+            emit(context, { ok: true, name: package_json.name, version: package_json.version }, () => `longmemory ${package_json.version}`);
             return context.exit_code;
         }
         if (args.command === 'help' || args.flags.has('help')) {
@@ -106,14 +120,14 @@ export async function run_cli_app(argv = process.argv.slice(2), env: NodeJS.Proc
             return context.exit_code;
         }
         const load_command = commands.get(args.command);
-        if (!load_command) throw new cli_error('unknown_command', `Unknown command: ${args.command}`, exit_codes.validation, { commands: [...commands.keys()] }, 'openmemory help', 'Choose a registered command.');
+        if (!load_command) throw new cli_error('unknown_command', `Unknown command: ${args.command}`, exit_codes.validation, { commands: [...commands.keys()] }, 'longmemory help', 'Choose a registered command.');
         if (context.human && !context.silent && args.command !== 'mcp' && args.command !== 'tui') io.stdout(banner(context));
         const command = await load_command();
         await command(context);
         return context.exit_code;
     } catch (error) {
         const value = !context && error instanceof Error
-            ? new cli_error('validation_error', error.message, exit_codes.validation, {}, 'openmemory help', 'Correct the command arguments.')
+            ? new cli_error('validation_error', error.message, exit_codes.validation, {}, 'longmemory help', 'Correct the command arguments.')
             : error;
         return render_error(context, io, value);
     }

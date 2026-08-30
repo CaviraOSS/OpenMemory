@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/acceptance.test.ts
+ *  usage : verifies LongMemory acceptance.test behavior
+ */
+
 import { mkdtemp, access, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -21,14 +35,14 @@ async function exists(path: string): Promise<boolean> {
 describe('phase 1 acceptance', () => {
     it('exports the ready public memory engine', () => {
         const memory = create_memory();
-        expect(memory.status()).toEqual({ name: 'openmemory-hydrograph', phase: 'phase-19-public-api', ready: true, store: 'memory' });
+        expect(memory.status()).toEqual({ name: 'longmemory-hydrograph', phase: 'phase-19-public-api', ready: true, store: 'memory' });
     });
 
     it('declares required scripts and cli binary', () => {
         for (const script of ['build', 'dev', 'test', 'bench', 'serve', 'typecheck', 'release:check']) {
             expect(pkg.scripts).toHaveProperty(script);
         }
-        expect(pkg.bin.openmemory).toBe('dist/cli/index.js');
+        expect(pkg.bin.longmemory).toBe('dist/cli/index.js');
     });
 
     it('has required docs', async () => {
@@ -38,10 +52,10 @@ describe('phase 1 acceptance', () => {
     });
 
     it('has benchmark command behavior', async () => {
-        const output_dir = await mkdtemp(join(tmpdir(), 'openmemory-acceptance-'));
+        const output_dir = await mkdtemp(join(tmpdir(), 'longmemory-acceptance-'));
         try {
             const result = await run_benchmark({
-                providers: ['openmemory'],
+                providers: ['longmemory'],
                 datasets: ['smoke'],
                 run_id: 'acceptance',
                 output_dir,

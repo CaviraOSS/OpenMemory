@@ -1,0 +1,37 @@
+{
+    "name": "longmemory",
+    "version": "0.1.0",
+    "description": "Durable project memory, recall, decisions, tasks, and governed context for Codex and ChatGPT.",
+    "author": {
+        "name": "CaviraOSS",
+        "email": "CaviraOSS@users.noreply.github.com",
+        "url": "https://github.com/CaviraOSS"
+    },
+    "homepage": "https://github.com/CaviraOSS/LongMemory",
+    "repository": "https://github.com/CaviraOSS/LongMemory",
+    "license": "MIT",
+    "keywords": [
+        "memory",
+        "mcp",
+        "coding-agent"
+    ],
+    "skills": "./skills/",
+    "mcpServers": "./.mcp.json",
+    "interface": {
+        "displayName": "LongMemory",
+        "shortDescription": "Durable memory for Codex agents",
+        "longDescription": "Recall project context and persist decisions, task state, and validated outcomes through LongMemory.",
+        "developerName": "CaviraOSS",
+        "category": "Developer Tools",
+        "capabilities": [
+            "Read",
+            "Write"
+        ],
+        "websiteURL": "https://github.com/CaviraOSS/LongMemory",
+        "brandColor": "#0284C7",
+        "defaultPrompt": [
+            "Use LongMemory to load context for this task.",
+            "Recall prior architecture decisions from LongMemory."
+        ]
+    }
+}

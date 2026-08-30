@@ -1,13 +1,27 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/.vscode/launch.json
+ *  usage : supports the LongMemory VS Code extension launch
+ */
+
 {
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Run OpenMemory Extension",
+      "name": "Run LongMemory Extension",
       "type": "extensionHost",
       "request": "launch",
       "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "preLaunchTask": "OpenMemory: build extension"
+      "preLaunchTask": "LongMemory: build extension"
     }
   ]
 }

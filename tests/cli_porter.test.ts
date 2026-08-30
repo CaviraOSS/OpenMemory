@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/cli_porter.test.ts
+ *  usage : verifies LongMemory cli porter.test behavior
+ */
+
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -31,7 +45,7 @@ describe('CLI session porter', () => {
         expect(derive_session_preview(['<command-name>/plan</command-name>', 'Implement the memory porter'])).toBe('/plan · Implement the memory porter');
         expect(parse_session_selection('1, 3-4', 5)).toEqual([0, 2, 3]);
         expect(parse_session_selection('all', 3)).toEqual([0, 1, 2]);
-        expect(display_workspace('C:\\Users\\dev\\openmemory')).toBe('openmemory');
+        expect(display_workspace('C:\\Users\\dev\\longmemory')).toBe('longmemory');
         expect(display_workspace('/Users/dev/project')).toBe('project');
         expect(display_timestamp(Date.parse('2026-08-20T12:34:56Z'))).toBe('2026-08-20 12:34');
         expect(is_cli_main(import.meta.filename, import.meta.filename)).toBe(true);
@@ -43,7 +57,7 @@ describe('CLI session porter', () => {
     it('renders an original desktop utility flow instead of the reference five-step wizard', () => {
         const output = utility_window('Choose a local archive.', create_colors(false), { title: 'Conversation Library', phase: 1, width: 64 });
         expect(output).toContain('● ● ●  Conversation Library');
-        expect(output).toContain('╭┬╮  OpenMemory');
+        expect(output).toContain('╭┬╮  LongMemory');
         expect(output).toContain('├┼┤  Conversation Transfer');
         expect(output).toContain('╰┴╯  Local-first memory for agents');
         expect(output).toContain('✓ Library  ›  ● Review  ›  ○ Transfer');
@@ -55,7 +69,7 @@ describe('CLI session porter', () => {
     it('gives every human panel the macOS window chrome and mark', () => {
         const output = panel('Core systems are ready.', create_colors(false), { title: 'Status', width: 64 });
         expect(output).toContain('● ● ●  Status');
-        expect(output).toContain('╭┬╮ OpenMemory');
+        expect(output).toContain('╭┬╮ LongMemory');
         expect(output).toContain('Core systems are ready.');
         expect(output.split('\n').every((line) => line.length === 64)).toBe(true);
     });
@@ -83,7 +97,7 @@ describe('CLI session porter', () => {
     });
 
     it('detects and parses Claude Code and Codex stores without writing them', async () => {
-        const root = mkdtempSync(join(tmpdir(), 'openmemory-porter-'));
+        const root = mkdtempSync(join(tmpdir(), 'longmemory-porter-'));
         dirs.push(root);
         const claude = join(root, 'claude');
         const codex = join(root, 'codex');
@@ -98,7 +112,7 @@ describe('CLI session porter', () => {
             JSON.stringify({ type: 'response_item', timestamp: '2026-01-02T00:00:01Z', payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'Review the porter' }] } }),
             JSON.stringify({ type: 'response_item', timestamp: '2026-01-02T00:00:02Z', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Reviewed' }] } }),
         ].join('\n'));
-        const env = { ...process.env, OPENMEMORY_CLAUDE_PROJECTS: claude, OPENMEMORY_CODEX_SESSIONS: codex, OPENCODE_DB: join(root, 'missing.db'), PATH: '' };
+        const env = { ...process.env, LONGMEMORY_CLAUDE_PROJECTS: claude, LONGMEMORY_CODEX_SESSIONS: codex, OPENCODE_DB: join(root, 'missing.db'), PATH: '' };
         const detected = await detect_harnesses(env);
         expect(detected.find((value) => value.harness === 'claude-code')).toMatchObject({ installed: true, can_import: true, source_path: claude });
         expect(detected.find((value) => value.harness === 'codex')).toMatchObject({ installed: true, can_import: true, source_path: codex });
@@ -110,7 +124,7 @@ describe('CLI session porter', () => {
     });
 
     it('discovers and parses OpenCode through a read-only SQLite fallback', async () => {
-        const root = mkdtempSync(join(tmpdir(), 'openmemory-opencode-'));
+        const root = mkdtempSync(join(tmpdir(), 'longmemory-opencode-'));
         dirs.push(root);
         const path = join(root, 'opencode.db');
         const database = new Database(path);
@@ -132,7 +146,7 @@ describe('CLI session porter', () => {
     });
 
     it('discovers Gemini CLI, Cline, Copilot Chat, and raw DeepSeek Harness sessions', async () => {
-        const root = mkdtempSync(join(tmpdir(), 'openmemory-more-harnesses-'));
+        const root = mkdtempSync(join(tmpdir(), 'longmemory-more-harnesses-'));
         dirs.push(root);
         const gemini = join(root, 'gemini', 'project', 'chats');
         const cline = join(root, 'cline', 'task-1');
@@ -155,10 +169,10 @@ describe('CLI session porter', () => {
             JSON.stringify({ type: 'text-chunks', seq0: 1, time0: 2, data: { turn: 1, step: 1, index: 0, dt: [1, 1], texts: ['Bug ', 'trac', 'ed'] } }),
         ].join('\n'));
         const cases = [
-            ['gemini-cli', { OPENMEMORY_GEMINI_SESSIONS: join(root, 'gemini') }, 'gemini-1', 'Document the API'],
-            ['cline', { OPENMEMORY_CLINE_TASKS: join(root, 'cline') }, 'task-1', 'Fix the build'],
-            ['copilot-chat', { OPENMEMORY_COPILOT_CHAT_SESSIONS: join(root, 'copilot') }, 'copilot-1', 'Review this code'],
-            ['deepseek-harness', { OPENMEMORY_DEEPSEEK_HARNESS_SESSIONS: join(root, 'deepseek') }, 'dsh-1', 'Trace the bug'],
+            ['gemini-cli', { LONGMEMORY_GEMINI_SESSIONS: join(root, 'gemini') }, 'gemini-1', 'Document the API'],
+            ['cline', { LONGMEMORY_CLINE_TASKS: join(root, 'cline') }, 'task-1', 'Fix the build'],
+            ['copilot-chat', { LONGMEMORY_COPILOT_CHAT_SESSIONS: join(root, 'copilot') }, 'copilot-1', 'Review this code'],
+            ['deepseek-harness', { LONGMEMORY_DEEPSEEK_HARNESS_SESSIONS: join(root, 'deepseek') }, 'dsh-1', 'Trace the bug'],
         ] as const;
         for (const [harness, override, id, first] of cases) {
             const env = { ...process.env, ...override };
@@ -173,7 +187,7 @@ describe('CLI session porter', () => {
     });
 
     it('materializes deterministic conversation AI Wiki assets with immutable versions', async () => {
-        const root = mkdtempSync(join(tmpdir(), 'openmemory-wiki-'));
+        const root = mkdtempSync(join(tmpdir(), 'longmemory-wiki-'));
         dirs.push(root);
         const chats = join(root, 'project', 'chats');
         mkdirSync(chats, { recursive: true });
@@ -185,7 +199,7 @@ describe('CLI session porter', () => {
         ];
         writeFileSync(path, lines.map((value) => JSON.stringify(value)).join('\n'));
         const project = await createProjectMemory({ tenant_id: 'test', project_id: 'wiki', name: 'Wiki' });
-        const env = { ...process.env, OPENMEMORY_GEMINI_SESSIONS: root };
+        const env = { ...process.env, LONGMEMORY_GEMINI_SESSIONS: root };
         const first = await sessions_to_wiki(project, 'wiki', 'gemini-cli', { all: true, name: 'Build knowledge', agent_id: 'builder', env });
         const duplicate = await sessions_to_wiki(project, 'wiki', 'gemini-cli', { all: true, name: 'Build knowledge', agent_id: 'builder', env });
         lines.push({ id: 'u2', type: 'user', timestamp: '2026-01-01T00:00:02Z', content: 'Run tests before package' } as any);
@@ -203,7 +217,7 @@ describe('CLI session porter', () => {
     });
 
     it('ports immutable revisions into one stable governed Chat Memory asset', async () => {
-        const root = mkdtempSync(join(tmpdir(), 'openmemory-port-'));
+        const root = mkdtempSync(join(tmpdir(), 'longmemory-port-'));
         dirs.push(root);
         const source = join(root, 'claude');
         mkdirSync(source);
@@ -214,7 +228,7 @@ describe('CLI session porter', () => {
         ];
         writeFileSync(path, lines.map((value) => JSON.stringify(value)).join('\n'));
         const project = await createProjectMemory({ tenant_id: 'test', project_id: 'porter', name: 'Porter' });
-        const env = { ...process.env, OPENMEMORY_CLAUDE_PROJECTS: source };
+        const env = { ...process.env, LONGMEMORY_CLAUDE_PROJECTS: source };
         const first = await port_sessions(project, 'porter', 'claude-code', { all: true, agent_id: 'builder', env });
         const duplicate = await port_sessions(project, 'porter', 'claude-code', { all: true, agent_id: 'builder', env });
         lines.push({ type: 'user', sessionId: 'native-1', cwd: '/repo', timestamp: '2026-01-01T00:00:02Z', message: { role: 'user', content: 'Add tests' } } as any);

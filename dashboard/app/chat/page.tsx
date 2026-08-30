@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : dashboard/app/chat/page.tsx
+ *  usage : supports the LongMemory dashboard page
+ */
+
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -108,7 +122,7 @@ export default function ChatPage() {
             console.error("Error processing message:", error)
             const errorMessage: ChatMessage = {
                 role: "assistant",
-                content: "I encountered an error while processing your message. Please make sure the OpenMemory backend is running on port 8080.",
+                content: "I encountered an error while processing your message. Please make sure the LongMemory backend is running on port 8080.",
                 timestamp: Date.now()
             }
             setMessages(prev => [...prev, errorMessage])

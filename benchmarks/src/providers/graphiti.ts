@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/providers/graphiti.ts
+ *  usage : supports LongMemory benchmark graphiti
+ */
+
 import { http_client } from "./http";
 import { array, as_hits, attributed_text, ignore_missing, provider_metadata, record, route, scope_key, text, unwrap, wait } from "./shared";
 import type { benchmark_event, benchmark_provider, benchmark_scope, ingest_result, provider_config, route_config, search_hit } from "../types";
@@ -58,7 +72,7 @@ export class graphiti_provider implements benchmark_provider {
             await ignore_missing(() => this.api().delete(route(this.routes.reset, { scope: this.group(scope) })));
             await this.api().post("/graph/create", {
                 graph_id: this.group(scope),
-                name: `OpenMemory benchmark ${scope.corpus_id}`,
+                name: `LongMemory benchmark ${scope.corpus_id}`,
                 description: `Benchmark run ${scope.run_id}`,
             });
             return;
@@ -69,7 +83,7 @@ export class graphiti_provider implements benchmark_provider {
     async ingest(events: benchmark_event[], scope: benchmark_scope): Promise<ingest_result> {
         if (this.cloud) {
             const response = record(unwrap(await this.api().post(this.routes.ingest, {
-                metadata: { description: `OpenMemory benchmark ${scope.run_id}:${scope.corpus_id}` },
+                metadata: { description: `LongMemory benchmark ${scope.run_id}:${scope.corpus_id}` },
             })));
             const batch_id = text(response.batch_id, response.batchId, response.id);
             if (!batch_id) throw new Error("Zep did not return a batch ID");
@@ -81,7 +95,7 @@ export class graphiti_provider implements benchmark_provider {
                         data: attributed_text(event),
                         data_type: "text",
                         created_at: new Date(event.timestamp).toISOString(),
-                        source_description: `OpenMemory benchmark ${scope.run_id}`,
+                        source_description: `LongMemory benchmark ${scope.run_id}`,
                         metadata: { ...provider_metadata(event.metadata), source_ref: benchmark_source_ref(event) },
                     })),
                 });
@@ -100,7 +114,7 @@ export class graphiti_provider implements benchmark_provider {
                 role: "benchmark",
                 content: event.text,
                 timestamp: new Date(event.timestamp).toISOString(),
-                source_description: `openmemory benchmark ${scope.run_id}`,
+                source_description: `longmemory benchmark ${scope.run_id}`,
             })),
         });
         const ids = events.map((event) => event.id);

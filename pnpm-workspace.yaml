@@ -1,15 +1,27 @@
+#      __                      __  ___                               
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+#                      /____/                                 /____/   
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : pnpm-workspace.yaml
+#  usage : configures LongMemory pnpm workspace
+
 packages:
   - .
   - apps/vscode-extension
-
-onlyBuiltDependencies:
-  - esbuild
-  - better-sqlite3
-  - '@vscode/vsce-sign'
-  - keytar
+  - integrations/n8n-nodes-longmemory
 
 allowBuilds:
   esbuild: true
   better-sqlite3: true
-  '@vscode/vsce-sign': true
+  "@vscode/vsce-sign": true
   keytar: true
+  cpu-features: false
+  eslint-plugin-n8n-nodes-base: false
+  isolated-vm: false
+  ssh2: false
+  unrs-resolver: false

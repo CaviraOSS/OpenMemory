@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/tools/project_context.ts
+ *  usage : implements the LongMemory project context component
+ */
+
 import type { McpServer as mcp_server_sdk } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { mcp_runtime } from '../runtime.js';
 import { project_context_schema } from '../schemas/tool_schemas.js';
@@ -5,11 +19,11 @@ import { resolve_agent, resolve_framework, resolve_project } from '../security/p
 import { run_audited_tool } from './common.js';
 
 export function register_project_context_tool(server: mcp_server_sdk, runtime: mcp_runtime): void {
-    server.registerTool('openmemory_project_context', {
+    server.registerTool('longmemory_project_context', {
         description: 'Return token-budgeted, permission-scoped context for coding, debugging, planning, or review.',
         inputSchema: project_context_schema,
         annotations: { readOnlyHint: true, idempotentHint: true },
-    }, async (input) => run_audited_tool(runtime, 'openmemory_project_context', input, async () => {
+    }, async (input) => run_audited_tool(runtime, 'longmemory_project_context', input, async () => {
         const project_id = runtime.resolve_project_id(resolve_project(runtime.access, input.project_id));
         const manager = await runtime.project(project_id);
         const packet = await manager.getProjectContext(

@@ -1,10 +1,24 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/config.ts
+ *  usage : supports LongMemory benchmark config
+ */
+
 import type { model_config, model_provider, provider_config, provider_name } from "./types";
 
-export const provider_names: provider_name[] = ["openmemory", "supermemory", "mem0", "graphiti", "cognee"];
-export const model_provider_names: model_provider[] = ["openai", "anthropic", "google", "openai-compatible", "ollama", "codex", "claude-code"];
+export const provider_names: provider_name[] = ["longmemory"];
+export const model_provider_names: model_provider[] = ["openai", "anthropic", "google", "openai-compatible", "ollama", "codex", "claude-code", "copilot", "copilot-answerer", "copilot-judge"];
 
 const base_urls: Record<provider_name, string> = {
-    openmemory: "embedded://openmemory",
+    longmemory: "embedded://longmemory",
     supermemory: "https://api.supermemory.ai",
     mem0: "https://api.mem0.ai",
     graphiti: "https://api.getzep.com/api/v2",
@@ -42,8 +56,8 @@ export function provider_config_from_env(name: provider_name, env: NodeJS.Proces
         timeout_ms: Number(env[`${prefix}_TIMEOUT_MS`] ?? benchmark_defaults.timeout_ms),
         ...(api_key ? { api_key } : {}),
         ...((env[`${prefix}_PROFILE`] ?? default_profile) ? { profile: env[`${prefix}_PROFILE`] ?? default_profile } : {}),
-        ...(name === "openmemory" && env.BENCH_OPENMEMORY_EMBEDDING_BATCH_SIZE
-            ? { embedding_batch_size: Number(env.BENCH_OPENMEMORY_EMBEDDING_BATCH_SIZE) }
+        ...(name === "longmemory" && env.BENCH_LONGMEMORY_EMBEDDING_BATCH_SIZE
+            ? { embedding_batch_size: Number(env.BENCH_LONGMEMORY_EMBEDDING_BATCH_SIZE) }
             : {}),
         ...(routes ? { routes: JSON.parse(routes) as provider_config["routes"] } : {}),
     };
@@ -55,7 +69,7 @@ export function model_config_from_spec(spec: string, env: NodeJS.ProcessEnv = pr
     const provider = spec.slice(0, separator) as model_provider;
     const model = spec.slice(separator + 1);
     if (!model_provider_names.includes(provider)) throw new Error(`unsupported model provider: ${provider}`);
-    const local = provider === "ollama" || provider === "codex" || provider === "claude-code";
+    const local = provider === "ollama" || provider === "codex" || provider === "claude-code" || provider === "copilot" || provider === "copilot-answerer" || provider === "copilot-judge";
     if (provider === "codex" && model === "default") throw new Error("codex requires an explicit model because benchmark safe mode ignores user configuration");
     const env_prefix = provider === "openai-compatible" ? "OPENAI" : provider.toUpperCase().replaceAll("-", "_");
     const api_key = local ? "" : env[`BENCH_${env_prefix}_API_KEY`] ?? env[`${env_prefix}_API_KEY`] ?? "";

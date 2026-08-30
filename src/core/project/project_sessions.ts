@@ -1,4 +1,18 @@
-import type { open_memory } from '../create_memory.js';
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/core/project/project_sessions.ts
+ *  usage : implements the LongMemory project sessions component
+ */
+
+import type { long_memory } from '../create_memory.js';
 import type { ProjectWorld } from './project_world.js';
 import type { project_state } from './project_state.js';
 import { ingest_project_event } from './project_ingest.js';
@@ -46,7 +60,7 @@ const required = (value: string, name: string): string => {
     return clean;
 };
 
-export async function import_project_session(memory: open_memory, project: ProjectWorld, state: project_state, input: project_session_input): Promise<project_session> {
+export async function import_project_session(memory: long_memory, project: ProjectWorld, state: project_state, input: project_session_input): Promise<project_session> {
     const session_id = required(input.session_id, 'session_id');
     const agent_id = required(input.agent_id, 'agent_id');
     const provider = required(input.provider, 'provider');
@@ -85,7 +99,7 @@ export async function import_project_session(memory: open_memory, project: Proje
     };
 }
 
-export async function list_project_sessions(memory: open_memory, state: project_state): Promise<project_session[]> {
+export async function list_project_sessions(memory: long_memory, state: project_state): Promise<project_session[]> {
     const grouped = new Map<string, project_session>();
     const nodes = await Promise.all([...state.session_nodes].map((id) => memory.explain(id)));
     for (const entry of nodes) {

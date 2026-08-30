@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : tests/phase21_cli.test.ts
+ *  usage : verifies LongMemory phase21 cli.test behavior
+ */
+
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -42,7 +56,7 @@ afterEach(async () => {
 });
 
 const workspace = () => {
-    const dir = mkdtempSync(join(tmpdir(), 'openmemory-cli-'));
+    const dir = mkdtempSync(join(tmpdir(), 'longmemory-cli-'));
     dirs.push(dir);
     return { dir, db: join(dir, 'memory.db') };
 };
@@ -98,13 +112,13 @@ function wait_line(child: ChildProcess): Promise<string> {
 }
 
 describe('phase 21 cli', () => {
-    it('1. exposes the openmemory binary and machine-readable help', () => {
-        expect(pkg.bin.openmemory).toBe('dist/cli/index.js');
+    it('1. exposes the longmemory binary and machine-readable help', () => {
+        expect(pkg.bin.longmemory).toBe('dist/cli/index.js');
         const result = run(['help']);
         expect(result.status).toBe(0);
-        expect(result.body?.name).toBe('openmemory');
+        expect(result.body?.name).toBe('longmemory');
         expect(result.stderr).not.toMatch(/\u001b\[/);
-        expect(run(['--version']).body).toMatchObject({ name: 'openmemory', version: pkg.version });
+        expect(run(['--version']).body).toMatchObject({ name: 'longmemory', version: pkg.version });
     });
 
     it('2. starts the shared API server with the selected database', async () => {
@@ -259,7 +273,7 @@ describe('phase 21 cli', () => {
         const registered = run([
             'asset', 'register', '--project', 'alpha', '--db', db, '--type', 'llm_wiki', '--name', 'Architecture wiki',
             '--description', 'Project architecture', '--owner', 'alice', '--source-type', 'docs',
-            '--content-ref', 'openmemory://project/alpha/wiki/architecture', '--status', 'approved', '--visibility', 'project',
+            '--content-ref', 'longmemory://project/alpha/wiki/architecture', '--status', 'approved', '--visibility', 'project',
             '--frameworks', 'vscode', '--mode', 'tool', '--priority', '0.8',
         ]);
         const asset_id = registered.body?.asset.asset_id;
@@ -267,7 +281,7 @@ describe('phase 21 cli', () => {
         const manifest = run(['agent', 'manifest', 'reviewer', '--query', 'architecture release', '--framework', 'vscode', '--project', 'alpha', '--db', db]);
         expect(registered.status).toBe(0);
         expect(loadout.body?.selected.map((item: { asset: { asset_id: string } }) => item.asset.asset_id)).toContain(asset_id);
-        expect(manifest.body?.manifest).toMatchObject({ schema: 'https://openmemory.dev/schemas/agent-memory-manifest/v1', agent: { id: 'reviewer', framework: 'vscode' } });
+        expect(manifest.body?.manifest).toMatchObject({ schema: 'https://longmemory.dev/schemas/agent-memory-manifest/v1', agent: { id: 'reviewer', framework: 'vscode' } });
 
         const session_path = join(dir, 'session.json');
         writeFileSync(session_path, JSON.stringify({
@@ -290,16 +304,16 @@ describe('phase 21 cli', () => {
             { type: 'assistant', sessionId: 'claude-native-1', cwd: dir, timestamp: '2026-01-01T00:00:01Z', message: { role: 'assistant', content: 'Porter built' } },
         ];
         writeFileSync(session_path, turns.map((turn) => JSON.stringify(turn)).join('\n'));
-        const env = { OPENMEMORY_CLAUDE_PROJECTS: source, OPENMEMORY_CODEX_SESSIONS: join(dir, 'missing-codex'), OPENCODE_DB: join(dir, 'missing-opencode.db'), PATH: '' };
+        const env = { LONGMEMORY_CLAUDE_PROJECTS: source, LONGMEMORY_CODEX_SESSIONS: join(dir, 'missing-codex'), OPENCODE_DB: join(dir, 'missing-opencode.db'), PATH: '' };
         const detected = run(['detect', '--project', 'alpha', '--db', db], env);
         const discovered = run(['session', 'discover', '--from', 'claude-code', '--project', 'alpha', '--db', db], env);
-        const first = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
-        const duplicate = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        const first = run(['port', '--from', 'claude-code', '--to', 'longmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        const duplicate = run(['port', '--from', 'claude-code', '--to', 'longmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
         turns.push({ type: 'user', sessionId: 'claude-native-1', cwd: dir, timestamp: '2026-01-01T00:00:02Z', message: { role: 'user', content: 'Add regression tests' } });
         writeFileSync(session_path, turns.map((turn) => JSON.stringify(turn)).join('\n'));
-        const updated = run(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
+        const updated = run(['port', '--from', 'claude-code', '--to', 'longmemory', '--all', '--agent', 'builder', '--project', 'alpha', '--db', db], env);
         const verified = run(['verify', '--from', 'claude-code', '--sample', '1', '--project', 'alpha', '--db', db], env);
-        const streamed = run_jsonl(['port', '--from', 'claude-code', '--to', 'openmemory', '--all', '--force', '--jsonl', '--project', 'alpha', '--db', db], env);
+        const streamed = run_jsonl(['port', '--from', 'claude-code', '--to', 'longmemory', '--all', '--force', '--jsonl', '--project', 'alpha', '--db', db], env);
 
         expect(detected.body?.harnesses.find((item: { harness: string }) => item.harness === 'claude-code')).toMatchObject({ installed: true, can_import: true, source_path: source });
         expect(discovered.body).toMatchObject({ harness: 'claude-code', count: 1, projects: [expect.objectContaining({ cwd: dir })] });

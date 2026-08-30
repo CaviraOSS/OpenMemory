@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/mcp/tools/manage_asset.ts
+ *  usage : implements the LongMemory manage asset component
+ */
+
 import type { McpServer as mcp_server_sdk } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { memory_asset_input } from '../../core/project/project_assets.js';
 import type { mcp_runtime } from '../runtime.js';
@@ -11,12 +25,12 @@ const required = (value: string | undefined, name: string): string => {
 };
 
 export function register_manage_asset_tool(server: mcp_server_sdk, runtime: mcp_runtime): void {
-    server.registerTool('openmemory_manage_asset', {
+    server.registerTool('longmemory_manage_asset', {
         description: 'Register or govern a versioned memory asset. Sensitive writes remain auditable and read-only servers reject this tool.',
         inputSchema: manage_asset_schema,
         annotations: { readOnlyHint: false, destructiveHint: false },
-    }, async (input) => run_audited_tool(runtime, 'openmemory_manage_asset', input, async () => {
-        assert_write_allowed(runtime.access, 'openmemory_manage_asset');
+    }, async (input) => run_audited_tool(runtime, 'longmemory_manage_asset', input, async () => {
+        assert_write_allowed(runtime.access, 'longmemory_manage_asset');
         const project_id = runtime.resolve_project_id(resolve_project(runtime.access, input.project_id));
         const manager = await runtime.project(project_id);
         if (input.action === 'govern') {

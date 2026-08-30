@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : benchmarks/src/runner.ts
+ *  usage : supports LongMemory benchmark runner
+ */
+
 import { mkdirSync } from "node:fs";
 import { arch, cpus, platform, release, totalmem } from "node:os";
 import { basename, resolve } from "node:path";
@@ -77,6 +91,9 @@ const make_manifest = (
         local: embedding.local_model,
         synthetic: "deterministic-hash",
     } as Record<string, string>)[embedding.provider] : null;
+    const configured_embedding_price = process.env.BENCH_EMBEDDING_INPUT_COST_PER_MILLION_USD;
+    const embedding_price = configured_embedding_price === undefined || configured_embedding_price.trim() === "" ? null : Number(configured_embedding_price);
+    if (embedding_price !== null && (!Number.isFinite(embedding_price) || embedding_price < 0)) throw new Error("BENCH_EMBEDDING_INPUT_COST_PER_MILLION_USD must be a non-negative number");
     return {
         version: 1,
         official: cases.every((item) => item.dataset !== "smoke"),
@@ -112,14 +129,15 @@ const make_manifest = (
         sample_offset: options.sample_offset ?? 0,
         matching: { version: 2, lexical_threshold: benchmark_defaults.lexical_threshold, opaque_source_ref_first: true, source_id_first: false },
         context_token_budget: benchmark_defaults.context_token_budget,
-        openmemory_embedding: embedding ? {
+        longmemory_embedding: embedding ? {
             provider: embedding.provider,
             model: embedding_model ?? "unknown",
             tier: embedding.tier,
             dimension: embedding.dimension,
             fallback: embedding.fallback,
-            batch_size: configs.openmemory?.embedding_batch_size ?? (embedding.provider === "ollama" ? 128 : embedding.provider === "gemini" ? 100 : 16),
+            batch_size: configs.longmemory?.embedding_batch_size ?? (embedding.provider === "ollama" ? 128 : embedding.provider === "gemini" ? 100 : 16),
             inputs_per_minute: embedding.provider === "gemini" ? embedding.gemini_inputs_per_minute : 0,
+            input_cost_per_million_usd: embedding_price,
         } : null,
         ai: {
             enabled: Boolean(options.answerer_config && options.judge_config),
@@ -156,12 +174,12 @@ export async function run_benchmark(options: run_options): Promise<run_result> {
         throw new Error("official LongMemEval/LoCoMo runs require --answerer and --judge; use --retrieval-diagnostic only for non-publishable tuning");
     }
     if (official_requested && options.answerer_config && options.judge_config && options.answerer_config.provider === options.judge_config.provider && options.answerer_config.model === options.judge_config.model) {
-        throw new Error("official runs require distinct answerer and judge models to reduce correlated evaluation bias");
+        throw new Error("official runs require distinct answerer and judge model specs to reduce correlated evaluation bias");
     }
-    if (official_requested && options.providers.includes("openmemory")) {
+    if (official_requested && options.providers.includes("longmemory")) {
         const embedding = load_embedding_environment();
         if (!embedding || embedding.provider === "synthetic" || embedding.tier === "fast" || embedding.tier === "hybrid") {
-            throw new Error("official OpenMemory runs require a semantic embedding profile via OPENMEMORY_EMBEDDING_PROVIDER with tier=deep or smart");
+            throw new Error("official LongMemory runs require a semantic embedding profile via LONGMEMORY_EMBEDDING_PROVIDER with tier=deep or smart");
         }
     }
     const run_id = options.run_id ?? new Date().toISOString().replace(/[:.]/g, "-");
@@ -175,7 +193,7 @@ export async function run_benchmark(options: run_options): Promise<run_result> {
     if (!cases.length) throw new Error("no benchmark cases selected");
     const configs = Object.fromEntries(options.providers.map((name) => {
         const config = options.configs?.[name] ?? provider_config_from_env(name);
-        return [name, name === "openmemory" && !config.profile
+        return [name, name === "longmemory" && !config.profile
             ? { ...config, profile: official_requested ? "semantic" : "synthetic" }
             : config];
     })) as Record<provider_name, provider_config>;
@@ -216,6 +234,7 @@ export async function run_benchmark(options: run_options): Promise<run_result> {
                 if (options.resume !== false && provider_cases[benchmark_case.id]?.phases[terminal_phase].status === "completed") continue;
                 options.on_progress?.({ provider: name, case_id: benchmark_case.id, index: index + 1, total: cases.length });
                 const item = new_case(benchmark_case.id, benchmark_case.corpus_id, benchmark_case.dataset, benchmark_case.category);
+                item.read_input_tokens = count_tokens(benchmark_case.question);
                 provider_cases[benchmark_case.id] = item;
                 const parsed_question_time = benchmark_case.question_date ? Date.parse(benchmark_case.question_date.replace(/\s*\([A-Za-z]{3}\)\s*/, " ")) : Number.NaN;
                 const scope = {
@@ -230,11 +249,13 @@ export async function run_benchmark(options: run_options): Promise<run_result> {
                 try {
                     if (active_corpus_id === benchmark_case.corpus_id) {
                         item.ingest_reused = true;
+                        item.write_input_tokens = 0;
                         start_phase(item, "ingest");
                         complete_phase(item, "ingest", 0);
                         start_phase(item, "indexing");
                         complete_phase(item, "indexing", 0);
                     } else {
+                        item.write_input_tokens = benchmark_case.events.reduce((sum, event) => sum + count_tokens(event.text), 0);
                         await provider.reset(scope);
                         start_phase(item, "ingest");
                         save_checkpoint(checkpoint_path, checkpoint);
@@ -268,8 +289,9 @@ export async function run_benchmark(options: run_options): Promise<run_result> {
                     const matched_ids = new Set(top.flatMap((hit) => hit.evidence_id ? [hit.evidence_id] : []));
                     item.hits = matched;
                     item.metrics = cutoffs.map((cutoff) => score_at_k(matched, benchmark_case.evidence_ids, cutoff));
+                    item.evidence_ids = benchmark_case.evidence_ids;
                     item.stale_leakage = benchmark_case.forbidden_ids.some((id) => matched_ids.has(id));
-                    item.abstention_correct = benchmark_case.evidence_ids.length ? null : matched_ids.size === 0;
+                    item.abstention_correct = benchmark_case.evidence_ids.length || benchmark_case.evidence_unknown ? null : matched_ids.size === 0;
                     item.context_tokens = count_tokens(context_hits.map((hit) => hit.text).join("\n"));
                     complete_phase(item, "evaluate", performance.now() - phase_started);
 

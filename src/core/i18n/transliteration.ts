@@ -1,17 +1,15 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/i18n/transliteration.ts
- *  usage : conservative script-to-Latin search aliases
+ *  usage : implements the LongMemory transliteration component
  */
 
 import type { language_code } from './language_detection.js';
@@ -35,7 +33,7 @@ const map_characters = (text: string, map: Record<string, string>) => [...text.t
 
 export function transliterate(text: string, language: language_code = 'und'): transliteration_result | null {
     const exact = phrases[text.trim()];
-    if (exact) return { text: exact, confidence: 0.99, scheme: 'openmemory-curated' };
+    if (exact) return { text: exact, confidence: 0.99, scheme: 'longmemory-curated' };
     if (/\p{Script=Cyrillic}/u.test(text)) return { text: map_characters(text, cyrillic), confidence: 0.82, scheme: 'iso-like-cyrillic' };
     if (/\p{Script=Arabic}/u.test(text)) return { text: map_characters(text, arabic), confidence: language === 'ur' ? 0.72 : 0.78, scheme: 'buckwalter-like' };
     if (/\p{Script=Latin}/u.test(text) && [...text].every((character) => ['Latin', 'Common'].includes(script_of_character(character)))) return { text: text.toLocaleLowerCase(), confidence: 1, scheme: 'identity-latin' };

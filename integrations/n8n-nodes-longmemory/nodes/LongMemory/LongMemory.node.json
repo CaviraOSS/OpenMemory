@@ -1,0 +1,16 @@
+{
+    "node": "n8n-nodes-longmemory.longMemory",
+    "nodeVersion": "1.0",
+    "codexVersion": "1.0",
+    "categories": [
+        "AI",
+        "Data & Storage"
+    ],
+    "resources": {
+        "primaryDocumentation": [
+            {
+                "url": "https://github.com/CaviraOSS/LongMemory/tree/main/integrations"
+            }
+        ]
+    }
+}

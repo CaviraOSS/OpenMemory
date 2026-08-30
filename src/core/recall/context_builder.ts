@@ -1,24 +1,16 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/recall/context_builder.ts
- *  usage : builds a context packet under a token budget
+ *  usage : implements the LongMemory context builder component
  */
-
-
-
-
-
-
 
 import type { HydroNode } from '../types/hydro_node.js';
 import { count_multilingual_tokens } from '../i18n/multilingual_tokenizer.js';
@@ -64,10 +56,12 @@ export type ContextPacket = {
     items: HydroNode[];
     evidence: memory_evidence[];
     within_budget: boolean;
+    bundled_items: number;
 };
 
 export type context_packet_options = {
     query_terms?: readonly string[];
+    bundles?: ReadonlyMap<string, readonly HydroNode[]>;
 };
 
 
@@ -80,15 +74,25 @@ export function build_context_packet(
     const evidence: memory_evidence[] = [];
     const lines: string[] = [];
     let tokens_used = 0;
+    let bundled_items = 0;
 
     for (const candidate of scored) {
-        const line = render_node(candidate.node);
-        const cost = node_tokens(candidate.node, line);
+        const bundle = options.bundles?.get(candidate.node.id) ?? [];
+        const evidence_text = bundle.length
+            ? [...bundle, candidate.node]
+                .sort((left, right) => left.temporal.observed_at - right.temporal.observed_at)
+                .map((node) => memory_evidence_of(node, { query_terms: options.query_terms, prefer_raw: true }).text)
+                .join(' | ')
+            : memory_evidence_of(candidate.node, { query_terms: options.query_terms }).text;
+        const line = bundle.length ? evidence_text : render_node(candidate.node);
+        const cost = bundle.length ? count_tokens(line) : node_tokens(candidate.node, line);
         if (tokens_used + cost > budget) continue;
         items.push(candidate.node);
-        evidence.push(memory_evidence_of(candidate.node, { query_terms: options.query_terms }));
+        const item_evidence = memory_evidence_of(candidate.node, { query_terms: options.query_terms });
+        evidence.push({ ...item_evidence, text: evidence_text });
         lines.push(`- ${line}`);
         tokens_used += cost;
+        bundled_items += bundle.length;
     }
 
     return {
@@ -98,5 +102,6 @@ export function build_context_packet(
         items,
         evidence,
         within_budget: tokens_used <= budget,
+        bundled_items,
     };
 }

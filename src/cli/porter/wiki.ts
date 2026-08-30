@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/wiki.ts
+ *  usage : implements the LongMemory wiki component
+ */
+
 import { hash_canonical } from '../../core/hash/content_hash.js';
 import type { memory_asset, memory_asset_status } from '../../core/project/project_assets.js';
 import type { project_memory } from '../../core/project/project_memory.js';
@@ -72,12 +86,12 @@ export async function sessions_to_wiki(project: project_memory, project_id: stri
     const asset = await project.registerAsset(project_id, {
         asset_id, type: 'llm_wiki', name, description: `Agent-readable knowledge pages derived from ${sessions.length} ${harness} conversation${sessions.length === 1 ? '' : 's'}`,
         owner_id: options.owner_id ?? 'project', source_type: 'conversation_wiki', source_ref: `${harness}:${selected_ids.join(',')}`,
-        content_ref: `openmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
+        content_ref: `longmemory://project/${encodeURIComponent(project_id)}/asset/${encodeURIComponent(asset_id)}`,
         status: options.status ?? prior?.status ?? 'candidate', visibility: prior?.visibility ?? 'project', confidence: 0.8,
         labels: ['conversation-wiki', harness, 'agent-readable'],
         ...(options.agent_id ? { bindings: [{ target_type: 'agent' as const, target_id: options.agent_id, injection_mode: 'direct' as const, priority: 0.7, required: false, enabled: true, created_by: options.owner_id ?? 'project' }] } : {}),
         payload: { summary: `${sessions.length} conversations and ${sessions.reduce((sum, session) => sum + session.turns.length, 0)} turns from ${harness}`, format: 'text/markdown', markdown, session_ids: selected_ids },
-        metadata: { source_harness: harness, source_revision: revision, session_count: sessions.length, turn_count: sessions.reduce((sum, session) => sum + session.turns.length, 0), generated_by: 'openmemory-session-wiki-v1' },
+        metadata: { source_harness: harness, source_revision: revision, session_count: sessions.length, turn_count: sessions.reduce((sum, session) => sum + session.turns.length, 0), generated_by: 'longmemory-session-wiki-v1' },
     });
     return { asset, sessions: sessions.length, turns: sessions.reduce((sum, session) => sum + session.turns.length, 0), revision, status: prior ? 'updated' : 'created' };
 }

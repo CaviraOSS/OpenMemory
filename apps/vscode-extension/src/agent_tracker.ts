@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/src/agent_tracker.ts
+ *  usage : supports the LongMemory VS Code extension agent tracker
+ */
+
 import * as vscode from 'vscode';
 import {
     change_id,
@@ -8,7 +22,7 @@ import {
     type pending_agent_change,
     type pending_file_change,
 } from './agent_changes.js';
-import { openmemory_cli } from './cli.js';
+import { longmemory_cli } from './cli.js';
 
 export type agent_tracker_status = { active: agent_kind | null; pending: number };
 
@@ -35,7 +49,7 @@ const installed_agents = (): agent_kind[] => [...new Set(known_extensions
     .map((candidate) => candidate.agent))];
 
 const relative_path = (resource: vscode.Uri): string => vscode.workspace.asRelativePath(resource, false).replaceAll('\\', '/');
-const snapshot_exclude = '{**/.git/**,**/.openmemory/**,**/node_modules/**,**/dist/**,**/out/**,**/build/**,**/coverage/**}';
+const snapshot_exclude = '{**/.git/**,**/.longmemory/**,**/node_modules/**,**/dist/**,**/out/**,**/build/**,**/coverage/**}';
 
 export class agent_change_tracker implements vscode.Disposable {
     private readonly baselines = new Map<string, string>();
@@ -46,7 +60,7 @@ export class agent_change_tracker implements vscode.Disposable {
     private active: active_session | null = null;
 
     constructor(
-        private readonly cli: openmemory_cli,
+        private readonly cli: longmemory_cli,
         private readonly output: vscode.OutputChannel,
         private readonly on_status: (status: agent_tracker_status) => void,
         private readonly after_record: () => Promise<void>,
@@ -62,7 +76,7 @@ export class agent_change_tracker implements vscode.Disposable {
 
     status(): agent_tracker_status { return { active: this.active?.agent ?? null, pending: this.queue.length + this.heuristic.size }; }
 
-    async start(): Promise<void> {
+    async start(preset_agent?: agent_kind, preset_label?: string): Promise<void> {
         if (this.active) {
             const replace = await vscode.window.showWarningMessage(`A ${this.active.agent} session is already active. Stop it first?`, { modal: true }, 'Stop Session');
             if (!replace) return;
@@ -77,7 +91,9 @@ export class agent_change_tracker implements vscode.Disposable {
             { label: 'Windsurf / Codeium', agent: 'windsurf' as const },
             { label: 'Other AI agent', agent: 'other' as const },
         ].map((item) => ({ ...item, description: detected.includes(item.agent) ? 'installed' : undefined }));
-        const selected = await vscode.window.showQuickPick(items, { title: 'Start AI change session', placeHolder: 'Which agent will edit this workspace?' });
+        const selected = preset_agent
+            ? items.find((item) => item.agent === preset_agent) ?? { label: preset_label ?? preset_agent, agent: preset_agent }
+            : await vscode.window.showQuickPick(items, { title: 'Start AI change session', placeHolder: 'Which agent will edit this workspace?' });
         if (!selected) return;
         const resource = this.cli.current_resource();
         if (!resource) { vscode.window.showWarningMessage('Open a workspace before starting an AI change session.'); return; }
@@ -242,7 +258,7 @@ export class agent_change_tracker implements vscode.Disposable {
     }
 
     private setting<T>(name: string, resource: vscode.Uri, fallback: T): T {
-        return vscode.workspace.getConfiguration('openmemory.agentChanges', resource).get<T>(name, fallback);
+        return vscode.workspace.getConfiguration('longmemory.agentChanges', resource).get<T>(name, fallback);
     }
 
     private max_patch_bytes(resource: vscode.Uri): number {

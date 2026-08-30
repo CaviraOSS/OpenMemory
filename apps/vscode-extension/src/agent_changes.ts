@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : apps/vscode-extension/src/agent_changes.ts
+ *  usage : supports the LongMemory VS Code extension agent changes
+ */
+
 import { createHash } from 'node:crypto';
 
 export type agent_kind = 'copilot' | 'codex' | 'claude' | 'cursor' | 'windsurf' | 'other';
@@ -36,7 +50,7 @@ export type rendered_agent_change = {
 
 const secret_path = /(^|[\\/])(?:\.env(?:\..*)?|\.npmrc|\.pypirc|id_rsa|id_ed25519|credentials(?:\.json)?|secrets?(?:\.[^\\/]*)?|.*\.(?:pem|key|p12|pfx))$/i;
 const binary_extension = /\.(?:png|jpe?g|gif|webp|ico|pdf|zip|gz|tar|7z|exe|dll|so|dylib|wasm|woff2?|ttf|otf|mp[34]|mov|avi|sqlite|db)$/i;
-const generated_path = /(^|[\\/])(?:\.git|\.openmemory|node_modules|dist|out|build|coverage)([\\/]|$)/i;
+const generated_path = /(^|[\\/])(?:\.git|\.longmemory|node_modules|dist|out|build|coverage)([\\/]|$)/i;
 const credential_line = /(?:api[_-]?key|(?:access[_-]?|auth[_-]?)?token|client[_-]?secret|password|private[_-]?key|authorization)\s*[:=]|\bbearer\s+[a-z0-9._~+/=-]+|-----begin [a-z ]*private key-----/i;
 
 export const should_capture_path = (path: string): boolean => !generated_path.test(path) && !secret_path.test(path) && !binary_extension.test(path);

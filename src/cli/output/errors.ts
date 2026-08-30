@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/output/errors.ts
+ *  usage : implements the LongMemory errors component
+ */
+
 import type { cli_context, cli_io } from '../context/cli_context.js';
 import { render_json } from './json.js';
 import { panel } from './panel.js';
@@ -39,7 +53,7 @@ export function render_error(context: cli_context | null, io: cli_io, error: unk
         io.stderr(panel('', context.colors, {
             title: `Error: ${value.code}`,
             kind: 'danger', width: context.terminal_width,
-            rows: [['Cause', value.message], ['Fix', value.fix || 'Review the command arguments and try again.'], ['Try', value.suggestion || 'openmemory help']],
+            rows: [['Cause', value.message], ['Fix', value.fix || 'Review the command arguments and try again.'], ['Try', value.suggestion || 'longmemory help']],
         }));
     }
     return value.exit_code;

@@ -1,3 +1,17 @@
+/*
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
+ *
+ *  cavira oss (c) 2026  -  nullure (c) 2026
+ *  ----------------------------------------------------------
+ *  file  : src/cli/porter/adapters/gemini_cli.ts
+ *  usage : implements the LongMemory gemini cli component
+ */
+
 import { readFileSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -6,7 +20,7 @@ import { is_directory, is_readable, walk_files } from '../filesystem.js';
 import type { harness_capability, import_adapter, portable_session, portable_turn, session_ref } from '../types.js';
 import { epoch, object, text_content, type json } from './shared.js';
 
-const root = (env: NodeJS.ProcessEnv) => env.OPENMEMORY_GEMINI_SESSIONS ?? join(env.GEMINI_CLI_HOME ?? env.HOME ?? homedir(), env.GEMINI_CLI_HOME ? 'tmp' : '.gemini/tmp');
+const root = (env: NodeJS.ProcessEnv) => env.LONGMEMORY_GEMINI_SESSIONS ?? join(env.GEMINI_CLI_HOME ?? env.HOME ?? homedir(), env.GEMINI_CLI_HOME ? 'tmp' : '.gemini/tmp');
 const records = (path: string): json[] => {
     const text = readFileSync(path, 'utf8');
     if (path.toLocaleLowerCase().endsWith('.jsonl')) return text.split(/\r?\n/).filter(Boolean).flatMap((line) => { try { return [object(JSON.parse(line))]; } catch { return []; } });

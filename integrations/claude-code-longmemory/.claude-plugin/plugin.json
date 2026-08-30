@@ -1,0 +1,23 @@
+{
+    "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+    "name": "longmemory",
+    "displayName": "LongMemory",
+    "version": "0.1.0",
+    "description": "Durable project memory, recall, decisions, tasks, and governed context for Claude Code.",
+    "author": {
+        "name": "CaviraOSS",
+        "email": "CaviraOSS@users.noreply.github.com",
+        "url": "https://github.com/CaviraOSS"
+    },
+    "homepage": "https://github.com/CaviraOSS/LongMemory",
+    "repository": "https://github.com/CaviraOSS/LongMemory",
+    "license": "MIT",
+    "keywords": [
+        "memory",
+        "mcp",
+        "coding-agent"
+    ],
+    "skills": "./skills/",
+    "mcpServers": "./.mcp.json",
+    "defaultEnabled": true
+}

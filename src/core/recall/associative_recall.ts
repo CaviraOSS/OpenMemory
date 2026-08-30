@@ -1,35 +1,16 @@
 /*
- *   _____                 ___  ___
- *  |  _  |                |  \/  |
- *  | | | |_ __   ___ _ __ | .  . | ___ _ __ ___   ___  _ __ _   _
- *  | | | | '_ \ / _ \ '_ \| |\/| |/ _ \ '_ ` _ \ / _ \| '__| | | |
- *  \ \_/ / |_) |  __/ | | | |  | |  __/ | | | | | (_) | |  | |_| |
- *   \___/| .__/ \___|_| |_\_|  |_/\___|_| |_| |_|\___/|_|   \__, |
- *        | |                                                 __/ |
- *        |_|                                                |___/
+*      __                      __  ___                               
+*     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+*    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
+                     /____/                                 /____/   
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/recall/associative_recall.ts
- *  usage : associative recall engine (pattern/emotion/reflection, not truth)
+ *  usage : implements the LongMemory associative recall component
  */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 import { compute_activation } from '../math/activation.js';
 import { clamp01, sigmoid } from '../math/utility.js';
@@ -39,16 +20,20 @@ import type { HydroNode } from '../types/hydro_node.js';
 import type { GateContext, RecallLabel } from '../types/recall_mode.js';
 import { default_gate_thresholds } from '../types/recall_mode.js';
 import {
+    legacy_spread_activation,
     spread_activation,
     type ActivationSpreadOptions,
     type SpreadResult,
 } from './activation_spread.js';
-import { build_context_packet, type ContextPacket } from './context_builder.js';
+import { build_context_packet, count_tokens, type ContextPacket } from './context_builder.js';
+import { memory_evidence_text } from './evidence.js';
+import { default_evidence_selection_depth, select_evidence_set } from './evidence_selection.js';
 import { hopfield_recall, type HopfieldMemory, type HopfieldResult } from './hopfield_recall.js';
 import { can_use_in_associative_recall } from './mode_gates.js';
 import { plan_strict_recall, type RecallDeps, type RecallQuery } from './recall_planner.js';
 import { normalize_recall_token, recall_document, recall_tokens, recall_vector, type RecallDocument, type RecallVector } from './recall_text.js';
 import { rank_indices, reciprocal_rank_fusion, select_diverse } from './fusion.js';
+import { matrix_fusion, select_sparse_seeds } from './matrix_fusion.js';
 import { default_rerank_depth, prepare_rerank_query, rerank_features, rerank_score } from './rerank.js';
 
 const day_ms = 86_400_000;
@@ -58,6 +43,7 @@ const rm3_enabled = process.env.OM_RM3 === '1';
 const rm3_feedback_docs = 10;
 const rm3_feedback_terms = 12;
 const rm3_original_weight = 0.6;
+const matrix_retrieval_enabled = process.env.OM_MATRIX_RETRIEVAL !== '0';
 
 export type AssociativeQuery = {
     text: string;
@@ -127,6 +113,10 @@ export type AssociativeBreakdown = {
     recency: number;
     session: number;
     status_penalty: number;
+    matrix: number;
+    polarity: number;
+    entity_gate: number;
+    graph_gain: number;
     score: number;
 };
 
@@ -156,7 +146,8 @@ export type AssociativeTrace = {
     retrieved: number;
     admitted: number;
     rejected: number;
-    spread: { hops: number; visited: number };
+    spread: { hops: number; visited: number; seeds: number; seed_density: number; entropy: number; peak: number; bypassed: boolean };
+    matrix: { enabled: boolean; features: string[]; regularization: number; temperature: number; seed_threshold: number };
     candidates: AssociativeCandidateTrace[];
     context_tokens: number;
     budget: number;
@@ -227,6 +218,54 @@ function is_contradicted(node: HydroNode): boolean {
 
 function is_emotional(node: HydroNode): boolean {
     return node.facets.emotional !== null || node.contract.use_for_emotional_context;
+}
+
+const exception_query_re = /\b(?:all|always|any|ever|every|never|none|only|smoothly|without (?:a )?(?:problem|issue))\b/i;
+const exception_evidence_terms = ['except', 'fail', 'failed', 'failure', 'problem', 'issue', 'tough', 'challenge', 'difficult', 'disappointed', 'disappointing', 'wrong', 'weird', 'broke', 'broken', 'unable'] as const;
+
+function polarity_relevance(node: HydroNode, enabled: boolean, query_terms: readonly string[]): number {
+    if (!enabled) return 0;
+    const evidence_terms = new Set(recall_tokens(`${node.content.raw} ${node.content.summary}`));
+    const failure_strength = exception_evidence_terms.reduce((sum, term) => sum + Number(evidence_terms.has(term)), 0);
+    if (failure_strength === 0) return 0;
+    const ignored = new Set(['all', 'always', 'any', 'ever', 'every', 'never', 'none', 'only', 'smooth', 'without']);
+    const document = recall_document(node);
+    let overlap = 0;
+    for (const term of new Set(query_terms)) {
+        if (!ignored.has(term) && document.frequencies.has(term)) overlap++;
+    }
+    return overlap >= 2 ? Math.min(1, failure_strength / 3) : 0;
+}
+
+const referential_turn_re = /\b(?:did it|did that|just did it|just did that|that one|this one|the same (?:thing|place|one)|so did i|me too)\b/i;
+
+function conversation_bundles(
+    anchors: readonly AssociativeItem[],
+    nodes: readonly HydroNode[],
+    edges: readonly HydroEdge[],
+    anchor_limit = 8,
+    max_depth = 2,
+): Map<string, readonly HydroNode[]> {
+    const by_id = new Map(nodes.map((node) => [node.id, node]));
+    const predecessor = new Map<string, string>();
+    for (const edge of edges) if (edge.type === 'refers_to') predecessor.set(edge.from, edge.to);
+    const bundles = new Map<string, readonly HydroNode[]>();
+    for (const anchor of anchors.slice(0, anchor_limit)) {
+        if (!referential_turn_re.test(anchor.node.content.raw)) continue;
+        const conversation = conversation_of(anchor.node);
+        if (!conversation) continue;
+        const neighbours: HydroNode[] = [];
+        let current = anchor.node.id;
+        for (let depth = 0; depth < max_depth; depth++) {
+            const previous_id = predecessor.get(current);
+            const previous = previous_id ? by_id.get(previous_id) : undefined;
+            if (!previous || conversation_of(previous) !== conversation) break;
+            neighbours.push(previous);
+            current = previous.id;
+        }
+        if (neighbours.length > 0) bundles.set(anchor.node.id, neighbours);
+    }
+    return bundles;
 }
 
 
@@ -368,6 +407,7 @@ export function associative_recall(
     const first_person_query = /\b(?:i|me|my|mine)\b/i.test(query.text);
     const emotional_query = /\b(?:feel|feeling|felt|emotion|emotional|happy|sad|afraid|anxious|angry|love|hate|mood)\b/i.test(query.text);
     const recommendation_query = /\b(?:recommend|recommendation|suggest|suggestion|personalize|tailor)\b/i.test(query.text);
+    const exception_query = exception_query_re.test(query.text);
 
 
     const plan_query: RecallQuery = {
@@ -415,9 +455,6 @@ export function associative_recall(
     let oldest_observed = Number.POSITIVE_INFINITY;
     let newest_observed = Number.NEGATIVE_INFINITY;
 
-    // Direct relevance seeds spreading activation (steps 1-3 feed the seed).
-    const seeds = spread_enabled ? new Map<string, number>() : null;
-    let seed_count = 0;
     for (let node_index = 0; node_index < admitted.length; node_index++) {
         const node = admitted[node_index];
         const document = documents[node_index];
@@ -428,10 +465,6 @@ export function associative_recall(
         entity_scores[node_index] = entity;
         const rel = clamp01(0.5 * vector + 0.35 * lexical + 0.15 * entity);
         direct_relevance[node_index] = rel;
-        if (rel > 0.05) {
-            seed_count++;
-            seeds?.set(node.id, rel);
-        }
         if (node.temporal.observed_at < oldest_observed) oldest_observed = node.temporal.observed_at;
         if (node.temporal.observed_at > newest_observed) newest_observed = node.temporal.observed_at;
     }
@@ -445,23 +478,19 @@ export function associative_recall(
     const session_weight = weights.session ?? 0;
     const session_scores = session_weight > 0 ? session_relevance(admitted, direct_relevance) : null;
 
-    // Step 5: controlled, bounded spreading activation over the graph.
-    const spread: SpreadResult =
-        spread_enabled && seeds && seeds.size > 0
-            ? spread_activation(seeds, deps.edges!, deps.spread)
-            : { activation: new Map(), hops: deps.spread?.max_hops ?? 2, visited: [], frontier_by_hop: [[]] };
-
-    // Steps 1-7: combine every signal per admitted node.
-    const limit = query.k == null ? null : Math.max(0, query.k);
-    const ranked_entries: Array<{ item: AssociativeItem; order: number }> = [];
+    const activation_scores = new Float64Array(admitted.length);
+    const emotional_scores = new Float64Array(admitted.length);
+    const speaker_scores = new Float64Array(admitted.length);
+    const preference_scores = new Float64Array(admitted.length);
+    const recency_scores = new Float64Array(admitted.length);
+    const polarity_scores = new Float64Array(admitted.length);
+    const entity_gates = new Float64Array(admitted.length);
     for (let node_index = 0; node_index < admitted.length; node_index++) {
         const node = admitted[node_index];
         const vector = vector_scores[node_index];
         const lexical = bm25[node_index];
         const entity = entity_scores[node_index];
-        const spread_value = clamp01(spread.activation.get(node.id) ?? 0);
         const pressure = clamp01(deps.contradiction_pressure_of?.(node.id) ?? 0);
-
         const age_days = Math.max(0, (at - node.temporal.observed_at) / day_ms);
         const memory_strength = deps.decay_policy
             ? project_node_decay(node, at, deps.decay_policy).activation
@@ -472,28 +501,81 @@ export function associative_recall(
             grounding_relevance: node.grounding.grounding_score,
             contradiction_penalty: pressure,
         });
-        const activation = clamp01(sigmoid(actr_raw));
-
-        const emotional = emotional_query && is_emotional(node) ? (node.facets.emotional?.weight ?? 0.5) * Math.max(vector, lexical, entity) : 0;
+        activation_scores[node_index] = clamp01(sigmoid(actr_raw));
+        emotional_scores[node_index] = emotional_query && is_emotional(node) ? (node.facets.emotional?.weight ?? 0.5) * Math.max(vector, lexical, entity) : 0;
         const role = typeof node.metadata.role === 'string' ? node.metadata.role.toLowerCase() : '';
-        const speaker = first_person_query ? role === 'user' ? 1 : role === 'assistant' ? 0 : 0.5 : 0;
-        const preference = recommendation_query && node.content.claims?.some((claim) => claim.kind === 'preference') ? 1 : 0;
+        speaker_scores[node_index] = first_person_query ? role === 'user' ? 1 : role === 'assistant' ? 0 : 0.5 : 0;
+        preference_scores[node_index] = recommendation_query && node.content.claims?.some((claim) => claim.kind === 'preference') ? 1 : 0;
+        const observed_position = observed_span > 0 ? (node.temporal.observed_at - oldest_observed) / observed_span : 0;
+        recency_scores[node_index] = plan.intent.temporal === 'latest'
+            ? observed_position
+            : plan.intent.temporal === 'earliest' ? 1 - observed_position : 0;
+        polarity_scores[node_index] = polarity_relevance(node, exception_query, recall_tokens(query.text));
+        entity_gates[node_index] = plan.resolved_entities.length === 0 ? 1 : 0.35 + 0.65 * sigmoid(8 * (entity - 0.5));
+    }
+
+    const matrix = matrix_fusion([
+        { name: 'vector', values: vector_scores, weight: weights.vector },
+        { name: 'lexical', values: bm25, weight: weights.lexical },
+        { name: 'activation', values: activation_scores, weight: weights.activation },
+        { name: 'speaker', values: speaker_scores, weight: first_person_query ? weights.speaker : 0 },
+        { name: 'temporal', values: recency_scores, weight: recency_weight },
+        { name: 'polarity', values: polarity_scores, weight: exception_query ? 0.18 : 0 },
+        { name: 'preference', values: preference_scores, weight: recommendation_query ? weights.preference : 0 },
+    ]);
+    const matrix_scores = new Float64Array(admitted.length);
+    for (let index = 0; index < admitted.length; index++) matrix_scores[index] = matrix.scores[index] * entity_gates[index];
+    const sparse = select_sparse_seeds(admitted.map((node) => node.id), matrix_scores);
+    const legacy_seeds = new Map<string, number>();
+    if (!matrix_retrieval_enabled) {
+        for (let index = 0; index < admitted.length; index++) {
+            if (direct_relevance[index] > 0.05) legacy_seeds.set(admitted[index].id, direct_relevance[index]);
+        }
+    }
+    const matrix_query = matrix_retrieval_enabled && exception_query;
+    if (!matrix_query) {
+        for (let index = 0; index < admitted.length; index++) {
+            if (direct_relevance[index] > 0.05) legacy_seeds.set(admitted[index].id, direct_relevance[index]);
+        }
+    }
+    const seeds = matrix_query ? sparse.seeds : legacy_seeds;
+    const seed_count = seeds.size;
+
+    // Step 5: controlled, bounded spreading activation over the graph.
+    const spread: SpreadResult =
+        spread_enabled && seeds.size > 0
+            ? matrix_query
+                ? spread_activation(seeds, deps.edges!, deps.spread)
+                : legacy_spread_activation(seeds, deps.edges!, deps.spread)
+            : { activation: new Map(), hops: deps.spread?.max_hops ?? 2, visited: [], frontier_by_hop: [[]], entropy: 0, peak: 0, bypassed: false };
+
+    // Steps 1-7: combine every signal per admitted node.
+    const limit = query.k == null ? null : Math.max(0, query.k);
+    const ranked_entries: Array<{ item: AssociativeItem; order: number }> = [];
+    for (let node_index = 0; node_index < admitted.length; node_index++) {
+        const node = admitted[node_index];
+        const vector = vector_scores[node_index];
+        const lexical = bm25[node_index];
+        const entity = entity_scores[node_index];
+        const spread_value = clamp01(spread.activation.get(node.id) ?? 0);
+        const activation = activation_scores[node_index];
+        const emotional = emotional_scores[node_index];
+        const speaker = speaker_scores[node_index];
+        const preference = preference_scores[node_index];
+        const polarity = polarity_scores[node_index];
+        const entity_gate = entity_gates[node_index];
         const label = status_label_for(node, min_confidence);
         const status_penalty =
             label === 'superseded' || label === 'contradicted' ? weights.status_penalty : 0;
         const fusion = fusion_scores[node_index];
-        const observed_position = observed_span > 0 ? (node.temporal.observed_at - oldest_observed) / observed_span : 0;
-        const recency = plan.intent.temporal === 'latest'
-            ? observed_position
-            : plan.intent.temporal === 'earliest' ? 1 - observed_position : 0;
+        const recency = recency_scores[node_index];
         const session = session_scores?.get(conversation_of(node)) ?? 0;
 
-        const score =
+        const direct_score =
             weights.vector * vector +
             weights.lexical * lexical +
             weights.entity * entity +
             weights.activation * activation +
-            weights.spread * spread_value +
             weights.emotional * emotional +
             weights.speaker * speaker +
             weights.preference * preference +
@@ -501,6 +583,13 @@ export function associative_recall(
             recency_weight * recency +
             session_weight * session -
             status_penalty;
+        const matrix_score = matrix_scores[node_index];
+        const graph_gain = matrix_query && !seeds.has(node.id) ? weights.spread * spread_value : 0;
+        const matrix_residual = 0.04 * (matrix_score - 0.5);
+        const polarity_gain = matrix_query ? 0.2 * polarity : 0;
+        const score = matrix_query
+            ? direct_score + matrix_residual + graph_gain + polarity_gain
+            : direct_score + weights.spread * spread_value;
 
         if (limit === 0) continue;
         const last = ranked_entries.at(-1);
@@ -522,6 +611,10 @@ export function associative_recall(
                 recency,
                 session,
                 status_penalty,
+                matrix: matrix_score,
+                polarity,
+                entity_gate,
+                graph_gain,
                 score,
             },
         };
@@ -556,11 +649,30 @@ export function associative_recall(
         for (let index = 0; index < head.length; index++) ranked[index] = head[index];
     }
 
-    const diverse = select_diverse(ranked, {
+    const diverse = matrix_retrieval_enabled && deps.diversity === undefined && exception_query ? (() => {
+        const depth = Math.min(default_evidence_selection_depth, ranked.length);
+        const head = ranked.slice(0, depth);
+        const selected = select_evidence_set(head, {
+            limit: head.length,
+            token_budget: query.token_budget ?? Number.POSITIVE_INFINITY,
+            query_terms: recall_tokens(query.text),
+            exception_query,
+            terms: (item) => new Set([...recall_document(item.node).frequencies.keys(), ...recall_document(item.node).speaker_terms]),
+            similarity: (left, right) => memory_similarity(left.node, right.node),
+            token_cost: (item) => count_tokens(memory_evidence_text(item.node, { query_terms: plan.intent.terms })),
+            polarity: (item) => item.breakdown.polarity,
+            relevance: (item) => item.score,
+        });
+        const selected_ids = new Set(selected.map((item) => item.node.id));
+        return [...selected, ...head.filter((item) => !selected_ids.has(item.node.id)), ...ranked.slice(depth)];
+    })() : select_diverse(ranked, {
         lambda: deps.diversity?.lambda ?? 0.85,
         similarity: (left, right) => memory_similarity(left.node, right.node),
     });
-    const context = build_context_packet(diverse, query.token_budget ?? Number.POSITIVE_INFINITY, { query_terms: plan.intent.terms });
+    const bundles = matrix_retrieval_enabled && deps.edges?.length
+        ? conversation_bundles(diverse, admitted, deps.edges)
+        : new Map<string, readonly HydroNode[]>();
+    const context = build_context_packet(diverse, query.token_budget ?? Number.POSITIVE_INFINITY, { query_terms: plan.intent.terms, bundles });
     const included_ids = new Set(context.items.map((n) => n.id));
 
     for (const item of ranked) {
@@ -592,7 +704,22 @@ export function associative_recall(
         retrieved: retrieved.length,
         admitted: admitted.length,
         rejected: retrieved.length - admitted.length,
-        spread: { hops: spread.hops, visited: spread_enabled ? spread.visited.length : seed_count },
+        spread: {
+            hops: spread.hops,
+            visited: spread_enabled ? spread.visited.length : seed_count,
+            seeds: seed_count,
+            seed_density: admitted.length > 0 ? seed_count / admitted.length : 0,
+            entropy: spread.entropy,
+            peak: spread.peak,
+            bypassed: spread.bypassed,
+        },
+        matrix: {
+            enabled: matrix_query,
+            features: matrix.active_features,
+            regularization: matrix.regularization,
+            temperature: matrix.temperature,
+            seed_threshold: matrix_retrieval_enabled ? sparse.threshold : 0.05,
+        },
         candidates,
         context_tokens: context.tokens_used,
         budget: context.budget,
