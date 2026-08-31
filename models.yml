@@ -1,0 +1,46 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : models.yml
+#  usage : supports LongMemory models
+
+providers:
+    openai:
+        model: text-embedding-3-small
+        dimensions: 1536
+        environment: LONGMEMORY_OPENAI_EMBEDDING_MODEL
+    gemini:
+        model: gemini-embedding-001
+        dimensions: 3072
+        environment: LONGMEMORY_GEMINI_EMBEDDING_MODEL
+    aws:
+        model: amazon.titan-embed-text-v2:0
+        dimensions: 1024
+        environment: LONGMEMORY_AWS_EMBEDDING_MODEL
+    ollama:
+        model: nomic-embed-text
+        dimensions: 768
+        environment: LONGMEMORY_OLLAMA_EMBEDDING_MODEL
+    siray:
+        model: text-embedding-3-small
+        dimensions: 1536
+        environment: LONGMEMORY_SIRAY_EMBEDDING_MODEL
+    local:
+        model: local-model
+        environment: LONGMEMORY_LOCAL_EMBEDDING_MODEL
+
+tiers:
+    fast:
+        default_dimensions: 256
+    smart:
+        default_dimensions: 384
+    deep:
+        default_dimensions: 1536
+    hybrid:
+        default_dimensions: 256

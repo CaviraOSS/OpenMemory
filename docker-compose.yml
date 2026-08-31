@@ -1,0 +1,73 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : docker-compose.yml
+#  usage : supports LongMemory docker compose
+
+services:
+    longmemory:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: ghcr.io/caviraoss/longmemory:${LONGMEMORY_IMAGE_TAG:-latest}
+        ports:
+            - '${LONGMEMORY_PORT:-7331}:7331'
+        environment:
+            LONGMEMORY_HOST: 0.0.0.0
+            LONGMEMORY_PORT: 7331
+            LONGMEMORY_DB_PATH: /data/longmemory.db
+            LONGMEMORY_API_KEY: ${LONGMEMORY_API_KEY:-}
+            LONGMEMORY_MCP_HTTP: ${LONGMEMORY_MCP_HTTP:-true}
+            LONGMEMORY_ALLOWED_ORIGINS: ${LONGMEMORY_ALLOWED_ORIGINS:-http://127.0.0.1:3000}
+            LONGMEMORY_RATE_LIMIT_ENABLED: ${LONGMEMORY_RATE_LIMIT_ENABLED:-false}
+            LONGMEMORY_RATE_LIMIT_MAX_REQUESTS: ${LONGMEMORY_RATE_LIMIT_MAX_REQUESTS:-100}
+            LONGMEMORY_EMBEDDING_PROVIDER: ${LONGMEMORY_EMBEDDING_PROVIDER:-}
+            LONGMEMORY_EMBEDDING_TIER: ${LONGMEMORY_EMBEDDING_TIER:-deep}
+            LONGMEMORY_EMBEDDING_DIMENSION: ${LONGMEMORY_EMBEDDING_DIMENSION:-1536}
+            LONGMEMORY_OLLAMA_URL: ${LONGMEMORY_OLLAMA_URL:-http://host.docker.internal:11434}
+            LONGMEMORY_OLLAMA_EMBEDDING_MODEL: ${LONGMEMORY_OLLAMA_EMBEDDING_MODEL:-nomic-embed-text}
+            OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+            GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+            AWS_REGION: ${AWS_REGION:-}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+        volumes:
+            - longmemory_data:/data
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'node',
+                    '-e',
+                    "fetch('http://127.0.0.1:7331/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+                ]
+            interval: 30s
+            timeout: 5s
+            retries: 3
+            start_period: 20s
+
+    dashboard:
+        profiles: ['ui']
+        build:
+            context: ./dashboard
+            dockerfile: Dockerfile
+        ports:
+            - '${LONGMEMORY_DASHBOARD_PORT:-3000}:3000'
+        environment:
+            LONGMEMORY_API_URL: http://longmemory:7331
+            LONGMEMORY_API_KEY: ${LONGMEMORY_API_KEY:-}
+        depends_on:
+            longmemory:
+                condition: service_healthy
+        restart: unless-stopped
+
+volumes:
+    longmemory_data:
+        name: longmemory_data

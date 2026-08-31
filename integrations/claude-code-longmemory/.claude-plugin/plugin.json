@@ -11,7 +11,7 @@
     },
     "homepage": "https://github.com/CaviraOSS/LongMemory",
     "repository": "https://github.com/CaviraOSS/LongMemory",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "keywords": [
         "memory",
         "mcp",

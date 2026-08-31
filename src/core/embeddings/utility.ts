@@ -1,16 +1,17 @@
 /*
-*      __                      __  ___                               
+*      __                      __  ___
 *     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
 *    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
-*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
-*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
-                     /____/                                 /____/   
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+                     /____/                                 /____/
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/core/embeddings/utility.ts
  *  usage : implements the LongMemory utility component
  */
+
 
 export function normalize_embedding_vector(vector: unknown, dimension: number): number[] {
     if (!Array.isArray(vector) || !vector.length) throw new Error('embedding provider returned an empty vector');

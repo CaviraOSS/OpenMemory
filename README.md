@@ -1,391 +1,437 @@
 <!--
-     __                      __  ___                               
+     __                      __  ___
     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
-  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
- /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
-                     /____/                                 /____/   
+  / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+ /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+                     /____/                                 /____/
 
  cavira oss (c) 2026  -  nullure (c) 2026
  ==========================================================
  file  : README.md
- usage : documents LongMemory installation, architecture, and workflows
+ usage : introduces LongMemory, its architecture, integrations, and deployment options
 -->
 
-# LongMemory Hydrograph
+# LongMemory
 
-LongMemory is a single TypeScript npm package for durable cognitive memory. The
-same Hydrograph engine powers library imports, the CLI, and the self-hosted HTTP
-server.
+> **Durable, temporal, governed memory for AI agents. Not just RAG. Not just a vector database. Local-first and self-hosted.**
 
-## Install
+[![npm](https://img.shields.io/npm/v/longmemory.svg)](https://www.npmjs.com/package/longmemory)
+[![VS Code](https://img.shields.io/badge/VS%20Code-LongMemory-007ACC?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=CaviraOSS.longmemory-vscode)
+[![Container](https://img.shields.io/badge/GHCR-longmemory-2496ED?logo=docker)](https://github.com/CaviraOSS/LongMemory/pkgs/container/longmemory)
+[![License](https://img.shields.io/github/license/CaviraOSS/LongMemory)](LICENSE)
 
-```powershell
-pnpm add longmemory
+![LongMemory dashboard](.github/longmemory.png)
+
+LongMemory is a cognitive memory engine for LLM applications and autonomous agents.
+
+- Durable local-first storage with SQLite
+- Immutable content, provenance, and temporal truth
+- Strict, historical, associative, grounded, and multilingual recall
+- Explainable evidence selection and token-bounded context
+- Governed project memory, Skills, Chat Memory, LLM-Wiki, and CodeGraph
+- One TypeScript engine across npm, CLI, HTTP, MCP, dashboard, and VS Code
+- Native integrations for agent hosts, automation tools, and Python frameworks
+
+Your model stays stateless. **Your application stops being amnesiac.**
+
+---
+
+## 1. Use It in 10 Seconds
+
+### Install as a library
+
+```bash
+npm install longmemory
 ```
 
-## In-memory usage
-
-No database or setup is required.
-
 ```ts
-import { createMemory } from "longmemory";
+import { createMemory } from 'longmemory';
 
 const memory = await createMemory();
-
-const preference = await memory.ingest({
-  user_id: "user:alice",
-  text: "I prefer tea",
-  at: Date.now(),
+await memory.ingest({
+    user_id: 'alice',
+    text: 'I prefer TypeScript for backend services',
 });
 
-const current = await memory.recall({
-  text: "what do I prefer",
-  mode: "strict",
+const result = await memory.recall({
+    text: 'What language does Alice prefer?',
+    mode: 'strict',
 });
 
-const explanation = await memory.explain(preference.node.id);
-console.log(current, explanation);
-
+console.log(result);
 await memory.close();
 ```
 
-## SQLite usage
+No service or external database is required for in-memory use.
+
+### Persist with SQLite
 
 ```ts
-import { createMemory } from "longmemory";
-
 const memory = await createMemory({
-  store: "sqlite",
-  db_path: "./longmemory.db",
-  tenant_id: "tenant:default",
-  user_id: "user:alice",
-  enable_cold_log: true,
-  enable_consolidation: true,
+    store: 'sqlite',
+    db_path: './longmemory.db',
+    tenant_id: 'acme',
+    user_id: 'alice',
 });
-
-await memory.ingest({
-  user_id: "user:alice",
-  text: "I now prefer coffee instead of tea",
-});
-
-await memory.close();
 ```
 
-Reopening the same `db_path`, `tenant_id`, and `user_id` restores nodes, edges,
-worlds, entities, grounded facts, and sketch state.
+Reopening the same database restores nodes, worlds, entities, edges, temporal history, grounding, and lifecycle state.
 
-## Recall modes
+### Install the CLI
+
+```bash
+npm install --global longmemory
+longmemory init
+longmemory recall "current project priorities" --mode associative
+```
+
+---
+
+## 2. Run as a Service
+
+### From source
+
+```bash
+git clone https://github.com/CaviraOSS/LongMemory.git
+cd LongMemory
+corepack enable
+pnpm install --frozen-lockfile
+pnpm build
+pnpm start
+```
+
+The API listens on `http://127.0.0.1:7331` by default.
+
+### Docker
+
+```bash
+docker run --rm \
+  -p 7331:7331 \
+  -v longmemory-data:/data \
+  -e LONGMEMORY_API_KEY=change-me \
+  ghcr.io/caviraoss/longmemory:latest
+```
+
+### Docker Compose
+
+```bash
+cp .env.example .env
+docker compose up --build -d longmemory
+```
+
+Include the dashboard:
+
+```bash
+docker compose --profile ui up --build -d
+```
+
+- API and MCP: `http://127.0.0.1:7331`
+- Dashboard: `http://127.0.0.1:3000`
+- Health: `http://127.0.0.1:7331/health`
+
+---
+
+## 3. Why LongMemory
+
+Most systems called memory are retrieval pipelines:
+
+1. Split text into chunks.
+2. Embed the chunks.
+3. Return the nearest vectors.
+
+That does not establish what was true at a particular time, whether a new fact superseded an old one, which source is authoritative, who may see it, or why a result belongs in context.
+
+LongMemory models those concerns directly:
+
+- **Temporal truth:** recorded time and valid time are separate.
+- **Immutable memory:** content, vectors, hashes, and provenance are not rewritten by recall or decay.
+- **Executable graph:** typed relationships participate in recall and explanation.
+- **Governance:** project, tenant, user, team, role, agent, task, and framework scope are enforced.
+- **Lifecycle:** deterministic decay, explicit reinforcement, consolidation, compression, and reconsolidation.
+- **Evidence:** recall is bounded by relevance, contradictions, grounding, permissions, and token cost.
+
+See [Why.md](Why.md) for the design rationale.
+
+---
+
+## 4. Recall Modes
 
 ```ts
 const strict = await memory.recall({
-  text: "what is my current preference",
-  mode: "strict",
+    text: 'What is the current deployment region?',
+    mode: 'strict',
 });
 
 const historical = await memory.recall({
-  text: "what did I prefer",
-  mode: "historical",
-  valid_time: Date.UTC(2026, 0, 1),
+    text: 'What was the deployment region in January?',
+    mode: 'historical',
+    valid_time: Date.UTC(2026, 0, 15),
 });
 
 const associative = await memory.recall({
-  text: "memories related to rainy offices",
-  mode: "associative",
+    text: 'Incidents related to the payment migration',
+    mode: 'associative',
 });
 
 const grounded = await memory.recall({
-  text: "where is the production server",
-  mode: "world_grounded",
+    text: 'Which production endpoint is currently live?',
+    mode: 'world_grounded',
 });
 ```
 
-Strict recall applies temporal, contract, contradiction, confidence, and
-grounding gates before ranking. Historical recall preserves superseded truth.
-Associative recall supports emotional and pattern continuity. World-grounded
-recall requires current external evidence.
+Strict recall applies temporal, contradiction, contract, confidence, and grounding gates. Historical recall preserves superseded truth. Associative recall follows semantic, lexical, entity, activation, and graph signals. World-grounded recall requires current external evidence.
 
-## Public API
+---
 
-```ts
-await memory.ingest(event);
-await memory.recall(query);
-await memory.explain(memory_id);
-await memory.getWorld(world_id);
-await memory.listWorlds({ zone: "endocortex" });
-await memory.getEntity(entity_id);
-await memory.resolveEntity(entity_mention);
-await memory.getTimeline({ valid_time, recorded_time });
-await memory.getStats();
-await memory.runDecay({ now: Date.now(), limit: 256 });
-await memory.reinforce(memory_id, { at: Date.now() });
-await memory.close();
-```
+## 5. Features
 
-## Configuration
+- **Hydrograph memory substrate** with immutable nodes, executable edges, worlds, entities, facets, and traces.
+- **Temporal reasoning** with point-in-time truth, event ordering, supersession, and stale-evidence controls.
+- **Multilingual memory** with script detection, code switching, transliteration, and cross-language embeddings.
+- **Project memory** for architecture, decisions, tasks, conventions, failures, handoffs, and code impact.
+- **Governed assets** for Chat Memory, Skills, LLM-Wiki, and CodeGraph with lifecycle and ACL policy.
+- **Session porter** for Claude Code, Codex, OpenCode, Gemini CLI, Copilot Chat, Cline, and raw harness logs.
+- **Connectors** for repositories, local files, Markdown, web content, feeds, cloud documents, and provider APIs.
+- **Embeddings** through OpenAI-compatible APIs, Gemini, AWS Bedrock, Ollama, Siray, and local HTTP models.
+- **Operational surfaces** through HTTP, MCP, dashboard, VS Code, n8n, and framework-native MCP clients.
+- **Auditable benchmarks** for LongMemEval, LoCoMo, BEAM, retrieval quality, temporal behavior, and latency.
 
-```ts
-const memory = await createMemory({
-  store: "memory",
-  db_path: "./longmemory.db",
-  embedding_provider: {
-    embed: async (text) => embedding_model.embed(text),
-  },
-  default_world: "memory",
-  max_context_tokens: 2048,
-  strict_confidence_threshold: 0.5,
-  grounding_threshold: 0.6,
-  enable_cold_log: false,
-  enable_consolidation: false,
-  benchmark_mode: false,
-  decay_policy: {
-    hot_lambda: 0.005,
-    warm_lambda: 0.02,
-    cold_lambda: 0.05,
-    activation_floor: 0.05,
-    reinforcement_gain: 0.2,
-  },
-});
-```
+---
 
-Defaults use an in-memory store, a `memory` world, a 2,048-token context budget,
-`0.5` strict confidence, and `0.6` grounding threshold.
+## 6. MCP and Agent Integrations
 
-## Memory decay
+Start local stdio MCP:
 
-Associative recall projects age-sensitive activation without mutating memory.
-Applications can persist that projection through deterministic, cursor-based
-`runDecay()` cycles and explicitly reinforce useful memories with diminishing
-returns through `reinforce()`. Decay updates only the mutable activation
-envelope: content, vectors, provenance, valid-time history, and content hashes
-remain unchanged. Default hot, warm, and cold rates are `0.005`, `0.02`, and
-`0.05` per day, adjusted by retention, confidence, grounding, conflict, and
-reinforcement. `runDecay()` processes at most 256 nodes by default and returns a
-`next_cursor` for the following batch. Cycles are idempotent at the same
-timestamp and audited when using SQLite. LongMemory does not start a hidden
-maintenance timer. Decay-aware associative ranking is enabled when
-`decay_policy` is supplied; default ranking remains unchanged until an official
-quality A/B justifies enabling it globally.
-
-## Real embeddings
-
-The server, CLI, and MCP runtime support OpenAI-compatible, Gemini, AWS Bedrock
-Titan, Ollama, local HTTP, Siray, and deterministic synthetic embeddings.
-Providers support normalized dimensions, timeout/retry controls, smart/deep
-tiers, and ordered fallbacks without bypassing Hydrograph recall gates. See
-[docs/embeddings.md](docs/embeddings.md) and [.env.example](.env.example).
-
-## Connectors
-
-```ts
-import { createMemory, github_connector, sync_connector } from "longmemory";
-
-const memory = await createMemory({
-  store: "sqlite",
-  db_path: "./longmemory.db",
-});
-
-const github = new github_connector({
-  owner: "CaviraOSS",
-  repo: "LongMemory",
-});
-
-await github.connect();
-const repository = await github.inspectRepository();
-const sync = await sync_connector(github, memory, {
-  mode: "incremental",
-});
-```
-
-The unified connector framework includes deep GitHub and local repository
-intelligence, native Markdown/web/feed connectors, more than 70 file formats,
-and 50 registered code, storage, knowledge, communication, project, web, and
-data connectors. Connectors map external versions, permissions, provenance,
-worlds, entities, grounding, sections, updates, and deletions into atomic
-Hydrograph import plans instead of writing raw chunks. See
-[docs/connectors.md](docs/connectors.md).
-
-Native document ingestion extracts PDF pages, DOCX text, HTML/URLs, Markdown,
-plain text, audio transcripts, and video audio. Google Drive, Sheets, Slides,
-OneDrive, and Notion use provider-native APIs while preserving the same cursor,
-permission, provenance, dry-run, and transactional import-plan boundary.
-
-## Project memory
-
-```ts
-import { createProjectMemory } from "longmemory";
-
-const projects = await createProjectMemory({
-  tenant_id: "tenant:cavira",
-  organization_id: "CaviraOSS",
-  project_id: "longmemory",
-  name: "LongMemory",
-  store: "sqlite",
-  db_path: "./longmemory.db",
-});
-
-await projects.ingestProjectEvent("longmemory", {
-  kind: "decision",
-  topic: "persistence",
-  text: "Use SQLite for local-first persistence",
-  source_type: "architecture_note",
-  url: "file:///docs/decisions.md",
-});
-
-const handoff = await projects.getProjectContext(
-  "longmemory",
-  "continue the current task",
-);
-```
-
-Project memory creates tenant/organization/project world hierarchies, scopes
-connector sync and recall, preserves architecture and decision history, ranks
-code facts by source snapshot freshness, tracks contradictions, and returns
-token-budgeted handoff packets for agents. See
-[docs/project-memory.md](docs/project-memory.md).
-
-Conversations, curated procedures, documents, and repositories also become a
-governed four-asset catalog: Chat Memory, Skills, LLM-Wiki, and CodeGraph.
-Assets have immutable versions, lifecycle approval, owner/team/ACL policy,
-agent/task/framework bindings, injection modes, expiry, and explainable
-token-budgeted loadouts. Portable manifests expose MCP discovery metadata and an
-optional A2A 1.0-compatible Agent Card. See
-[docs/agent-assets.md](docs/agent-assets.md).
-
-## MCP integration
-
-Run LongMemory as a local stdio MCP server for coding and IDE agents:
-
-```powershell
+```bash
 longmemory mcp --db .longmemory/project.db --project current
 ```
 
-Or expose Streamable HTTP beside the self-hosted API:
+Expose authenticated Streamable HTTP MCP:
 
-```powershell
-longmemory serve --db ./longmemory.db --mcp-http
+```bash
+LONGMEMORY_API_KEY=change-me longmemory serve --mcp-http
 ```
 
-MCP provides thirteen high-level tools, thirteen readable resources, and five agent
-workflow prompts. Project/user permissions, recall gates, token budgets,
-read-only mode, connector dry-runs, and JSONL audit logging are enforced by the
-shared runtime. See [docs/mcp.md](docs/mcp.md).
+LongMemory exposes 13 high-level governed tools plus readable resources and agent workflow prompts. Tool arguments cannot override server-bound runtime identity.
 
-Installable integrations live under [integrations](integrations): a native n8n
-community node, an Agent Plugins 1.0 bundle, native Claude Code and Codex
-plugins, a Gemini CLI extension, and MCP configuration packs for Cline,
-Continue, and LibreChat. Runnable native-MCP examples cover CrewAI, AutoGen,
-LangGraph/LangChain, the OpenAI Agents SDK, and PydanticAI. Dify and Flowise
-attach through their native MCP client surfaces, so LongMemory does not
-duplicate its engine inside each host.
+Installable integrations include:
 
-## Dashboard
+- Claude Code plugin
+- Codex and ChatGPT desktop plugin
+- Gemini CLI extension
+- Agent Plugins 1.0 bundle for OpenClaw and compatible hosts
+- n8n community node usable as an AI Agent tool
+- Cline, Continue, and LibreChat configuration packs
+- Dify and Flowise native MCP setup
+- CrewAI, AutoGen, LangGraph/LangChain, OpenAI Agents SDK, and PydanticAI examples
 
-The optional Next.js dashboard under [dashboard](dashboard) provides live
-Hydrograph health, immutable memory browsing/ingest, strict search, project
-selection, activity timelines, decay views, settings status, and memory-aware
-chat. It is responsive on mobile and desktop and talks to the root server
-through a same-origin compatibility proxy. See
-[dashboard/README.md](dashboard/README.md).
+See [integrations/README.md](integrations/README.md) and [docs/mcp.md](docs/mcp.md).
 
-## VS Code extension
+---
 
-The native extension under [apps/vscode-extension](apps/vscode-extension)
-provides an activity-bar memory browser, status bar, selection/note ingestion,
-recall, project context, explanation, reinforcement, and explicit decay
-maintenance. Explicit AI change sessions capture bounded, redacted patches from
-Copilot, Codex, Claude, Cursor, Windsurf, and other coding agents, including
-direct workspace writes. Because VS Code does not expose edit-origin identity,
-automatic heuristic candidates are opt-in, marked low-confidence, and always
-reviewed before ingestion. It talks to the same local engine through stable CLI
-JSON rather than maintaining a second client implementation.
-
-```powershell
-pnpm extension:check
-pnpm extension:build
-pnpm extension:package
-```
-
-Set `longmemory.cliPath` to the installed `longmemory` binary. For development,
-build the root package and point it at `dist/cli/index.js`.
-
-## Multilingual memory
+## 7. Temporal and Project Memory
 
 ```ts
-const memory = await createMemory({
-  output_language: "en",
-  enable_translation: false,
+import { createProjectMemory } from 'longmemory';
+
+const projects = await createProjectMemory({
+    tenant_id: 'cavira',
+    organization_id: 'CaviraOSS',
+    project_id: 'longmemory',
+    name: 'LongMemory',
+    store: 'sqlite',
+    db_path: './longmemory.db',
 });
 
-await memory.ingest({
-  user_id: "user:alice",
-  text: "मुझे TypeScript पसंद है backend के लिए.",
+await projects.ingestProjectEvent('longmemory', {
+    kind: 'decision',
+    topic: 'persistence',
+    text: 'Use SQLite for local-first persistence',
+    source_type: 'architecture_note',
 });
 
-const result = await memory.recallMultilingual({
-  text: "What language does the user prefer for backend?",
-  mode: "strict",
-  token_budget: 256,
-});
+const context = await projects.getProjectContext('longmemory', 'prepare the next release');
 ```
 
-LongMemory preserves original wording/script, detects code switching, tokenizes
-Indic/Arabic/CJK text, supports conservative cross-script entity aliases, and
-uses multilingual embeddings for cross-language ranking. Translation is an
-optional provenance-marked display view, never hidden source truth. See
-[docs/multilingual.md](docs/multilingual.md).
+Project context combines relevant architecture, current decisions, open tasks, failures, code facts, matched Skills, conflicts, and governed asset loadouts under one token budget.
 
-## CLI and server
+---
 
-```powershell
+## 8. CLI
+
+```bash
 longmemory init
 longmemory tui
+longmemory status --memories 20 --json
+longmemory ingest "Remember the rollback procedure" --type procedure
+longmemory recall "What is the rollback procedure?" --mode associative
+longmemory memory list --limit 50
+longmemory project context "prepare the next release"
+longmemory maintenance decay --all
+longmemory maintenance reinforce <memory-id>
+longmemory skill match "run the release checklist" --agent reviewer
+longmemory asset loadout "prepare the release" --agent reviewer --framework codex
+longmemory code impact createMemory
 longmemory detect
 longmemory session discover --from claude-code
 longmemory port --from claude-code --to longmemory --all
-longmemory verify --from codex --sample 10
 longmemory session wiki --from gemini-cli --all --name "Project knowledge"
-longmemory status
-longmemory status --memories 20 --json
-longmemory ingest "Remember the rollback procedure" --type procedure
-Get-Content .\notes.md | longmemory ingest --stdin --source notes.md
-longmemory recall "what is the rollback procedure" --mode associative
-longmemory memory list --limit 50
-longmemory maintenance decay --all
-longmemory maintenance reinforce <memory-id>
-longmemory project context "prepare the next release"
-longmemory skill create --name "Release check" --description "Validate releases" --triggers "release checklist" --instructions-json '["Run tests","Build packages"]'
-longmemory skill match "run the release checklist" --agent reviewer
-longmemory asset list
-longmemory asset loadout "prepare the release" --agent reviewer --framework codex
-longmemory agent manifest reviewer --framework codex --query "prepare the release"
-longmemory code impact createMemory
-longmemory session import ./history/codex-session.json
-longmemory agent preflight "prepare the next release" --json
 longmemory serve --mcp-http
 ```
 
-The CLI defaults to `.longmemory/project.db` in the detected workspace and
-emits stable JSON whenever stdout is not a TTY or `--json` is supplied. Use
-`--db`, `--project`, `--user`, and `--cwd` to override scope. Commands never
-prompt unless `--interactive` is explicitly enabled. `memory list`, status
-snapshots, and stdin ingestion are the stable native-client contract used by
-the VS Code extension.
+Finite commands emit stable JSON outside a TTY or when `--json` is supplied. The session porter reads supported coding-agent stores without modifying them. See [docs/cli.md](docs/cli.md).
 
-The session porter detects local Claude Code, Codex, and OpenCode history and
-imports selected conversations as governed Chat Memory. Source adapters are
-read-only; unchanged native sessions skip, changed sessions create immutable
-asset versions, and `--jsonl` exposes progress for automation. See
-[docs/session-porter.md](docs/session-porter.md).
+---
 
-## Development
+## 9. Dashboard and VS Code
 
-```powershell
-pnpm build
-pnpm test
-pnpm bench
-pnpm typecheck
-pnpm release:check
+The Next.js dashboard provides health, memory browsing, ingestion, search, project selection, activity, decay, settings, timelines, and memory-aware chat through a same-origin API proxy.
+
+```bash
+pnpm --dir dashboard build
+pnpm --dir dashboard start
 ```
 
-LongMemory itself is the SDK; there is no separate SDK package.
+The VS Code extension provides an activity-bar browser, status bar, recall, project context, explanation, reinforcement, explicit decay, session import, and reviewed AI-change capture.
+
+```bash
+pnpm extension:package
+```
+
+The generated package is `apps/vscode-extension/longmemory-vscode-0.2.0.vsix`.
+
+---
+
+## 10. Architecture
+
+```mermaid
+graph TB
+  INPUT[Events, documents, sessions] --> INGEST[Immutable ingest pipeline]
+  INGEST --> GRAPH[(Hydrograph)]
+  GRAPH --> STRICT[Strict and historical recall]
+  GRAPH --> ASSOC[Associative recall]
+  GRAPH --> GROUND[World-grounded recall]
+  GRAPH --> PROJECT[Project memory and governed assets]
+  GRAPH --> SQLITE[(SQLite)]
+  STRICT --> CONTEXT[Explainable bounded context]
+  ASSOC --> CONTEXT
+  GROUND --> CONTEXT
+  PROJECT --> MCP[MCP tools, resources, prompts]
+  CONTEXT --> API[Library, CLI, HTTP]
+  MCP --> AGENTS[Agents, IDEs, automation]
+  API --> UI[Dashboard and VS Code]
+```
+
+Read [ARCHITECTURE.md](ARCHITECTURE.md) and [docs/architecture.md](docs/architecture.md) for subsystem details.
+
+---
+
+## 11. Deployment Options
+
+| Platform       | Configuration          | What it deploys                           |
+| -------------- | ---------------------- | ----------------------------------------- |
+| Docker         | `Dockerfile`           | API and Streamable HTTP MCP               |
+| Docker Compose | `docker-compose.yml`   | API/MCP plus optional dashboard           |
+| Heroku         | `app.json`             | Containerized API/MCP                     |
+| Railway        | `railway.json`         | Containerized API/MCP                     |
+| Render         | `render.yaml`          | API/MCP with persistent disk              |
+| DigitalOcean   | `.do/spec.yaml`        | App Platform API/MCP service              |
+| Vercel         | `vercel.json`          | Dashboard; configure `LONGMEMORY_API_URL` |
+| Windows        | `start-longmemory.ps1` | Background local API/MCP process          |
+
+For hosted API deployments, set `LONGMEMORY_API_KEY`, mount persistent storage at `/data`, and terminate TLS at the platform edge. Vercel hosts only the stateless dashboard and requires a separately deployed LongMemory API.
+
+---
+
+## 12. Benchmarks
+
+```bash
+pnpm bench
+pnpm bench:ci
+pnpm bench:full
+```
+
+The benchmark harness publishes explicit manifests, dataset completion, evidence metrics, answer judgments, temporal categories, latency percentiles, and N/A reasons. Official scorecards fail closed on incomplete datasets or semantic embedding fallback. See [benchmarks/README.md](benchmarks/README.md).
+
+---
+
+## 13. Migration
+
+Import supported SQLite, JSON, or JSONL memory:
+
+```bash
+longmemory migrate \
+  --from ./legacy.db \
+  --to ./longmemory.db \
+  --report ./migration-report.json
+```
+
+Import coding-agent conversations as governed Chat Memory:
+
+```bash
+longmemory port --from codex --to longmemory --all
+```
+
+See [MIGRATION.md](MIGRATION.md) and [docs/migration.md](docs/migration.md).
+
+---
+
+## 14. Release and Operations
+
+```bash
+corepack enable
+pnpm install --frozen-lockfile
+pnpm release:check
+pnpm pack
+pnpm extension:package
+```
+
+`release:check` validates branding, types, integration manifests, the benchmark smoke gate, the root build, extension build, and dashboard production build.
+
+Useful Make targets:
+
+```bash
+make install
+make build
+make check
+make docker-up
+make dashboard
+```
+
+---
+
+## 15. Security
+
+LongMemory is local-first, but network deployment still requires explicit controls:
+
+- Protect API and MCP routes with `LONGMEMORY_API_KEY`.
+- Restrict allowed origins and terminate TLS at the edge.
+- Keep connector and embedding credentials outside repository files.
+- Treat recalled content as untrusted evidence, not authorization.
+- Preserve server-bound user, project, agent, and framework identity.
+
+Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+---
+
+## 16. Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md), and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) before contributing.
+
+- Issues: https://github.com/CaviraOSS/LongMemory/issues
+- Discussions: https://github.com/CaviraOSS/LongMemory/discussions
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+---
+
+## 17. License
+
+LongMemory is licensed under the [Apache License 2.0](LICENSE). The separately
+published n8n community node uses MIT as required by n8n's strict package
+validator.
+
+## Contributors
+
+<!-- readme: contributors -start -->
+<!-- readme: contributors -end -->

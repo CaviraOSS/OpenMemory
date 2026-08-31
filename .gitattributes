@@ -1,0 +1,36 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : .gitattributes
+#  usage : supports LongMemory .gitattributes
+
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.ts diff=typescript
+*.tsx diff=typescript
+*.js diff=javascript
+*.mjs diff=javascript
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.sql text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.gz binary
+*.vsix binary

@@ -1,16 +1,17 @@
 /*
-*      __                      __  ___                               
+*      __                      __  ___
 *     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
 *    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
-*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
-*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
-                     /____/                                 /____/   
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+                     /____/                                 /____/
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/connectors/adapter_connector.ts
  *  usage : implements the LongMemory adapter connector component
  */
+
 
 import type { Connector, connector_config, connector_list_params, connector_sync_params } from '../core/connectors/connector.js';
 import { public_permission, type connector_permission } from '../core/connectors/permission.js';

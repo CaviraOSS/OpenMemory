@@ -24,7 +24,8 @@
         "lint": "n8n-node lint"
     },
     "files": [
-        "dist"
+        "dist",
+        "LICENSE"
     ],
     "n8n": {
         "n8nNodesApiVersion": 1,

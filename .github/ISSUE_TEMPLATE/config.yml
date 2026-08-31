@@ -1,0 +1,23 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : .github/ISSUE_TEMPLATE/config.yml
+#  usage : supports LongMemory repository config
+
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+  url: https://github.com/CaviraOSS/longmemory/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📖 Documentation
+  url: https://github.com/longmemory/longmemory/wiki
+    about: Check out the project documentation
+  - name: 🔒 Security Issue
+  url: https://github.com/CaviraOSS/longmemory/security/advisories/new
+    about: Report a security vulnerability privately

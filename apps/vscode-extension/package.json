@@ -4,7 +4,7 @@
     "description": "Native Hydrograph memory workflows for VS Code",
     "version": "0.2.0",
     "publisher": "CaviraOSS",
-    "license": "UNLICENSED",
+    "license": "Apache-2.0",
     "repository": {
         "type": "git",
         "url": "https://github.com/CaviraOSS/LongMemory"
@@ -40,7 +40,8 @@
         "dist",
         "media",
         "README.md",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "LICENSE"
     ],
     "contributes": {
         "viewsContainers": {
@@ -322,7 +323,7 @@
         "check": "tsc --noEmit -p tsconfig.json",
         "compile": "node esbuild.mjs",
         "watch": "node esbuild.mjs --watch",
-        "package": "pnpm compile && vsce package --no-dependencies --skip-license",
+        "package": "pnpm compile && vsce package --no-dependencies",
         "vscode:prepublish": "pnpm compile"
     },
     "devDependencies": {

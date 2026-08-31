@@ -1,0 +1,63 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : .github/workflows/docker-build.yml
+#  usage : automates the LongMemory docker build workflow
+
+name: Container build
+
+on:
+    push:
+        branches: [main, rewrite]
+        paths:
+            - Dockerfile
+            - docker-compose.yml
+            - .dockerignore
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.yaml
+            - src/**
+            - docs/**
+            - dashboard/**
+            - .github/workflows/docker-build.yml
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    container:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@v4
+            - uses: docker/setup-buildx-action@v3
+            - uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ./Dockerfile
+                  load: true
+                  push: false
+                  tags: longmemory:verify
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max
+            - run: docker compose config --quiet
+            - name: Verify health endpoint
+              run: |
+                  docker run --detach --name longmemory --publish 7331:7331 longmemory:verify
+                  for attempt in $(seq 1 30); do
+                    if curl --fail --silent http://127.0.0.1:7331/health; then exit 0; fi
+                    sleep 2
+                  done
+                  docker logs longmemory
+                  exit 1
+            - if: always()
+              run: docker rm --force longmemory || true

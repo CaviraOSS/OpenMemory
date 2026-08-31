@@ -1,9 +1,9 @@
-#      __                      __  ___                               
+#      __                      __  ___
 #     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
 #    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
-#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
-#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
-#                      /____/                                 /____/   
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
 #
 #  cavira oss (c) 2026  -  nullure (c) 2026
 #  ----------------------------------------------------------
@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copy source code
 COPY . .
@@ -33,7 +33,7 @@ WORKDIR /app
 # Install only production dependencies
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
-RUN npm install --omit=dev
+RUN npm ci --omit=dev
 
 # Copy built assets from builder
 COPY --from=builder /app/.next ./.next

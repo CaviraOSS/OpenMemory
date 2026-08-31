@@ -1,0 +1,32 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : render.yaml
+#  usage : supports LongMemory render
+
+services:
+    - type: web
+      name: longmemory
+      runtime: docker
+      dockerfilePath: ./Dockerfile
+      dockerContext: .
+      plan: starter
+      healthCheckPath: /health
+      autoDeployTrigger: commit
+      envVars:
+          - key: LONGMEMORY_API_KEY
+            generateValue: true
+          - key: LONGMEMORY_MCP_HTTP
+            value: true
+          - key: LONGMEMORY_DB_PATH
+            value: /data/longmemory.db
+      disk:
+          name: longmemory-data
+          mountPath: /data
+          sizeGB: 1

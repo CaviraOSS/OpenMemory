@@ -1,16 +1,17 @@
 /*
-*      __                      __  ___                               
+*      __                      __  ___
 *     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
 *    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
-*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ / 
-*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /  
-                     /____/                                 /____/   
+*   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+*  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+                     /____/                                 /____/
  *
  *  cavira oss (c) 2026  -  nullure (c) 2026
  *  ----------------------------------------------------------
  *  file  : src/server/config.ts
  *  usage : implements the LongMemory config component
  */
+
 
 import type { memory_config } from '../core/create_memory.js';
 import { create_embedding_environment } from '../core/embeddings/environment.js';
@@ -62,7 +63,7 @@ export function load_server_config(env: NodeJS.ProcessEnv = process.env): server
     const embeddings = create_embedding_environment(env, { logger: (message) => console.warn(`[longmemory] ${message}`) });
     return {
         host: first(env, 'LONGMEMORY_HOST', 'OM_HOST') || '127.0.0.1',
-        port: num_alias(env, ['LONGMEMORY_PORT', 'OM_PORT'], 7331, 0, 65_535),
+        port: num_alias(env, ['LONGMEMORY_PORT', 'PORT', 'OM_PORT'], 7331, 0, 65_535),
         api_key: first(env, 'LONGMEMORY_API_KEY', 'OM_API_KEY') || null,
         mcp_http: bool(env, 'LONGMEMORY_MCP_HTTP', false),
         max_payload_size: num_alias(env, ['LONGMEMORY_MAX_PAYLOAD_SIZE', 'OM_MAX_PAYLOAD_SIZE'], 1_048_576, 1_024, 1_073_741_824),

@@ -1,0 +1,39 @@
+#      __                      __  ___
+#     / /   ____  ____  ____ _/  |/  /__  ____ ___  ____  _______  __
+#    / /   / __ \/ __ \/ __ `/ /|_/ / _ \/ __ `__ \/ __ \/ ___/ / / /
+#   / /___/ /_/ / / / / /_/ / /  / /  __/ / / / / / /_/ / /  / /_/ /
+#  /_____/\____/_/ /_/\__, /_/  /_/\___/_/ /_/ /_/\____/_/   \__, /
+#                      /____/                                 /____/
+#
+#  cavira oss (c) 2026  -  nullure (c) 2026
+#  ----------------------------------------------------------
+#  file  : .do/spec.yaml
+#  usage : supports LongMemory spec
+
+name: longmemory
+region: nyc
+services:
+    - name: api
+      github:
+          repo: CaviraOSS/LongMemory
+          branch: main
+          deploy_on_push: true
+      dockerfile_path: Dockerfile
+      source_dir: /
+      http_port: 7331
+      instance_count: 1
+      instance_size_slug: basic-xxs
+      health_check:
+          http_path: /health
+      envs:
+          - key: LONGMEMORY_HOST
+            value: 0.0.0.0
+          - key: LONGMEMORY_PORT
+            value: '7331'
+          - key: LONGMEMORY_MCP_HTTP
+            value: 'true'
+          - key: LONGMEMORY_DB_PATH
+            value: /data/longmemory.db
+          - key: LONGMEMORY_API_KEY
+            type: SECRET
+            value: CHANGE_ME
