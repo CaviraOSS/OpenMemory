@@ -54,6 +54,13 @@ the end of this file for historical context.
 - Did not claim the unrelated `longmemory` PyPI project. New Python installs use
   `longmemory-sdk`.
 
+### Fixes
+
+- Embedded project-scoped writes. `longmemory_ingest` with a `project_id`,
+  `longmemory_remember_decision` and connector imports go through
+  `applyImportPlan`, which stored every node without a semantic vector, so
+  those memories never received a vector score in recall (#216).
+
 ## [1.0.0] - 2026-08-31
 
 LongMemory 1.0 is a ground-up architecture rewrite rather than an incremental
