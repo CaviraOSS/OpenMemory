@@ -20,6 +20,11 @@ the end of this file for historical context.
 
 ## [Unreleased]
 
+### Documentation
+
+- Added an opt-in Claude Code workflow pairing Parallel Search MCP with LongMemory
+  for web research, approved source-attributed observations, and later recall.
+
 ### Python SDK and package registry migration
 
 - Added `packages/longmemory-py`, a zero-runtime-dependency Python HTTP client

@@ -102,6 +102,10 @@ Dify has a native HTTP MCP tool integration. Start LongMemory with `--mcp-http`,
 
 Use Flowise's **Custom MCP** tool with the same Streamable HTTP endpoint and bearer header. This exposes LongMemory tools inside Assistants, Chatflows, and Agentflows without embedding another memory engine.
 
+## Research with durable memory
+
+Use [Parallel Search MCP alongside LongMemory in Claude Code](research-memory.md) to research current public sources, review the evidence, and retain approved findings with source provenance for later recall. This opt-in workflow uses the existing LongMemory plugin and keeps memory writes approval-gated.
+
 ## Agent frameworks
 
 Examples: [`frameworks`](frameworks)
