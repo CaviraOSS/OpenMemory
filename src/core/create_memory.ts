@@ -550,6 +550,12 @@ export function create_memory(config: memory_config = {}): long_memory {
                     throw new Error(`connector node ${node.key} is missing source identity, recorded_at, or provenance`);
                 }
             }
+            // The import transaction is synchronous, so embed before entering it, as ingest() does.
+            const vectors = new Map<(typeof plan.nodes_to_create)[number], number[] | null>();
+            for (const node of plan.nodes_to_create) {
+                const language = detect_language(node.content).language ?? cfg.default_language;
+                vectors.set(node, await embed(cfg.embedding_provider, multilingual_embeddings, embedding_cache, node.content, language, 'document'));
+            }
             return import_transaction().run(() => {
                 const before_nodes = new Set(engine.graph.node_list().map((node) => node.id));
                 const before_edges = new Set(engine.graph.edge_list().map((edge) => edge.id));
@@ -611,6 +617,7 @@ export function create_memory(config: memory_config = {}): long_memory {
                         id: node.id,
                         user_id: cfg.user_id,
                         text: node.content,
+                        vector: vectors.get(node),
                         at: node.recorded_at,
                         observed_at: node.observed_at,
                         valid_from: node.valid_from,

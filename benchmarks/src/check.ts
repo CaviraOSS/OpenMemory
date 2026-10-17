@@ -35,6 +35,7 @@ import { create_named_embedding_provider } from '../../src/core/embeddings/provi
 import { prepare_evidence_query, evidence_support, evidence_adjustment, order_evidence, query_calendar_window, calendar_relevance } from '../../src/core/recall/rerank.js';
 import { associative_recall } from '../../src/core/recall/associative_recall.js';
 import { answer_from_evidence, type evidence_reader_model } from '../../src/answering/evidence_reader.js';
+import { createProjectMemory as create_project_memory } from '../../src/core/project/project_memory.js';
 
 const directory = temp(join(tmpdir(), 'longmemory-bench-check-'));
 const memory = create_memory({ embedding_dimension: 2 });
@@ -449,6 +450,19 @@ try {
         for (const [key, value] of [['LONGMEMORY_EMBEDDING_PROVIDER', saved.provider], ['LONGMEMORY_EMBEDDING_TIER', saved.tier], ['GEMINI_API_KEY', saved.key]]) {
             if (value === undefined) delete process.env[key!];
             else process.env[key!] = value;
+        }
+    }
+    {
+        // Project writes and decisions go through applyImportPlan, not ingest(); they must still be embedded.
+        const embedded = create_memory({ embedding_dimension: 4, embedding_provider: { embed: () => [0.5, 0.5, 0.5, 0.5] } });
+        try {
+            const manager = await create_project_memory({ memory: embedded, tenant_id: 'default', project_id: 'check-project', name: 'check' });
+            const id = await manager.ingestProjectEvent('check-project', { kind: 'decision', text: 'Staging credentials rotate every 45 days.' });
+            const node = (await embedded.explain(id)).node;
+            assert.ok(node);
+            assert.equal(node.vectors.semantic?.length, 4);
+        } finally {
+            await embedded.close();
         }
     }
     if (!process.argv.includes('--unit-only')) {
