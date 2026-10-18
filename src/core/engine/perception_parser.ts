@@ -125,9 +125,13 @@ export function parse_perception(event: MemoryEvent, now = Date.now()): ParsedPe
     const normalization = normalize_multilingual_text(event.text, language, locale.locale);
     const transliteration = event.transliteration ?? (event.enable_transliteration === false ? null : transliterate(normalization.normalized_text, language)?.text ?? null);
     const speaker = event.speaker?.trim();
-    const claims = extract_claims(event.text).map((claim) => claim.subject === 'user' && speaker
-        ? { ...claim, subject: speaker.toLocaleLowerCase(), topic: claim.topic.replace(/:(?:user):/i, `:${speaker.toLocaleLowerCase()}:`) }
-        : claim);
+    const claims = extract_claims(event.text).map((claim) => {
+        const subject = claim.subject === 'user' && speaker ? speaker.toLocaleLowerCase() : claim.subject;
+        const topic = claim.kind === 'preference'
+            ? claim.topic.replace(/^preference:/, `preference:${subject}:`)
+            : claim.topic.replace(/:user(?=:|$)/i, `:${subject}`);
+        return { ...claim, subject, topic };
+    });
     const context = event.text.toLowerCase().match(/[a-z0-9]+/g) ?? [];
     const named_speaker = speaker && !/^(?:user|assistant|system|tool|function|speaker)$/i.test(speaker) ? speaker : null;
     const names = [...new Set([...(event.text.match(entity_re) ?? []), ...(named_speaker ? [named_speaker] : [])])];

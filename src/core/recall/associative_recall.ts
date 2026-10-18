@@ -846,6 +846,40 @@ export function associative_recall(
         const ordered = evidence_query ? order_evidence(head, evidence_query, counterevidence) : head.sort((left, right) => right.score - left.score);
         for (let index = 0; index < ordered.length; index++) ranked[index] = ordered[index];
     }
+    const current_query = /\b(?:now|currently|current|latest)\b/i.test(query.text)
+        && !/\b(?:before|previously|formerly|historical|history|then|changed|evolved)\b/i.test(query.text)
+        && (query.at === undefined || query.at >= query.now);
+    const replacements = current_query ? (deps.edges ?? []).filter((edge) => edge.type === 'supersedes') : [];
+    const predecessors = new Map<string, string[]>();
+    for (const edge of replacements) predecessors.set(edge.from, [...(predecessors.get(edge.from) ?? []), edge.to]);
+    const current_terms = new Set(plan.intent.terms);
+    const promote_current = (items: AssociativeItem[]): void => {
+        if (!current_query) return;
+        const by_id = new Map(items.map((item) => [item.node.id, item]));
+        for (const replacement of [...items]) {
+            if (is_superseded(replacement.node)) continue;
+            const pending = [...(predecessors.get(replacement.node.id) ?? [])];
+            const visited = new Set<string>([replacement.node.id]);
+            let before = items.indexOf(replacement);
+            while (pending.length) {
+                const id = pending.pop()!;
+                if (visited.has(id)) continue;
+                visited.add(id);
+                pending.push(...(predecessors.get(id) ?? []));
+                const previous = by_id.get(id);
+                if (!previous || !is_superseded(previous.node)
+                    || previous.node.world.world_id !== replacement.node.world.world_id
+                    || previous.node.metadata.user_id !== replacement.node.metadata.user_id) continue;
+                const topics = new Set(previous.node.content.claims?.map((claim) => claim.topic));
+                const relevant = replacement.node.content.claims?.some((claim) => topics.has(claim.topic)
+                    && recall_tokens(`${claim.kind} ${claim.predicate} ${claim.object}`).some((term) => current_terms.has(term)));
+                if (relevant) before = Math.min(before, items.indexOf(previous));
+            }
+            const after = items.indexOf(replacement);
+            if (after > before) { items.splice(after, 1); items.splice(before, 0, replacement); }
+        }
+    };
+    promote_current(ranked);
     const aggregate_query = policy.flags.session_coverage && aggregate_query_re.test(query.text);
     if (limit !== null && !aggregate_query) ranked.splice(limit);
 
@@ -870,6 +904,7 @@ export function associative_recall(
         lambda: policy.diversity_lambda,
         similarity: (left, right) => memory_similarity(left.node, right.node),
     });
+    promote_current(diverse);
     if (limit !== null) diverse.splice(limit);
     const { bundles, forward_ids } = policy.flags.matrix_retrieval && deps.edges?.length
         ? conversation_bundles(diverse, admitted, deps.edges)

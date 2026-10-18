@@ -69,15 +69,17 @@ export class graphiti_provider implements benchmark_provider {
     }
 
     async reset(scope: benchmark_scope): Promise<void> {
+        await this.cleanup(scope);
         if (this.cloud) {
-            await ignore_missing(() => this.api().delete(route(this.routes.reset, { scope: this.group(scope) })));
             await this.api().post("/graph/create", {
                 graph_id: this.group(scope),
                 name: `LongMemory benchmark ${scope.corpus_id}`,
                 description: `Benchmark run ${scope.run_id}`,
             });
-            return;
         }
+    }
+
+    async cleanup(scope: benchmark_scope): Promise<void> {
         await ignore_missing(() => this.api().delete(route(this.routes.reset, { scope: this.group(scope) })));
     }
 

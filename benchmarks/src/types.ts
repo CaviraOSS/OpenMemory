@@ -101,6 +101,7 @@ export interface benchmark_provider {
     initialize(config: provider_config): Promise<void>;
     health(): Promise<void>;
     reset(scope: benchmark_scope): Promise<void>;
+    cleanup?(scope: benchmark_scope): Promise<void>;
     ingest(events: benchmark_event[], scope: benchmark_scope): Promise<ingest_result>;
     await_indexing(result: ingest_result, scope: benchmark_scope, progress?: (value: indexing_progress) => void): Promise<void>;
     search(query: string, limit: number, scope: benchmark_scope): Promise<search_hit[]>;

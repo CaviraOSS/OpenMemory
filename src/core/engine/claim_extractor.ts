@@ -28,6 +28,15 @@ const preference = /\b(?:I|we)\s+(?:(?:now|also|really|especially|generally)\s+)
 const moved_location = /\b(?:my\s+(?:friend|colleague|coworker|partner)\s+)?([A-Z][\p{L}'-]+)\b[^.!?]{0,80}?\bmov(?:ed|ing)\b[^.!?]{0,40}?\b(?:back\s+)?to\s+(?:the\s+)?(.+)$/iu;
 const location = /\b(.+?)\s+(?:is|are|was|were)\s+(?:currently\s+|now\s+)?(?:in|at|on)\s+(.+)$/i;
 const copula = /\b(.+?)\s+(?:is|are|was|were)\s+(.+)$/i;
+const first_person = /^(?:(?:hi|hello|hey)[,\s]+)?(?:i\s+am|i['\u2019]m|my\s+name\s+is)\s+(.+)$/i;
+const contact = /^(?:please\s+)?(?:ping|contact|message|reach)\s+me\s+(?:on|via|by)\s+(.+?)(?:\s+(?:instead of|rather than)\s+.+)?$/i;
+const mode_change = /^(?:(?:actually|please|now)[,\s]+)*(?:switch|change)\s+me\s+to\s+(.+\b(?:mode|theme))$/i;
+
+function preference_topic(object: string): string {
+    const topic = object.match(/\bas my\s+([a-z0-9_-]+)/i);
+    const mode = object.match(/\b(mode|theme)\b/i);
+    return topic ? `preference:${clean(topic[1])}` : mode ? `preference:${clean(mode[1])}` : 'preference:general';
+}
 
 function clean(value: string): string {
     return value.trim().replace(/^["']|["']$/g, '').replace(/[.!?]+$/, '').toLowerCase();
@@ -69,16 +78,38 @@ export function extract_claims(text: string): ExtractedClaim[] {
     const table_claims = extract_table_claims(text);
     const source_role = text.match(/^\s*(user|assistant|system|tool|function):\s*/i)?.[1].toLowerCase() ?? 'user';
     const prose = text.split(/\r?\n/).filter((line) => !line.trim().startsWith('|')).join('\n');
-    const protected_text = prose.replace(/(?<=\d)\.(?=\d)/g, '<period>').replace(/\b(Dr|Mr|Mrs|Ms|Prof|[A-Z])\./g, '$1<period>');
-    const statements = protected_text.split(/[.!?]+/).map((item) => item.replaceAll('<period>', '.').replace(/^\s*(?:user|assistant|system|tool|function):\s*/i, '').trim()).filter(Boolean);
+    const protected_text = prose.replace(/[\p{L}\p{N}.!#$%&'*+/=?^_`{|}~-]+@[\p{L}\p{N}-]+(?:\.[\p{L}\p{N}-]+)+/gu, (email) => email.replaceAll('.', '<period>').replaceAll('!', '<exclaim>').replaceAll('?', '<question>'))
+        .replace(/(?<=\d)\.(?=\d)/g, '<period>').replace(/\b(Dr|Mr|Mrs|Ms|Prof|[A-Z])\./g, '$1<period>');
+    const statements = protected_text.split(/[.!?]+/)
+        .flatMap((item) => item.split(/,\s*(?=(?:please\s+)?(?:ping|contact|message|reach)\s+me\b)/i))
+        .map((item) => item.replaceAll('<period>', '.').replaceAll('<exclaim>', '!').replaceAll('<question>', '?').replace(/^\s*(?:user|assistant|system|tool|function):\s*/i, '').trim()).filter(Boolean);
     const prose_claims = statements.map((statement): ExtractedClaim => {
-        const pref = statement.match(preference);
+        const pref = statement.match(preference) ?? statement.match(mode_change);
         if (pref) {
             const object = clean(pref[1]);
-            const topic_match = object.match(/\bas my\s+([a-z0-9_-]+)/i);
             return {
-                kind: 'preference', statement, subject: 'user', predicate: 'prefers', object,
-                topic: topic_match ? `preference:${clean(topic_match[1])}` : 'preference:general',
+                kind: 'preference', statement, subject: source_role, predicate: 'prefers', object,
+                topic: preference_topic(object),
+            };
+        }
+        const channel = statement.match(contact);
+        if (channel) {
+            return {
+                kind: 'fact', statement, subject: source_role, predicate: 'contact_via', object: clean(channel[1]),
+                topic: `contact_via:${source_role}`,
+            };
+        }
+        const profile = statement.match(first_person);
+        if (profile) {
+            const named = /\bname\s+is\b/i.test(statement)
+                || /^(?:hi|hello|hey)[,\s]+/i.test(statement) && /^[\p{Lu}][\p{L}'-]+(?:\s+[\p{Lu}][\p{L}'-]+){0,3}$/u.test(profile[1]);
+            const place = profile[1].match(/^(?:currently\s+|now\s+)?(?:in|at|on)\s+(.+)$/i);
+            const role = /^(?:a\s+|an\s+|the\s+)?(?:[\p{L}-]+\s+){0,4}(?:lead|engineer|developer|designer|manager|researcher|teacher|doctor|nurse|student|director)\b/iu.test(profile[1]);
+            const predicate = named ? 'name' : place ? 'located_in' : role ? 'role' : 'is';
+            const object = clean(place && !named ? place[1] : profile[1]);
+            return {
+                kind: 'fact', statement, subject: source_role, predicate, object,
+                topic: `${predicate}:${source_role}${predicate === 'is' ? `:${object}` : ''}`,
             };
         }
         const moved = statement.match(moved_location);

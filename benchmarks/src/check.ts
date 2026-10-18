@@ -23,6 +23,7 @@ import { strict_recall_tokens } from '../../src/core/recall/recall_text.js';
 import { build_answer_prompt } from './ai/prompts';
 import { parse_judge_response } from './ai/judge';
 import { extract_claims } from '../../src/core/engine/claim_extractor.js';
+import { parse_perception } from '../../src/core/engine/perception_parser.js';
 import { run_benchmark } from './runner';
 import { markdown } from './report';
 import { IngestEngine as ingest_engine } from '../../src/core/engine/ingest_engine.js';
@@ -260,6 +261,25 @@ try {
         'The replacement cost was 185.50 dollars', 'The firmware is 2.4.1',
     ]);
     assert.equal(extract_claims('The temperature was -3.14 degrees.')[0].object, '-3.14 degrees');
+    const profile_claims = extract_claims("Hi, I'm Priya. I'm the backend lead on the payments team, please ping me on Slack instead of email.");
+    assert.deepEqual(profile_claims.map((claim) => [claim.kind, claim.predicate, claim.object]), [
+        ['fact', 'name', 'priya'],
+        ['fact', 'role', 'the backend lead on the payments team'],
+        ['fact', 'contact_via', 'slack'],
+    ]);
+    assert.equal(extract_claims('assistant: I am a research assistant.')[0].subject, 'assistant');
+    assert.equal(extract_claims('Contact me via priya@example.com.')[0].object, 'priya@example.com');
+    assert.equal(extract_claims('Contact me via priya!ops@example.com.')[0].object, 'priya!ops@example.com');
+    assert.notEqual(extract_claims('I am in Paris.')[0].topic, extract_claims('I am a backend developer.')[0].topic);
+    assert.notEqual(extract_claims('I am hungry.')[0].topic, extract_claims('I am tired.')[0].topic);
+    const priya_preference = parse_perception({ user_id: 'owner', speaker: 'Priya', text: 'I prefer dark mode.' });
+    const omar_preference = parse_perception({ user_id: 'owner', speaker: 'Omar', text: 'Switch me to light mode.' });
+    assert.notEqual(priya_preference.claims[0].topic, omar_preference.claims[0].topic);
+    const mode_preference = extract_claims('I prefer dark mode for the editor.')[0];
+    const mode_update = extract_claims('Actually, switch me to light mode.')[0];
+    assert.equal(mode_update.kind, 'preference');
+    assert.equal(mode_preference.topic, mode_update.topic);
+    assert.notEqual(extract_claims('I prefer coffee.')[0].topic, mode_update.topic);
     assert.equal(longmemeval_filename('s'), 'longmemeval_s_cleaned.json');
     assert.equal(longmemeval_filename('oracle'), 'longmemeval_oracle.json');
     assert.throws(() => longmemeval_filename('typo'));
