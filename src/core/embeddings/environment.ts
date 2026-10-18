@@ -19,6 +19,10 @@ import { create_embedding_stack } from './stack.js';
 const providers = new Set<embedding_provider_name>(['openai', 'gemini', 'nvidia', 'aws', 'ollama', 'local', 'siray', 'synthetic']);
 const tiers = new Set<embedding_tier>(['fast', 'smart', 'deep', 'hybrid']);
 const value = (env: NodeJS.ProcessEnv, ...keys: string[]) => keys.map((key) => env[key]?.trim()).find(Boolean);
+const explicit_value = (env: NodeJS.ProcessEnv, ...keys: string[]) => {
+    const key = keys.find((candidate) => Object.prototype.hasOwnProperty.call(env, candidate));
+    return key === undefined ? undefined : env[key]?.trim();
+};
 const number_value = (env: NodeJS.ProcessEnv, keys: string[], fallback: number, min = 0) => {
     const raw = value(env, ...keys);
     if (!raw) return fallback;
@@ -42,7 +46,7 @@ export function load_embedding_environment(env: NodeJS.ProcessEnv = process.env)
     const default_dimension = selected === 'nvidia' ? 2048 : tier === 'smart' ? 384 : tier === 'deep' ? 1536 : 256;
     return {
         provider: provider(selected, 'synthetic'),
-        fallback: (value(env, 'LONGMEMORY_EMBEDDING_FALLBACK', 'OM_EMBEDDING_FALLBACK') ?? 'synthetic').split(',').map((name) => provider(name.trim(), 'synthetic')),
+        fallback: (explicit_value(env, 'LONGMEMORY_EMBEDDING_FALLBACK', 'OM_EMBEDDING_FALLBACK') ?? 'synthetic').split(',').map((name) => name.trim()).filter(Boolean).map((name) => provider(name, 'synthetic')),
         tier,
         dimension: number_value(env, ['LONGMEMORY_EMBEDDING_DIMENSION', 'OM_VEC_DIM', 'OM_MAX_VECTOR_DIM'], default_dimension, 1),
         timeout_ms: number_value(env, ['LONGMEMORY_EMBEDDING_TIMEOUT_MS', 'OM_EMBED_TIMEOUT_MS'], 30_000, 1),

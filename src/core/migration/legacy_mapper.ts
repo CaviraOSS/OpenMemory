@@ -16,8 +16,9 @@
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import Database from 'better-sqlite3';
-import { create_memory } from '../create_memory.js';
+import { create_memory, type memory_config } from '../create_memory.js';
 import { create_hydro_edge } from '../memory/durable_graph.js';
+import { project_memory } from '../project/project_memory.js';
 import { manual_provenance } from '../types/provenance.js';
 import { SqliteStore } from '../../stores/sqlite/sqlite_store.js';
 import { clean_legacy_data } from './legacy_cleaner.js';
@@ -28,6 +29,7 @@ export type legacy_migration_options = {
     from: string;
     to: string;
     overwrite?: boolean;
+    memory_config?: Omit<memory_config, 'store' | 'db_path' | 'readonly'>;
 };
 
 const supported_relations = new Set(['contains', 'refers_to', 'same_as', 'supports', 'contradicts', 'supersedes', 'derived_from', 'grounds', 'semantic_shift']);
@@ -48,11 +50,15 @@ const relation_type = (value: string) => {
     return supported_relations.has(mapped) ? mapped : 'refers_to';
 };
 
-async function benchmark_migration(path: string, imported_node_ids: string[]): Promise<migration_benchmark_result> {
+async function benchmark_migration(
+    path: string,
+    imported_node_ids: string[],
+    memory_config?: Omit<memory_config, 'store' | 'db_path' | 'readonly'>,
+): Promise<migration_benchmark_result> {
     const store = new SqliteStore(path, { startup_integrity_check: true });
     const integrity = store.check_integrity();
     store.close();
-    const memory = create_memory({ store: 'sqlite', db_path: path });
+    const memory = create_memory({ ...memory_config, store: 'sqlite', db_path: path, readonly: true });
     try {
         const stats = await memory.getStats();
         const hydration = imported_node_ids.length === 0 || (await memory.explain(imported_node_ids[0])).node !== null;
@@ -67,10 +73,15 @@ async function benchmark_migration(path: string, imported_node_ids: string[]): P
     }
 }
 
-async function copy_hydrograph(from: string, to: string, started_at: number): Promise<migration_report> {
+async function copy_hydrograph(
+    from: string,
+    to: string,
+    started_at: number,
+    memory_config?: Omit<memory_config, 'store' | 'db_path' | 'readonly'>,
+): Promise<migration_report> {
     const source = new Database(from, { readonly: true, fileMustExist: true });
     try { await source.backup(to); } finally { source.close(); }
-    const memory = create_memory({ store: 'sqlite', db_path: to });
+    const memory = create_memory({ ...memory_config, store: 'sqlite', db_path: to, readonly: true });
     const stats = await memory.getStats();
     await memory.close();
     const store = new SqliteStore(to);
@@ -97,7 +108,7 @@ async function copy_hydrograph(from: string, to: string, started_at: number): Pr
         contradictions_found: 0,
         skipped_records: [],
         errors: [],
-        benchmark_result: await benchmark_migration(to, node_ids),
+        benchmark_result: await benchmark_migration(to, node_ids, memory_config),
     };
 }
 
@@ -110,7 +121,7 @@ export async function migrate_legacy(options: legacy_migration_options): Promise
     if (existsSync(to) && !options.overwrite) throw new Error(`migration destination already exists: ${to}`);
     mkdirSync(dirname(to), { recursive: true });
     const read = read_legacy_source(from);
-    if (read.format === 'hydrograph') return copy_hydrograph(from, to, started_at);
+    if (read.format === 'hydrograph') return copy_hydrograph(from, to, started_at, options.memory_config);
     const clean = clean_legacy_data(read);
     const imported_node_ids = new Set<string>();
     const imported_edge_ids = new Set<string>();
@@ -120,8 +131,14 @@ export async function migrate_legacy(options: legacy_migration_options): Promise
     const skipped = [...clean.skipped];
     const errors = [...clean.errors];
     let contradictions_found = 0;
-    const memory = create_memory({ store: 'sqlite', db_path: to, enable_consolidation: true });
+    const memory = create_memory({ ...options.memory_config, store: 'sqlite', db_path: to, enable_consolidation: true });
     try {
+        const projects = new project_memory({ memory, tenant_id: 'default', project_id: 'legacy-migration', name: 'Legacy migration' });
+        const document_worlds = new Map<string, string>();
+        for (const project_id of new Set(clean.records.map((item) => item.world))) {
+            const project = await projects.createProject({ tenant_id: 'default', project_id, name: project_id });
+            document_worlds.set(project_id, project.world_ids.documents);
+        }
         for (const item of clean.records) {
             try {
                 const result = await memory.ingest({
@@ -132,13 +149,13 @@ export async function migrate_legacy(options: legacy_migration_options): Promise
                     observed_at: item.observed_at,
                     valid_from: item.valid_from,
                     valid_to: item.valid_to,
-                    world: item.world,
+                    world_id: document_worlds.get(item.world),
                     tags: item.tags,
                     facet_hint: item.facet,
                     external: item.source !== null,
                     source: item.source ?? undefined,
                     contract: item.source ? undefined : { requires_grounding: false, source_required: false },
-                    metadata: item.metadata,
+                    metadata: { ...item.metadata, project_id: item.world, canonical_project: item.world },
                 });
                 node_by_source.set(item.source_id, result.node.id);
                 result.diff.created_node_ids.forEach((id) => imported_node_ids.add(id));
@@ -208,7 +225,7 @@ export async function migrate_legacy(options: legacy_migration_options): Promise
         contradictions_found,
         skipped_records: skipped,
         errors,
-        benchmark_result: await benchmark_migration(to, [...imported_node_ids]),
+        benchmark_result: await benchmark_migration(to, [...imported_node_ids], options.memory_config),
     };
     return report;
 }

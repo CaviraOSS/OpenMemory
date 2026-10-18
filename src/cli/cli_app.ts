@@ -28,6 +28,7 @@ const commands = new Map<string, cli_command_loader>([
     ['doctor', async () => (await import('./commands/doctor.js')).doctor_command],
     ['serve', async () => (await import('./commands/serve.js')).serve_command],
     ['mcp', async () => (await import('./commands/mcp.js')).mcp_command],
+    ['migrate', async () => (await import('./commands/migrate.js')).migrate_command],
     ['ingest', async () => (await import('./commands/ingest.js')).ingest_command],
     ['recall', async () => (await import('./commands/recall.js')).recall_command],
     ['explain', async () => (await import('./commands/explain.js')).explain_command],
@@ -82,6 +83,7 @@ const help = {
     global_flags: ['--db <path>', '--project <id>', '--user <id>', '--json', '--jsonl', '--pretty', '--compact', '--no-color', '--silent', '--interactive', '--dry-run', '--token-budget <number>', '--cwd <path>'],
     commands: [
         'status', 'init', 'doctor', 'serve [--host <host>] [--port <port>] [--mcp-http]', 'mcp [--read-only]',
+        'migrate --from <legacy.db> --to <longmemory.db> [--report <report.json>]',
         'ingest "memory" [--stdin] [--type <type>] [--source <source>]', 'recall "query" [--mode <mode>]', 'explain <memory-id>',
         'timeline <entity|project|memory>', 'memory list [--limit <n>] [--status <status>]',
         'maintenance decay [--limit <n>] [--all]', 'maintenance reinforce <memory-id>',
