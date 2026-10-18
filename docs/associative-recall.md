@@ -35,6 +35,52 @@ can never affect strict truth.
 A small status penalty downranks (but never excludes) superseded and
 contradicted memories, so strict facts still tend to rank above historical ones.
 
+## Policy
+
+`associative_recall(query, deps, policy)` takes ranking and evidence dilution as
+one `associative_policy` struct — not separate modules. Every stage (matrix
+retrieval, RM3 feedback, evidence/calendar/derivation reranking, Hopfield,
+session coverage) is a field on that struct, zeroed or flagged off to disable
+it:
+
+| `policy.flags` field | Effect when `true`                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------------- |
+| `matrix_retrieval`   | Seeds spreading activation from a whitened multi-column matrix instead of a flat relevance threshold. |
+| `rm3`                | Expands query terms from top feedback documents before BM25 scoring.                                  |
+| `evidence_rerank`    | Applies attribution/assertion/exclusion evidence adjustments on top of the base score.                |
+| `calendar_rerank`    | Boosts memories that fall inside a date window parsed from the query.                                 |
+| `derivation_rerank`  | Lets evidence support treat paraphrased/derived claims as supporting evidence.                        |
+| `hopfield`           | Runs a modern-Hopfield pattern snap and attaches it to the result as `hopfield` (observational only). |
+| `session_coverage`   | Widens aggregate/list queries to cover distinct conversations instead of top-K alone.                 |
+
+`policy.weights`, `policy.columns`, `policy.seeds`, `policy.evidence`, and
+`policy.budgets` hold the numeric knobs (scoring weights, matrix columns, seed
+density, evidence gains, rerank depth) for those same stages. `default_associative_policy()`
+returns the production defaults; `associative_policy_from_env(env, overrides)`
+maps environment variables onto a copy of those defaults:
+
+| Env                                    | Policy field              | Default |
+| -------------------------------------- | ------------------------- | ------- |
+| `OM_MATRIX_RETRIEVAL !== '0'`          | `flags.matrix_retrieval`  | `true`  |
+| `OM_RM3 === '1'`                       | `flags.rm3`               | `false` |
+| `LONGMEMORY_EVIDENCE_RERANK !== '0'`   | `flags.evidence_rerank`   | `true`  |
+| `LONGMEMORY_CALENDAR_RERANK !== '0'`   | `flags.calendar_rerank`   | `true`  |
+| `LONGMEMORY_DERIVATION_RERANK !== '0'` | `flags.derivation_rerank` | `true`  |
+| `LONGMEMORY_SESSION_COVERAGE === '1'`  | `flags.session_coverage`  | `false` |
+
+`create_memory(config)` reads the environment once at construction time and
+closes over the resulting policy; it is not re-read per call, so live
+environment edits do not affect an already-open instance. Pass
+`config.associative_policy` to override specific fields for one instance
+without touching the environment — it is not part of the public npm API
+(`src/index.ts`), only an instance-level setting.
+
+The ranking helpers that implement these stages (`fusion.ts`, `matrix_fusion.ts`,
+`hopfield_recall.ts`, `rerank.ts`, `activation_spread.ts`, `evidence_selection.ts`)
+are private to `associative_recall.ts` — they are not exported from
+`src/core/recall/index.ts` and should not be imported directly. Drive every test
+or integration through `associative_recall(query, deps, policy)` instead.
+
 ## Controlled spreading activation
 
 Activation flows over the graph one hop at a time:

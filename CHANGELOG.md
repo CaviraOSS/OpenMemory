@@ -60,6 +60,26 @@ the end of this file for historical context.
   `longmemory_remember_decision` and connector imports go through
   `applyImportPlan`, which stored every node without a semantic vector, so
   those memories never received a vector score in recall (#216).
+- The HTTP server never read `LONGMEMORY_TENANT_ID`/`LONGMEMORY_USER_ID`, so
+  every restart silently re-scoped the engine (and the `/mcp` endpoint) to the
+  `default` tenant and user, making memories saved under a configured scope
+  unreachable after a restart (#215).
+- MCP tool responses (`longmemory_ingest`, `longmemory_recall`, and others)
+  embedded each node's full embedding vector, repeated across every place the
+  node is nested in a response, inflating responses by thousands of tokens.
+  Vectors are now stripped by default (`LONGMEMORY_MCP_INCLUDE_VECTORS=true`
+  or a per-call `include_vectors: true` input restores them); ingest and
+  recall responses also no longer repeat a node already returned in full
+  elsewhere in the same response, and `structuredContent` — an unvalidated
+  duplicate of `content[].text`, since no tool declares an `outputSchema` — is
+  no longer emitted at all (#219).
+
+### Documentation
+
+- Added a guide for connecting Grok's Bring Your Own MCP connector to
+  LongMemory's Streamable HTTP MCP endpoint, covering tunneling for local
+  testing, a TLS-terminated deployment for persistent use, and authentication
+  (`integrations/grok-connectors.md`) (#176).
 
 ## [1.0.0] - 2026-08-31
 

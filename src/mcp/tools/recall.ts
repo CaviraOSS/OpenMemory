@@ -22,14 +22,29 @@ import { run_audited_tool } from './common.js';
 const sanitize_recall = (result: unknown): unknown => {
     if (!result || typeof result !== 'object') return result;
     const value = result as Record<string, any>;
-    if (!value.trace || typeof value.trace !== 'object' || !Array.isArray(value.trace.candidates)) return result;
-    return {
-        ...value,
-        trace: {
-            ...value.trace,
-            candidates: value.trace.candidates.filter((candidate: Record<string, unknown>) => candidate.accepted === true || candidate.included === true),
-        },
-    };
+    let next = value;
+    if (next.trace && typeof next.trace === 'object' && Array.isArray(next.trace.candidates)) {
+        next = {
+            ...next,
+            trace: {
+                ...next.trace,
+                candidates: next.trace.candidates.filter((candidate: Record<string, unknown>) => candidate.accepted === true || candidate.included === true),
+            },
+        };
+    }
+    // context.items is always a subset of items[].node (same recall pass); keep the
+    // one full copy in items[] and collapse the context duplicate to an id reference.
+    if (Array.isArray(next.items) && next.context && Array.isArray(next.context.items)) {
+        const full_node_ids = new Set(next.items.map((item: Record<string, any>) => item.node?.id).filter(Boolean));
+        next = {
+            ...next,
+            context: {
+                ...next.context,
+                items: next.context.items.map((node: Record<string, any>) => full_node_ids.has(node?.id) ? { id: node.id } : node),
+            },
+        };
+    }
+    return next;
 };
 
 export function register_recall_tool(server: mcp_server_sdk, runtime: mcp_runtime): void {

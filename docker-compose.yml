@@ -22,7 +22,7 @@ services:
             LONGMEMORY_HOST: 0.0.0.0
             LONGMEMORY_PORT: 7331
             LONGMEMORY_DB_PATH: /data/longmemory.db
-            LONGMEMORY_API_KEY: ${LONGMEMORY_API_KEY:-}
+            LONGMEMORY_API_KEY: ${LONGMEMORY_API_KEY:?Set LONGMEMORY_API_KEY before starting the container; a public 0.0.0.0 bind with MCP HTTP enabled requires a key}
             LONGMEMORY_MCP_HTTP: ${LONGMEMORY_MCP_HTTP:-true}
             LONGMEMORY_ALLOWED_ORIGINS: ${LONGMEMORY_ALLOWED_ORIGINS:-http://127.0.0.1:3000}
             LONGMEMORY_RATE_LIMIT_ENABLED: ${LONGMEMORY_RATE_LIMIT_ENABLED:-false}

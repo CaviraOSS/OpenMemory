@@ -59,6 +59,7 @@ export const recall_schema = {
     user_id: optional_text,
     mode: z.enum(['strict', 'historical', 'associative', 'world_grounded']),
     token_budget,
+    include_vectors: z.boolean().optional().describe('Include raw embedding vectors in the response (default false)'),
 };
 
 export const ingest_schema = {
@@ -68,6 +69,7 @@ export const ingest_schema = {
     source: z.string().trim().min(1),
     source_ref: optional_text,
     memory_type: optional_text,
+    include_vectors: z.boolean().optional().describe('Include raw embedding vectors in the response (default false)'),
 };
 
 export const remember_decision_schema = {
@@ -92,6 +94,7 @@ export const update_task_state_schema = {
 export const explain_schema = {
     memory_id: optional_text,
     query_id: optional_text,
+    include_vectors: z.boolean().optional().describe('Include raw embedding vectors in the response (default false)'),
 };
 
 export const report_conflicts_schema = {

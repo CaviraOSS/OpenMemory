@@ -186,7 +186,7 @@ export function prepare_evidence_query(text: string, nodes: readonly HydroNode[]
 }
 
 
-export function evidence_support(query: evidence_query, node: HydroNode): evidence_features {
+export function evidence_support(query: evidence_query, node: HydroNode, derivation_enabled = true): evidence_features {
     const document = evidence_document_of(node);
     const assertions = document.assertions;
     const subject_pattern = query.subject && query.subject !== 'user'
@@ -196,7 +196,7 @@ export function evidence_support(query: evidence_query, node: HydroNode): eviden
     const attribution = !query.subject ? 0 : document.speaker === query.subject || explicit_subject ? 1
         : document.speaker ? -1 : 0;
     const supported_terms = document.assertion_terms;
-    const derivation = process.env.LONGMEMORY_DERIVATION_RERANK !== '0' && [...query.terms].some((term) => !supported_terms.has(term)
+    const derivation = derivation_enabled && [...query.terms].some((term) => !supported_terms.has(term)
         && [...supported_terms].some((token) => related_word(term, token))) ? 1 : 0;
     const positive_match = derivation > 0 || [...query.terms].some((term) => supported_terms.has(term));
     const assertion = assertions.length === 0 ? -1 : query.terms.size === 0 ? 0
@@ -205,9 +205,24 @@ export function evidence_support(query: evidence_query, node: HydroNode): eviden
     return { attribution, assertion, excluded_only: excluded_match && !positive_match, derivation };
 }
 
-export function evidence_adjustment(features: evidence_features): number {
-    return 0.24 * features.attribution + 0.06 * features.assertion - (features.excluded_only ? 0.16 : 0)
-        + 0.12 * (features.derivation ?? 0);
+export type EvidenceWeights = {
+    attribution: number;
+    assertion: number;
+    excluded_only: number;
+    derivation: number;
+};
+
+// tuned on the 55-case diagnostic alongside default_rerank_weights
+export const default_evidence_weights: EvidenceWeights = {
+    attribution: 0.24,
+    assertion: 0.06,
+    excluded_only: 0.16,
+    derivation: 0.12,
+};
+
+export function evidence_adjustment(features: evidence_features, weights: EvidenceWeights = default_evidence_weights): number {
+    return weights.attribution * features.attribution + weights.assertion * features.assertion - (features.excluded_only ? weights.excluded_only : 0)
+        + weights.derivation * (features.derivation ?? 0);
 }
 
 export function order_evidence<item extends { node: HydroNode; score: number }>(items: readonly item[], query: evidence_query, counterevidence?: item): item[] {

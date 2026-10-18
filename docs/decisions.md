@@ -26,3 +26,14 @@
   bounds, timeout/cancellation, and no automatic retries or additional retrieval.
   Schema and citation validation do not certify entailment, completeness, or
   truth. Preserve all existing memory, HTTP, and MCP behavior.
+
+## Associative Recall as One Deep Module
+
+- Ranking vs evidence dilution is two *field groups on `associative_policy`*,
+  not two public modules. Callers use `associative_recall(query, deps, policy)`.
+  Env flags and `memory_config.associative_policy` are adapters of that struct.
+- Fusion, matrix, hopfield, rerank, spread, and evidence-set helpers fail the
+  deletion test as importable seams (one production caller). Stop barrel-exporting
+  them. Keep `build_context_packet` shared with strict/grounded recall.
+- Do not pluginize stages. Do not add policy to `src/index.ts`. Spec:
+  `.specs/specs/architecture-associative-recall.md`.

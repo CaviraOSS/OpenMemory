@@ -15,8 +15,9 @@
 
 import type { route_handler } from '../app.js';
 
+// Unauthenticated liveness probe: no counts or flags, those live behind /v1/stats.
 export const health_route: route_handler = async ({ memory }) => {
     const status = memory.status();
     const stats = await memory.getStats();
-    return { data: { ok: status.ready && !stats.closed, status, store: stats } };
+    return { data: { ok: status.ready && !stats.closed } };
 };

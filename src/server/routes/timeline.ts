@@ -27,6 +27,12 @@ const time = (query: URLSearchParams, key: string) => {
 
 export const timeline_route: route_handler = async ({ memory, query }) => {
     const names = query.getAll('entity_names').flatMap((item) => item.split(',')).map((item) => item.trim()).filter(Boolean);
+    const permission_user_id = query.get('permission_user_id') ?? undefined;
+    const team_ids = query.getAll('permission_team_ids').flatMap((item) => item.split(',')).map((item) => item.trim()).filter(Boolean);
+    const project_ids = query.getAll('permission_project_ids').flatMap((item) => item.split(',')).map((item) => item.trim()).filter(Boolean);
+    const source_ids = query.getAll('permission_source_ids').flatMap((item) => item.split(',')).map((item) => item.trim()).filter(Boolean);
+    const allow_private = query.get('permission_allow_private') === 'true';
+    const has_permission_context = Boolean(permission_user_id || team_ids.length || project_ids.length || source_ids.length || allow_private);
     const input: timeline_params = {
         text: query.get('text') ?? undefined,
         now: time(query, 'now'),
@@ -34,6 +40,13 @@ export const timeline_route: route_handler = async ({ memory, query }) => {
         recorded_time: time(query, 'recorded_time'),
         world_id: query.get('world_id') ?? undefined,
         entity_names: names.length ? names : undefined,
+        permission_context: has_permission_context ? {
+            user_id: permission_user_id,
+            team_ids: team_ids.length ? team_ids : undefined,
+            project_ids: project_ids.length ? project_ids : undefined,
+            source_ids: source_ids.length ? source_ids : undefined,
+            allow_private: allow_private || undefined,
+        } : undefined,
     };
     return { data: await memory.getTimeline(input) };
 };

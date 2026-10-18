@@ -102,6 +102,12 @@ Dify has a native HTTP MCP tool integration. Start LongMemory with `--mcp-http`,
 
 Use Flowise's **Custom MCP** tool with the same Streamable HTTP endpoint and bearer header. This exposes LongMemory tools inside Assistants, Chatflows, and Agentflows without embedding another memory engine.
 
+## Grok (xAI)
+
+Guide: [`grok-connectors.md`](grok-connectors.md)
+
+Grok's Bring Your Own MCP connector calls LongMemory's Streamable HTTP MCP endpoint over the public internet, so it is the one integration here that requires a reachable URL rather than local stdio. The guide covers starting LongMemory with `--mcp-http`, exposing it via a tunnel for testing or a TLS-terminated deployment for persistent use, and adding the connector at `grok.com/connectors`.
+
 ## Agent frameworks
 
 Examples: [`frameworks`](frameworks)

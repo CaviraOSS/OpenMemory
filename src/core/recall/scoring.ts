@@ -82,10 +82,12 @@ function clamp01(x: number): number {
 }
 
 function cosine(a: RecallVector | null, b: RecallVector | null): number {
-    if (!a || !b || a.values.length !== b.values.length) return 0.5;
+    // Missing or dimension-mismatched vectors carry no similarity signal; treat them as
+    // unrelated (0), not "average similar" (0.5) — a mismatch is a data error, not neutrality.
+    if (!a || !b || a.values.length !== b.values.length) return 0;
     let dot = 0;
     for (let index = 0; index < a.values.length; index++) dot += a.values[index] * b.values[index];
-    if (a.norm === 0 || b.norm === 0) return 0.5;
+    if (a.norm === 0 || b.norm === 0) return 0;
     return clamp01(dot / (a.norm * b.norm));
 }
 

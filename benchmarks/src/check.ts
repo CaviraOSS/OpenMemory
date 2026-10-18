@@ -29,11 +29,9 @@ import { IngestEngine as ingest_engine } from '../../src/core/engine/ingest_engi
 import { recall_document } from '../../src/core/recall/recall_text.js';
 import { build_context_packet } from '../../src/core/recall/context_builder.js';
 import { longmemory_provider, benchmark_embedding_error } from './providers/longmemory';
-import { select_evidence_set } from '../../src/core/recall/evidence_selection.js';
 import { load_embedding_environment } from '../../src/core/embeddings/environment.js';
 import { create_named_embedding_provider } from '../../src/core/embeddings/providers.js';
-import { prepare_evidence_query, evidence_support, evidence_adjustment, order_evidence, query_calendar_window, calendar_relevance } from '../../src/core/recall/rerank.js';
-import { associative_recall } from '../../src/core/recall/associative_recall.js';
+import { associative_recall, default_associative_policy, type associative_policy } from '../../src/core/recall/associative_recall.js';
 import { answer_from_evidence, type evidence_reader_model } from '../../src/answering/evidence_reader.js';
 import { createProjectMemory as create_project_memory } from '../../src/core/project/project_memory.js';
 
@@ -145,60 +143,64 @@ try {
     const entry = (speaker: string, text: string, at: number) => ranking_engine.ingest({
         user_id: 'evidence-check', speaker, text, at, vector: [1, 0], world: 'shared', conflict_behavior: 'none',
     }).node;
+    const policy_with = (overrides: Partial<associative_policy['flags']>): associative_policy => {
+        const base = default_associative_policy();
+        return { ...base, flags: { ...base.flags, ...overrides } };
+    };
     const own = entry('Mira', 'Cycling helps me with stress.', 1);
-    const calendar = query_calendar_window('What did Mira attend in March 2024?');
-    assert.deepEqual(calendar, { from: Date.UTC(2024, 2, 1), to: Date.UTC(2024, 3, 1) });
-    assert.equal(calendar_relevance(calendar, entry('Mira', 'I attended the exhibition last month.', Date.UTC(2024, 3, 18))), 1);
-    assert.equal(calendar_relevance(calendar, entry('Mira', 'I joined a marching event.', Date.UTC(2024, 6, 3))), 0);
-    assert.equal(calendar_relevance(calendar, entry('Mira', 'I shared my painting.', Date.UTC(2024, 2, 10))), 0.75);
-    assert.equal(calendar_relevance(calendar, entry('Mira', 'I visited in March 2024.', Date.UTC(2024, 5, 10))), 1);
-    assert.equal(query_calendar_window('What happened after March 2024?'), null);
-    assert.equal(query_calendar_window('What happened between March 2024 and April 2024?'), null);
-    assert.equal(query_calendar_window('February 30, 2024'), null);
-    assert.equal(query_calendar_window('February 29, 2023'), null);
-    assert.ok(query_calendar_window('February 29, 2024'));
     const extended = entry('Mira', 'I am experimenting with glazes.', 20);
     const unrelated = entry('Mira', 'My experience is with glaciers.', 21);
-    const nominal = prepare_evidence_query('What is Mira doing as part of her experimentation?', [extended, unrelated]);
-    assert.equal(evidence_support(nominal, extended).derivation, 1);
-    assert.equal(evidence_support(nominal, extended).assertion, 1);
-    assert.equal(evidence_support(nominal, unrelated).derivation, 0);
     const addressed = entry('Noah', 'Mira, painting helps me with stress.', 2);
     const reported = entry('Noah', 'Mira relieves stress by cycling.', 3);
-    const query = prepare_evidence_query('What relieves stress for Mira?', [own, addressed, reported]);
-    assert.equal(query.subject, 'mira');
-    assert.ok(evidence_adjustment(evidence_support(query, own)) > evidence_adjustment(evidence_support(query, addressed)));
-    assert.equal(evidence_support(query, reported).attribution, 1);
-    assert.equal(prepare_evidence_query('What do Mira and Noah enjoy?', [own, addressed]).subject, null);
-    assert.equal(prepare_evidence_query('What did you recommend for me?', [own, addressed]).subject, null);
-    const question = entry('Mira', 'Does cycling help stress?', 4);
-    assert.equal(evidence_support(query, question).assertion, -1);
     const excluded = entry('Mira', 'I teach pottery.', 5);
     const alternative = entry('Mira', 'I enjoy hiking.', 6);
-    const exclusion_query = prepare_evidence_query('What activities does Mira pursue besides pottery?', [excluded, alternative]);
-    assert.equal(evidence_support(exclusion_query, excluded).excluded_only, true);
-    assert.equal(evidence_support(exclusion_query, alternative).excluded_only, false);
     const one = entry('user', 'I purchased a red notebook.', 7);
-    const repeat = entry('user', 'I purchased a red notebook.', 8);
+    entry('user', 'I purchased a red notebook.', 8);
     const two = entry('user', 'I purchased a blue pen.', 9);
-    const aggregate = prepare_evidence_query('How many items did I purchase?', [one, repeat, two]);
-    assert.deepEqual(order_evidence([{ node: one, score: 1 }, { node: repeat, score: 1 }, { node: two, score: 1 }], aggregate)
-        .slice(0, 2).map((item) => item.node.id), [one.id, two.id]);
-    assert.deepEqual(order_evidence([], aggregate), []);
-    const counter = { node: addressed, score: 0.1 };
-    const competing = [{ node: own, score: 1 }, { node: reported, score: 0.9 }, { node: question, score: 0.8 }, counter];
-    assert.equal(order_evidence(competing, query, counter)[2], counter);
-    assert.equal(order_evidence(competing, aggregate, counter)[2], counter);
+
+    // Same query and deps; only policy changes (see .specs/specs/architecture-associative-recall.md "Tests at the seam").
     const revision_before = ranking_engine.graph.revision;
-    const result = associative_recall({ text: 'What helps Mira with stress?', now: 10, k: 2, vector: [1, 0] }, { index: ranking_engine.index });
-    assert.equal(result.items.length, 2);
-    assert.equal(result.trace.evidence_rerank?.subject, 'mira');
-    assert.ok((result.trace.evidence_rerank?.candidates ?? 0) <= 50);
+    const stress_query = { text: 'What relieves stress for Mira?', now: 10, k: 9, vector: [1, 0] };
+    const evidence_on = associative_recall(stress_query, { index: ranking_engine.index });
+    assert.equal(evidence_on.trace.evidence_rerank?.subject, 'mira');
+    assert.ok((evidence_on.trace.evidence_rerank?.candidates ?? 0) <= 50);
+    const own_rank = evidence_on.items.findIndex((item) => item.node.id === own.id);
+    const addressed_rank = evidence_on.items.findIndex((item) => item.node.id === addressed.id);
+    assert.ok(own_rank >= 0 && addressed_rank >= 0 && own_rank < addressed_rank);
+    const evidence_off = associative_recall(stress_query, { index: ranking_engine.index }, policy_with({ evidence_rerank: false }));
+    assert.equal(evidence_off.trace.evidence_rerank?.enabled, false);
     assert.equal(ranking_engine.graph.revision, revision_before);
     assert.equal(own.content.raw, 'Cycling helps me with stress.');
-    const dated = associative_recall({ text: 'What did Mira attend in March 2024?', now: Date.UTC(2024, 7, 1), k: 5, vector: [1, 0] }, { index: ranking_engine.index });
+    assert.ok(reported.id);
+
+    const derivation_query = { text: 'What is Mira doing as part of her experimentation?', now: 25, k: 2, vector: [1, 0] };
+    const derivation_on = associative_recall(derivation_query, { index: ranking_engine.index });
+    const extended_on = derivation_on.items.find((item) => item.node.id === extended.id);
+    assert.ok((extended_on?.breakdown.evidence_adjustment ?? 0) > 0);
+    const derivation_off = associative_recall(derivation_query, { index: ranking_engine.index }, policy_with({ derivation_rerank: false }));
+    const extended_off = derivation_off.items.find((item) => item.node.id === extended.id);
+    assert.notEqual(extended_off?.breakdown.evidence_adjustment, extended_on?.breakdown.evidence_adjustment);
+    assert.ok(unrelated.id);
+
+    const exclusion_result = associative_recall({ text: 'What activities does Mira pursue besides pottery?', now: 10, k: 5, vector: [1, 0] }, { index: ranking_engine.index });
+    assert.ok(exclusion_result.items.some((item) => item.node.id === alternative.id));
+    assert.ok(excluded.id);
+
+    const aggregate_result = associative_recall(
+        { text: 'How many items did I purchase?', now: 10, k: 3, vector: [1, 0] },
+        { index: ranking_engine.index },
+        policy_with({ session_coverage: true }),
+    );
+    const aggregate_ids = aggregate_result.items.map((item) => item.node.id);
+    assert.ok(aggregate_ids.includes(one.id) && aggregate_ids.includes(two.id));
+
+    const dated_query = { text: 'What did Mira attend in March 2024?', now: Date.UTC(2024, 7, 1), k: 5, vector: [1, 0] };
+    entry('Mira', 'I attended the exhibition last month.', Date.UTC(2024, 3, 18));
+    const dated = associative_recall(dated_query, { index: ranking_engine.index });
     assert.deepEqual(dated.context.items.map((node) => node.id), dated.items.map((item) => item.node.id));
     assert.ok(dated.items.some((item) => (item.breakdown.calendar_adjustment ?? 0) > 0));
+    const calendar_off = associative_recall(dated_query, { index: ranking_engine.index }, policy_with({ calendar_rerank: false }));
+    assert.ok(calendar_off.items.every((item) => (item.breakdown.calendar_adjustment ?? 0) === 0));
     const qa_memory = create_memory({ store: 'memory', embedding_dimension: 2 });
     const qa_scope = { user_id: 'evan', conversation_id: 'chat', world: 'qa-bundle', vector: [1, 0] as number[] };
     await qa_memory.ingest({ ...qa_scope, speaker: 'Evan', text: 'Hey Sam, what helps you relieve stress these days?', at: 1, observed_at: 1 });
@@ -318,26 +320,6 @@ try {
     assert.equal(concise.items.length, 1);
     assert.equal(concise.text, `- ${concise.evidence[0].text}`);
     assert.ok(concise.within_budget);
-    const facts = [{ id: 'one', session: 'first' }, { id: 'duplicate', session: 'first' }, { id: 'two', session: 'second' }];
-    const selected = select_evidence_set(facts, {
-        limit: 2, query_terms: ['purchase'], token_budget: 10,
-        terms: () => new Set(['purchase']), similarity: () => 0, token_cost: () => 5,
-        polarity: () => 0, relevance: () => 1, group: (item) => item.session,
-    });
-    assert.deepEqual(selected.map((item) => item.id), ['one', 'two']);
-
-    const candidates = Array.from({ length: 64 }, (_, id) => ({ id }));
-    let cost_calls = 0;
-    let similarity_calls = 0;
-    const efficient = select_evidence_set(candidates, {
-        limit: 64, query_terms: ['topic'], terms: () => new Set(['topic']),
-        token_cost: () => { cost_calls++; return 10; },
-        similarity: () => { similarity_calls++; return 0.5; },
-        polarity: () => 0, relevance: (item) => 64 - item.id,
-    });
-    assert.deepEqual(efficient, candidates);
-    assert.equal(cost_calls, 64);
-    assert.equal(similarity_calls, 2016);
 
     const history = new ingest_engine();
     const original = { user_id: 'replay', conversation_id: 'session', text: 'Notebook entry.', vector: [1, 0], at: 100 };

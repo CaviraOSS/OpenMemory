@@ -59,9 +59,21 @@ const bool_alias = (env: NodeJS.ProcessEnv, keys: string[], fallback: boolean) =
     throw new Error(`${keys[0]} must be true or false`);
 };
 
+const loopback_hosts = new Set(['127.0.0.1', 'localhost', '::1', '::']);
+
+function require_api_key_for_exposed_binds(config: server_config): void {
+    const exposed = !loopback_hosts.has(config.host) || config.mcp_http;
+    if (exposed && !config.api_key) {
+        throw new Error(
+            'LONGMEMORY_API_KEY is required when LONGMEMORY_HOST is not loopback or LONGMEMORY_MCP_HTTP is enabled. ' +
+            'Set LONGMEMORY_API_KEY, bind to 127.0.0.1, or disable LONGMEMORY_MCP_HTTP.',
+        );
+    }
+}
+
 export function load_server_config(env: NodeJS.ProcessEnv = process.env): server_config {
     const embeddings = create_embedding_environment(env, { logger: (message) => console.warn(`[longmemory] ${message}`) });
-    return {
+    const config: server_config = {
         host: first(env, 'LONGMEMORY_HOST', 'OM_HOST') || '127.0.0.1',
         port: num_alias(env, ['LONGMEMORY_PORT', 'PORT', 'OM_PORT'], 7331, 0, 65_535),
         api_key: first(env, 'LONGMEMORY_API_KEY', 'OM_API_KEY') || null,
@@ -80,6 +92,8 @@ export function load_server_config(env: NodeJS.ProcessEnv = process.env): server
         memory: {
             store: 'sqlite',
             db_path: first(env, 'LONGMEMORY_DB_PATH', 'OM_DB_PATH') || './longmemory.db',
+            tenant_id: first(env, 'LONGMEMORY_TENANT_ID', 'OM_TENANT_ID') || 'default',
+            user_id: first(env, 'LONGMEMORY_USER_ID', 'OM_USER_ID') || 'default',
             enable_cold_log: bool(env, 'LONGMEMORY_ENABLE_COLD_LOG', false),
             enable_consolidation: bool_alias(env, ['LONGMEMORY_ENABLE_CONSOLIDATION', 'OM_AUTO_REFLECT'], false),
             max_context_tokens: num_alias(env, ['LONGMEMORY_MAX_CONTEXT_TOKENS'], 2_048, 64, 1_000_000),
@@ -97,4 +111,6 @@ export function load_server_config(env: NodeJS.ProcessEnv = process.env): server
             } : {}),
         },
     };
+    require_api_key_for_exposed_binds(config);
+    return config;
 }

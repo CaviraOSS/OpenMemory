@@ -17,7 +17,7 @@ import type { McpServer as mcp_server_sdk } from '@modelcontextprotocol/sdk/serv
 import type { mcp_runtime } from '../runtime.js';
 import { ingest_schema } from '../schemas/tool_schemas.js';
 import { assert_write_allowed, resolve_project, resolve_user } from '../security/permissions.js';
-import { run_audited_tool } from './common.js';
+import { dedupe_ingest_nodes, run_audited_tool } from './common.js';
 
 export function register_ingest_tool(server: mcp_server_sdk, runtime: mcp_runtime): void {
     server.registerTool('longmemory_ingest', {
@@ -40,6 +40,6 @@ export function register_ingest_tool(server: mcp_server_sdk, runtime: mcp_runtim
             user_id, text: input.text, grounding_ref: input.source_ref,
             metadata: { source_type: input.source, source_ref: input.source_ref, memory_type: input.memory_type },
         });
-        return { memory_id: result.node.id, result };
+        return { memory_id: result.node.id, result: dedupe_ingest_nodes(result) };
     }));
 }

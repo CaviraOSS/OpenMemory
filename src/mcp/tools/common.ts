@@ -18,10 +18,36 @@ import type { mcp_runtime } from '../runtime.js';
 import { assert_tool_allowed } from '../security/permissions.js';
 import type { mcp_tool_name } from '../security/tool_allowlist.js';
 
-export const json_tool_result = (value: unknown): call_tool_result => ({
-    content: [{ type: 'text', text: JSON.stringify(value) }],
-    ...(value && typeof value === 'object' && !Array.isArray(value) ? { structuredContent: value as Record<string, unknown> } : {}),
-});
+// Raw embedding vectors are not useful to an MCP client (similarity is already
+// exposed via score/breakdown) and can be thousands of tokens per node, repeated
+// across every place a node is nested in a response. Hidden by default.
+const strip_vectors_replacer = (key: string, value: unknown) => key === 'vectors' ? undefined : value;
+
+const include_vectors_by_default = (env: NodeJS.ProcessEnv = process.env) => {
+    const raw = env.LONGMEMORY_MCP_INCLUDE_VECTORS?.trim().toLowerCase();
+    return raw === 'true' || raw === '1';
+};
+
+export const json_tool_result = (value: unknown, include_vectors = include_vectors_by_default()): call_tool_result => {
+    const text = JSON.stringify(value, include_vectors ? undefined : strip_vectors_replacer);
+    // No tool declares an outputSchema, so structuredContent would only ever be an
+    // unvalidated duplicate of content[].text; omit it rather than double every response.
+    return { content: [{ type: 'text', text }] };
+};
+
+type node_like = { id: string };
+type node_bearing_result = { node: node_like; changed_nodes: readonly node_like[]; nodes: readonly node_like[] };
+
+// An ingest result repeats its primary node's full content in `changed_nodes` and `nodes`
+// (it is a changed node, and usually a newly created one). Keep the one full copy at
+// `result.node` and collapse later occurrences of the same id to a lightweight reference.
+// Returns a response-shaping copy, not a typed IngestResult: changed_nodes/nodes entries
+// may be reduced to { id } and this value is only ever serialized, never read back typed.
+export function dedupe_ingest_nodes(result: node_bearing_result, extra_known_ids: ReadonlySet<string> = new Set()): Record<string, unknown> {
+    const known = new Set<string>([result.node.id, ...extra_known_ids]);
+    const collapse = (list: readonly node_like[]) => list.map((node) => known.has(node.id) ? { id: node.id } : node);
+    return { ...result, changed_nodes: collapse(result.changed_nodes), nodes: collapse(result.nodes) };
+}
 
 export async function run_audited_tool(
     runtime: mcp_runtime,
@@ -40,7 +66,8 @@ export async function run_audited_tool(
             outcome: 'allowed', dry_run: typeof input.dry_run === 'boolean' ? input.dry_run : null,
             started_at, completed_at, error: null,
         });
-        return json_tool_result(value);
+        const include_vectors = typeof input.include_vectors === 'boolean' ? input.include_vectors : undefined;
+        return json_tool_result(value, include_vectors);
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         const denied = /not allowed|read-only|permission denied/i.test(message);

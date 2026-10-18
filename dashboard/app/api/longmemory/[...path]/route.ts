@@ -175,12 +175,23 @@ async function compatibility(req: NextRequest, path: string): Promise<Response |
     return null
 }
 
+// Raw passthrough is for the backend's own `/v1/*` and `/health` surface only.
+// `/mcp` is never proxied here: it is a privileged, stateful transport and this
+// route has no caller auth of its own, so reaching it would hand the injected
+// server API key to anyone who can load the dashboard.
+function isProxyAllowed(path: string): boolean {
+    if (path === 'health') return true
+    if (path === 'v1' || path.startsWith('v1/')) return true
+    return false
+}
+
 async function proxy(req: NextRequest, ctx: { params: Promise<{ path?: string[] }> }) {
     const { path: parts = [] } = await ctx.params
     const path = parts.join('/')
     try {
         const adapted = await compatibility(req, path)
         if (adapted) return adapted
+        if (!isProxyAllowed(path)) return NextResponse.json({ error: 'forbidden', message: `Path "${path}" is not exposed through the dashboard proxy` }, { status: 403 })
         const target = new URL(`${backend}/${parts.map(encodeURIComponent).join('/')}`)
         req.nextUrl.searchParams.forEach((value, key) => target.searchParams.append(key, value))
         const init: RequestInit = { method: req.method, headers: headers(!['GET', 'HEAD'].includes(req.method)), cache: 'no-store' }

@@ -81,3 +81,23 @@ export function optional_record(value: Record<string, unknown>, key: string): vo
     if (item === undefined) return;
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new api_error(400, 'validation_error', `${key} must be an object`);
 }
+
+export type permission_context_input = {
+    user_id?: string;
+    team_ids?: string[];
+    project_ids?: string[];
+    source_ids?: string[];
+    allow_private?: boolean;
+};
+
+export function optional_permission_context(value: Record<string, unknown>, key = 'permission_context'): permission_context_input | undefined {
+    optional_record(value, key);
+    const item = value[key] as Record<string, unknown> | undefined;
+    if (item === undefined) return undefined;
+    optional_string(item, 'user_id');
+    optional_array(item, 'team_ids', 'string');
+    optional_array(item, 'project_ids', 'string');
+    optional_array(item, 'source_ids', 'string');
+    optional_boolean(item, 'allow_private');
+    return item as permission_context_input;
+}
