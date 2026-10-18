@@ -685,14 +685,21 @@ validator.
                 </a>
             </td>
             <td align="center">
+                <a href="https://github.com/RockinPaul">
+                    <img src="https://avatars.githubusercontent.com/u/3741448?v=4" width="100;" alt="RockinPaul"/>
+                    <br />
+                    <sub><b>Paul Zarudnev</b></sub>
+                </a>
+            </td>
+		</tr>
+		<tr>
+            <td align="center">
                 <a href="https://github.com/oantoshchenko">
                     <img src="https://avatars.githubusercontent.com/u/1749531?v=4" width="100;" alt="oantoshchenko"/>
                     <br />
                     <sub><b>Oleksandr Antoshchenko</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/lwsinclair">
                     <img src="https://avatars.githubusercontent.com/u/2829939?v=4" width="100;" alt="lwsinclair"/>
@@ -728,6 +735,8 @@ validator.
                     <sub><b>Dhravya Shah</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/dflor003">
                     <img src="https://avatars.githubusercontent.com/u/103017?v=4" width="100;" alt="dflor003"/>
@@ -735,8 +744,6 @@ validator.
                     <sub><b>Danil Flores</b></sub>
                 </a>
             </td>
-		</tr>
-		<tr>
             <td align="center">
                 <a href="https://github.com/DAESA24">
                     <img src="https://avatars.githubusercontent.com/u/173488786?v=4" width="100;" alt="DAESA24"/>
@@ -772,6 +779,8 @@ validator.
                     <sub><b>Annel Chavez</b></sub>
                 </a>
             </td>
+		</tr>
+		<tr>
             <td align="center">
                 <a href="https://github.com/atao2004">
                     <img src="https://avatars.githubusercontent.com/u/148929819?v=4" width="100;" alt="atao2004"/>
